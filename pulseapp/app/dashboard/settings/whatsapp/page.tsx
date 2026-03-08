@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Script from 'next/script'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import {
@@ -49,6 +49,7 @@ export default function WhatsAppSettingsPage() {
   const [success, setSuccess] = useState<string | null>(null)
   const [fbReady, setFbReady] = useState(false)
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false)
+  const connectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const metaAppId = process.env.NEXT_PUBLIC_META_APP_ID
 
@@ -96,8 +97,21 @@ export default function WhatsAppSettingsPage() {
     setSuccess(null)
     setConnecting(true)
 
+    const timeoutMs = 90_000
+    connectTimeoutRef.current = setTimeout(() => {
+      connectTimeoutRef.current = null
+      setConnecting(false)
+      setError(
+        'Bağlantı zaman aşımına uğradı. Açılır pencere engelliyse izin verin, giriş penceresini tamamlayın veya sayfayı yenileyip tekrar deneyin.'
+      )
+    }, timeoutMs)
+
     window.FB.login(
       async (response: any) => {
+        if (connectTimeoutRef.current) {
+          clearTimeout(connectTimeoutRef.current)
+          connectTimeoutRef.current = null
+        }
         if (response.authResponse?.code) {
           try {
             const res = await fetch('/api/whatsapp/connect', {
@@ -120,7 +134,7 @@ export default function WhatsAppSettingsPage() {
             setError('Bağlantı isteği başarısız.')
           }
         } else {
-          setError('Facebook girişi iptal edildi.')
+          setError('Facebook girişi iptal edildi veya pencerede giriş tamamlanmadı.')
         }
         setConnecting(false)
       },
@@ -135,6 +149,15 @@ export default function WhatsAppSettingsPage() {
         },
       },
     )
+  }
+
+  function handleCancelConnect() {
+    if (connectTimeoutRef.current) {
+      clearTimeout(connectTimeoutRef.current)
+      connectTimeoutRef.current = null
+    }
+    setConnecting(false)
+    setError(null)
   }
 
   async function handleDisconnect() {
@@ -350,18 +373,32 @@ export default function WhatsAppSettingsPage() {
                 müşterilerinize kendi numaranızdan otomatik mesajlar gönderin.
               </p>
 
-              <button
-                onClick={handleConnect}
-                disabled={connecting || !metaAppId}
-                className="mt-6 inline-flex items-center gap-2 rounded-xl bg-green-600 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {connecting ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                  <MessageCircle className="h-5 w-5" />
+              <div className="mt-6 flex flex-col items-center gap-3">
+                <button
+                  onClick={handleConnect}
+                  disabled={connecting || !metaAppId}
+                  className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {connecting ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <MessageCircle className="h-5 w-5" />
+                  )}
+                  {connecting ? 'Bağlanıyor...' : 'WhatsApp\'ı Bağla'}
+                </button>
+                {connecting && (
+                  <button
+                    type="button"
+                    onClick={handleCancelConnect}
+                    className="text-sm text-gray-500 underline hover:text-gray-700"
+                  >
+                    İptal
+                  </button>
                 )}
-                {connecting ? 'Bağlanıyor...' : 'WhatsApp\'ı Bağla'}
-              </button>
+              </div>
+              <p className="mt-3 text-xs text-gray-500">
+                Tıklayınca Facebook/Meta giriş penceresi açılır. Açılmazsa tarayıcıda bu site için açılır pencerelere izin verin. Takılı kalırsa &quot;İptal&quot;e basıp tekrar deneyin.
+              </p>
 
               {!metaAppId && (
                 <p className="mt-3 text-xs text-amber-600">
