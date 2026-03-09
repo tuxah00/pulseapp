@@ -331,8 +331,16 @@ export default function AppointmentsPage() {
       </div>
 
       {/* Şu anki saat */}
-      <div className="mb-2 flex justify-end text-xs text-gray-500">
-        Şu an: {now.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+      <div className="mb-4 flex justify-center">
+        <div className="inline-flex items-center gap-2 rounded-full bg-gray-50 px-4 py-1.5 text-sm font-semibold text-gray-700">
+          <Clock className="h-4 w-4 text-gray-500" />
+          <span>
+            Şu an:{' '}
+            <span className="tabular-nums">
+              {now.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          </span>
+        </div>
       </div>
 
       {/* Mini İstatistik */}
