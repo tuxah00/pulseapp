@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
-import { Plus, Pencil, Trash2, Loader2, Clock, Banknote, GripVertical } from 'lucide-react'
-import { formatCurrency } from '@/lib/utils'
+import { Plus, Pencil, Trash2, Loader2, Clock, Banknote, GripVertical, LayoutList, LayoutGrid } from 'lucide-react'
+import { formatCurrency, cn } from '@/lib/utils'
 import type { Service } from '@/types'
 
 export default function ServicesPage() {
@@ -15,6 +15,7 @@ export default function ServicesPage() {
   const [editingService, setEditingService] = useState<Service | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState<'list' | 'box'>('list')
 
   // Form state
   const [name, setName] = useState('')
@@ -139,13 +140,19 @@ export default function ServicesPage() {
             İşletmenizin sunduğu hizmetleri tanımlayın.
           </p>
         </div>
-        <button onClick={openNewModal} className="btn-primary">
-          <Plus className="mr-2 h-4 w-4" />
-          Yeni Hizmet
-        </button>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
+            <button onClick={() => setViewMode('list')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'list' ? 'bg-gray-200 text-gray-900' : 'text-gray-400 hover:bg-gray-100')} title="Liste"><LayoutList className="h-4 w-4" /></button>
+            <button onClick={() => setViewMode('box')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'box' ? 'bg-gray-200 text-gray-900' : 'text-gray-400 hover:bg-gray-100')} title="Kutular"><LayoutGrid className="h-4 w-4" /></button>
+          </div>
+          <button onClick={openNewModal} className="btn-primary">
+            <Plus className="mr-2 h-4 w-4" />
+            Yeni Hizmet
+          </button>
+        </div>
       </div>
 
-      {/* Hizmet Listesi */}
+      {/* Hizmet Listesi / Kutular */}
       {services.length === 0 ? (
         <div className="card flex flex-col items-center justify-center py-16">
           <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-pulse-50">
@@ -157,14 +164,13 @@ export default function ServicesPage() {
             İlk Hizmeti Ekle
           </button>
         </div>
-      ) : (
+      ) : viewMode === 'list' ? (
         <div className="space-y-3">
           {services.map((service) => (
             <div
               key={service.id}
               className="card flex items-center gap-4 p-4 hover:shadow-md transition-shadow"
             >
-              {/* Sol: Hizmet bilgisi */}
               <div className="flex-1 min-w-0">
                 <h3 className="font-semibold text-gray-900">{service.name}</h3>
                 {service.description && (
@@ -183,21 +189,39 @@ export default function ServicesPage() {
                   )}
                 </div>
               </div>
-
-              {/* Sağ: Butonlar */}
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => openEditModal(service)}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
-                >
-                  <Pencil className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => handleDelete(service)}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-600 transition-colors"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                <button onClick={() => openEditModal(service)} className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"><Pencil className="h-4 w-4" /></button>
+                <button onClick={() => handleDelete(service)} className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-600 transition-colors"><Trash2 className="h-4 w-4" /></button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+          {services.map((service) => (
+            <div key={service.id} className="card flex aspect-square flex-col justify-between p-4 hover:shadow-md transition-shadow">
+              <div className="flex flex-col items-center gap-1 text-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-pulse-100 text-pulse-600">
+                  <Clock className="h-6 w-6" />
+                </div>
+                <h3 className="font-semibold text-gray-900 truncate w-full">{service.name}</h3>
+                {service.description && <p className="text-xs text-gray-500 truncate w-full">{service.description}</p>}
+              </div>
+              <div className="mt-2 space-y-0.5 text-center text-sm text-gray-600">
+                <p className="flex items-center justify-center gap-1">
+                  <Clock className="h-3.5 w-3.5" />
+                  {service.duration_minutes} dk
+                </p>
+                {service.price && (
+                  <p className="flex items-center justify-center gap-1">
+                    <Banknote className="h-3.5 w-3.5" />
+                    {formatCurrency(service.price)}
+                  </p>
+                )}
+              </div>
+              <div className="mt-3 flex items-center justify-center gap-2">
+                <button onClick={() => openEditModal(service)} className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600"><Pencil className="h-3.5 w-3.5" /></button>
+                <button onClick={() => handleDelete(service)} className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-600"><Trash2 className="h-3.5 w-3.5" /></button>
               </div>
             </div>
           ))}

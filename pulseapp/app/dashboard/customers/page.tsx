@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import {
   Plus, Search, Loader2, Phone, Mail, Calendar,
-  X, Pencil, Trash2, User,
+  X, Pencil, Trash2, User, LayoutList, LayoutGrid,
 } from 'lucide-react'
 import { formatPhone, formatDate, formatCurrency, getSegmentColor, cn } from '@/lib/utils'
 import { SEGMENT_LABELS, type Customer, type CustomerSegment } from '@/types'
@@ -21,6 +21,7 @@ export default function CustomersPage() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState<'list' | 'box'>('list')
 
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
@@ -124,6 +125,10 @@ export default function CustomersPage() {
             </button>
           ))}
         </div>
+        <div className="flex items-center gap-1">
+          <button onClick={() => setViewMode('list')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'list' ? 'bg-gray-200 text-gray-900' : 'text-gray-400 hover:bg-gray-100')} title="Liste"><LayoutList className="h-4 w-4" /></button>
+          <button onClick={() => setViewMode('box')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'box' ? 'bg-gray-200 text-gray-900' : 'text-gray-400 hover:bg-gray-100')} title="Kutular"><LayoutGrid className="h-4 w-4" /></button>
+        </div>
       </div>
 
       <div className="flex gap-6">
@@ -134,7 +139,7 @@ export default function CustomersPage() {
               <p className="text-gray-500 mb-4">{search ? 'Aramanızla eşleşen müşteri bulunamadı' : 'Henüz müşteri eklenmemiş'}</p>
               {!search && <button onClick={openNewModal} className="btn-primary"><Plus className="mr-2 h-4 w-4" />İlk Müşteriyi Ekle</button>}
             </div>
-          ) : (
+          ) : viewMode === 'list' ? (
             <div className="space-y-2">
               {customers.map((customer) => (
                 <div key={customer.id} onClick={() => setSelectedCustomer(customer)} className={cn('card flex items-center gap-4 p-4 cursor-pointer transition-all hover:shadow-md', selectedCustomer?.id === customer.id && 'ring-2 ring-pulse-500')}>
@@ -151,6 +156,24 @@ export default function CustomersPage() {
                   <div className="text-right text-sm flex-shrink-0 hidden sm:block">
                     <p className="text-gray-900 font-medium">{customer.total_visits} ziyaret</p>
                     <p className="text-gray-400">{customer.last_visit_at ? formatDate(customer.last_visit_at) : 'Henüz yok'}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+              {customers.map((customer) => (
+                <div key={customer.id} onClick={() => setSelectedCustomer(customer)} className={cn('card flex aspect-square flex-col justify-between p-4 cursor-pointer transition-all hover:shadow-md', selectedCustomer?.id === customer.id && 'ring-2 ring-pulse-500')}>
+                  <div className="flex flex-col items-center gap-1">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-pulse-100 text-pulse-700 font-semibold text-sm">
+                      {customer.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                    </div>
+                    <span className={`badge ${getSegmentColor(customer.segment)}`}>{SEGMENT_LABELS[customer.segment]}</span>
+                  </div>
+                  <div className="mt-2 space-y-0.5 text-center text-sm">
+                    <p className="font-medium text-gray-900 truncate">{customer.name}</p>
+                    <p className="text-gray-500 text-xs">{formatPhone(customer.phone)}</p>
+                    <p className="text-gray-400 text-xs">{customer.total_visits} ziyaret · {customer.last_visit_at ? formatDate(customer.last_visit_at) : '—'}</p>
                   </div>
                 </div>
               ))}
