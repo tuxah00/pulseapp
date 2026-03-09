@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Script from 'next/script'
+import { useSearchParams } from 'next/navigation'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import {
   Loader2,
@@ -39,6 +40,7 @@ interface WhatsAppStatus {
 }
 
 export default function WhatsAppSettingsPage() {
+  const searchParams = useSearchParams()
   const { businessId, loading: ctxLoading } = useBusinessContext()
 
   const [status, setStatus] = useState<WhatsAppStatus | null>(null)
@@ -70,6 +72,14 @@ export default function WhatsAppSettingsPage() {
     if (!ctxLoading && businessId) fetchStatus()
   }, [fetchStatus, ctxLoading, businessId])
 
+  // Callback'ten dönüşte URL'deki success/error
+  useEffect(() => {
+    const successMsg = searchParams.get('success')
+    const errorMsg = searchParams.get('error')
+    if (successMsg) setSuccess(decodeURIComponent(successMsg))
+    if (errorMsg) setError(decodeURIComponent(errorMsg))
+  }, [searchParams])
+
   function handleFBInit() {
     if (window.FB) {
       window.FB.init({
@@ -88,8 +98,12 @@ export default function WhatsAppSettingsPage() {
   }, [metaAppId])
 
   async function handleConnect() {
+    if (!metaAppId) {
+      setError('Meta App ID yapılandırılmamış. Vercel ortam değişkenlerinde NEXT_PUBLIC_META_APP_ID tanımlı olmalı.')
+      return
+    }
     if (!window.FB || !fbReady) {
-      setError('Facebook SDK yüklenemedi. Sayfayı yenileyin.')
+      setError('Facebook SDK yüklenemedi. Sayfayı yenileyin veya açılır pencerelere izin verin.')
       return
     }
 
@@ -139,6 +153,7 @@ export default function WhatsAppSettingsPage() {
         setConnecting(false)
       },
       {
+        display: 'popup',
         config_id: metaAppId,
         response_type: 'code',
         override_default_response_type: true,
@@ -158,6 +173,24 @@ export default function WhatsAppSettingsPage() {
     }
     setConnecting(false)
     setError(null)
+  }
+
+  /** Popup açılmıyorsa: aynı sayfada Facebook'a yönlendir, giriş sonrası callback'e döner. */
+  function handleConnectWithRedirect() {
+    if (!metaAppId || !businessId) {
+      setError('Meta App ID veya işletme bilgisi eksik.')
+      return
+    }
+    setError(null)
+    const redirectUri = `${typeof window !== 'undefined' ? window.location.origin : ''}/dashboard/settings/whatsapp/callback`
+    const url = new URL('https://www.facebook.com/v21.0/dialog/oauth')
+    url.searchParams.set('client_id', metaAppId)
+    url.searchParams.set('redirect_uri', redirectUri)
+    url.searchParams.set('response_type', 'code')
+    url.searchParams.set('config_id', metaAppId)
+    url.searchParams.set('override_default_response_type', 'true')
+    url.searchParams.set('state', businessId)
+    window.location.href = url.toString()
   }
 
   async function handleDisconnect() {
@@ -202,7 +235,7 @@ export default function WhatsAppSettingsPage() {
     <div>
       <Script
         src="https://connect.facebook.net/tr_TR/sdk.js"
-        strategy="lazyOnload"
+        strategy="afterInteractive"
         onLoad={handleFBInit}
       />
 
@@ -374,18 +407,28 @@ export default function WhatsAppSettingsPage() {
               </p>
 
               <div className="mt-6 flex flex-col items-center gap-3">
-                <button
-                  onClick={handleConnect}
-                  disabled={connecting || !metaAppId}
-                  className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {connecting ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                  ) : (
-                    <MessageCircle className="h-5 w-5" />
-                  )}
-                  {connecting ? 'Bağlanıyor...' : 'WhatsApp\'ı Bağla'}
-                </button>
+                <div className="flex flex-col sm:flex-row items-center gap-3">
+                  <button
+                    onClick={handleConnect}
+                    disabled={connecting || !metaAppId}
+                    className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {connecting ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <MessageCircle className="h-5 w-5" />
+                    )}
+                    {connecting ? 'Bağlanıyor...' : 'WhatsApp\'ı Bağla'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleConnectWithRedirect}
+                    disabled={connecting || !metaAppId}
+                    className="inline-flex items-center gap-2 rounded-xl border-2 border-green-600 bg-white px-5 py-3 text-sm font-semibold text-green-600 hover:bg-green-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Pencere açılmıyorsa buradan giriş yap
+                  </button>
+                </div>
                 {connecting && (
                   <button
                     type="button"
@@ -397,12 +440,21 @@ export default function WhatsAppSettingsPage() {
                 )}
               </div>
               <p className="mt-3 text-xs text-gray-500">
-                Tıklayınca Facebook/Meta giriş penceresi açılır. Açılmazsa tarayıcıda bu site için açılır pencerelere izin verin. Takılı kalırsa &quot;İptal&quot;e basıp tekrar deneyin.
+                Tıklayınca Facebook/Meta giriş penceresi açılır. Takılı kalırsa &quot;İptal&quot;e basıp tekrar deneyin.
               </p>
+
+              <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50/80 p-3 text-left text-xs text-amber-800">
+                <p className="font-medium">Pencere hiç açılmıyorsa:</p>
+                <ul className="mt-2 list-inside list-disc space-y-1">
+                  <li><strong>Yeşil &quot;Buradan giriş yapın&quot;</strong> linkine tıklayın — aynı sekmede Facebook’a gider, giriş sonrası buraya döner.</li>
+                  <li>Meta’da <strong>Valid OAuth Redirect URIs</strong> listesine bu adresi ekleyin: <code className="rounded bg-amber-100 px-1 break-all">{typeof window !== 'undefined' ? `${window.location.origin}/dashboard/settings/whatsapp/callback` : 'https://.../dashboard/settings/whatsapp/callback'}</code></li>
+                  <li>Vercel’de <strong>NEXT_PUBLIC_META_APP_ID</strong> tanımlı olmalı.</li>
+                </ul>
+              </div>
 
               {!metaAppId && (
                 <p className="mt-3 text-xs text-amber-600">
-                  Meta App ID yapılandırılmamış. Yöneticiyle iletişime geçin.
+                  Meta App ID yapılandırılmamış. Vercel’de NEXT_PUBLIC_META_APP_ID ekleyin.
                 </p>
               )}
             </div>

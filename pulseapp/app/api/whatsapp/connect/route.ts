@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { code, businessId, wabaId } = body
+    const { code, businessId, wabaId, redirect_uri } = body
 
     if (!code || !businessId) {
       return NextResponse.json(
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { accessToken } = await exchangeCodeForToken(code)
+    const { accessToken } = await exchangeCodeForToken(code, redirect_uri)
 
     let resolvedWabaId = wabaId
     if (!resolvedWabaId) {

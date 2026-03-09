@@ -239,7 +239,10 @@ export function verifyWebhookSignature(
   )
 }
 
-export async function exchangeCodeForToken(code: string): Promise<{
+export async function exchangeCodeForToken(
+  code: string,
+  redirectUri?: string,
+): Promise<{
   accessToken: string
   expiresIn?: number
 }> {
@@ -254,6 +257,9 @@ export async function exchangeCodeForToken(code: string): Promise<{
   url.searchParams.set('client_id', appId)
   url.searchParams.set('client_secret', appSecret)
   url.searchParams.set('code', code)
+  if (redirectUri) {
+    url.searchParams.set('redirect_uri', redirectUri)
+  }
 
   const response = await fetch(url.toString())
   const data = await response.json()
