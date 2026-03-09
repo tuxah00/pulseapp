@@ -84,9 +84,39 @@ Vercel Dashboard → Proje → **Settings** → **Cron Jobs** (veya `vercel.json
 
 Randevu “Tamamlandı” / onaylama hatasını önlemek için Supabase’te migration’ı çalıştırın:
 
-1. Supabase Dashboard → **SQL Editor** → New query.
-2. `supabase/migrations/003_fix_appointment_customer_segment.sql` dosyasının içeriğini yapıştırın.
-3. Run.
+1. [Supabase Dashboard](https://supabase.com/dashboard) → projenizi seçin → **SQL Editor** → **New query**.
+2. Aşağıdaki SQL bloğunun tamamını kopyalayıp sorgu alanına yapıştırın, **Run** ile çalıştırın.
+3. Uygulama sayfasını yenileyip randevu tamamlamayı tekrar deneyin.
+
+**Kopyalanacak SQL:**
+
+```sql
+DO $$
+DECLARE tr record;
+BEGIN
+  FOR tr IN SELECT tgname FROM pg_trigger t
+    WHERE t.tgrelid = 'public.appointments'::regclass AND NOT t.tgisinternal
+  LOOP
+    EXECUTE format('DROP TRIGGER IF EXISTS %I ON public.appointments', tr.tgname);
+  END LOOP;
+END $$;
+
+CREATE OR REPLACE FUNCTION public.pulseapp_sync_customer_on_appointment_completed()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  IF NEW.status = 'completed' AND (OLD.status IS NULL OR OLD.status IS DISTINCT FROM 'completed') THEN
+    UPDATE public.customers
+    SET last_visit_at = (NEW.appointment_date::text || ' ' || COALESCE(NEW.end_time::text, '23:59:59'))::timestamp,
+        total_visits = COALESCE(total_visits, 0) + 1
+    WHERE id = NEW.customer_id;
+  END IF;
+  RETURN NEW;
+END; $$;
+
+CREATE TRIGGER after_appointment_status_sync_customer
+  AFTER UPDATE OF status ON public.appointments FOR EACH ROW
+  EXECUTE PROCEDURE public.pulseapp_sync_customer_on_appointment_completed();
+```
 
 ---
 

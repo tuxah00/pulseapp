@@ -41,4 +41,4 @@ $$;
 CREATE TRIGGER after_appointment_status_sync_customer
   AFTER UPDATE OF status ON public.appointments
   FOR EACH ROW
-  EXECUTE FUNCTION public.pulseapp_sync_customer_on_appointment_completed();
+  EXECUTE PROCEDURE public.pulseapp_sync_customer_on_appointment_completed();

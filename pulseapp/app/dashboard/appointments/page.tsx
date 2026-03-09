@@ -300,7 +300,19 @@ export default function AppointmentsPage() {
       .eq('id', appointmentId)
 
     if (error) {
-      alert('Güncelleme hatası: ' + error.message)
+      const isSegmentError = error.message.includes('segment') && error.message.includes('customer_segment')
+      if (isSegmentError) {
+        alert(
+          'Randevu güncellemesi veritabanı ayarı nedeniyle başarısız.\n\n' +
+          'Düzeltmek için:\n' +
+          '1. Supabase Dashboard → SQL Editor\'ü açın.\n' +
+          '2. Projedeki supabase/migrations/003_fix_appointment_customer_segment.sql dosyasının tüm içeriğini kopyalayıp SQL Editor\'e yapıştırın.\n' +
+          '3. "Run" ile çalıştırın.\n' +
+          '4. Bu sayfayı yenileyip tekrar deneyin.'
+        )
+      } else {
+        alert('Güncelleme hatası: ' + error.message)
+      }
       return
     }
     fetchAppointments()
