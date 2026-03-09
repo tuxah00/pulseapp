@@ -536,11 +536,11 @@ export default function AppointmentsPage() {
         </div>
       ) : (
         // Kutulu görünüm (box view)
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3 xl:grid-cols-6">
           {appointments.map((apt) => {
             const timeState = getTimeState(apt)
             const cardClass = cn(
-              'card flex h-full flex-col justify-between p-4 transition-colors md:aspect-square',
+              'card flex h-full flex-col justify-between p-4 transition-colors',
               // Süresi geçen randevular: tamamen gri kutu
               timeState === 'past' && 'border-transparent bg-gray-200 text-gray-700',
               // Şu anki randevu: beyaz zemin, sadece yeşil çerçeve
@@ -549,8 +549,8 @@ export default function AppointmentsPage() {
 
             return (
               <div key={apt.id} className={cardClass}>
-                {/* Üst: başlangıç saati ve durum */}
-                <div className="flex items-start justify-between gap-2">
+                {/* Üst: başlangıç saati ve durum (ortalanmış) */}
+                <div className="flex flex-col items-center gap-1">
                   <div className="text-2xl font-semibold text-gray-900">
                     {formatTime(apt.start_time)}
                   </div>
