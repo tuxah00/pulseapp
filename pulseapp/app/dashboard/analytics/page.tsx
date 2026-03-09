@@ -248,7 +248,7 @@ export default function AnalyticsPage() {
                   )}>{i + 1}</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">{svc.name}</p>
-                    <p className="text-xs text-gray-500">{svc.count} randevu · {formatCurrency(svc.revenue)}</p>
+                    <p className="text-xs text-gray-500">{svc.count} randevu · <span className="text-price">{formatCurrency(svc.revenue)}</span></p>
                   </div>
                 </div>
               ))}
@@ -297,7 +297,7 @@ function MetricCard({ icon, label, value, color }: { icon: React.ReactNode; labe
       <div className={cn('flex h-10 w-10 items-center justify-center rounded-lg', colorMap[color])}>{icon}</div>
       <div>
         <p className="text-sm text-gray-500">{label}</p>
-        <p className="text-xl font-bold text-gray-900">{value}</p>
+        <p className={cn('text-xl font-bold', color === 'green' ? 'text-price' : 'text-gray-900')}>{value}</p>
       </div>
     </div>
   )

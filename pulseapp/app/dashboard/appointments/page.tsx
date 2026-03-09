@@ -103,7 +103,7 @@ export default function AppointmentsPage() {
     setSelectedDate(new Date().toISOString().split('T')[0])
   }
 
-  const todayStr = now.toISOString().split('T')[0]
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
   const isToday = selectedDate === todayStr
   const nowMinutes = now.getHours() * 60 + now.getMinutes()
 
@@ -350,8 +350,7 @@ export default function AppointmentsPage() {
 
       {/* Şu anki saat */}
       <div className="mb-6 flex justify-center">
-        <div className="inline-flex items-center gap-3 rounded-full bg-gray-200/90 px-5 py-2 text-base font-semibold text-gray-800 shadow-sm">
-          <Clock className="h-5 w-5 text-gray-700" />
+        <div className="inline-flex items-center rounded-full bg-gray-200/90 px-5 py-2 text-base font-semibold text-gray-800 shadow-sm">
           <span>
             Şu an:{' '}
             <span className="tabular-nums">

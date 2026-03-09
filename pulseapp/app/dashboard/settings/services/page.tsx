@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
-import { Plus, Pencil, Trash2, Loader2, Clock, Banknote, GripVertical, LayoutList, LayoutGrid } from 'lucide-react'
+import { Plus, Pencil, Trash2, Loader2, Banknote, LayoutList, LayoutGrid } from 'lucide-react'
 import { formatCurrency, cn } from '@/lib/utils'
 import type { Service } from '@/types'
 
@@ -172,19 +172,16 @@ export default function ServicesPage() {
               className="card flex items-center gap-4 p-4 hover:shadow-md transition-shadow"
             >
               <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-gray-900">{service.name}</h3>
+                <h3 className="text-lg font-semibold text-gray-900">{service.name}</h3>
                 {service.description && (
                   <p className="text-sm text-gray-500 mt-0.5 truncate">{service.description}</p>
                 )}
                 <div className="mt-2 flex items-center gap-4 text-sm text-gray-500">
-                  <span className="flex items-center gap-1">
-                    <Clock className="h-3.5 w-3.5" />
-                    {service.duration_minutes} dk
-                  </span>
+                  <span>{service.duration_minutes} dk</span>
                   {service.price && (
                     <span className="flex items-center gap-1">
                       <Banknote className="h-3.5 w-3.5" />
-                      {formatCurrency(service.price)}
+                      <span className="text-price">{formatCurrency(service.price)}</span>
                     </span>
                   )}
                 </div>
@@ -201,21 +198,15 @@ export default function ServicesPage() {
           {services.map((service) => (
             <div key={service.id} className="card flex aspect-square flex-col justify-between p-4 hover:shadow-md transition-shadow">
               <div className="flex flex-col items-center gap-1 text-center">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-pulse-100 text-pulse-600">
-                  <Clock className="h-6 w-6" />
-                </div>
-                <h3 className="font-semibold text-gray-900 truncate w-full">{service.name}</h3>
+                <h3 className="text-lg font-semibold text-gray-900 truncate w-full">{service.name}</h3>
                 {service.description && <p className="text-xs text-gray-500 truncate w-full">{service.description}</p>}
               </div>
               <div className="mt-2 space-y-0.5 text-center text-sm text-gray-600">
-                <p className="flex items-center justify-center gap-1">
-                  <Clock className="h-3.5 w-3.5" />
-                  {service.duration_minutes} dk
-                </p>
+                <p>{service.duration_minutes} dk</p>
                 {service.price && (
                   <p className="flex items-center justify-center gap-1">
                     <Banknote className="h-3.5 w-3.5" />
-                    {formatCurrency(service.price)}
+                    <span className="text-price">{formatCurrency(service.price)}</span>
                   </p>
                 )}
               </div>

@@ -202,7 +202,7 @@ export default function CustomersPage() {
               </div>
               <div className="grid grid-cols-3 gap-3 mb-6">
                 <div className="text-center p-2 rounded-lg bg-gray-50"><p className="text-lg font-bold text-gray-900">{selectedCustomer.total_visits}</p><p className="text-xs text-gray-500">Ziyaret</p></div>
-                <div className="text-center p-2 rounded-lg bg-gray-50"><p className="text-lg font-bold text-gray-900">{formatCurrency(selectedCustomer.total_revenue)}</p><p className="text-xs text-gray-500">Toplam</p></div>
+                <div className="text-center p-2 rounded-lg bg-gray-50"><p className="text-lg font-bold text-price">{formatCurrency(selectedCustomer.total_revenue)}</p><p className="text-xs text-gray-500">Toplam</p></div>
                 <div className="text-center p-2 rounded-lg bg-gray-50"><p className="text-lg font-bold text-gray-900">{selectedCustomer.total_no_shows}</p><p className="text-xs text-gray-500">Gelmedi</p></div>
               </div>
               {selectedCustomer.notes && <div className="mb-6"><p className="text-xs font-medium text-gray-500 mb-1">Notlar</p><p className="text-sm text-gray-700 bg-gray-50 rounded-lg p-3">{selectedCustomer.notes}</p></div>}

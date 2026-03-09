@@ -616,7 +616,7 @@ export default function BusinessSettingsPage() {
                 )}
               </div>
               <div className="text-right">
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-2xl font-bold text-price">
                   {formatCurrency(PLAN_PRICES[business.subscription_plan])}
                 </p>
                 <p className="text-xs text-gray-400">/ ay</p>
@@ -749,7 +749,7 @@ function PlanCard({
       <div className="text-center mb-4">
         <h3 className="font-semibold text-gray-900">{name}</h3>
         <div className="mt-2">
-          <span className="text-3xl font-bold text-gray-900">{formatCurrency(price)}</span>
+          <span className="text-3xl font-bold text-price">{formatCurrency(price)}</span>
           <span className="text-sm text-gray-400"> / ay</span>
         </div>
       </div>
