@@ -4,9 +4,21 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import {
-  Plus, Loader2, Calendar, ChevronLeft, ChevronRight,
-  Clock, User, CheckCircle, XCircle, AlertTriangle, X,
-  Pencil, CalendarClock,
+  Plus,
+  Loader2,
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  User,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+  X,
+  Pencil,
+  CalendarClock,
+  LayoutList,
+  LayoutGrid,
 } from 'lucide-react'
 import { formatTime, getStatusColor, cn } from '@/lib/utils'
 import { STATUS_LABELS, type Appointment, type AppointmentStatus, type Customer, type Service, type StaffMember } from '@/types'
@@ -17,6 +29,7 @@ export default function AppointmentsPage() {
   const [loading, setLoading] = useState(true)
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
   const [now, setNow] = useState(new Date())
+  const [viewMode, setViewMode] = useState<'list' | 'box'>('list')
   const [showModal, setShowModal] = useState(false)
   const [editingAppointment, setEditingAppointment] = useState<any | null>(null)
   const [rescheduleAppointment, setRescheduleAppointment] = useState<any | null>(null)
@@ -348,24 +361,74 @@ export default function AppointmentsPage() {
         </div>
       </div>
 
-      {/* Mini İstatistik */}
-      <div className="mb-6 grid grid-cols-4 gap-3">
-        <div className="card p-3 text-center"><p className="text-2xl font-bold text-gray-900">{totalCount}</p><p className="text-xs text-gray-500">Toplam</p></div>
-        <div className="card p-3 text-center"><p className="text-2xl font-bold text-blue-600">{confirmedCount}</p><p className="text-xs text-gray-500">Onaylı</p></div>
-        <div className="card p-3 text-center"><p className="text-2xl font-bold text-green-600">{completedCount}</p><p className="text-xs text-gray-500">Tamamlandı</p></div>
-        <div className="card p-3 text-center"><p className="text-2xl font-bold text-red-600">{noShowCount}</p><p className="text-xs text-gray-500">Gelmedi</p></div>
+      {/* Mini İstatistik + Görünüm butonları */}
+      <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="grid flex-1 grid-cols-4 gap-3">
+          <div className="card p-3 text-center">
+            <p className="text-2xl font-bold text-gray-900">{totalCount}</p>
+            <p className="text-xs text-gray-500">Toplam</p>
+          </div>
+          <div className="card p-3 text-center">
+            <p className="text-2xl font-bold text-blue-600">{confirmedCount}</p>
+            <p className="text-xs text-gray-500">Onaylı</p>
+          </div>
+          <div className="card p-3 text-center">
+            <p className="text-2xl font-bold text-green-600">{completedCount}</p>
+            <p className="text-xs text-gray-500">Tamamlandı</p>
+          </div>
+          <div className="card p-3 text-center">
+            <p className="text-2xl font-bold text-red-600">{noShowCount}</p>
+            <p className="text-xs text-gray-500">Gelmedi</p>
+          </div>
+        </div>
+        {/* 1 numaralı alan: görünüm geçiş butonları */}
+        <div className="flex justify-end md:w-auto">
+          <div className="inline-flex rounded-lg border border-gray-200 bg-white p-0.5 shadow-sm">
+            <button
+              type="button"
+              onClick={() => setViewMode('list')}
+              className={cn(
+                'inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                viewMode === 'list'
+                  ? 'bg-pulse-50 text-pulse-700'
+                  : 'text-gray-500 hover:bg-gray-50',
+              )}
+            >
+              <LayoutList className="h-3.5 w-3.5" />
+              Liste
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('box')}
+              className={cn(
+                'inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                viewMode === 'box'
+                  ? 'bg-pulse-50 text-pulse-700'
+                  : 'text-gray-500 hover:bg-gray-50',
+              )}
+            >
+              <LayoutGrid className="h-3.5 w-3.5" />
+              Kutular
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Randevu Listesi */}
       {loading ? (
-        <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-pulse-500" /></div>
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-pulse-500" />
+        </div>
       ) : appointments.length === 0 ? (
         <div className="card flex flex-col items-center justify-center py-16">
           <Calendar className="mb-4 h-12 w-12 text-gray-300" />
-          <p className="text-gray-500 mb-4">Bu tarihte randevu yok</p>
-          <button onClick={openNewModal} className="btn-primary"><Plus className="mr-2 h-4 w-4" />Randevu Ekle</button>
+          <p className="mb-4 text-gray-500">Bu tarihte randevu yok</p>
+          <button onClick={openNewModal} className="btn-primary">
+            <Plus className="mr-2 h-4 w-4" />
+            Randevu Ekle
+          </button>
         </div>
-      ) : (
+      ) : viewMode === 'list' ? (
         <div className="space-y-3">
           {appointments.map((apt) => {
             const timeState = getTimeState(apt)
@@ -381,18 +444,20 @@ export default function AppointmentsPage() {
               <div key={apt.id} className={cardClass}>
                 <div className="flex items-center gap-4">
                   {/* Saat */}
-                  <div className="text-center flex-shrink-0 w-16">
+                  <div className="w-16 flex-shrink-0 text-center">
                     <p className="text-lg font-bold text-gray-900">{formatTime(apt.start_time)}</p>
                     <p className="text-xs text-gray-400">{formatTime(apt.end_time)}</p>
                   </div>
 
                   {/* Dikey çizgi */}
-                  <div className="w-px h-12 bg-gray-200 flex-shrink-0" />
+                  <div className="h-12 w-px flex-shrink-0 bg-gray-200" />
 
                   {/* Detaylar */}
-                  <div className="flex-1 min-w-0">
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-semibold text-gray-900">{apt.customers?.name || 'İsimsiz'}</span>
+                      <span className="font-semibold text-gray-900">
+                        {apt.customers?.name || 'İsimsiz'}
+                      </span>
                       <span className={`badge ${getStatusColor(apt.status)}`}>
                         {STATUS_LABELS[apt.status as keyof typeof STATUS_LABELS]}
                       </span>
@@ -400,26 +465,30 @@ export default function AppointmentsPage() {
                     <div className="mt-1 flex items-center gap-3 text-sm text-gray-500">
                       {apt.services?.name && <span>{apt.services.name}</span>}
                       {apt.staff_members?.name && <span>· {apt.staff_members.name}</span>}
-                      {apt.services?.duration_minutes && <span>· {apt.services.duration_minutes} dk</span>}
+                      {apt.services?.duration_minutes && (
+                        <span>· {apt.services.duration_minutes} dk</span>
+                      )}
                     </div>
-                    {apt.notes && <p className="mt-1 text-sm text-gray-400 truncate">{apt.notes}</p>}
+                    {apt.notes && (
+                      <p className="mt-1 truncate text-sm text-gray-400">{apt.notes}</p>
+                    )}
                   </div>
 
                   {/* İkonlar: Düzenle, Ertele, Tamamlandı, Gelmedi, İptal */}
-                  <div className="flex items-center gap-1 flex-shrink-0">
+                  <div className="flex flex-shrink-0 items-center gap-1">
                     {(apt.status === 'confirmed' || apt.status === 'pending') && (
                       <>
                         <button
                           onClick={() => openEditModal(apt)}
                           title="Düzenle"
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
+                          className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100"
                         >
                           <Pencil className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => openRescheduleModal(apt)}
                           title="Ertele"
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-blue-500 hover:bg-blue-50 transition-colors"
+                          className="flex h-8 w-8 items-center justify-center rounded-lg text-blue-500 transition-colors hover:bg-blue-50"
                         >
                           <CalendarClock className="h-4 w-4" />
                         </button>
@@ -430,21 +499,21 @@ export default function AppointmentsPage() {
                         <button
                           onClick={() => updateStatus(apt.id, 'completed')}
                           title="Tamamlandı"
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-green-500 hover:bg-green-50 transition-colors"
+                          className="flex h-8 w-8 items-center justify-center rounded-lg text-green-500 transition-colors hover:bg-green-50"
                         >
                           <CheckCircle className="h-5 w-5" />
                         </button>
                         <button
                           onClick={() => updateStatus(apt.id, 'no_show')}
                           title="Gelmedi"
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-red-500 hover:bg-red-50 transition-colors"
+                          className="flex h-8 w-8 items-center justify-center rounded-lg text-red-500 transition-colors hover:bg-red-50"
                         >
                           <AlertTriangle className="h-5 w-5" />
                         </button>
                         <button
                           onClick={() => openCancelConfirm(apt)}
                           title="İptal"
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 transition-colors"
+                          className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100"
                         >
                           <XCircle className="h-5 w-5" />
                         </button>
@@ -454,9 +523,111 @@ export default function AppointmentsPage() {
                       <button
                         onClick={() => updateStatus(apt.id, 'confirmed')}
                         title="Onayla"
-                        className="flex h-8 items-center gap-1 rounded-lg bg-blue-50 px-3 text-sm font-medium text-blue-700 hover:bg-blue-100 transition-colors"
+                        className="flex h-8 items-center gap-1 rounded-lg bg-blue-50 px-3 text-sm font-medium text-blue-700 transition-colors hover:bg-blue-100"
                       >
                         <CheckCircle className="h-4 w-4" /> Onayla
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      ) : (
+        // Kutulu görünüm (box view)
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {appointments.map((apt) => {
+            const timeState = getTimeState(apt)
+            const cardClass = cn(
+              'card flex h-full flex-col justify-between p-4 transition-colors',
+              // Süresi geçen randevular: tamamen gri kutu
+              timeState === 'past' && 'border-transparent bg-gray-200 text-gray-700',
+              // Şu anki randevu: beyaz zemin, sadece yeşil çerçeve
+              timeState === 'current' && 'border-green-500 ring-2 ring-green-400 bg-white',
+            )
+
+            return (
+              <div key={apt.id} className={cardClass}>
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-gray-900">
+                        {apt.customers?.name || 'İsimsiz'}
+                      </span>
+                      <span className={`badge ${getStatusColor(apt.status)}`}>
+                        {STATUS_LABELS[apt.status as keyof typeof STATUS_LABELS]}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-gray-500">
+                      {formatTime(apt.start_time)} – {formatTime(apt.end_time)}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-2 space-y-1 text-xs text-gray-500">
+                  {apt.services?.name && <p>{apt.services.name}</p>}
+                  {apt.staff_members?.name && <p>Personel: {apt.staff_members.name}</p>}
+                  {apt.services?.duration_minutes && <p>Süre: {apt.services.duration_minutes} dk</p>}
+                  {apt.notes && <p className="truncate text-gray-400">{apt.notes}</p>}
+                </div>
+                <div className="mt-3 flex items-center justify-between">
+                  <div className="text-xs text-gray-400">
+                    Kaynak:{' '}
+                    <span className="uppercase">
+                      {(apt.source || 'manual').toString().slice(0, 3)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {(apt.status === 'confirmed' || apt.status === 'pending') && (
+                      <>
+                        <button
+                          onClick={() => openEditModal(apt)}
+                          title="Düzenle"
+                          className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={() => openRescheduleModal(apt)}
+                          title="Ertele"
+                          className="flex h-7 w-7 items-center justify-center rounded-lg text-blue-500 transition-colors hover:bg-blue-50"
+                        >
+                          <CalendarClock className="h-3.5 w-3.5" />
+                        </button>
+                      </>
+                    )}
+                    {apt.status === 'confirmed' && (
+                      <>
+                        <button
+                          onClick={() => updateStatus(apt.id, 'completed')}
+                          title="Tamamlandı"
+                          className="flex h-7 w-7 items-center justify-center rounded-lg text-green-500 transition-colors hover:bg-green-50"
+                        >
+                          <CheckCircle className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => updateStatus(apt.id, 'no_show')}
+                          title="Gelmedi"
+                          className="flex h-7 w-7 items-center justify-center rounded-lg text-red-500 transition-colors hover:bg-red-50"
+                        >
+                          <AlertTriangle className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => openCancelConfirm(apt)}
+                          title="İptal"
+                          className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100"
+                        >
+                          <XCircle className="h-4 w-4" />
+                        </button>
+                      </>
+                    )}
+                    {apt.status === 'pending' && (
+                      <button
+                        onClick={() => updateStatus(apt.id, 'confirmed')}
+                        title="Onayla"
+                        className="flex h-7 items-center gap-1 rounded-lg bg-blue-50 px-2 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-100"
+                      >
+                        <CheckCircle className="h-3.5 w-3.5" /> Onayla
                       </button>
                     )}
                   </div>
