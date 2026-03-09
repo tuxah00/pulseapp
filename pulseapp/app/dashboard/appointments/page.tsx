@@ -16,6 +16,7 @@ export default function AppointmentsPage() {
   const [appointments, setAppointments] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
+  const [now, setNow] = useState(new Date())
   const [showModal, setShowModal] = useState(false)
   const [editingAppointment, setEditingAppointment] = useState<any | null>(null)
   const [rescheduleAppointment, setRescheduleAppointment] = useState<any | null>(null)
@@ -68,6 +69,12 @@ export default function AppointmentsPage() {
     if (staffRes.data) setStaffMembers(staffRes.data)
   }, [businessId])
 
+  // Şu anki zamanı her dakika güncelle
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000)
+    return () => clearInterval(id)
+  }, [])
+
   useEffect(() => { if (!ctxLoading) fetchAppointments() }, [fetchAppointments, ctxLoading])
   useEffect(() => { if (!ctxLoading) fetchFormData() }, [fetchFormData, ctxLoading])
 
@@ -82,7 +89,22 @@ export default function AppointmentsPage() {
     setSelectedDate(new Date().toISOString().split('T')[0])
   }
 
-  const isToday = selectedDate === new Date().toISOString().split('T')[0]
+  const todayStr = now.toISOString().split('T')[0]
+  const isToday = selectedDate === todayStr
+  const nowMinutes = now.getHours() * 60 + now.getMinutes()
+
+  function getTimeState(apt: any): 'past' | 'current' | 'future' {
+    if (!isToday) return 'future'
+    const toMinutes = (time: string) => {
+      const [h, m] = time.split(':').map(Number)
+      return h * 60 + m
+    }
+    const start = toMinutes(apt.start_time)
+    const end = toMinutes(apt.end_time)
+    if (end <= nowMinutes) return 'past'
+    if (start <= nowMinutes && nowMinutes < end) return 'current'
+    return 'future'
+  }
 
   // Tarih formatla
   function formatSelectedDate() {
@@ -308,6 +330,11 @@ export default function AppointmentsPage() {
         <button onClick={() => changeDate(1)} className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-gray-100"><ChevronRight className="h-5 w-5" /></button>
       </div>
 
+      {/* Şu anki saat */}
+      <div className="mb-2 flex justify-end text-xs text-gray-500">
+        Şu an: {now.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+      </div>
+
       {/* Mini İstatistik */}
       <div className="mb-6 grid grid-cols-4 gap-3">
         <div className="card p-3 text-center"><p className="text-2xl font-bold text-gray-900">{totalCount}</p><p className="text-xs text-gray-500">Toplam</p></div>
@@ -327,92 +354,101 @@ export default function AppointmentsPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {appointments.map((apt) => (
-            <div key={apt.id} className="card p-4">
-              <div className="flex items-center gap-4">
-                {/* Saat */}
-                <div className="text-center flex-shrink-0 w-16">
-                  <p className="text-lg font-bold text-gray-900">{formatTime(apt.start_time)}</p>
-                  <p className="text-xs text-gray-400">{formatTime(apt.end_time)}</p>
-                </div>
+          {appointments.map((apt) => {
+            const timeState = getTimeState(apt)
+            const cardClass = cn(
+              'card p-4 transition-colors',
+              timeState === 'past' && 'border-gray-200 bg-gray-50',
+              timeState === 'current' && 'border-green-300 ring-1 ring-green-200 bg-green-50/60',
+            )
 
-                {/* Dikey çizgi */}
-                <div className="w-px h-12 bg-gray-200 flex-shrink-0" />
-
-                {/* Detaylar */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-gray-900">{apt.customers?.name || 'İsimsiz'}</span>
-                    <span className={`badge ${getStatusColor(apt.status)}`}>
-                      {STATUS_LABELS[apt.status as keyof typeof STATUS_LABELS]}
-                    </span>
+            return (
+              <div key={apt.id} className={cardClass}>
+                <div className="flex items-center gap-4">
+                  {/* Saat */}
+                  <div className="text-center flex-shrink-0 w-16">
+                    <p className="text-lg font-bold text-gray-900">{formatTime(apt.start_time)}</p>
+                    <p className="text-xs text-gray-400">{formatTime(apt.end_time)}</p>
                   </div>
-                  <div className="mt-1 flex items-center gap-3 text-sm text-gray-500">
-                    {apt.services?.name && <span>{apt.services.name}</span>}
-                    {apt.staff_members?.name && <span>· {apt.staff_members.name}</span>}
-                    {apt.services?.duration_minutes && <span>· {apt.services.duration_minutes} dk</span>}
-                  </div>
-                  {apt.notes && <p className="mt-1 text-sm text-gray-400 truncate">{apt.notes}</p>}
-                </div>
 
-                {/* İkonlar: Düzenle, Ertele, Tamamlandı, Gelmedi, İptal */}
-                <div className="flex items-center gap-1 flex-shrink-0">
-                  {(apt.status === 'confirmed' || apt.status === 'pending') && (
-                    <>
+                  {/* Dikey çizgi */}
+                  <div className="w-px h-12 bg-gray-200 flex-shrink-0" />
+
+                  {/* Detaylar */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-gray-900">{apt.customers?.name || 'İsimsiz'}</span>
+                      <span className={`badge ${getStatusColor(apt.status)}`}>
+                        {STATUS_LABELS[apt.status as keyof typeof STATUS_LABELS]}
+                      </span>
+                    </div>
+                    <div className="mt-1 flex items-center gap-3 text-sm text-gray-500">
+                      {apt.services?.name && <span>{apt.services.name}</span>}
+                      {apt.staff_members?.name && <span>· {apt.staff_members.name}</span>}
+                      {apt.services?.duration_minutes && <span>· {apt.services.duration_minutes} dk</span>}
+                    </div>
+                    {apt.notes && <p className="mt-1 text-sm text-gray-400 truncate">{apt.notes}</p>}
+                  </div>
+
+                  {/* İkonlar: Düzenle, Ertele, Tamamlandı, Gelmedi, İptal */}
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    {(apt.status === 'confirmed' || apt.status === 'pending') && (
+                      <>
+                        <button
+                          onClick={() => openEditModal(apt)}
+                          title="Düzenle"
+                          className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => openRescheduleModal(apt)}
+                          title="Ertele"
+                          className="flex h-8 w-8 items-center justify-center rounded-lg text-blue-500 hover:bg-blue-50 transition-colors"
+                        >
+                          <CalendarClock className="h-4 w-4" />
+                        </button>
+                      </>
+                    )}
+                    {apt.status === 'confirmed' && (
+                      <>
+                        <button
+                          onClick={() => updateStatus(apt.id, 'completed')}
+                          title="Tamamlandı"
+                          className="flex h-8 w-8 items-center justify-center rounded-lg text-green-500 hover:bg-green-50 transition-colors"
+                        >
+                          <CheckCircle className="h-5 w-5" />
+                        </button>
+                        <button
+                          onClick={() => updateStatus(apt.id, 'no_show')}
+                          title="Gelmedi"
+                          className="flex h-8 w-8 items-center justify-center rounded-lg text-red-500 hover:bg-red-50 transition-colors"
+                        >
+                          <AlertTriangle className="h-5 w-5" />
+                        </button>
+                        <button
+                          onClick={() => openCancelConfirm(apt)}
+                          title="İptal"
+                          className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 transition-colors"
+                        >
+                          <XCircle className="h-5 w-5" />
+                        </button>
+                      </>
+                    )}
+                    {apt.status === 'pending' && (
                       <button
-                        onClick={() => openEditModal(apt)}
-                        title="Düzenle"
-                        className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
+                        onClick={() => updateStatus(apt.id, 'confirmed')}
+                        title="Onayla"
+                        className="flex h-8 items-center gap-1 rounded-lg bg-blue-50 px-3 text-sm font-medium text-blue-700 hover:bg-blue-100 transition-colors"
                       >
-                        <Pencil className="h-4 w-4" />
+                        <CheckCircle className="h-4 w-4" /> Onayla
                       </button>
-                      <button
-                        onClick={() => openRescheduleModal(apt)}
-                        title="Ertele"
-                        className="flex h-8 w-8 items-center justify-center rounded-lg text-blue-500 hover:bg-blue-50 transition-colors"
-                      >
-                        <CalendarClock className="h-4 w-4" />
-                      </button>
-                    </>
-                  )}
-                  {apt.status === 'confirmed' && (
-                    <>
-                      <button
-                        onClick={() => updateStatus(apt.id, 'completed')}
-                        title="Tamamlandı"
-                        className="flex h-8 w-8 items-center justify-center rounded-lg text-green-500 hover:bg-green-50 transition-colors"
-                      >
-                        <CheckCircle className="h-5 w-5" />
-                      </button>
-                      <button
-                        onClick={() => updateStatus(apt.id, 'no_show')}
-                        title="Gelmedi"
-                        className="flex h-8 w-8 items-center justify-center rounded-lg text-red-500 hover:bg-red-50 transition-colors"
-                      >
-                        <AlertTriangle className="h-5 w-5" />
-                      </button>
-                      <button
-                        onClick={() => openCancelConfirm(apt)}
-                        title="İptal"
-                        className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 transition-colors"
-                      >
-                        <XCircle className="h-5 w-5" />
-                      </button>
-                    </>
-                  )}
-                  {apt.status === 'pending' && (
-                    <button
-                      onClick={() => updateStatus(apt.id, 'confirmed')}
-                      title="Onayla"
-                      className="flex h-8 items-center gap-1 rounded-lg bg-blue-50 px-3 text-sm font-medium text-blue-700 hover:bg-blue-100 transition-colors"
-                    >
-                      <CheckCircle className="h-4 w-4" /> Onayla
-                    </button>
-                  )}
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
