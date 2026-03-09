@@ -95,7 +95,11 @@ export default function AppointmentsPage() {
   const nowMinutes = now.getHours() * 60 + now.getMinutes()
 
   function getTimeState(apt: any): 'past' | 'current' | 'future' {
-    if (!isToday) return 'future'
+    // Seçili gün bugünden önce ise: tüm randevular geçmiş (gri)
+    if (selectedDate < todayStr) return 'past'
+    // Seçili gün bugünden sonraysa: tüm randevular gelecek (beyaz)
+    if (selectedDate > todayStr) return 'future'
+    // Bugün ise: saat bazlı durum hesapla
     const toMinutes = (time: string) => {
       const [h, m] = time.split(':').map(Number)
       return h * 60 + m
