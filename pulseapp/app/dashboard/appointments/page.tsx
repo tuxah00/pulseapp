@@ -69,9 +69,10 @@ export default function AppointmentsPage() {
     if (staffRes.data) setStaffMembers(staffRes.data)
   }, [businessId])
 
-  // Şu anki zamanı her dakika güncelle
+  // Şu anki zamanı düzenli olarak güncelle
   useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 60_000)
+    // Daha akıcı ve sistem saatine daha yakın görünmesi için saniyede bir güncelle
+    const id = setInterval(() => setNow(new Date()), 1_000)
     return () => clearInterval(id)
   }, [])
 
