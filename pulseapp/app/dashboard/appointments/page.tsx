@@ -366,10 +366,10 @@ export default function AppointmentsPage() {
             const timeState = getTimeState(apt)
             const cardClass = cn(
               'card p-4 transition-colors',
-              // Süresi geçen randevular: belirgin gri
-              timeState === 'past' && 'border-gray-300 bg-gray-100 text-gray-600',
+              // Süresi geçen randevular: tamamen gri kutu
+              timeState === 'past' && 'border-transparent bg-gray-200 text-gray-700',
               // Şu anki randevu: beyaz zemin, sadece yeşil çerçeve
-              timeState === 'current' && 'border-green-400 ring-2 ring-green-300 bg-white',
+              timeState === 'current' && 'border-green-500 ring-2 ring-green-400 bg-white',
             )
 
             return (
