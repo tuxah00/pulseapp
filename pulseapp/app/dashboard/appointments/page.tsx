@@ -355,8 +355,26 @@ export default function AppointmentsPage() {
                   {apt.notes && <p className="mt-1 text-sm text-gray-400 truncate">{apt.notes}</p>}
                 </div>
 
-                {/* Durum butonları (Tamamlandı, Gelmedi, İptal) */}
+                {/* İkonlar: Düzenle, Ertele, Tamamlandı, Gelmedi, İptal */}
                 <div className="flex items-center gap-1 flex-shrink-0">
+                  {(apt.status === 'confirmed' || apt.status === 'pending') && (
+                    <>
+                      <button
+                        onClick={() => openEditModal(apt)}
+                        title="Düzenle"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => openRescheduleModal(apt)}
+                        title="Ertele"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-blue-500 hover:bg-blue-50 transition-colors"
+                      >
+                        <CalendarClock className="h-4 w-4" />
+                      </button>
+                    </>
+                  )}
                   {apt.status === 'confirmed' && (
                     <>
                       <button
@@ -393,28 +411,6 @@ export default function AppointmentsPage() {
                   )}
                 </div>
               </div>
-
-              {/* Düzenle / Ertele — kartın altında ayrı satır, her zaman görünür */}
-              {(apt.status === 'confirmed' || apt.status === 'pending') && (
-                <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-2">
-                  <button
-                    onClick={() => openEditModal(apt)}
-                    type="button"
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-                  >
-                    <Pencil className="h-4 w-4" />
-                    Düzenle
-                  </button>
-                  <button
-                    onClick={() => openRescheduleModal(apt)}
-                    type="button"
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100 transition-colors"
-                  >
-                    <CalendarClock className="h-4 w-4" />
-                    Ertele
-                  </button>
-                </div>
-              )}
             </div>
           ))}
         </div>
