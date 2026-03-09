@@ -175,7 +175,7 @@ export default function WhatsAppSettingsPage() {
     setError(null)
   }
 
-  /** Popup açılmıyorsa: aynı sayfada Facebook'a yönlendir, giriş sonrası callback'e döner. */
+  /** Popup açılmıyorsa: aynı sayfada Facebook'a yönlendir, giriş sonrası callback'e döner. config_id yerine scope kullan (Meta Embedded Signup config zorunlu değil). */
   function handleConnectWithRedirect() {
     if (!metaAppId || !businessId) {
       setError('Meta App ID veya işletme bilgisi eksik.')
@@ -187,8 +187,7 @@ export default function WhatsAppSettingsPage() {
     url.searchParams.set('client_id', metaAppId)
     url.searchParams.set('redirect_uri', redirectUri)
     url.searchParams.set('response_type', 'code')
-    url.searchParams.set('config_id', metaAppId)
-    url.searchParams.set('override_default_response_type', 'true')
+    url.searchParams.set('scope', 'whatsapp_business_management,business_management')
     url.searchParams.set('state', businessId)
     window.location.href = url.toString()
   }
@@ -406,29 +405,35 @@ export default function WhatsAppSettingsPage() {
                 müşterilerinize kendi numaranızdan otomatik mesajlar gönderin.
               </p>
 
-              <div className="mt-6 flex flex-col items-center gap-3">
-                <div className="flex flex-col sm:flex-row items-center gap-3">
-                  <button
-                    onClick={handleConnect}
-                    disabled={connecting || !metaAppId}
-                    className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {connecting ? (
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                    ) : (
-                      <MessageCircle className="h-5 w-5" />
-                    )}
-                    {connecting ? 'Bağlanıyor...' : 'WhatsApp\'ı Bağla'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleConnectWithRedirect}
-                    disabled={connecting || !metaAppId}
-                    className="inline-flex items-center gap-2 rounded-xl border-2 border-green-600 bg-white px-5 py-3 text-sm font-semibold text-green-600 hover:bg-green-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Pencere açılmıyorsa buradan giriş yap
-                  </button>
-                </div>
+              {/* Önce redirect seçeneği - popup açılmıyorsa kullan */}
+              <div className="mt-6 w-full max-w-md mx-auto rounded-xl border-2 border-green-500 bg-green-50/80 p-4">
+                <p className="text-sm font-semibold text-green-800 mb-2">Aynı sekmede bağlan (önerilen)</p>
+                <p className="text-xs text-green-700 mb-3">Facebook penceresi açılmıyorsa bu yöntemi kullanın.</p>
+                <button
+                  type="button"
+                  onClick={handleConnectWithRedirect}
+                  disabled={connecting || !metaAppId}
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-green-600 px-5 py-3 text-sm font-semibold text-white hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <MessageCircle className="h-5 w-5" />
+                  WhatsApp’ı buradan bağla (aynı sekme)
+                </button>
+              </div>
+
+              <p className="mt-4 text-xs text-gray-500">veya popup ile:</p>
+              <div className="mt-2 flex flex-col items-center gap-3">
+                <button
+                  onClick={handleConnect}
+                  disabled={connecting || !metaAppId}
+                  className="inline-flex items-center gap-2 rounded-xl border-2 border-gray-300 bg-white px-6 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {connecting ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <MessageCircle className="h-5 w-5" />
+                  )}
+                  {connecting ? 'Bağlanıyor...' : 'WhatsApp\'ı Bağla (popup)'}
+                </button>
                 {connecting && (
                   <button
                     type="button"
