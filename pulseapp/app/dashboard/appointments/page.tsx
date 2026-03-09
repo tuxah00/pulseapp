@@ -20,7 +20,7 @@ import {
   LayoutList,
   LayoutGrid,
 } from 'lucide-react'
-import { formatTime, getStatusColor, cn } from '@/lib/utils'
+import { formatTime, getStatusColor, formatCurrency, cn } from '@/lib/utils'
 import { STATUS_LABELS, type Appointment, type AppointmentStatus, type Customer, type Service, type StaffMember } from '@/types'
 
 export default function AppointmentsPage() {
@@ -171,6 +171,36 @@ export default function AppointmentsPage() {
     return `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`
   }
 
+  // Aynı personel aynı günde çakışan saatte randevu var mı?
+  function timeRangesOverlap(aStart: string, aEnd: string, bStart: string, bEnd: string): boolean {
+    const toMin = (t: string) => { const [h, m] = t.slice(0, 5).split(':').map(Number); return h * 60 + m }
+    const a1 = toMin(aStart), a2 = toMin(aEnd), b1 = toMin(bStart), b2 = toMin(bEnd)
+    return a1 < b2 && b1 < a2
+  }
+
+  async function checkStaffConflict(
+    staffIdVal: string | null,
+    appointmentDate: string,
+    startTimeVal: string,
+    endTimeVal: string,
+    excludeAppointmentId: string | null
+  ): Promise<boolean> {
+    if (!staffIdVal) return false
+    const { data: existing } = await supabase
+      .from('appointments')
+      .select('id, start_time, end_time')
+      .eq('business_id', businessId)
+      .eq('staff_id', staffIdVal)
+      .eq('appointment_date', appointmentDate)
+      .in('status', ['pending', 'confirmed'])
+    if (!existing?.length) return false
+    for (const apt of existing) {
+      if (excludeAppointmentId && apt.id === excludeAppointmentId) continue
+      if (timeRangesOverlap(startTimeVal, endTimeVal, apt.start_time, apt.end_time)) return true
+    }
+    return false
+  }
+
   // Kaydet (yeni veya düzenleme)
   async function handleSave(e: React.FormEvent) {
     e.preventDefault(); setSaving(true); setError(null)
@@ -187,6 +217,19 @@ export default function AppointmentsPage() {
       start_time: startTime,
       end_time: endTime,
       notes: notes || null,
+    }
+
+    const conflict = await checkStaffConflict(
+      staffId || null,
+      date,
+      startTime,
+      endTime,
+      editingAppointment?.id ?? null
+    )
+    if (conflict) {
+      setError('Bu personelin bu saatte başka bir randevusu var.')
+      setSaving(false)
+      return
     }
 
     if (editingAppointment) {
@@ -235,6 +278,19 @@ export default function AppointmentsPage() {
     const selectedService = services.find(s => s.id === rescheduleAppointment.service_id)
     const duration = selectedService?.duration_minutes || 30
     const endTime = calculateEndTime(rescheduleTime, duration)
+
+    const conflict = await checkStaffConflict(
+      rescheduleAppointment.staff_id ?? null,
+      rescheduleDate,
+      rescheduleTime,
+      endTime,
+      rescheduleAppointment.id
+    )
+    if (conflict) {
+      setError('Bu personelin bu saatte başka bir randevusu var.')
+      setSaving(false)
+      return
+    }
 
     const { error } = await supabase
       .from('appointments')
@@ -570,18 +626,23 @@ export default function AppointmentsPage() {
                   </span>
                 </div>
 
-                {/* Orta: müşteri ve detaylar */}
-                <div className="mt-3 space-y-1 text-xs text-gray-600">
-                  <p className="font-medium text-gray-900">
+                {/* Orta: sabit satırlar (hizalı kutu), ücret dahil */}
+                <div className="mt-3 min-h-[7.5rem] flex flex-col justify-center space-y-0.5 text-xs text-gray-600">
+                  <p className="font-medium text-gray-900 truncate" title={apt.customers?.name || 'İsimsiz'}>
                     {apt.customers?.name || 'İsimsiz'}
                   </p>
                   <p className="text-gray-500">
                     {formatTime(apt.start_time)} – {formatTime(apt.end_time)}
                   </p>
-                  {apt.services?.name && <p>Hizmet: {apt.services.name}</p>}
-                  {apt.staff_members?.name && <p>Personel: {apt.staff_members.name}</p>}
-                  {apt.services?.duration_minutes && <p>Süre: {apt.services.duration_minutes} dk</p>}
-                  {apt.notes && <p className="truncate text-gray-400">{apt.notes}</p>}
+                  <p className="truncate">{apt.services?.name ? `Hizmet: ${apt.services.name}` : '—'}</p>
+                  <p className="truncate">{apt.staff_members?.name ? `Personel: ${apt.staff_members.name}` : '—'}</p>
+                  <p>{apt.services?.duration_minutes ? `Süre: ${apt.services.duration_minutes} dk` : '—'}</p>
+                  <p>
+                    Ücret: <span className="text-price">{formatCurrency(apt.services?.price ?? 0)}</span>
+                  </p>
+                  <p className={cn('truncate text-gray-400', !apt.notes && 'invisible')}>
+                    {apt.notes || '—'}
+                  </p>
                 </div>
 
                 {/* Alt: aksiyon ikonları */}
