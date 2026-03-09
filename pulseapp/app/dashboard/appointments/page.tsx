@@ -331,9 +331,9 @@ export default function AppointmentsPage() {
       </div>
 
       {/* Şu anki saat */}
-      <div className="mb-4 flex justify-center">
-        <div className="inline-flex items-center gap-2 rounded-full bg-gray-50 px-4 py-1.5 text-sm font-semibold text-gray-700">
-          <Clock className="h-4 w-4 text-gray-500" />
+      <div className="mb-6 flex justify-center">
+        <div className="inline-flex items-center gap-3 rounded-full bg-gray-200/90 px-5 py-2 text-base font-semibold text-gray-800 shadow-sm">
+          <Clock className="h-5 w-5 text-gray-700" />
           <span>
             Şu an:{' '}
             <span className="tabular-nums">
