@@ -6,6 +6,7 @@ import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import {
   Plus, Loader2, Calendar, ChevronLeft, ChevronRight,
   Clock, User, CheckCircle, XCircle, AlertTriangle, X,
+  Pencil, CalendarClock,
 } from 'lucide-react'
 import { formatTime, getStatusColor, cn } from '@/lib/utils'
 import { STATUS_LABELS, type Appointment, type AppointmentStatus, type Customer, type Service, type StaffMember } from '@/types'
@@ -16,8 +17,14 @@ export default function AppointmentsPage() {
   const [loading, setLoading] = useState(true)
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
   const [showModal, setShowModal] = useState(false)
+  const [editingAppointment, setEditingAppointment] = useState<any | null>(null)
+  const [rescheduleAppointment, setRescheduleAppointment] = useState<any | null>(null)
+  const [cancelConfirmAppointment, setCancelConfirmAppointment] = useState<any | null>(null)
+  const [cancelNotifyCustomer, setCancelNotifyCustomer] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [rescheduleDate, setRescheduleDate] = useState('')
+  const [rescheduleTime, setRescheduleTime] = useState('09:00')
 
   // Dropdown data
   const [customers, setCustomers] = useState<Customer[]>([])
@@ -85,11 +92,34 @@ export default function AppointmentsPage() {
     return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}, ${days[d.getDay()]}`
   }
 
-  // Modal aç
+  // Modal aç (yeni)
   function openNewModal() {
+    setEditingAppointment(null)
     setCustomerId(''); setServiceId(''); setStaffId('')
     setDate(selectedDate); setStartTime('09:00'); setNotes('')
     setError(null); setShowModal(true)
+  }
+
+  // Düzenleme modalı aç
+  function openEditModal(apt: any) {
+    setEditingAppointment(apt)
+    setCustomerId(apt.customer_id); setServiceId(apt.service_id || ''); setStaffId(apt.staff_id || '')
+    setDate(apt.appointment_date); setStartTime(apt.start_time); setNotes(apt.notes || '')
+    setError(null); setShowModal(true)
+  }
+
+  // Erteleme modalı aç
+  function openRescheduleModal(apt: any) {
+    setRescheduleAppointment(apt)
+    setRescheduleDate(apt.appointment_date)
+    setRescheduleTime(apt.start_time)
+    setError(null)
+  }
+
+  // İptal onay modalı aç
+  function openCancelConfirm(apt: any) {
+    setCancelConfirmAppointment(apt)
+    setCancelNotifyCustomer(true)
   }
 
   // Bitiş saati hesapla
@@ -101,7 +131,7 @@ export default function AppointmentsPage() {
     return `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`
   }
 
-  // Kaydet
+  // Kaydet (yeni veya düzenleme)
   async function handleSave(e: React.FormEvent) {
     e.preventDefault(); setSaving(true); setError(null)
 
@@ -109,18 +139,71 @@ export default function AppointmentsPage() {
     const duration = selectedService?.duration_minutes || 30
     const endTime = calculateEndTime(startTime, duration)
 
-    const { error } = await supabase.from('appointments').insert({
-      business_id: businessId,
+    const payload = {
       customer_id: customerId,
       service_id: serviceId || null,
       staff_id: staffId || null,
       appointment_date: date,
       start_time: startTime,
       end_time: endTime,
-      status: 'confirmed',
-      source: 'manual',
       notes: notes || null,
-    })
+    }
+
+    if (editingAppointment) {
+      const { error } = await supabase
+        .from('appointments')
+        .update(payload)
+        .eq('id', editingAppointment.id)
+
+      if (error) {
+        if (error.message.includes('başka bir randevusu var')) {
+          setError('Bu personelin bu saatte başka bir randevusu var.')
+        } else {
+          setError(error.message)
+        }
+        setSaving(false)
+        return
+      }
+      setEditingAppointment(null)
+    } else {
+      const { error } = await supabase.from('appointments').insert({
+        business_id: businessId,
+        ...payload,
+        status: 'confirmed',
+        source: 'manual',
+      })
+
+      if (error) {
+        if (error.message.includes('başka bir randevusu var')) {
+          setError('Bu personelin bu saatte başka bir randevusu var.')
+        } else {
+          setError(error.message)
+        }
+        setSaving(false)
+        return
+      }
+    }
+
+    setSaving(false); setShowModal(false); fetchAppointments()
+  }
+
+  // Erteleme kaydet
+  async function handleRescheduleSave(e: React.FormEvent) {
+    e.preventDefault()
+    if (!rescheduleAppointment) return
+    setSaving(true); setError(null)
+    const selectedService = services.find(s => s.id === rescheduleAppointment.service_id)
+    const duration = selectedService?.duration_minutes || 30
+    const endTime = calculateEndTime(rescheduleTime, duration)
+
+    const { error } = await supabase
+      .from('appointments')
+      .update({
+        appointment_date: rescheduleDate,
+        start_time: rescheduleTime,
+        end_time: endTime,
+      })
+      .eq('id', rescheduleAppointment.id)
 
     if (error) {
       if (error.message.includes('başka bir randevusu var')) {
@@ -131,8 +214,42 @@ export default function AppointmentsPage() {
       setSaving(false)
       return
     }
+    setSaving(false); setRescheduleAppointment(null); fetchAppointments()
+  }
 
-    setSaving(false); setShowModal(false); fetchAppointments()
+  // İptal onayı (isteğe bağlı WhatsApp bildirimi)
+  async function handleCancelConfirm() {
+    if (!cancelConfirmAppointment) return
+    setSaving(true)
+    const apt = cancelConfirmAppointment
+    const { error } = await supabase
+      .from('appointments')
+      .update({ status: 'cancelled' })
+      .eq('id', apt.id)
+
+    if (error) {
+      alert('İptal güncellenemedi: ' + error.message)
+      setSaving(false)
+      setCancelConfirmAppointment(null)
+      return
+    }
+
+    if (cancelNotifyCustomer && apt.customer_id) {
+      try {
+        await fetch('/api/messages/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            businessId,
+            customerId: apt.customer_id,
+            content: 'Merhaba, randevunuz iptal edilmiştir. Sorularınız için bizi arayabilirsiniz.',
+          }),
+        })
+      } catch {
+        // Bildirim hatası randevu iptalini geri almaz
+      }
+    }
+    setSaving(false); setCancelConfirmAppointment(null); fetchAppointments()
   }
 
   // Durum güncelle
@@ -238,7 +355,7 @@ export default function AppointmentsPage() {
                   {apt.notes && <p className="mt-1 text-sm text-gray-400 truncate">{apt.notes}</p>}
                 </div>
 
-                {/* Durum Butonları */}
+                {/* Durum butonları (Tamamlandı, Gelmedi, İptal) */}
                 <div className="flex items-center gap-1 flex-shrink-0">
                   {apt.status === 'confirmed' && (
                     <>
@@ -257,7 +374,7 @@ export default function AppointmentsPage() {
                         <AlertTriangle className="h-5 w-5" />
                       </button>
                       <button
-                        onClick={() => updateStatus(apt.id, 'cancelled')}
+                        onClick={() => openCancelConfirm(apt)}
                         title="İptal"
                         className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 transition-colors"
                       >
@@ -276,18 +393,47 @@ export default function AppointmentsPage() {
                   )}
                 </div>
               </div>
+
+              {/* Düzenle / Ertele — kartın altında ayrı satır, her zaman görünür */}
+              {(apt.status === 'confirmed' || apt.status === 'pending') && (
+                <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-2">
+                  <button
+                    onClick={() => openEditModal(apt)}
+                    type="button"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    <Pencil className="h-4 w-4" />
+                    Düzenle
+                  </button>
+                  <button
+                    onClick={() => openRescheduleModal(apt)}
+                    type="button"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100 transition-colors"
+                  >
+                    <CalendarClock className="h-4 w-4" />
+                    Ertele
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>
       )}
 
-      {/* Yeni Randevu Modal */}
+      {/* Yeni / Düzenleme Randevu Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="card w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Yeni Randevu</h2>
-              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
+              <h2 className="text-lg font-semibold text-gray-900">
+                {editingAppointment ? 'Randevu Düzenle' : 'Yeni Randevu'}
+              </h2>
+              <button
+                onClick={() => { setShowModal(false); setEditingAppointment(null) }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
 
             <form onSubmit={handleSave} className="space-y-4">
@@ -351,13 +497,121 @@ export default function AppointmentsPage() {
               {error && <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
 
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setShowModal(false)} className="btn-secondary flex-1">İptal</button>
+                <button
+                  type="button"
+                  onClick={() => { setShowModal(false); setEditingAppointment(null) }}
+                  className="btn-secondary flex-1"
+                >
+                  İptal
+                </button>
                 <button type="submit" disabled={saving || !customerId} className="btn-primary flex-1">
                   {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  Randevu Oluştur
+                  {editingAppointment ? 'Güncelle' : 'Randevu Oluştur'}
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Erteleme Modal */}
+      {rescheduleAppointment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="card w-full max-w-sm">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">Randevuyu Ertele</h2>
+              <button
+                onClick={() => setRescheduleAppointment(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-500 mb-4">
+              {rescheduleAppointment.customers?.name} — {formatTime(rescheduleAppointment.start_time)}
+            </p>
+            <form onSubmit={handleRescheduleSave} className="space-y-4">
+              <div>
+                <label className="label">Yeni Tarih</label>
+                <input
+                  type="date"
+                  value={rescheduleDate}
+                  onChange={(e) => setRescheduleDate(e.target.value)}
+                  className="input"
+                  required
+                />
+              </div>
+              <div>
+                <label className="label">Yeni Saat</label>
+                <select
+                  value={rescheduleTime}
+                  onChange={(e) => setRescheduleTime(e.target.value)}
+                  className="input"
+                  required
+                >
+                  {generateTimeSlots().map(t => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </div>
+              {error && <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setRescheduleAppointment(null)} className="btn-secondary flex-1">
+                  Vazgeç
+                </button>
+                <button type="submit" disabled={saving} className="btn-primary flex-1">
+                  {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Ertele
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* İptal Onay Modal */}
+      {cancelConfirmAppointment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="card w-full max-w-sm">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">Randevuyu İptal Et</h2>
+              <button
+                onClick={() => setCancelConfirmAppointment(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-500 mb-4">
+              {cancelConfirmAppointment.customers?.name} — {formatTime(cancelConfirmAppointment.start_time)} randevusunu iptal etmek istediğinize emin misiniz?
+            </p>
+            <label className="flex items-center gap-2 cursor-pointer mb-4">
+              <input
+                type="checkbox"
+                checked={cancelNotifyCustomer}
+                onChange={(e) => setCancelNotifyCustomer(e.target.checked)}
+                className="rounded border-gray-300"
+              />
+              <span className="text-sm text-gray-700">Müşteriye WhatsApp ile iptal bildirimi gönder</span>
+            </label>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setCancelConfirmAppointment(null)}
+                className="btn-secondary flex-1"
+              >
+                Vazgeç
+              </button>
+              <button
+                type="button"
+                onClick={handleCancelConfirm}
+                disabled={saving}
+                className="flex-1 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin inline" /> : null}
+                İptal Et
+              </button>
+            </div>
           </div>
         </div>
       )}
