@@ -383,32 +383,32 @@ export default function AppointmentsPage() {
         </div>
         {/* 1 numaralı alan: görünüm geçiş butonları */}
         <div className="flex justify-end md:w-auto">
-          <div className="inline-flex rounded-lg border border-gray-200 bg-white p-0.5 shadow-sm">
+          <div className="inline-flex rounded-full border border-gray-200 bg-white p-0.5 shadow-sm">
             <button
               type="button"
               onClick={() => setViewMode('list')}
               className={cn(
-                'inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                'inline-flex items-center rounded-full px-2.5 py-1 text-xs transition-colors',
                 viewMode === 'list'
                   ? 'bg-pulse-50 text-pulse-700'
                   : 'text-gray-500 hover:bg-gray-50',
               )}
+              title="Liste görünüm"
             >
               <LayoutList className="h-3.5 w-3.5" />
-              Liste
             </button>
             <button
               type="button"
               onClick={() => setViewMode('box')}
               className={cn(
-                'inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                'inline-flex items-center rounded-full px-2.5 py-1 text-xs transition-colors',
                 viewMode === 'box'
                   ? 'bg-pulse-50 text-pulse-700'
                   : 'text-gray-500 hover:bg-gray-50',
               )}
+              title="Kutu görünüm"
             >
               <LayoutGrid className="h-3.5 w-3.5" />
-              Kutular
             </button>
           </div>
         </div>
@@ -540,7 +540,7 @@ export default function AppointmentsPage() {
           {appointments.map((apt) => {
             const timeState = getTimeState(apt)
             const cardClass = cn(
-              'card flex h-full flex-col justify-between p-4 transition-colors',
+              'card flex h-full flex-col justify-between p-4 transition-colors md:aspect-square',
               // Süresi geçen randevular: tamamen gri kutu
               timeState === 'past' && 'border-transparent bg-gray-200 text-gray-700',
               // Şu anki randevu: beyaz zemin, sadece yeşil çerçeve
@@ -549,34 +549,32 @@ export default function AppointmentsPage() {
 
             return (
               <div key={apt.id} className={cardClass}>
+                {/* Üst: başlangıç saati ve durum */}
                 <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-gray-900">
-                        {apt.customers?.name || 'İsimsiz'}
-                      </span>
-                      <span className={`badge ${getStatusColor(apt.status)}`}>
-                        {STATUS_LABELS[apt.status as keyof typeof STATUS_LABELS]}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-xs text-gray-500">
-                      {formatTime(apt.start_time)} – {formatTime(apt.end_time)}
-                    </p>
+                  <div className="text-2xl font-semibold text-gray-900">
+                    {formatTime(apt.start_time)}
                   </div>
+                  <span className={`badge ${getStatusColor(apt.status)}`}>
+                    {STATUS_LABELS[apt.status as keyof typeof STATUS_LABELS]}
+                  </span>
                 </div>
-                <div className="mt-2 space-y-1 text-xs text-gray-500">
-                  {apt.services?.name && <p>{apt.services.name}</p>}
+
+                {/* Orta: müşteri ve detaylar */}
+                <div className="mt-3 space-y-1 text-xs text-gray-600">
+                  <p className="font-medium text-gray-900">
+                    {apt.customers?.name || 'İsimsiz'}
+                  </p>
+                  <p className="text-gray-500">
+                    {formatTime(apt.start_time)} – {formatTime(apt.end_time)}
+                  </p>
+                  {apt.services?.name && <p>Hizmet: {apt.services.name}</p>}
                   {apt.staff_members?.name && <p>Personel: {apt.staff_members.name}</p>}
                   {apt.services?.duration_minutes && <p>Süre: {apt.services.duration_minutes} dk</p>}
                   {apt.notes && <p className="truncate text-gray-400">{apt.notes}</p>}
                 </div>
-                <div className="mt-3 flex items-center justify-between">
-                  <div className="text-xs text-gray-400">
-                    Kaynak:{' '}
-                    <span className="uppercase">
-                      {(apt.source || 'manual').toString().slice(0, 3)}
-                    </span>
-                  </div>
+
+                {/* Alt: aksiyon ikonları */}
+                <div className="mt-4 flex items-center justify-end">
                   <div className="flex items-center gap-1">
                     {(apt.status === 'confirmed' || apt.status === 'pending') && (
                       <>
