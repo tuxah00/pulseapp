@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import Sidebar from '@/components/dashboard/sidebar'
 import OnboardingForm from '@/components/dashboard/onboarding-form'
 import { BusinessProvider } from '@/lib/hooks/business-context-provider'
+import { ThemeProvider } from '@/components/theme-provider'
 
 export default async function DashboardLayout({
   children,
@@ -44,20 +45,22 @@ export default async function DashboardLayout({
   const businessName = business?.name || 'İşletme'
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Sidebar businessName={businessName} userName={userName} />
-      <main className="lg:pl-64 transition-all duration-200">
-        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          <BusinessProvider value={{
-            businessId: staffMember.business_id,
-            userId: user.id,
-            staffId: staffMember.id,
-            staffName: staffMember.name || userName,
-          }}>
-            {children}
-          </BusinessProvider>
-        </div>
-      </main>
-    </div>
+    <ThemeProvider>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <Sidebar businessName={businessName} userName={userName} />
+        <main className="lg:pl-64 transition-all duration-200">
+          <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+            <BusinessProvider value={{
+              businessId: staffMember.business_id,
+              userId: user.id,
+              staffId: staffMember.id,
+              staffName: staffMember.name || userName,
+            }}>
+              {children}
+            </BusinessProvider>
+          </div>
+        </main>
+      </div>
+    </ThemeProvider>
   )
 }

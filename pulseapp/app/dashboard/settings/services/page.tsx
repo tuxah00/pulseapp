@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { Plus, Pencil, Trash2, Loader2, Banknote, LayoutList, LayoutGrid } from 'lucide-react'
 import { formatCurrency, cn } from '@/lib/utils'
+import { useViewMode } from '@/lib/hooks/use-view-mode'
 import type { Service } from '@/types'
 
 export default function ServicesPage() {
@@ -15,7 +16,7 @@ export default function ServicesPage() {
   const [editingService, setEditingService] = useState<Service | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [viewMode, setViewMode] = useState<'list' | 'box'>('list')
+  const [viewMode, setViewMode] = useViewMode('services', 'list')
 
   // Form state
   const [name, setName] = useState('')

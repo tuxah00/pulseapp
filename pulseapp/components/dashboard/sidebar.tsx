@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
+import { useTheme } from '@/components/theme-provider'
 import {
   LayoutDashboard,
   Calendar,
@@ -21,6 +22,8 @@ import {
   Zap,
   Scissors,
   Package,
+  Sun,
+  Moon,
 } from 'lucide-react'
 
 const navigation = [
@@ -48,6 +51,7 @@ interface SidebarProps {
 export default function Sidebar({ businessName, userName }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
+  const { theme, toggleTheme } = useTheme()
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
 
@@ -66,19 +70,19 @@ export default function Sidebar({ businessName, userName }: SidebarProps) {
   const sidebarContent = (
     <div className="flex h-full flex-col">
       {/* Logo */}
-      <div className="flex h-16 items-center gap-3 border-b border-gray-200 px-4">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-pulse-500">
+      <div className="flex h-16 items-center gap-3 border-b border-gray-200 dark:border-gray-700 px-4">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-pulse-500 flex-shrink-0">
           <Zap className="h-5 w-5 text-white" />
         </div>
         {!collapsed && (
           <div className="flex-1 min-w-0">
-            <p className="truncate text-sm font-bold text-gray-900">PulseApp</p>
-            <p className="truncate text-xs text-gray-500">{businessName}</p>
+            <p className="truncate text-sm font-bold text-gray-900 dark:text-gray-100">PulseApp</p>
+            <p className="truncate text-xs text-gray-500 dark:text-gray-400">{businessName}</p>
           </div>
         )}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="hidden lg:flex h-7 w-7 items-center justify-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+          className="hidden lg:flex h-7 w-7 items-center justify-center rounded-md text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300"
         >
           <ChevronLeft className={cn('h-4 w-4 transition-transform', collapsed && 'rotate-180')} />
         </button>
@@ -96,11 +100,11 @@ export default function Sidebar({ businessName, userName }: SidebarProps) {
               className={cn(
                 'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
                 active
-                  ? 'bg-pulse-50 text-pulse-700'
-                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                  ? 'bg-pulse-50 text-pulse-700 dark:bg-pulse-950/40 dark:text-pulse-300'
+                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/60 hover:text-gray-900 dark:hover:text-gray-100'
               )}
             >
-              <item.icon className={cn('h-5 w-5 flex-shrink-0', active ? 'text-pulse-600' : 'text-gray-400')} />
+              <item.icon className={cn('h-5 w-5 flex-shrink-0', active ? 'text-pulse-600 dark:text-pulse-400' : 'text-gray-400 dark:text-gray-500')} />
               {!collapsed && <span>{item.name}</span>}
             </Link>
           )
@@ -108,7 +112,7 @@ export default function Sidebar({ businessName, userName }: SidebarProps) {
       </nav>
 
       {/* Alt navigasyon */}
-      <div className="border-t border-gray-200 px-3 py-4 space-y-1">
+      <div className="border-t border-gray-200 dark:border-gray-700 px-3 py-4 space-y-1">
         {bottomNav.map((item) => {
           const active = isActive(item.href)
           return (
@@ -119,20 +123,34 @@ export default function Sidebar({ businessName, userName }: SidebarProps) {
               className={cn(
                 'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
                 active
-                  ? 'bg-pulse-50 text-pulse-700'
-                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                  ? 'bg-pulse-50 text-pulse-700 dark:bg-pulse-950/40 dark:text-pulse-300'
+                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/60 hover:text-gray-900 dark:hover:text-gray-100'
               )}
             >
-              <item.icon className={cn('h-5 w-5 flex-shrink-0', active ? 'text-pulse-600' : 'text-gray-400')} />
+              <item.icon className={cn('h-5 w-5 flex-shrink-0', active ? 'text-pulse-600 dark:text-pulse-400' : 'text-gray-400 dark:text-gray-500')} />
               {!collapsed && <span>{item.name}</span>}
             </Link>
           )
         })}
 
-        {/* Kullanıcı bilgisi + Çıkış */}
+        {/* Karanlık Mod Geçişi */}
+        <button
+          onClick={toggleTheme}
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-400 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700/60 hover:text-gray-900 dark:hover:text-gray-100"
+          title={theme === 'dark' ? 'Aydınlık Mod' : 'Karanlık Mod'}
+        >
+          {theme === 'dark' ? (
+            <Sun className="h-5 w-5 flex-shrink-0 text-amber-400" />
+          ) : (
+            <Moon className="h-5 w-5 flex-shrink-0 text-gray-400" />
+          )}
+          {!collapsed && <span>{theme === 'dark' ? 'Aydınlık Mod' : 'Karanlık Mod'}</span>}
+        </button>
+
+        {/* Çıkış */}
         <button
           onClick={handleLogout}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-600 transition-colors hover:bg-red-50 hover:text-red-600"
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-400 transition-colors hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400"
         >
           <LogOut className="h-5 w-5 flex-shrink-0 text-gray-400" />
           {!collapsed && <span>Çıkış Yap</span>}
@@ -140,9 +158,9 @@ export default function Sidebar({ businessName, userName }: SidebarProps) {
 
         {/* Kullanıcı */}
         {!collapsed && (
-          <div className="mt-2 rounded-lg bg-gray-50 px-3 py-2.5">
-            <p className="truncate text-sm font-medium text-gray-900">{userName}</p>
-            <p className="truncate text-xs text-gray-500">İşletme Sahibi</p>
+          <div className="mt-2 rounded-lg bg-gray-50 dark:bg-gray-700/50 px-3 py-2.5">
+            <p className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{userName}</p>
+            <p className="truncate text-xs text-gray-500 dark:text-gray-400">İşletme Sahibi</p>
           </div>
         )}
       </div>
@@ -154,9 +172,9 @@ export default function Sidebar({ businessName, userName }: SidebarProps) {
       {/* Mobil hamburger butonu */}
       <button
         onClick={() => setMobileOpen(true)}
-        className="fixed left-4 top-4 z-40 flex h-10 w-10 items-center justify-center rounded-lg bg-white shadow-md lg:hidden"
+        className="fixed left-4 top-4 z-40 flex h-10 w-10 items-center justify-center rounded-lg bg-white dark:bg-gray-800 shadow-md lg:hidden"
       >
-        <Menu className="h-5 w-5 text-gray-600" />
+        <Menu className="h-5 w-5 text-gray-600 dark:text-gray-300" />
       </button>
 
       {/* Mobil overlay */}
@@ -170,7 +188,7 @@ export default function Sidebar({ businessName, userName }: SidebarProps) {
       {/* Mobil sidebar */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-xl transition-transform lg:hidden',
+          'fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-900 shadow-xl transition-transform lg:hidden',
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
@@ -180,7 +198,7 @@ export default function Sidebar({ businessName, userName }: SidebarProps) {
       {/* Desktop sidebar */}
       <aside
         className={cn(
-          'hidden lg:fixed lg:inset-y-0 lg:left-0 lg:flex lg:flex-col bg-white border-r border-gray-200 transition-all duration-200',
+          'hidden lg:fixed lg:inset-y-0 lg:left-0 lg:flex lg:flex-col bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 transition-all duration-200',
           collapsed ? 'lg:w-[72px]' : 'lg:w-64'
         )}
       >
