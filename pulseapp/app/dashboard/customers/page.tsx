@@ -78,7 +78,7 @@ export default function CustomersPage() {
         email: email || null, birthday: birthday || null, notes: notes || null,
       }).eq('id', editingCustomer.id)
       if (error) { setError(error.message.includes('idx_customers_business_phone') ? 'Bu telefon numarası zaten kayıtlı.' : error.message); setSaving(false); return }
-      setSelectedCustomer(prev => prev?.id === editingCustomer.id ? { ...prev, ...customerData } : prev)
+      setSelectedCustomer(prev => prev?.id === editingCustomer.id ? { ...prev, name, phone: phone.replace(/\s/g, ''), email: email || null, birthday: birthday || null, notes: notes || null } as Customer : prev)
     } else {
       const { error } = await supabase.from('customers').insert(customerData)
       if (error) { setError(error.message.includes('idx_customers_business_phone') ? 'Bu telefon numarası zaten kayıtlı.' : error.message); setSaving(false); return }
