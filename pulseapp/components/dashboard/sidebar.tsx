@@ -20,12 +20,14 @@ import {
   Menu,
   Zap,
   Scissors,
+  Package,
 } from 'lucide-react'
 
 const navigation = [
   { name: 'Genel Bakış', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Randevular', href: '/dashboard/appointments', icon: Calendar },
   { name: 'Müşteriler', href: '/dashboard/customers', icon: Users },
+  { name: 'Stoklar', href: '/dashboard/stoklar', icon: Package },
   { name: 'Hizmetler', href: '/dashboard/settings/services', icon: Scissors },
   { name: 'Personeller', href: '/dashboard/settings/staff', icon: UserPlus },
   { name: 'Mesajlar', href: '/dashboard/messages', icon: MessageSquare },
