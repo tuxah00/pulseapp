@@ -50,6 +50,49 @@
   .text-price {
     @apply text-green-600 font-medium;
   }
+
+  /* ── Karanlık Mod Overrides ── */
+  .dark .card {
+    background-color: #1f2937; /* gray-800 */
+    border-color: #374151;     /* gray-700 */
+    color: #f3f4f6;            /* gray-100 */
+  }
+
+  .dark .input {
+    background-color: #374151; /* gray-700 */
+    border-color: #4b5563;     /* gray-600 */
+    color: #f3f4f6;
+  }
+
+  .dark .input::placeholder {
+    color: #6b7280; /* gray-500 */
+  }
+
+  .dark .label {
+    color: #d1d5db; /* gray-300 */
+  }
+
+  .dark .btn-secondary {
+    background-color: #374151;
+    border-color: #4b5563;
+    color: #e5e7eb;
+  }
+
+  .dark .btn-secondary:hover {
+    background-color: #4b5563;
+  }
+
+  /* Dark modda card içindeki metin renklerini otomatik düzelt */
+  .dark .card .text-gray-900 { color: #f9fafb; }
+  .dark .card .text-gray-700 { color: #e5e7eb; }
+  .dark .card .text-gray-600 { color: #d1d5db; }
+  .dark .card .text-gray-500 { color: #9ca3af; }
+  .dark .card .text-gray-400 { color: #6b7280; }
+
+  /* Slide-over panel (detay paneli) */
+  .slide-panel {
+    @apply fixed inset-y-0 right-0 z-50 flex w-80 sm:w-96 flex-col bg-white shadow-xl dark:bg-gray-800;
+  }
 }
 
 /* Scrollbar */
@@ -66,4 +109,8 @@
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #9ca3af;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #4b5563;
 }
