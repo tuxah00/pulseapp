@@ -292,28 +292,28 @@ export default function WhatsAppSettingsPage() {
             </div>
 
             <div className="mt-6 grid gap-4 sm:grid-cols-3">
-              <div className="rounded-lg bg-white border border-gray-100 px-4 py-3">
-                <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+              <div className="rounded-lg bg-slate-700 border border-slate-600 px-4 py-3">
+                <div className="flex items-center gap-2 text-sm text-slate-300 mb-1">
                   <Phone className="h-3.5 w-3.5" />
                   Telefon Numarası
                 </div>
-                <p className="font-semibold text-gray-900">{account.phoneNumber}</p>
+                <p className="font-semibold text-white">{account.phoneNumber}</p>
               </div>
 
-              <div className="rounded-lg bg-white border border-gray-100 px-4 py-3">
-                <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+              <div className="rounded-lg bg-slate-700 border border-slate-600 px-4 py-3">
+                <div className="flex items-center gap-2 text-sm text-slate-300 mb-1">
                   <Shield className="h-3.5 w-3.5" />
                   Kalite Puanı
                 </div>
                 <QualityBadge rating={account.qualityRating} />
               </div>
 
-              <div className="rounded-lg bg-white border border-gray-100 px-4 py-3">
-                <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+              <div className="rounded-lg bg-slate-700 border border-slate-600 px-4 py-3">
+                <div className="flex items-center gap-2 text-sm text-slate-300 mb-1">
                   <Zap className="h-3.5 w-3.5" />
                   Bağlanma Tarihi
                 </div>
-                <p className="font-semibold text-gray-900">
+                <p className="font-semibold text-white">
                   {new Date(account.connectedAt).toLocaleDateString('tr-TR', {
                     day: 'numeric',
                     month: 'long',
@@ -542,13 +542,13 @@ function FeatureItem({
   description: string
 }) {
   return (
-    <div className="flex items-start gap-3 rounded-lg border border-gray-100 bg-gray-50/50 p-3">
-      <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-lg bg-pulse-100 text-pulse-600 flex-shrink-0">
+    <div className="flex items-start gap-3 rounded-lg border border-slate-600 bg-slate-700 p-3">
+      <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-lg bg-slate-600 text-slate-200 flex-shrink-0">
         {icon}
       </div>
       <div>
-        <p className="text-sm font-medium text-gray-900">{title}</p>
-        <p className="text-xs text-gray-500 mt-0.5">{description}</p>
+        <p className="text-sm font-medium text-white">{title}</p>
+        <p className="text-xs text-slate-300 mt-0.5">{description}</p>
       </div>
     </div>
   )
