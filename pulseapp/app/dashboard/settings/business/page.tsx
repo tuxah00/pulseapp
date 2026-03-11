@@ -459,7 +459,7 @@ export default function BusinessSettingsPage() {
                         onChange={() => toggleDay(day)}
                         className="peer sr-only"
                       />
-                      <div className="h-6 w-11 rounded-full bg-gray-300 dark:bg-gray-600 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:!bg-white peer-checked:after:translate-x-full peer-checked:after:!bg-pulse-500 peer-checked:after:!border-pulse-400 peer-focus:ring-2 peer-focus:ring-pulse-300" />
+                      <div className="h-6 w-11 rounded-full bg-gray-300 dark:bg-gray-600 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-pulse-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:ring-2 peer-focus:ring-pulse-300" />
                     </label>
 
                     {isOpen ? (
@@ -582,7 +582,7 @@ export default function BusinessSettingsPage() {
               </div>
             </div>
 
-            <div className="card border-purple-200 bg-gradient-to-br from-purple-50/50 to-white">
+            <div className="card border-purple-200 bg-gradient-to-br from-purple-50/50 to-white dark:from-gray-800 dark:to-gray-800 dark:border-gray-700">
               <div className="flex items-center gap-3 mb-1">
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-100">
                   <Sparkles className="h-5 w-5 text-purple-600" />
@@ -736,7 +736,7 @@ function ToggleSetting({
           onChange={(e) => onChange(e.target.checked)}
           className="peer sr-only"
         />
-        <div className="h-6 w-11 rounded-full bg-gray-300 dark:bg-gray-600 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:!bg-white peer-checked:after:translate-x-full peer-checked:after:!bg-pulse-500 peer-checked:after:!border-pulse-400 peer-focus:ring-2 peer-focus:ring-pulse-300" />
+        <div className="h-6 w-11 rounded-full bg-gray-300 dark:bg-gray-600 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-pulse-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:ring-2 peer-focus:ring-pulse-300" />
       </label>
       <div>
         <p className="text-sm font-medium text-gray-900">{label}</p>
@@ -761,9 +761,9 @@ function PlanCard({
 }) {
   return (
     <div
-      className={`relative rounded-xl border p-6 ${
+      className={`relative flex flex-col rounded-xl border p-6 ${
         current
-          ? 'border-pulse-500 bg-pulse-50/30 ring-1 ring-pulse-500'
+          ? 'border-pulse-500 bg-pulse-50/30 dark:bg-gray-700/50 ring-1 ring-pulse-500'
           : popular
           ? 'border-purple-200 bg-white'
           : 'border-gray-200 bg-white'
@@ -792,7 +792,7 @@ function PlanCard({
         </div>
       </div>
 
-      <ul className="space-y-2.5">
+      <ul className="flex-1 space-y-2.5 mb-6">
         {features.map((feature, i) => (
           <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
             <svg className="h-4 w-4 mt-0.5 flex-shrink-0 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -805,7 +805,7 @@ function PlanCard({
 
       <button
         disabled={current}
-        className={`mt-6 w-full rounded-lg px-4 py-2.5 text-sm font-medium transition-colors ${
+        className={`mt-auto w-full rounded-lg px-4 py-2.5 text-sm font-medium transition-colors ${
           current
             ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
             : popular

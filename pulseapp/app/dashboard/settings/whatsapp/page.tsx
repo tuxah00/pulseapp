@@ -262,7 +262,7 @@ export default function WhatsAppSettingsPage() {
       {isConnected && account ? (
         <div className="space-y-6">
           {/* Bağlantı Durumu Kartı */}
-          <div className="card border-green-200 bg-gradient-to-br from-green-50/50 to-white">
+          <div className="card border-green-200 bg-gradient-to-br from-green-50/50 to-white dark:from-gray-800 dark:to-gray-800 dark:border-gray-700">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-4">
                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-green-100">
@@ -392,7 +392,7 @@ export default function WhatsAppSettingsPage() {
       ) : (
         <div className="space-y-6">
           {/* Bağlantı Yok - Ana Kart */}
-          <div className="card border-pulse-200 bg-gradient-to-br from-pulse-50/30 to-white">
+          <div className="card border-pulse-200 bg-gradient-to-br from-pulse-50/30 to-white dark:from-gray-800 dark:to-gray-800 dark:border-gray-700">
             <div className="text-center py-6">
               <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-green-100">
                 <MessageCircle className="h-8 w-8 text-green-600" />
@@ -490,7 +490,7 @@ export default function WhatsAppSettingsPage() {
           </div>
 
           {/* Gereksinimler */}
-          <div className="card bg-gray-50">
+          <div className="card dark:border-gray-600">
             <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-amber-500" />
               Gereksinimler
