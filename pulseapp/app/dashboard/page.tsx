@@ -9,8 +9,9 @@ import {
   TrendingUp,
   Bell,
 } from 'lucide-react'
-import { formatTime, formatCurrency, getStatusColor } from '@/lib/utils'
-import { STATUS_LABELS, SEGMENT_LABELS } from '@/types'
+import { formatCurrency } from '@/lib/utils'
+import { SEGMENT_LABELS } from '@/types'
+import TodayAppointments from './_components/today-appointments'
 
 export default async function DashboardPage() {
   const supabase = createServerSupabaseClient()
@@ -98,10 +99,10 @@ export default async function DashboardPage() {
     <div>
       {/* Sayfa başlığı */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
           Merhaba, {staff.name?.split(' ')[0]} 👋
         </h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
           İşletmenizin bugünkü durumu
         </p>
       </div>
@@ -140,63 +141,14 @@ export default async function DashboardPage() {
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Bugünkü randevular */}
         <div className="lg:col-span-2">
-          <div className="card">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">Bugünkü Randevular</h2>
-              <a href="/dashboard/appointments" className="text-sm font-medium text-pulse-600 hover:text-pulse-700">
-                Tümünü gör →
-              </a>
-            </div>
-
-            {!todayAppointments || todayAppointments.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <Calendar className="mb-3 h-10 w-10 text-gray-300" />
-                <p className="text-sm text-gray-500">Bugün randevu yok</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {todayAppointments.map((apt: any) => (
-                  <div
-                    key={apt.id}
-                    className="flex items-center gap-4 rounded-lg border border-gray-100 p-3 transition-colors hover:bg-gray-50"
-                  >
-                    {/* Saat */}
-                    <div className="flex flex-col items-center">
-                      <span className="text-lg font-bold text-gray-900">
-                        {formatTime(apt.start_time)}
-                      </span>
-                      <span className="text-xs text-gray-400">
-                        {formatTime(apt.end_time)}
-                      </span>
-                    </div>
-
-                    {/* Detay */}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-900 truncate">
-                        {apt.customers?.name || 'İsimsiz'}
-                      </p>
-                      <p className="text-sm text-gray-500 truncate">
-                        {apt.services?.name || 'Hizmet belirtilmemiş'}
-                        {apt.staff_members?.name ? ` · ${apt.staff_members.name}` : ''}
-                      </p>
-                    </div>
-
-                    {/* Durum */}
-                    <span className={`badge ${getStatusColor(apt.status)}`}>
-                      {STATUS_LABELS[apt.status as keyof typeof STATUS_LABELS]}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <TodayAppointments appointments={todayAppointments} />
         </div>
 
         {/* Sağ panel */}
         <div className="space-y-6">
           {/* Son bildirimler */}
           <div className="card">
-            <h2 className="mb-4 text-lg font-semibold text-gray-900">Bildirimler</h2>
+            <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-gray-100">Bildirimler</h2>
             {!notifications || notifications.length === 0 ? (
               <p className="text-sm text-gray-400 text-center py-6">Yeni bildirim yok</p>
             ) : (
@@ -213,7 +165,7 @@ export default async function DashboardPage() {
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{notif.title}</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{notif.title}</p>
                       <p className="text-xs text-gray-500 truncate">{notif.body}</p>
                     </div>
                   </div>

@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
-import { useTheme } from '@/components/theme-provider'
 import {
   LayoutDashboard,
   Calendar,
@@ -22,8 +21,6 @@ import {
   Zap,
   Scissors,
   Package,
-  Sun,
-  Moon,
 } from 'lucide-react'
 
 const navigation = [
@@ -51,7 +48,6 @@ interface SidebarProps {
 export default function Sidebar({ businessName, userName }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
-  const { theme, toggleTheme } = useTheme()
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
 
@@ -132,20 +128,6 @@ export default function Sidebar({ businessName, userName }: SidebarProps) {
             </Link>
           )
         })}
-
-        {/* Karanlık Mod Geçişi */}
-        <button
-          onClick={toggleTheme}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-400 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700/60 hover:text-gray-900 dark:hover:text-gray-100"
-          title={theme === 'dark' ? 'Aydınlık Mod' : 'Karanlık Mod'}
-        >
-          {theme === 'dark' ? (
-            <Sun className="h-5 w-5 flex-shrink-0 text-amber-400" />
-          ) : (
-            <Moon className="h-5 w-5 flex-shrink-0 text-gray-400" />
-          )}
-          {!collapsed && <span>{theme === 'dark' ? 'Aydınlık Mod' : 'Karanlık Mod'}</span>}
-        </button>
 
         {/* Çıkış */}
         <button

@@ -6,8 +6,9 @@ import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import {
   Loader2, Save, Building2, Clock, Bell, Sparkles,
   CreditCard, MapPin, Phone, Mail, Globe,
-  MessageSquare, ChevronDown, ChevronUp,
+  MessageSquare, ChevronDown, ChevronUp, Sun, Moon,
 } from 'lucide-react'
+import { useTheme } from '@/components/theme-provider'
 import {
   SECTOR_LABELS, PLAN_LABELS, PLAN_PRICES,
   type Business, type SectorType, type WorkingHours, type DayHours, type BusinessSettings,
@@ -62,6 +63,7 @@ type TabId = 'info' | 'hours' | 'settings' | 'subscription'
 export default function BusinessSettingsPage() {
   const { businessId, loading: ctxLoading } = useBusinessContext()
   const supabase = createClient()
+  const { theme, toggleTheme } = useTheme()
 
   const [business, setBusiness] = useState<Business | null>(null)
   const [loading, setLoading] = useState(true)
@@ -374,6 +376,42 @@ export default function BusinessSettingsPage() {
                     />
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* Görünüm */}
+            <div className="card">
+              <h2 className="text-lg font-semibold text-gray-900 mb-1">Görünüm</h2>
+              <p className="text-sm text-gray-500 mb-4">Uygulama temasını kişiselleştirin.</p>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  {theme === 'dark' ? (
+                    <Moon className="h-5 w-5 text-pulse-400" />
+                  ) : (
+                    <Sun className="h-5 w-5 text-amber-500" />
+                  )}
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">
+                      {theme === 'dark' ? 'Karanlık Mod' : 'Aydınlık Mod'}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {theme === 'dark' ? 'Koyu arka plan kullanılıyor' : 'Açık arka plan kullanılıyor'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={toggleTheme}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-pulse-500 focus:ring-offset-2 ${
+                    theme === 'dark' ? 'bg-pulse-500' : 'bg-gray-200'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                      theme === 'dark' ? 'translate-x-5' : 'translate-x-0.5'
+                    }`}
+                  />
+                </button>
               </div>
             </div>
 
