@@ -2,7 +2,10 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ChevronRight, Home } from 'lucide-react'
+import { ChevronRight, Home, Bell } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import { useBusinessContext } from '@/lib/hooks/use-business-context'
 
 const ROUTE_LABELS: Record<string, string> = {
   dashboard: 'Genel Bakış',
@@ -32,6 +35,36 @@ interface TopBarProps {
 
 export default function TopBar({ businessName, userName }: TopBarProps) {
   const pathname = usePathname()
+  const { businessId } = useBusinessContext()
+  const [unreadCount, setUnreadCount] = useState(0)
+
+  useEffect(() => {
+    if (!businessId) return
+    const supabase = createClient()
+
+    const fetchUnread = async () => {
+      const { count } = await supabase
+        .from('notifications')
+        .select('id', { count: 'exact', head: true })
+        .eq('business_id', businessId)
+        .eq('is_read', false)
+      setUnreadCount(count ?? 0)
+    }
+
+    fetchUnread()
+
+    const channel = supabase
+      .channel('notifications-bell')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'notifications',
+        filter: `business_id=eq.${businessId}`,
+      }, () => { fetchUnread() })
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [businessId])
 
   // Build breadcrumb from pathname
   const segments = pathname.split('/').filter(Boolean)
@@ -73,6 +106,14 @@ export default function TopBar({ businessName, userName }: TopBarProps) {
       </nav>
 
       <div className="ml-auto flex items-center gap-3">
+        <Link href="/dashboard" className="relative p-1 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors" title="Bildirimler">
+          <Bell className="h-5 w-5" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white font-bold leading-none">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          )}
+        </Link>
         <div className="hidden sm:flex flex-col items-end">
           <span className="text-sm font-medium text-gray-900 dark:text-gray-100 leading-none">{userName}</span>
           <span className="text-xs text-gray-500 dark:text-gray-400 leading-none mt-0.5">{businessName}</span>
