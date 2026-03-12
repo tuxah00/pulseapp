@@ -27,6 +27,7 @@ CREATE INDEX IF NOT EXISTS idx_whatsapp_accounts_status ON whatsapp_accounts(sta
 
 ALTER TABLE whatsapp_accounts ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Business members can view own whatsapp account" ON whatsapp_accounts;
 CREATE POLICY "Business members can view own whatsapp account"
   ON whatsapp_accounts FOR SELECT
   USING (
@@ -35,6 +36,7 @@ CREATE POLICY "Business members can view own whatsapp account"
     )
   );
 
+DROP POLICY IF EXISTS "Business owners can manage own whatsapp account" ON whatsapp_accounts;
 CREATE POLICY "Business owners can manage own whatsapp account"
   ON whatsapp_accounts FOR ALL
   USING (
