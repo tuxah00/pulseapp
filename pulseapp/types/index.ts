@@ -96,6 +96,7 @@ export interface Business {
   google_maps_url: string | null
   whatsapp_number: string | null
   twilio_whatsapp_sid: string | null
+  whatsapp_mode: 'shared' | 'own'
   is_active: boolean
   created_at: string
   updated_at: string
