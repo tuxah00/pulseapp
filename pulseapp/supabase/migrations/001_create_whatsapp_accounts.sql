@@ -21,9 +21,9 @@ CREATE TABLE IF NOT EXISTS whatsapp_accounts (
   UNIQUE(business_id)
 );
 
-CREATE INDEX idx_whatsapp_accounts_business ON whatsapp_accounts(business_id);
-CREATE INDEX idx_whatsapp_accounts_phone_number_id ON whatsapp_accounts(phone_number_id);
-CREATE INDEX idx_whatsapp_accounts_status ON whatsapp_accounts(status);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_accounts_business ON whatsapp_accounts(business_id);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_accounts_phone_number_id ON whatsapp_accounts(phone_number_id);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_accounts_status ON whatsapp_accounts(status);
 
 ALTER TABLE whatsapp_accounts ENABLE ROW LEVEL SECURITY;
 
