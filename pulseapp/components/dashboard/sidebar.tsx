@@ -21,19 +21,45 @@ import {
   Zap,
   Scissors,
   Package,
+  FolderOpen,
+  Briefcase,
+  Car,
+  PawPrint,
+  ClipboardList,
+  CreditCard,
+  CalendarDays,
+  CheckSquare,
+  BookOpen,
+  Image,
+  type LucideIcon,
 } from 'lucide-react'
+import type { SectorType, PlanType } from '@/types'
+import { getSidebarSections } from '@/lib/config/sector-modules'
 
-const navigation = [
-  { name: 'Genel Bakış', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Randevular', href: '/dashboard/appointments', icon: Calendar },
-  { name: 'Müşteriler', href: '/dashboard/customers', icon: Users },
-  { name: 'Stoklar', href: '/dashboard/stoklar', icon: Package },
-  { name: 'Hizmetler', href: '/dashboard/settings/services', icon: Scissors },
-  { name: 'Personeller', href: '/dashboard/settings/staff', icon: UserPlus },
-  { name: 'Mesajlar', href: '/dashboard/messages', icon: MessageSquare },
-  { name: 'Yorumlar', href: '/dashboard/reviews', icon: Star },
-  { name: 'Analitik', href: '/dashboard/analytics', icon: BarChart3 },
-]
+const ICON_MAP: Record<string, LucideIcon> = {
+  LayoutDashboard,
+  Calendar,
+  Users,
+  UserPlus,
+  MessageSquare,
+  MessageCircle,
+  Star,
+  BarChart3,
+  Settings,
+  LogOut,
+  Scissors,
+  Package,
+  FolderOpen,
+  Briefcase,
+  Car,
+  PawPrint,
+  ClipboardList,
+  CreditCard,
+  CalendarDays,
+  CheckSquare,
+  BookOpen,
+  Image,
+}
 
 const bottomNav = [
   { name: 'WhatsApp', href: '/dashboard/settings/whatsapp', icon: MessageCircle },
@@ -43,13 +69,17 @@ const bottomNav = [
 interface SidebarProps {
   businessName: string
   userName: string
+  sector: SectorType
+  plan: PlanType
 }
 
-export default function Sidebar({ businessName, userName }: SidebarProps) {
+export default function Sidebar({ businessName, userName, sector, plan }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+
+  const sections = getSidebarSections(sector, plan)
 
   async function handleLogout() {
     const supabase = createClient()
@@ -59,8 +89,9 @@ export default function Sidebar({ businessName, userName }: SidebarProps) {
   }
 
   function isActive(href: string) {
-    if (href === '/dashboard') return pathname === '/dashboard'
-    return pathname.startsWith(href)
+    const path = href.split('?')[0]
+    if (path === '/dashboard') return pathname === '/dashboard'
+    return pathname.startsWith(path)
   }
 
   const sidebarContent = (
@@ -84,31 +115,43 @@ export default function Sidebar({ businessName, userName }: SidebarProps) {
         </button>
       </div>
 
-      {/* Ana navigasyon */}
-      <nav className="flex-1 space-y-1 px-3 py-4">
-        {navigation.map((item) => {
-          const active = isActive(item.href)
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              onClick={() => setMobileOpen(false)}
-              className={cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
-                active
-                  ? 'bg-pulse-50 text-pulse-700 dark:bg-pulse-950/40 dark:text-pulse-300'
-                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/60 hover:text-gray-900 dark:hover:text-gray-100'
-              )}
-            >
-              <item.icon className={cn('h-5 w-5 flex-shrink-0', active ? 'text-pulse-600 dark:text-pulse-400' : 'text-gray-400 dark:text-gray-500')} />
-              {!collapsed && <span>{item.name}</span>}
-            </Link>
-          )
-        })}
+      {/* Ana navigasyon — sektöre göre dinamik */}
+      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-4">
+        {sections.map((section) => (
+          <div key={section.label}>
+            {!collapsed && (
+              <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                {section.label}
+              </p>
+            )}
+            <div className="space-y-0.5">
+              {section.items.map((item) => {
+                const Icon = ICON_MAP[item.iconName] ?? LayoutDashboard
+                const active = isActive(item.href)
+                return (
+                  <Link
+                    key={item.key}
+                    href={item.href}
+                    onClick={() => setMobileOpen(false)}
+                    className={cn(
+                      'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                      active
+                        ? 'bg-pulse-50 text-pulse-700 dark:bg-pulse-950/40 dark:text-pulse-300'
+                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/60 hover:text-gray-900 dark:hover:text-gray-100'
+                    )}
+                  >
+                    <Icon className={cn('h-5 w-5 flex-shrink-0', active ? 'text-pulse-600 dark:text-pulse-400' : 'text-gray-400 dark:text-gray-500')} />
+                    {!collapsed && <span>{item.name}</span>}
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
       {/* Alt navigasyon */}
-      <div className="border-t border-gray-200 dark:border-gray-700 px-3 py-4 space-y-1">
+      <div className="border-t border-gray-200 dark:border-gray-700 px-3 py-4 space-y-0.5">
         {bottomNav.map((item) => {
           const active = isActive(item.href)
           return (

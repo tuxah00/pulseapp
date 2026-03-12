@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import { SECTOR_LABELS, type SectorType } from '@/types'
+import { SECTOR_GROUPS } from '@/lib/config/sector-modules'
 
 interface OnboardingFormProps {
   userId: string
@@ -84,8 +85,12 @@ export default function OnboardingForm({ userId, userEmail, userName }: Onboardi
             className="input"
             required
           >
-            {Object.entries(SECTOR_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>{label}</option>
+            {SECTOR_GROUPS.map((group) => (
+              <optgroup key={group.label} label={group.label}>
+                {group.sectors.map((s) => (
+                  <option key={s} value={s}>{SECTOR_LABELS[s]}</option>
+                ))}
+              </optgroup>
             ))}
           </select>
         </div>
