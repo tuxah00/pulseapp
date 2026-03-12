@@ -6,10 +6,13 @@
 // ── Enum Tipleri ──
 
 export type SectorType =
-  | 'hair_salon' | 'beauty_salon' | 'dental_clinic'
-  | 'psychologist' | 'lawyer' | 'restaurant'
-  | 'cafe' | 'auto_service' | 'veterinary'
-  | 'physiotherapy' | 'other'
+  | 'hair_salon' | 'barber' | 'beauty_salon'
+  | 'dental_clinic' | 'psychologist' | 'lawyer'
+  | 'restaurant' | 'cafe' | 'auto_service'
+  | 'veterinary' | 'physiotherapy' | 'dietitian'
+  | 'tutoring' | 'photo_studio' | 'car_wash'
+  | 'spa_massage' | 'medical_aesthetic' | 'fitness'
+  | 'yoga_pilates' | 'tattoo_piercing' | 'other'
 
 export type PlanType = 'starter' | 'standard' | 'pro'
 
@@ -338,7 +341,8 @@ export interface TodayAppointment extends Appointment {
 // ── Yardımcı Tipler ──
 
 export const SECTOR_LABELS: Record<SectorType, string> = {
-  hair_salon: 'Kuaför / Berber',
+  hair_salon: 'Kuaför',
+  barber: 'Berber',
   beauty_salon: 'Güzellik Salonu',
   dental_clinic: 'Diş Kliniği',
   psychologist: 'Psikolog',
@@ -348,6 +352,15 @@ export const SECTOR_LABELS: Record<SectorType, string> = {
   auto_service: 'Oto Servis',
   veterinary: 'Veteriner',
   physiotherapy: 'Fizyoterapi',
+  dietitian: 'Diyetisyen & Beslenme Danışmanı',
+  tutoring: 'Özel Ders & Kurs Merkezi',
+  photo_studio: 'Fotoğraf Stüdyosu',
+  car_wash: 'Oto Yıkama & Detaylı Temizlik',
+  spa_massage: 'Spa & Masaj Salonu',
+  medical_aesthetic: 'Medikal Estetik & Klinik',
+  fitness: 'Fitness & Spor Salonu',
+  yoga_pilates: 'Yoga & Pilates Stüdyosu',
+  tattoo_piercing: 'Dövme & Piercing Salonu',
   other: 'Diğer',
 }
 
