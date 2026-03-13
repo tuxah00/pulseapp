@@ -6,7 +6,7 @@ import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import {
   Loader2, Save, Building2, Clock, Bell, Sparkles,
   CreditCard, MapPin, Phone, Mail, Globe,
-  MessageSquare, ChevronDown, ChevronUp, Sun, Moon,
+  MessageSquare, ChevronDown, ChevronUp, Sun, Moon, Lock,
 } from 'lucide-react'
 import { useTheme } from '@/components/theme-provider'
 import {
@@ -142,7 +142,6 @@ export default function BusinessSettingsPage() {
     e.preventDefault()
     await saveBusiness({
       name,
-      sector,
       phone: phone || null,
       email: email || null,
       address: address || null,
@@ -266,17 +265,12 @@ export default function BusinessSettingsPage() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="sector" className="label">Sektör</label>
-                  <select
-                    id="sector"
-                    value={sector}
-                    onChange={(e) => setSector(e.target.value as SectorType)}
-                    className="input"
-                  >
-                    {Object.entries(SECTOR_LABELS).map(([value, label]) => (
-                      <option key={value} value={value}>{label}</option>
-                    ))}
-                  </select>
+                  <label className="label">Sektör</label>
+                  <div className="input flex items-center gap-2 bg-gray-50 cursor-not-allowed text-gray-500">
+                    <Lock className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                    <span>{SECTOR_LABELS[sector]}</span>
+                  </div>
+                  <p className="mt-1 text-xs text-gray-400">Sektör kayıt sırasında belirlenir ve değiştirilemez.</p>
                 </div>
                 <div>
                   <label htmlFor="businessPhone" className="label">Telefon</label>
