@@ -35,34 +35,34 @@ CREATE TRIGGER products_set_updated_at
 -- Row Level Security
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Business owner can view products"
+CREATE POLICY "Staff can view products"
   ON public.products FOR SELECT TO authenticated
   USING (
     business_id IN (
-      SELECT id FROM public.businesses WHERE owner_id = auth.uid()
+      SELECT business_id FROM public.staff_members WHERE user_id = auth.uid() AND is_active = true
     )
   );
 
-CREATE POLICY "Business owner can insert products"
+CREATE POLICY "Staff can insert products"
   ON public.products FOR INSERT TO authenticated
   WITH CHECK (
     business_id IN (
-      SELECT id FROM public.businesses WHERE owner_id = auth.uid()
+      SELECT business_id FROM public.staff_members WHERE user_id = auth.uid() AND is_active = true
     )
   );
 
-CREATE POLICY "Business owner can update products"
+CREATE POLICY "Staff can update products"
   ON public.products FOR UPDATE TO authenticated
   USING (
     business_id IN (
-      SELECT id FROM public.businesses WHERE owner_id = auth.uid()
+      SELECT business_id FROM public.staff_members WHERE user_id = auth.uid() AND is_active = true
     )
   );
 
-CREATE POLICY "Business owner can delete products"
+CREATE POLICY "Staff can delete products"
   ON public.products FOR DELETE TO authenticated
   USING (
     business_id IN (
-      SELECT id FROM public.businesses WHERE owner_id = auth.uid()
+      SELECT business_id FROM public.staff_members WHERE user_id = auth.uid() AND is_active = true
     )
   );
