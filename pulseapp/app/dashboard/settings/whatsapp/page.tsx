@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import Script from 'next/script'
 import { useSearchParams } from 'next/navigation'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
+import { createClient } from '@/lib/supabase/client'
 import {
   Loader2,
   MessageCircle,
@@ -17,6 +18,8 @@ import {
   Bot,
   Unplug,
   RefreshCw,
+  Users,
+  Building2,
 } from 'lucide-react'
 
 declare global {
@@ -51,16 +54,23 @@ export default function WhatsAppSettingsPage() {
   const [success, setSuccess] = useState<string | null>(null)
   const [fbReady, setFbReady] = useState(false)
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false)
+  const [whatsappMode, setWhatsappMode] = useState<'shared' | 'own'>('shared')
+  const [savingMode, setSavingMode] = useState(false)
   const connectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const metaAppId = process.env.NEXT_PUBLIC_META_APP_ID
 
   const fetchStatus = useCallback(async () => {
     if (!businessId) return
+    const supabase = createClient()
     try {
-      const res = await fetch(`/api/whatsapp/status?businessId=${businessId}`)
-      const data = await res.json()
+      const [statusRes, { data: biz }] = await Promise.all([
+        fetch(`/api/whatsapp/status?businessId=${businessId}`),
+        supabase.from('businesses').select('whatsapp_mode').eq('id', businessId).single(),
+      ])
+      const data = await statusRes.json()
       setStatus(data)
+      if (biz?.whatsapp_mode) setWhatsappMode(biz.whatsapp_mode as 'shared' | 'own')
     } catch {
       setError('Durum bilgisi alınamadı.')
     } finally {
@@ -71,6 +81,15 @@ export default function WhatsAppSettingsPage() {
   useEffect(() => {
     if (!ctxLoading && businessId) fetchStatus()
   }, [fetchStatus, ctxLoading, businessId])
+
+  async function handleModeChange(mode: 'shared' | 'own') {
+    if (!businessId || mode === whatsappMode) return
+    setSavingMode(true)
+    const supabase = createClient()
+    await supabase.from('businesses').update({ whatsapp_mode: mode }).eq('id', businessId)
+    setWhatsappMode(mode)
+    setSavingMode(false)
+  }
 
   // Callback'ten dönüşte URL'deki success/error
   useEffect(() => {
@@ -246,6 +265,52 @@ export default function WhatsAppSettingsPage() {
         </p>
       </div>
 
+      {/* WhatsApp Mod Seçimi */}
+      <div className="mb-6 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">WhatsApp Kullanım Modu</h2>
+          {savingMode && <Loader2 className="h-4 w-4 animate-spin text-gray-400" />}
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <button
+            onClick={() => handleModeChange('shared')}
+            className={`flex items-start gap-3 rounded-lg border-2 p-4 text-left transition-all ${
+              whatsappMode === 'shared'
+                ? 'border-pulse-500 bg-pulse-50 dark:bg-pulse-900/20'
+                : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
+            }`}
+          >
+            <div className={`mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg ${whatsappMode === 'shared' ? 'bg-pulse-100 dark:bg-pulse-800' : 'bg-gray-100 dark:bg-gray-700'}`}>
+              <Users className={`h-5 w-5 ${whatsappMode === 'shared' ? 'text-pulse-600 dark:text-pulse-300' : 'text-gray-500 dark:text-gray-400'}`} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Paylaşımlı Hat</span>
+                <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2 py-0.5 text-[10px] font-semibold text-green-700 dark:text-green-400">Tavsiye Edilen</span>
+              </div>
+              <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">PulseApp altyapısını kullanın. Hızlı kurulum, ek hesap gerekmez.</p>
+            </div>
+          </button>
+
+          <button
+            onClick={() => handleModeChange('own')}
+            className={`flex items-start gap-3 rounded-lg border-2 p-4 text-left transition-all ${
+              whatsappMode === 'own'
+                ? 'border-pulse-500 bg-pulse-50 dark:bg-pulse-900/20'
+                : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
+            }`}
+          >
+            <div className={`mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg ${whatsappMode === 'own' ? 'bg-pulse-100 dark:bg-pulse-800' : 'bg-gray-100 dark:bg-gray-700'}`}>
+              <Building2 className={`h-5 w-5 ${whatsappMode === 'own' ? 'text-pulse-600 dark:text-pulse-300' : 'text-gray-500 dark:text-gray-400'}`} />
+            </div>
+            <div>
+              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Kendi Hesabınız</span>
+              <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Meta Business hesabınızı bağlayın. Kendi numaranız, tam kontrol.</p>
+            </div>
+          </button>
+        </div>
+      </div>
+
       {success && (
         <div className="mb-6 rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700 flex items-center gap-2">
           <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
@@ -259,7 +324,17 @@ export default function WhatsAppSettingsPage() {
         </div>
       )}
 
-      {isConnected && account ? (
+      {whatsappMode === 'shared' ? (
+        <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-6 text-center">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
+            <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-400" />
+          </div>
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Paylaşımlı Hat Aktif</h3>
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            PulseApp altyapısı üzerinden WhatsApp mesajlaşması aktif. Ek kurulum gerekmez.
+          </p>
+        </div>
+      ) : isConnected && account ? (
         <div className="space-y-6">
           {/* Bağlantı Durumu Kartı */}
           <div className="card border-green-200 bg-gradient-to-br from-green-50/50 to-white dark:from-gray-800 dark:to-gray-800 dark:border-gray-700">
