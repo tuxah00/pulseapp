@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
       if (updateError) {
         console.error('WhatsApp hesap güncelleme hatası:', updateError)
         return NextResponse.json(
-          { error: 'Hesap güncelleme hatası' },
+          { error: 'Hesap güncelleme hatası', details: updateError.message, code: updateError.code },
           { status: 500 },
         )
       }
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
       if (insertError) {
         console.error('WhatsApp hesap oluşturma hatası:', insertError)
         return NextResponse.json(
-          { error: 'Hesap oluşturma hatası' },
+          { error: 'Hesap oluşturma hatası', details: insertError.message, code: insertError.code },
           { status: 500 },
         )
       }

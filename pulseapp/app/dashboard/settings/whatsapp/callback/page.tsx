@@ -49,8 +49,9 @@ export default function WhatsAppCallbackPage() {
             `/dashboard/settings/whatsapp?success=${encodeURIComponent('WhatsApp bağlantısı başarılı!')}`,
           )
         } else {
+          const errMsg = data.details ? `${data.error}: ${data.details}` : (data.error || 'Bağlantı hatası')
           router.replace(
-            `/dashboard/settings/whatsapp?error=${encodeURIComponent(data.error || 'Bağlantı hatası')}`,
+            `/dashboard/settings/whatsapp?error=${encodeURIComponent(errMsg)}`,
           )
         }
       })
