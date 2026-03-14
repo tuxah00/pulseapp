@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,7 +18,9 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const { data: staff } = await supabase
+    const admin = createAdminClient()
+
+    const { data: staff } = await admin
       .from('staff_members')
       .select('role')
       .eq('user_id', user.id)
@@ -32,7 +35,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const { data: account } = await supabase
+    const { data: account } = await admin
       .from('whatsapp_accounts')
       .select(
         'id, business_id, phone_number, display_name, status, quality_rating, messaging_limit, connected_at',

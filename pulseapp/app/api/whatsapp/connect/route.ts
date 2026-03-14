@@ -26,7 +26,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { data: staff } = await supabase
+    const admin = createAdminClient()
+
+    const { data: staff } = await admin
       .from('staff_members')
       .select('role')
       .eq('user_id', user.id)
@@ -80,8 +82,6 @@ export async function POST(request: NextRequest) {
     const encryptedToken = encrypt(accessToken)
 
     await subscribeToWebhooks(resolvedWabaId, accessToken)
-
-    const admin = createAdminClient()
 
     const { data: existing } = await admin
       .from('whatsapp_accounts')
