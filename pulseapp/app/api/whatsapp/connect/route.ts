@@ -86,13 +86,14 @@ export async function POST(request: NextRequest) {
     const { data: existing } = await admin
       .from('whatsapp_accounts')
       .select('id')
-      .eq('business_id', businessId)
+      .or(`business_id.eq.${businessId},phone_number_id.eq.${phoneNumber.id}`)
       .single()
 
     if (existing) {
       const { error: updateError } = await admin
         .from('whatsapp_accounts')
         .update({
+          business_id: businessId,
           waba_id: resolvedWabaId,
           phone_number_id: phoneNumber.id,
           phone_number: phoneNumber.display_phone_number,
