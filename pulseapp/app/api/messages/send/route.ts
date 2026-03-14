@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { sendWhatsAppMessage } from '@/lib/whatsapp/send'
 
 export async function POST(request: NextRequest) {
@@ -20,7 +21,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { data: customer } = await supabase
+    const admin = createAdminClient()
+
+    const { data: customer } = await admin
       .from('customers')
       .select('id, phone, name, whatsapp_opted_in')
       .eq('id', customerId)
@@ -31,7 +34,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Müşteri bulunamadı' }, { status: 404 })
     }
 
-    const { data: waAccount } = await supabase
+    const { data: waAccount } = await admin
       .from('whatsapp_accounts')
       .select('status')
       .eq('business_id', businessId)
@@ -72,7 +75,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    const { error: dbError } = await supabase.from('messages').insert({
+    const { error: dbError } = await admin.from('messages').insert({
       business_id: businessId,
       customer_id: customerId,
       direction: 'outbound',
