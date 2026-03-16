@@ -12,6 +12,7 @@ import {
 import { formatCurrency } from '@/lib/utils'
 import { SEGMENT_LABELS } from '@/types'
 import TodayAppointments from './_components/today-appointments'
+import WeeklyInsights from './_components/weekly-insights'
 
 export default async function DashboardPage() {
   const supabase = createServerSupabaseClient()
@@ -138,6 +139,27 @@ export default async function DashboardPage() {
         />
       </div>
 
+      {/* Online randevu linki */}
+      <div className="mb-6 flex items-center gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
+        <div className="h-8 w-8 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
+          <TrendingUp className="h-4 w-4 text-blue-600" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-blue-900">Online Randevu Linkiniz</p>
+          <p className="text-xs text-blue-600 truncate">
+            {process.env.NEXT_PUBLIC_APP_URL}/book/{businessId}
+          </p>
+        </div>
+        <a
+          href={`${process.env.NEXT_PUBLIC_APP_URL}/book/${businessId}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition-colors"
+        >
+          Görüntüle
+        </a>
+      </div>
+
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Bugünkü randevular */}
         <div className="lg:col-span-2">
@@ -173,6 +195,9 @@ export default async function DashboardPage() {
               </div>
             )}
           </div>
+
+          {/* Haftalık AI Raporu */}
+          <WeeklyInsights />
 
           {/* Riskli müşteriler */}
           {riskCustomers && riskCustomers.length > 0 && (

@@ -32,6 +32,11 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
+  // ── Public rotalar: /book/* ve /api/public/* ──
+  if (pathname.startsWith('/book') || pathname.startsWith('/api/public')) {
+    return supabaseResponse
+  }
+
   // ── Korumalı rotalar: /dashboard/* ──
   if (pathname.startsWith('/dashboard')) {
     if (!user) {
