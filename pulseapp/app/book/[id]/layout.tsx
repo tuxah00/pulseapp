@@ -1,9 +1,7 @@
 export default function BookingLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="tr">
-      <body className="bg-gray-50 min-h-screen">
-        {children}
-      </body>
-    </html>
+    <div className="booking-page min-h-screen bg-white text-gray-900" style={{ colorScheme: 'light' }}>
+      {children}
+    </div>
   )
 }

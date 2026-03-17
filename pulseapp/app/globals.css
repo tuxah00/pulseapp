@@ -125,6 +125,32 @@
   .dark .bg-pulse-50    { background-color: #0a1628 !important; }
 }
 
+/* ── Booking page: dark mode override (müşteri tarafı light kalmalı) ── */
+.booking-page,
+.booking-page * {
+  color-scheme: light !important;
+}
+.booking-page input,
+.booking-page textarea {
+  background-color: #ffffff !important;
+  color: #111827 !important;
+  border-color: #e5e7eb !important;
+}
+.booking-page input::placeholder,
+.booking-page textarea::placeholder {
+  color: #9ca3af !important;
+}
+.booking-page .bg-white   { background-color: #ffffff !important; }
+.booking-page .bg-gray-50 { background-color: #f9fafb !important; }
+.booking-page .bg-gray-100 { background-color: #f3f4f6 !important; }
+.booking-page .text-gray-900 { color: #111827 !important; }
+.booking-page .text-gray-700 { color: #374151 !important; }
+.booking-page .text-gray-600 { color: #4b5563 !important; }
+.booking-page .text-gray-500 { color: #6b7280 !important; }
+.booking-page .text-gray-400 { color: #9ca3af !important; }
+.booking-page .border-gray-100 { border-color: #f3f4f6 !important; }
+.booking-page .border-gray-200 { border-color: #e5e7eb !important; }
+
 /* Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
