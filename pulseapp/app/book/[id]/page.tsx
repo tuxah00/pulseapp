@@ -206,7 +206,7 @@ export default function BookingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 text-gray-900" style={{ colorScheme: 'light' }}>
       {/* Header */}
       <div className="bg-white border-b border-gray-100 px-4 py-5">
         <div className="max-w-lg mx-auto">
@@ -414,7 +414,7 @@ export default function BookingPage() {
                   value={name}
                   onChange={e => setName(e.target.value)}
                   placeholder="Adınızı girin"
-                  className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2.5 rounded-lg border border-gray-200 bg-white text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
               <div>
@@ -429,7 +429,7 @@ export default function BookingPage() {
                     value={phone}
                     onChange={e => setPhone(e.target.value)}
                     placeholder="5XX XXX XX XX"
-                    className="flex-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="flex-1 px-3 py-2.5 rounded-lg border border-gray-200 bg-white text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
               </div>
@@ -440,7 +440,7 @@ export default function BookingPage() {
                   onChange={e => setNotes(e.target.value)}
                   placeholder="Eklemek istediğiniz not..."
                   rows={3}
-                  className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  className="w-full px-3 py-2.5 rounded-lg border border-gray-200 bg-white text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                 />
               </div>
             </div>

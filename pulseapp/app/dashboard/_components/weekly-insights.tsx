@@ -56,13 +56,34 @@ export default function WeeklyInsights() {
   const [error, setError] = useState<string | null>(null)
   const [open, setOpen] = useState(false)
 
-  async function load() {
+  const CACHE_KEY = 'pulse_weekly_insights'
+  const CACHE_TTL = 60 * 60 * 1000 // 1 saat
+
+  async function load(force = false) {
+    // Cache kontrolü (zorla yenileme değilse)
+    if (!force) {
+      try {
+        const cached = localStorage.getItem(CACHE_KEY)
+        if (cached) {
+          const { data: d, ts } = JSON.parse(cached)
+          if (Date.now() - ts < CACHE_TTL) {
+            setData(d)
+            setOpen(true)
+            return
+          }
+        }
+      } catch { /* localStorage erişimi başarısız */ }
+    }
+
     setLoading(true)
     setError(null)
     try {
       const res = await fetch('/api/ai/insights')
       if (!res.ok) throw new Error('Rapor alınamadı')
       const json = await res.json()
+      try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify({ data: json, ts: Date.now() }))
+      } catch { /* localStorage dolu olabilir */ }
       setData(json)
       setOpen(true)
     } catch {
@@ -72,7 +93,7 @@ export default function WeeklyInsights() {
     }
   }
 
-  // İlk yüklemede otomatik çekme
+  // İlk yüklemede cache'ten veya API'den çek
   useEffect(() => { load() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!open && !loading && !data) {
@@ -107,7 +128,7 @@ export default function WeeklyInsights() {
           </div>
         </div>
         <button
-          onClick={load}
+          onClick={() => load(true)}
           disabled={loading}
           className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
           title="Yenile"
