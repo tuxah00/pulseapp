@@ -20,6 +20,7 @@ import {
   LayoutList,
   LayoutGrid,
   Phone,
+  Trash2,
 } from 'lucide-react'
 import { formatTime, formatDate, getStatusColor, formatCurrency, cn } from '@/lib/utils'
 import { STATUS_LABELS, type AppointmentStatus, type Customer, type Service, type StaffMember } from '@/types'
@@ -231,6 +232,15 @@ export default function AppointmentsPage() {
     fetchAppointments()
   }
 
+  async function handleDeleteAppointment(appointmentId: string, e?: React.MouseEvent) {
+    e?.stopPropagation()
+    if (!confirm('Bu randevuyu kalıcı olarak silmek istediğinizden emin misiniz?')) return
+    const { error } = await supabase.from('appointments').delete().eq('id', appointmentId)
+    if (error) { alert('Silme hatası: ' + error.message); return }
+    if (selectedAppointment?.id === appointmentId) setSelectedAppointment(null)
+    fetchAppointments()
+  }
+
   async function updateStatus(appointmentId: string, newStatus: AppointmentStatus, e?: React.MouseEvent) {
     e?.stopPropagation()
     const { error } = await supabase.from('appointments').update({ status: newStatus }).eq('id', appointmentId)
@@ -294,6 +304,15 @@ export default function AppointmentsPage() {
               <XCircle className={size === 'sm' ? 'h-4 w-4' : 'h-5 w-5'} />
             </button>
           </>
+        )}
+        {(apt.status === 'no_show' || apt.status === 'cancelled') && (
+          <button
+            onClick={(e) => handleDeleteAppointment(apt.id, e)}
+            title="Sil"
+            className={cn(btnCls, 'text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30')}
+          >
+            <Trash2 className={iconCls} />
+          </button>
         )}
         {apt.status === 'pending' && (
           <button
