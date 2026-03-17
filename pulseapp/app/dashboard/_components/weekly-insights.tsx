@@ -99,7 +99,7 @@ export default function WeeklyInsights() {
   if (!open && !loading && !data) {
     return (
       <button
-        onClick={load}
+        onClick={() => load()}
         className="card w-full text-left hover:border-blue-300 transition-colors border-dashed border-2"
       >
         <div className="flex items-center gap-3 py-2">
