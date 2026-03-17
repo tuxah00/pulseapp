@@ -41,7 +41,7 @@ export async function GET(
   }
 
   const duration = parseInt(durationStr, 10)
-  const dateObj = new Date(date)
+  const dateObj = new Date(date + 'T00:00:00') // yerel saat olarak parse et (UTC shift önlenir)
   const dayKey = DAY_KEYS[dateObj.getDay()]
 
   // İşletme çalışma saatleri

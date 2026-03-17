@@ -47,7 +47,10 @@ function addDays(date: Date, days: number): Date {
 }
 
 function formatDate(date: Date): string {
-  return date.toISOString().split('T')[0]
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
 }
 
 function formatDisplayDate(date: Date): string {
@@ -206,7 +209,7 @@ export default function BookingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900" style={{ colorScheme: 'light' }}>
+    <div className="booking-page min-h-screen bg-gray-50 text-gray-900" style={{ colorScheme: 'light' }}>
       {/* Header */}
       <div className="bg-white border-b border-gray-100 px-4 py-5">
         <div className="max-w-lg mx-auto">
