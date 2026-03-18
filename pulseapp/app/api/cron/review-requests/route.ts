@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { sendSMS } from '@/lib/sms/send'
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization')
@@ -34,15 +35,38 @@ export async function GET(request: NextRequest) {
     const readyAt = new Date(new Date(apt.updated_at).getTime() + delayMinutes * 60 * 1000)
     if (readyAt > now) continue
 
+    const googleLink = business.google_maps_url
+    const message = googleLink
+      ? `Merhaba ${customer.name}! 😊\n\n${business.name} ziyaretiniz için teşekkürler.\nDeneyiminizi paylaşmak ister misiniz?\n\n⭐ Google'da yorum yapın:\n${googleLink}\n\nGörüşleriniz bizim için çok değerli! 🙏`
+      : `Merhaba ${customer.name}! 😊\n\n${business.name} ziyaretiniz için teşekkürler. Hizmetimizden memnun kaldıysanız bizi tavsiye etmeyi unutmayın! 🙏`
+
     try {
-      await supabase
-        .from('appointments')
-        .update({ review_requested: true })
-        .eq('id', apt.id)
-      results.sent++
-    } catch {
+      const smsResult = await sendSMS({
+        to: customer.phone,
+        body: message,
+        businessId: business.id,
+        customerId: customer.id,
+        messageType: 'system',
+      })
+
+      if (smsResult.success) {
+        await supabase
+          .from('appointments')
+          .update({ review_requested: true })
+          .eq('id', apt.id)
+        results.sent++
+      } else {
+        // SMS başarısız olsa bile işaretle ki sürekli denemesin
+        await supabase
+          .from('appointments')
+          .update({ review_requested: true })
+          .eq('id', apt.id)
+        results.errors++
+        console.error(`Yorum SMS hatası (${apt.id}):`, smsResult.error)
+      }
+    } catch (err) {
       results.errors++
-      console.error(`Yorum istek hatası (${apt.id})`)
+      console.error(`Yorum istek hatası (${apt.id}):`, err)
     }
   }
 

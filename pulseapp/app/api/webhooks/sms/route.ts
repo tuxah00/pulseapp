@@ -1,0 +1,135 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { sendSMS } from '@/lib/sms/send'
+
+/**
+ * Twilio inbound SMS webhook
+ * Twilio konsolunda SMS webhook URL'si olarak ayarlayın:
+ * https://yourdomain.com/api/webhooks/sms
+ */
+export async function POST(request: NextRequest) {
+  const body = await request.text()
+  const params = new URLSearchParams(body)
+
+  const from = params.get('From') || ''
+  const to = params.get('To') || ''
+  const messageBody = params.get('Body') || ''
+  const messageSid = params.get('MessageSid') || ''
+
+  if (!from || !messageBody) {
+    return new NextResponse('OK', { status: 200 })
+  }
+
+  const admin = createAdminClient()
+
+  // İşletmeyi Twilio numarasına göre bul (TWILIO_PHONE_NUMBER env veya business phone)
+  // Basit yaklaşım: tüm aktif işletmeleri çek ve TWILIO_PHONE_NUMBER ile eşleştir
+  // Gerçek çok-işletme senaryosunda her işletmenin kendi Twilio numarası olur
+  const twilioNumber = process.env.TWILIO_PHONE_NUMBER || ''
+  if (to !== twilioNumber && !twilioNumber.includes(to.replace('+', ''))) {
+    // Numara eşleşmedi, yine de devam et (tek işletme için)
+  }
+
+  // Gönderenin telefon numarasına göre müşteriyi bul
+  const normalizedFrom = from.replace(/\D/g, '')
+  const { data: customers } = await admin
+    .from('customers')
+    .select('id, business_id, name')
+    .or(`phone.eq.${from},phone.eq.+${normalizedFrom},phone.eq.0${normalizedFrom.slice(2)}`)
+    .eq('is_active', true)
+    .limit(1)
+
+  const customer = customers?.[0]
+  const businessId = customer?.business_id
+
+  if (!businessId) {
+    // Müşteri bulunamadı, ilk aktif işletmeye yaz (tek işletme senaryosu)
+    const { data: firstBusiness } = await admin
+      .from('businesses')
+      .select('id')
+      .eq('is_active', true)
+      .limit(1)
+      .single()
+
+    if (!firstBusiness) return new NextResponse('OK', { status: 200 })
+
+    await admin.from('messages').insert({
+      business_id: firstBusiness.id,
+      customer_id: null,
+      direction: 'inbound',
+      channel: 'sms',
+      message_type: 'text',
+      content: messageBody,
+      twilio_sid: messageSid,
+      twilio_status: 'received',
+    })
+
+    return new NextResponse('OK', { status: 200 })
+  }
+
+  // Mesajı kaydet
+  await admin.from('messages').insert({
+    business_id: businessId,
+    customer_id: customer?.id || null,
+    direction: 'inbound',
+    channel: 'sms',
+    message_type: 'text',
+    content: messageBody,
+    twilio_sid: messageSid,
+    twilio_status: 'received',
+  })
+
+  // İşletme ayarlarını ve bilgilerini çek
+  const { data: business } = await admin
+    .from('businesses')
+    .select('name, phone, address, city, district, google_maps_url, working_hours, settings')
+    .eq('id', businessId)
+    .single()
+
+  if (!business?.settings?.ai_auto_reply) {
+    return new NextResponse('OK', { status: 200 })
+  }
+
+  // Otomatik yanıt: basit keyword eşleştirme + AI fallback
+  const lowerBody = messageBody.toLowerCase()
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
+
+  // Randevu alma linki
+  const bookingLink = `${appUrl}/book/${businessId}`
+
+  let autoReply: string | null = null
+
+  if (/adres|nerede|konum|neredesiniz|maps|harita/.test(lowerBody)) {
+    if (business.google_maps_url) {
+      autoReply = `Merhaba! ${business.name} adresimiz: ${business.address}, ${business.district}/${business.city}\n📍 Google Maps: ${business.google_maps_url}`
+    } else if (business.address) {
+      autoReply = `Merhaba! ${business.name} adresimiz: ${business.address}, ${business.district}/${business.city}`
+    }
+  } else if (/randevu|almak istiyorum|rezervasyon|booking/.test(lowerBody)) {
+    autoReply = `Merhaba! Online randevu almak için:\n🔗 ${bookingLink}\n\nYardım için bizi arayabilirsiniz: ${business.phone || ''}`
+  } else if (/saat|kaçta|çalışma saatleri|açık mısınız|kaçta açılıyor/.test(lowerBody)) {
+    const wh = business.working_hours as any
+    const days: Record<string, string> = {
+      mon: 'Pzt', tue: 'Sal', wed: 'Çar', thu: 'Per', fri: 'Cum', sat: 'Cmt', sun: 'Paz',
+    }
+    const hoursText = Object.entries(days)
+      .map(([key, label]) => {
+        const h = wh?.[key]
+        return h ? `${label}: ${h.open}-${h.close}` : `${label}: Kapalı`
+      })
+      .join(', ')
+    autoReply = `Merhaba! ${business.name} çalışma saatlerimiz:\n${hoursText}`
+  }
+
+  if (autoReply && customer?.id) {
+    await sendSMS({
+      to: from,
+      body: autoReply,
+      businessId,
+      customerId: customer.id,
+      messageType: 'system',
+    })
+  }
+
+  return new NextResponse('OK', { status: 200 })
+}

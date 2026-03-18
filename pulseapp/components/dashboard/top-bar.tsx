@@ -22,6 +22,7 @@ const ROUTE_LABELS: Record<string, string> = {
   portfolio: 'Portfolyo',
   settings: 'Ayarlar',
   business: 'İşletme',
+  vardiye: 'Vardiye',
   services: 'Hizmetler',
   staff: 'Personeller',
   new: 'Yeni',

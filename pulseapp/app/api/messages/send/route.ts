@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { sendSMS } from '@/lib/sms/send'
 
 export async function POST(request: NextRequest) {
   try {
@@ -33,6 +34,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Müşteri bulunamadı' }, { status: 404 })
     }
 
+    // SMS göndermeyi dene
+    if (customer.phone) {
+      const result = await sendSMS({
+        to: customer.phone,
+        body: content,
+        businessId,
+        customerId,
+        messageType: messageType as any,
+      })
+
+      if (result.success) {
+        return NextResponse.json({ success: true, channel: 'sms', messageSid: result.messageSid })
+      }
+    }
+
+    // SMS başarısız olursa web kanalına düş
     const { error: dbError } = await admin.from('messages').insert({
       business_id: businessId,
       customer_id: customerId,
