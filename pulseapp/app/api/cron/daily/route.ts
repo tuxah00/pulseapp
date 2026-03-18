@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { sendSMS } from '@/lib/sms/send'
 import type { CustomerSegment } from '@/types'
 
 export async function GET(request: NextRequest) {
@@ -100,8 +101,19 @@ export async function GET(request: NextRequest) {
     const readyAt = new Date(new Date(apt.updated_at).getTime() + delayMinutes * 60 * 1000)
     if (readyAt > now) continue
 
+    const googleLink = business.google_maps_url
+    const message = googleLink
+      ? `Merhaba ${customer.name}! 😊\n\n${business.name} ziyaretiniz için teşekkürler.\n⭐ Google'da yorum yapın:\n${googleLink}`
+      : `Merhaba ${customer.name}! 😊\n\n${business.name} ziyaretiniz için teşekkürler. Bizi tavsiye etmeyi unutmayın! 🙏`
+
+    const smsResult = await sendSMS({
+      to: customer.phone, body: message,
+      businessId: business.id, customerId: customer.id, messageType: 'system',
+    })
+
     await supabase.from('appointments').update({ review_requested: true }).eq('id', apt.id)
-    reviewRequests.sent++
+    if (smsResult.success) reviewRequests.sent++
+    else reviewRequests.errors++
   }
 
   // ── 3. Winback + Segment Update ───────────────────────────────────────────
@@ -154,11 +166,60 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // ── 4. Bekleme Listesi Bildirimleri ───────────────────────────────────────
+  const waitlistNotifs = { sent: 0, errors: 0 }
+
+  // İptal/no_show olan bugünkü randevuların slotlarını kontrol et
+  const todayStr = now.toISOString().split('T')[0]
+  const { data: cancelledToday } = await supabase
+    .from('appointments')
+    .select('appointment_date, start_time, end_time, staff_id, service_id, business_id')
+    .in('status', ['cancelled', 'no_show'])
+    .eq('appointment_date', todayStr)
+
+  for (const apt of cancelledToday || []) {
+    // Aynı tarih/saat/personel için bekleme listesi kayıtlarını bul
+    let wlQuery = supabase
+      .from('waitlist_entries')
+      .select('*')
+      .eq('business_id', apt.business_id)
+      .eq('is_notified', false)
+      .eq('is_active', true)
+
+    if (apt.preferred_date) wlQuery = wlQuery.eq('preferred_date', apt.appointment_date)
+
+    const { data: waitlistItems } = await wlQuery
+
+    for (const item of waitlistItems || []) {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
+      const message = `Merhaba ${item.customer_name}! 😊 Beklediğiniz randevu slotu uygun oldu. Hemen almak için: ${appUrl}/book/${apt.business_id}`
+
+      const smsResult = await sendSMS({
+        to: item.customer_phone,
+        body: message,
+        businessId: apt.business_id,
+        customerId: item.customer_id || undefined,
+        messageType: 'system',
+      })
+
+      if (smsResult.success) {
+        await supabase
+          .from('waitlist_entries')
+          .update({ is_notified: true })
+          .eq('id', item.id)
+        waitlistNotifs.sent++
+      } else {
+        waitlistNotifs.errors++
+      }
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     timestamp: now.toISOString(),
     reminders,
     reviewRequests,
     winback,
+    waitlistNotifs,
   })
 }

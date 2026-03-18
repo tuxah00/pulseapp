@@ -256,7 +256,9 @@ export interface MessageTemplate {
 export interface WaitlistEntry {
   id: string
   business_id: string
-  customer_id: string
+  customer_id: string | null
+  customer_name: string
+  customer_phone: string
   service_id: string | null
   staff_id: string | null
   preferred_date: string | null
@@ -269,6 +271,24 @@ export interface WaitlistEntry {
   // JOIN
   customer?: Customer
   service?: Service
+}
+
+export type ShiftType = 'regular' | 'off'
+
+export interface Shift {
+  id: string
+  business_id: string
+  staff_id: string
+  shift_date: string
+  start_time: string | null
+  end_time: string | null
+  shift_type: ShiftType
+  notes: string | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
+  // JOIN
+  staff_members?: StaffMember
 }
 
 

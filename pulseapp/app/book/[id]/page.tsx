@@ -80,6 +80,13 @@ export default function BookingPage() {
   const [selectedTime, setSelectedTime] = useState<string | null>(null)
   const [calendarOffset, setCalendarOffset] = useState(0)
 
+  // Bekleme listesi
+  const [showWaitlist, setShowWaitlist] = useState(false)
+  const [waitlistName, setWaitlistName] = useState('')
+  const [waitlistPhone, setWaitlistPhone] = useState('')
+  const [waitlistSubmitting, setWaitlistSubmitting] = useState(false)
+  const [waitlistSuccess, setWaitlistSuccess] = useState(false)
+
   // Customer info
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
@@ -143,6 +150,30 @@ export default function BookingPage() {
     if (!business) return false
     const key = DAY_KEYS[date.getDay()]
     return !!business.working_hours?.[key]
+  }
+
+  async function handleWaitlistSubmit() {
+    if (!waitlistName.trim() || !waitlistPhone.trim() || !businessId) return
+    setWaitlistSubmitting(true)
+    try {
+      await fetch(`/api/public/business/${businessId}/waitlist`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerName: waitlistName,
+          customerPhone: waitlistPhone,
+          serviceId: selectedService?.id,
+          staffId: selectedStaff !== 'any' ? selectedStaff : undefined,
+          preferredDate: selectedDate ? formatDate(selectedDate) : undefined,
+        }),
+      })
+      setWaitlistSuccess(true)
+      setShowWaitlist(false)
+    } catch {
+      // sessizce geç
+    } finally {
+      setWaitlistSubmitting(false)
+    }
   }
 
   async function handleSubmit() {
@@ -370,7 +401,57 @@ export default function BookingPage() {
                     Saatler yükleniyor...
                   </div>
                 ) : slots.length === 0 ? (
-                  <p className="text-gray-400 text-sm py-4">Bu gün için müsait saat yok.</p>
+                  <div className="py-4 space-y-3">
+                    <p className="text-gray-400 text-sm">Bu gün için müsait saat yok.</p>
+                    {!waitlistSuccess ? (
+                      !showWaitlist ? (
+                        <button
+                          onClick={() => setShowWaitlist(true)}
+                          className="w-full py-2.5 rounded-xl border-2 border-dashed border-blue-300 text-blue-600 text-sm font-medium hover:border-blue-400 hover:bg-blue-50 transition-all"
+                        >
+                          Boşluk oluşunca bilgilendir
+                        </button>
+                      ) : (
+                        <div className="bg-blue-50 rounded-xl p-4 space-y-3 border border-blue-200">
+                          <p className="text-sm font-medium text-blue-800">Bilgilendirme için kayıt olun</p>
+                          <input
+                            type="text"
+                            value={waitlistName}
+                            onChange={e => setWaitlistName(e.target.value)}
+                            placeholder="Ad Soyad *"
+                            className="w-full px-3 py-2 rounded-lg border border-blue-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                          <input
+                            type="tel"
+                            value={waitlistPhone}
+                            onChange={e => setWaitlistPhone(e.target.value)}
+                            placeholder="Telefon numaranız *"
+                            className="w-full px-3 py-2 rounded-lg border border-blue-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => setShowWaitlist(false)}
+                              className="flex-1 py-2 rounded-lg border border-blue-200 text-blue-600 text-sm hover:bg-blue-100"
+                            >
+                              İptal
+                            </button>
+                            <button
+                              disabled={!waitlistName.trim() || !waitlistPhone.trim() || waitlistSubmitting}
+                              onClick={handleWaitlistSubmit}
+                              className="flex-1 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium disabled:opacity-50"
+                            >
+                              {waitlistSubmitting ? 'Kaydediliyor...' : 'Kaydet'}
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    ) : (
+                      <div className="bg-green-50 rounded-xl p-4 border border-green-200 text-center">
+                        <p className="text-green-700 text-sm font-medium">Kaydınız alındı!</p>
+                        <p className="text-green-600 text-xs mt-1">Randevu boşluğu oluşunca size ulaşacağız.</p>
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   <div className="grid grid-cols-4 gap-2">
                     {slots.map(slot => (
