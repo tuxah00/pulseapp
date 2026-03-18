@@ -6,8 +6,8 @@ const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'PulseApp — İşletmenizin Dijital Asistanı',
-  description: 'AI destekli randevu yönetimi, WhatsApp entegrasyonu ve müşteri takibi.',
-  keywords: ['randevu', 'kuaför', 'işletme yönetimi', 'whatsapp', 'AI asistan'],
+  description: 'AI destekli randevu yönetimi ve müşteri takibi.',
+  keywords: ['randevu', 'kuaför', 'işletme yönetimi', 'AI asistan'],
 }
 
 export default function RootLayout({

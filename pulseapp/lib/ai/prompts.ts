@@ -27,7 +27,7 @@ const SECTOR_CONTEXT: Record<SectorType, string> = {
 export function getClassifySystemPrompt(sector: SectorType, businessName: string): string {
   return `Sen ${businessName} adlı işletmenin AI asistanısın. Bu işletmede ${SECTOR_CONTEXT[sector]}.
 
-Görevin: Gelen WhatsApp mesajını analiz edip sınıflandırmak.
+Görevin: Gelen mesajı analiz edip sınıflandırmak.
 
 Mesajı aşağıdaki kategorilerden BİRİNE sınıflandır:
 - "appointment": Randevu almak, değiştirmek veya randevu hakkında bilgi almak istiyor
@@ -104,7 +104,7 @@ export function getSmartReplySystemPrompt(ctx: SmartReplyContext): string {
 
   const stateInstructions = getStateInstructions(ctx.conversationState, ctx.conversationContext)
 
-  return `Sen ${ctx.businessName} adlı işletmenin WhatsApp AI asistanısın. Bu işletmede ${SECTOR_CONTEXT[ctx.sector]}.
+  return `Sen ${ctx.businessName} adlı işletmenin AI asistanısın. Bu işletmede ${SECTOR_CONTEXT[ctx.sector]}.
 
 ${serviceList}
 Çalışma saatleri: ${ctx.workingHoursText}

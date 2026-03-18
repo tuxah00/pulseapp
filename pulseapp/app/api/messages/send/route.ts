@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { sendWhatsAppMessage } from '@/lib/whatsapp/send'
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,54 +24,13 @@ export async function POST(request: NextRequest) {
 
     const { data: customer } = await admin
       .from('customers')
-      .select('id, phone, name, whatsapp_opted_in')
+      .select('id, phone, name')
       .eq('id', customerId)
       .eq('business_id', businessId)
       .single()
 
     if (!customer) {
       return NextResponse.json({ error: 'Müşteri bulunamadı' }, { status: 404 })
-    }
-
-    const { data: waAccount } = await admin
-      .from('whatsapp_accounts')
-      .select('status')
-      .eq('business_id', businessId)
-      .eq('status', 'active')
-      .single()
-
-    const hasMetaWhatsApp = !!waAccount
-
-    const hasTwilioLegacy =
-      !hasMetaWhatsApp &&
-      process.env.TWILIO_ACCOUNT_SID &&
-      process.env.TWILIO_AUTH_TOKEN &&
-      !process.env.TWILIO_ACCOUNT_SID.startsWith('AC...')
-
-    const canSendWhatsApp = (hasMetaWhatsApp || hasTwilioLegacy) && customer.whatsapp_opted_in
-
-    if (canSendWhatsApp) {
-      const result = await sendWhatsAppMessage({
-        to: customer.phone,
-        body: content,
-        businessId,
-        customerId,
-        messageType: messageType as any,
-      })
-
-      if (!result.success) {
-        return NextResponse.json(
-          { error: 'WhatsApp gönderim hatası', details: result.error },
-          { status: 500 },
-        )
-      }
-
-      return NextResponse.json({
-        success: true,
-        channel: 'whatsapp',
-        provider: result.channel,
-        messageId: result.messageId,
-      })
     }
 
     const { error: dbError } = await admin.from('messages').insert({

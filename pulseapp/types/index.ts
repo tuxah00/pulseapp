@@ -24,25 +24,18 @@ export type StaffRole = 'owner' | 'manager' | 'staff'
 export type AppointmentStatus =
   | 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show'
 
-export type AppointmentSource = 'whatsapp' | 'web' | 'manual' | 'phone'
+export type AppointmentSource = 'web' | 'manual' | 'phone'
 
 export type CustomerSegment = 'new' | 'regular' | 'vip' | 'risk' | 'lost'
 
 export type MessageDirection = 'inbound' | 'outbound'
-export type MessageChannel = 'whatsapp' | 'sms' | 'web'
+export type MessageChannel = 'sms' | 'web'
 export type MessageType = 'text' | 'template' | 'ai_generated' | 'system'
 export type AiClassification =
   | 'appointment' | 'question' | 'complaint' | 'cancellation' | 'greeting' | 'other'
 
 export type ReviewStatus = 'pending' | 'responded' | 'escalated'
 export type NotificationType = 'appointment' | 'review' | 'payment' | 'customer' | 'system'
-export type WhatsAppAccountStatus = 'pending' | 'active' | 'disconnected' | 'suspended'
-
-export type ConversationState =
-  | 'idle'
-  | 'awaiting_reschedule_date'
-  | 'awaiting_reschedule_confirm'
-  | 'awaiting_cancel_confirm'
 
 
 // ── Çalışma Saati Tipi ──
@@ -94,9 +87,6 @@ export interface Business {
   settings: BusinessSettings
   google_place_id: string | null
   google_maps_url: string | null
-  whatsapp_number: string | null
-  twilio_whatsapp_sid: string | null
-  whatsapp_mode: 'shared' | 'own'
   is_active: boolean
   created_at: string
   updated_at: string
@@ -144,7 +134,6 @@ export interface Customer {
   total_no_shows: number
   last_visit_at: string | null
   preferences: Record<string, any>
-  whatsapp_opted_in: boolean
   is_active: boolean
   created_at: string
   updated_at: string
@@ -280,40 +269,6 @@ export interface WaitlistEntry {
   // JOIN
   customer?: Customer
   service?: Service
-}
-
-
-export interface WhatsAppAccount {
-  id: string
-  business_id: string
-  waba_id: string
-  phone_number_id: string
-  phone_number: string
-  display_name: string | null
-  status: WhatsAppAccountStatus
-  quality_rating: string | null
-  messaging_limit: string | null
-  connected_at: string
-  created_at: string
-  updated_at: string
-}
-
-
-export interface WhatsAppConversation {
-  id: string
-  business_id: string
-  customer_phone: string
-  customer_id: string | null
-  state: ConversationState
-  context: {
-    appointment_id?: string
-    proposed_date?: string
-    proposed_time?: string
-    service_name?: string
-  }
-  last_message_at: string
-  created_at: string
-  updated_at: string
 }
 
 

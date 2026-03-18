@@ -81,7 +81,6 @@ export default function BusinessSettingsPage() {
   const [city, setCity] = useState('')
   const [district, setDistrict] = useState('')
   const [googleMapsUrl, setGoogleMapsUrl] = useState('')
-  const [whatsappNumber, setWhatsappNumber] = useState('')
 
   // Çalışma saatleri
   const [workingHours, setWorkingHours] = useState<WorkingHours>(DEFAULT_WORKING_HOURS)
@@ -113,7 +112,6 @@ export default function BusinessSettingsPage() {
       setCity(data.city || '')
       setDistrict(data.district || '')
       setGoogleMapsUrl(data.google_maps_url || '')
-      setWhatsappNumber(data.whatsapp_number || '')
       setWorkingHours(data.working_hours || DEFAULT_WORKING_HOURS)
       setSettings({ ...DEFAULT_SETTINGS, ...(data.settings || {}) })
     }
@@ -148,7 +146,6 @@ export default function BusinessSettingsPage() {
       city: city || null,
       district: district || null,
       google_maps_url: googleMapsUrl || null,
-      whatsapp_number: whatsappNumber || null,
     })
   }
 
@@ -297,20 +294,6 @@ export default function BusinessSettingsPage() {
                       onChange={(e) => setEmail(e.target.value)}
                       className="input pl-10"
                       placeholder="info@isletme.com"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label htmlFor="whatsapp" className="label">WhatsApp Numarası</label>
-                  <div className="relative">
-                    <MessageSquare className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <input
-                      id="whatsapp"
-                      type="tel"
-                      value={whatsappNumber}
-                      onChange={(e) => setWhatsappNumber(e.target.value)}
-                      className="input pl-10"
-                      placeholder="+905321234567"
                     />
                   </div>
                 </div>
@@ -505,13 +488,13 @@ export default function BusinessSettingsPage() {
               <div className="space-y-4">
                 <ToggleSetting
                   label="24 saat önce hatırlatma"
-                  description="Randevudan bir gün önce WhatsApp mesajı gönderilir."
+                  description="Randevudan bir gün önce hatırlatma gönderilir."
                   checked={settings.reminder_24h}
                   onChange={(v) => setSettings(prev => ({ ...prev, reminder_24h: v }))}
                 />
                 <ToggleSetting
                   label="2 saat önce hatırlatma"
-                  description="Randevudan 2 saat önce WhatsApp mesajı gönderilir."
+                  description="Randevudan 2 saat önce hatırlatma gönderilir."
                   checked={settings.reminder_2h}
                   onChange={(v) => setSettings(prev => ({ ...prev, reminder_2h: v }))}
                 />
@@ -584,7 +567,7 @@ export default function BusinessSettingsPage() {
                 <h2 className="text-lg font-semibold text-gray-900">AI Asistan</h2>
               </div>
               <p className="text-sm text-gray-500 mb-6">
-                Claude AI ile gelen WhatsApp mesajlarına otomatik yanıt verin.
+                Claude AI ile gelen mesajlara otomatik yanıt verin.
               </p>
 
               <ToggleSetting
@@ -667,7 +650,7 @@ export default function BusinessSettingsPage() {
                 features={[
                   '100 müşteri',
                   '200 randevu/ay',
-                  'WhatsApp hatırlatma',
+                  'Otomatik hatırlatma',
                   'Temel analitik',
                 ]}
               />

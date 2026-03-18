@@ -22,7 +22,6 @@ const ROUTE_LABELS: Record<string, string> = {
   portfolio: 'Portfolyo',
   settings: 'Ayarlar',
   business: 'İşletme',
-  whatsapp: 'WhatsApp',
   services: 'Hizmetler',
   staff: 'Personeller',
   new: 'Yeni',

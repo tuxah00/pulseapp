@@ -306,13 +306,24 @@ export default function AppointmentsPage() {
           </>
         )}
         {(apt.status === 'no_show' || apt.status === 'cancelled') && (
-          <button
-            onClick={(e) => handleDeleteAppointment(apt.id, e)}
-            title="Sil"
-            className={cn(btnCls, 'text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30')}
-          >
-            <Trash2 className={iconCls} />
-          </button>
+          <>
+            <button
+              onClick={(e) => { e.stopPropagation(); updateStatus(apt.id, 'confirmed') }}
+              className={cn(
+                'flex items-center gap-1 rounded-lg bg-blue-50 dark:bg-blue-900/30 font-medium text-blue-700 dark:text-blue-300 transition-colors hover:bg-blue-100 dark:hover:bg-blue-800/40',
+                size === 'sm' ? 'h-7 px-2 text-xs' : 'h-8 px-3 text-sm'
+              )}
+            >
+              <CheckCircle className={iconCls} /> Aktif Et
+            </button>
+            <button
+              onClick={(e) => handleDeleteAppointment(apt.id, e)}
+              title="Sil"
+              className={cn(btnCls, 'text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30')}
+            >
+              <Trash2 className={iconCls} />
+            </button>
+          </>
         )}
         {apt.status === 'pending' && (
           <button
@@ -461,12 +472,22 @@ export default function AppointmentsPage() {
                 key={apt.id}
                 onClick={() => setSelectedAppointment(apt)}
                 className={cn(
-                  'card flex aspect-square flex-col justify-between p-4 transition-all cursor-pointer hover:shadow-md',
+                  'card relative flex aspect-square flex-col justify-between p-4 transition-all cursor-pointer hover:shadow-md',
                   timeState === 'past' && 'border-transparent bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300',
                   timeState === 'current' && 'border-green-500 ring-2 ring-green-400 bg-white dark:bg-gray-800',
                   selectedAppointment?.id === apt.id && 'ring-2 ring-pulse-500',
                 )}
               >
+                {/* Sağ üst silme butonu (no_show/cancelled) */}
+                {(apt.status === 'no_show' || apt.status === 'cancelled') && (
+                  <button
+                    onClick={(e) => handleDeleteAppointment(apt.id, e)}
+                    title="Sil"
+                    className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 transition-colors"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
                 <div className="flex flex-col items-center gap-1">
                   <div className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{formatTime(apt.start_time)}</div>
                   <span className={`badge ${getStatusColor(apt.status)}`}>{STATUS_LABELS[apt.status as keyof typeof STATUS_LABELS]}</span>
@@ -696,7 +717,7 @@ export default function AppointmentsPage() {
             </p>
             <label className="flex items-center gap-2 cursor-pointer mb-4">
               <input type="checkbox" checked={cancelNotifyCustomer} onChange={(e) => setCancelNotifyCustomer(e.target.checked)} className="rounded border-gray-300" />
-              <span className="text-sm text-gray-700 dark:text-gray-300">Müşteriye WhatsApp ile iptal bildirimi gönder</span>
+              <span className="text-sm text-gray-700 dark:text-gray-300">Müşteriye iptal bildirimi gönder</span>
             </label>
             <div className="flex gap-3">
               <button type="button" onClick={() => setCancelConfirmAppointment(null)} className="btn-secondary flex-1">Vazgeç</button>

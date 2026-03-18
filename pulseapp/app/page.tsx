@@ -34,7 +34,7 @@ export default function HomePage() {
           <span className="text-pulse-600"> dijital asistanı</span>
         </h1>
         <p className="mt-6 text-lg text-gray-500 max-w-2xl mx-auto">
-          WhatsApp üzerinden randevu yönetimi, akıllı hatırlatıcılar, 
+          Akıllı randevu yönetimi, otomatik hatırlatıcılar,
           müşteri takibi ve yorum toplama — hepsi tek platformda.
         </p>
         <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -61,8 +61,8 @@ export default function HomePage() {
             />
             <FeatureCard
               icon={<MessageSquare className="h-6 w-6" />}
-              title="WhatsApp Entegrasyonu"
-              desc="Müşterileriniz WhatsApp'tan randevu alır, siz dashboard'dan yönetirsiniz"
+              title="Online Randevu"
+              desc="Müşterileriniz online randevu alır, siz dashboard'dan yönetirsiniz"
             />
             <FeatureCard
               icon={<Star className="h-6 w-6" />}

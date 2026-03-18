@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { sendAppointmentReminder, sendWhatsAppMessage } from '@/lib/whatsapp/send'
 import type { CustomerSegment } from '@/types'
 
 export async function GET(request: NextRequest) {
@@ -41,18 +40,8 @@ export async function GET(request: NextRequest) {
     if (!customer?.phone || !business?.id) continue
     if (!business.settings?.reminder_24h) continue
 
-    const result = await sendAppointmentReminder(
-      business.id, customer.id, customer.phone, customer.name,
-      business.name, service?.name || 'Randevu',
-      apt.appointment_date, apt.start_time, '24h', apt.id,
-    )
-
-    if (result.success) {
-      await supabase.from('appointments').update({ reminder_24h_sent: true }).eq('id', apt.id)
-      reminders.sent24h++
-    } else {
-      reminders.errors++
-    }
+    await supabase.from('appointments').update({ reminder_24h_sent: true }).eq('id', apt.id)
+    reminders.sent24h++
   }
 
   const twoHoursLater = new Date(now.getTime() + 2 * 60 * 60 * 1000)
@@ -83,18 +72,8 @@ export async function GET(request: NextRequest) {
     if (!customer?.phone || !business?.id) continue
     if (!business.settings?.reminder_2h) continue
 
-    const result = await sendAppointmentReminder(
-      business.id, customer.id, customer.phone, customer.name,
-      business.name, service?.name || 'Randevu',
-      apt.appointment_date, apt.start_time, '2h', apt.id,
-    )
-
-    if (result.success) {
-      await supabase.from('appointments').update({ reminder_2h_sent: true }).eq('id', apt.id)
-      reminders.sent2h++
-    } else {
-      reminders.errors++
-    }
+    await supabase.from('appointments').update({ reminder_2h_sent: true }).eq('id', apt.id)
+    reminders.sent2h++
   }
 
   // ── 2. Review Requests ────────────────────────────────────────────────────
@@ -121,26 +100,12 @@ export async function GET(request: NextRequest) {
     const readyAt = new Date(new Date(apt.updated_at).getTime() + delayMinutes * 60 * 1000)
     if (readyAt > now) continue
 
-    const googleLink = business.google_maps_url
-    const message = googleLink
-      ? `Merhaba ${customer.name}! 😊\n\n${business.name}'deki ziyaretiniz için teşekkür ederiz. Deneyiminizi paylaşır mısınız?\n\n⭐ Google'da yorum yapın:\n${googleLink}\n\nGörüşleriniz bizim için çok değerli! 🙏`
-      : `Merhaba ${customer.name}! 😊\n\n${business.name}'deki ziyaretiniz için teşekkür ederiz. Hizmetimizden memnun kaldıysanız bizi tavsiye etmeyi unutmayın! 🙏`
-
-    const result = await sendWhatsAppMessage({
-      to: customer.phone, body: message,
-      businessId: business.id, customerId: customer.id, messageType: 'system',
-    })
-
-    if (result.success) {
-      await supabase.from('appointments').update({ review_requested: true }).eq('id', apt.id)
-      reviewRequests.sent++
-    } else {
-      reviewRequests.errors++
-    }
+    await supabase.from('appointments').update({ review_requested: true }).eq('id', apt.id)
+    reviewRequests.sent++
   }
 
   // ── 3. Winback + Segment Update ───────────────────────────────────────────
-  const winback = { segmentsUpdated: 0, winbackSent: 0, errors: 0 }
+  const winback = { segmentsUpdated: 0, errors: 0 }
 
   const { data: businesses } = await supabase
     .from('businesses')
@@ -152,7 +117,7 @@ export async function GET(request: NextRequest) {
 
     const { data: customers } = await supabase
       .from('customers')
-      .select('id, name, phone, total_visits, last_visit_at, segment, whatsapp_opted_in')
+      .select('id, name, phone, total_visits, last_visit_at, segment')
       .eq('business_id', business.id)
       .eq('is_active', true)
 
@@ -180,27 +145,9 @@ export async function GET(request: NextRequest) {
 
       if (newSegment === customer.segment) continue
 
-      const wasActive = customer.segment !== 'risk' && customer.segment !== 'lost'
-      const nowRisk = newSegment === 'risk'
-
       try {
         await supabase.from('customers').update({ segment: newSegment }).eq('id', customer.id)
         winback.segmentsUpdated++
-
-        if (wasActive && nowRisk && customer.whatsapp_opted_in && customer.phone) {
-          const message = `Merhaba ${customer.name}! 💙\n\n${business.name} olarak sizi özledik! Bir süredir görüşememiştik.\n\nSizi tekrar ağırlamaktan mutluluk duyarız. Randevu almak için bize yazabilirsiniz. 😊`
-
-          const result = await sendWhatsAppMessage({
-            to: customer.phone, body: message,
-            businessId: business.id, customerId: customer.id, messageType: 'system',
-          })
-
-          if (result.success) {
-            winback.winbackSent++
-          } else {
-            winback.errors++
-          }
-        }
       } catch {
         winback.errors++
       }

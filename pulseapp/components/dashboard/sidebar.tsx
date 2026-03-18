@@ -62,7 +62,6 @@ const ICON_MAP: Record<string, LucideIcon> = {
 }
 
 const bottomNav = [
-  { name: 'WhatsApp', href: '/dashboard/settings/whatsapp', icon: MessageCircle },
   { name: 'İşletmeler', href: '/dashboard/settings/businesses', icon: Briefcase },
   { name: 'Ayarlar', href: '/dashboard/settings/business', icon: Settings },
 ]
