@@ -78,7 +78,7 @@ export async function sendSMS(params: SendSMSParams): Promise<SendSMSResult> {
   }
 }
 
-function normalizePhone(phone: string): string {
+export function normalizePhone(phone: string): string {
   const cleaned = phone.replace(/\D/g, '')
   if (cleaned.startsWith('90') && cleaned.length === 12) return `+${cleaned}`
   if (cleaned.startsWith('0') && cleaned.length === 11) return `+9${cleaned}`

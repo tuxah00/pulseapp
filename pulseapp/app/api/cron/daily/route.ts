@@ -169,44 +169,38 @@ export async function GET(request: NextRequest) {
   // ── 4. Bekleme Listesi Bildirimleri ───────────────────────────────────────
   const waitlistNotifs = { sent: 0, errors: 0 }
 
-  // İptal/no_show olan bugünkü randevuların slotlarını kontrol et
-  const todayStr = now.toISOString().split('T')[0]
   const { data: cancelledToday } = await supabase
     .from('appointments')
-    .select('appointment_date, start_time, end_time, staff_id, service_id, business_id')
+    .select('business_id')
     .in('status', ['cancelled', 'no_show'])
-    .eq('appointment_date', todayStr)
+    .eq('appointment_date', todayDate)
 
-  for (const apt of cancelledToday || []) {
-    // Aynı tarih/saat/personel için bekleme listesi kayıtlarını bul
-    let wlQuery = supabase
+  const cancelledBusinessIds = [...new Set((cancelledToday || []).map(a => a.business_id))]
+
+  if (cancelledBusinessIds.length > 0) {
+    // Tüm ilgili bekleme listesi kayıtlarını tek sorguda çek
+    const { data: allWaitlist } = await supabase
       .from('waitlist_entries')
       .select('*')
-      .eq('business_id', apt.business_id)
+      .in('business_id', cancelledBusinessIds)
+      .eq('preferred_date', todayDate)
       .eq('is_notified', false)
       .eq('is_active', true)
 
-    wlQuery = wlQuery.eq('preferred_date', apt.appointment_date)
-
-    const { data: waitlistItems } = await wlQuery
-
-    for (const item of waitlistItems || []) {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
-      const message = `Merhaba ${item.customer_name}! 😊 Beklediğiniz randevu slotu uygun oldu. Hemen almak için: ${appUrl}/book/${apt.business_id}`
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
+    for (const item of allWaitlist || []) {
+      const message = `Merhaba ${item.customer_name}! 😊 Beklediğiniz randevu slotu uygun oldu. Hemen almak için: ${appUrl}/book/${item.business_id}`
 
       const smsResult = await sendSMS({
         to: item.customer_phone,
         body: message,
-        businessId: apt.business_id,
+        businessId: item.business_id,
         customerId: item.customer_id || undefined,
         messageType: 'system',
       })
 
       if (smsResult.success) {
-        await supabase
-          .from('waitlist_entries')
-          .update({ is_notified: true })
-          .eq('id', item.id)
+        await supabase.from('waitlist_entries').update({ is_notified: true }).eq('id', item.id)
         waitlistNotifs.sent++
       } else {
         waitlistNotifs.errors++

@@ -27,6 +27,11 @@ function generateSlots(open: string, close: string, durationMinutes: number): st
   return slots
 }
 
+function slotMinutes(s: string): number {
+  const [h, m] = s.split(':').map(Number)
+  return h * 60 + m
+}
+
 /** Bir listedeki randevulardan dolu minute-set'i döndürür */
 function occupiedMinutes(appointments: { start_time: string; end_time: string }[]): Set<number> {
   const set = new Set<number>()
@@ -103,10 +108,6 @@ export async function GET(
       .in('status', ['pending', 'confirmed'])
 
     const occupied = occupiedMinutes(existing || [])
-    const slotMinutes = (s: string) => {
-      const [h, m] = s.split(':').map(Number)
-      return h * 60 + m
-    }
     const available = allSlots.filter(s => !occupied.has(slotMinutes(s)))
     return NextResponse.json({ slots: available, open: hours.open, close: hours.close })
   }
@@ -129,10 +130,6 @@ export async function GET(
       .in('status', ['pending', 'confirmed'])
 
     const occupied = occupiedMinutes(existing || [])
-    const slotMinutes = (s: string) => {
-      const [h, m] = s.split(':').map(Number)
-      return h * 60 + m
-    }
     const available = allSlots.filter(s => !occupied.has(slotMinutes(s)))
     return NextResponse.json({ slots: available, open: hours.open, close: hours.close })
   }
@@ -160,19 +157,19 @@ export async function GET(
 
   const offStaffIds = new Set((offShifts || []).map(s => s.staff_id))
 
-  const slotMinutes = (s: string) => {
-    const [h, m] = s.split(':').map(Number)
-    return h * 60 + m
+  // Her personel için dolu dakikaları önceden hesapla (O(staff * appts) yerine O(slots * staff))
+  const occupiedByStaff = new Map<string, Set<number>>()
+  for (const sid of staffIds) {
+    const staffAppts = (allAppts || []).filter(a => a.staff_id === sid)
+    occupiedByStaff.set(sid, occupiedMinutes(staffAppts))
   }
 
   // Her slot için: en az 1 personelin müsait olup olmadığını kontrol et
   const available = allSlots.filter(slotStr => {
     const slotMin = slotMinutes(slotStr)
     return staffIds.some(sid => {
-      if (offStaffIds.has(sid)) return false // bu personel izinli
-      const staffAppts = (allAppts || []).filter(a => a.staff_id === sid)
-      const occupied = occupiedMinutes(staffAppts)
-      return !occupied.has(slotMin)
+      if (offStaffIds.has(sid)) return false
+      return !occupiedByStaff.get(sid)!.has(slotMin)
     })
   })
 

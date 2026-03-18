@@ -11,6 +11,8 @@ import {
 import { formatCurrency, cn } from '@/lib/utils'
 import { SEGMENT_LABELS } from '@/types'
 
+const supabase = createClient()
+
 function getPeriodDates(period: 'week' | 'month' | 'year', offset = 0): { start: string; end: string } {
   const now = new Date()
   let start: Date
@@ -51,8 +53,6 @@ export default function AnalyticsPage() {
   const [reviews, setReviews] = useState<any[]>([])
   const [services, setServices] = useState<any[]>([])
   const [staffMembers, setStaffMembers] = useState<any[]>([])
-
-  const supabase = createClient()
 
   const fetchData = useCallback(async () => {
     if (!businessId) return

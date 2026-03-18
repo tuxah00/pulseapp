@@ -25,11 +25,6 @@ export async function POST(request: NextRequest) {
   // İşletmeyi Twilio numarasına göre bul (TWILIO_PHONE_NUMBER env veya business phone)
   // Basit yaklaşım: tüm aktif işletmeleri çek ve TWILIO_PHONE_NUMBER ile eşleştir
   // Gerçek çok-işletme senaryosunda her işletmenin kendi Twilio numarası olur
-  const twilioNumber = process.env.TWILIO_PHONE_NUMBER || ''
-  if (to !== twilioNumber && !twilioNumber.includes(to.replace('+', ''))) {
-    // Numara eşleşmedi, yine de devam et (tek işletme için)
-  }
-
   // Gönderenin telefon numarasına göre müşteriyi bul
   const normalizedFrom = from.replace(/\D/g, '')
   const { data: customers } = await admin

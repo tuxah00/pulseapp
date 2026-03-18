@@ -169,6 +169,8 @@ export default function BookingPage() {
       })
       setWaitlistSuccess(true)
       setShowWaitlist(false)
+      setWaitlistName('')
+      setWaitlistPhone('')
     } catch {
       // sessizce geç
     } finally {

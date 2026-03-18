@@ -1,19 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { normalizePhone } from '@/lib/sms/send'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
-
-function normalizePhone(phone: string): string {
-  const cleaned = phone.replace(/\D/g, '')
-  if (cleaned.startsWith('90') && cleaned.length === 12) return `+${cleaned}`
-  if (cleaned.startsWith('0') && cleaned.length === 11) return `+9${cleaned}`
-  if (cleaned.length === 10) return `+90${cleaned}`
-  if (!phone.startsWith('+')) return `+${cleaned}`
-  return phone
-}
 
 export async function POST(
   request: NextRequest,
