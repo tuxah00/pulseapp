@@ -186,7 +186,7 @@ export async function GET(request: NextRequest) {
       .eq('is_notified', false)
       .eq('is_active', true)
 
-    if (apt.preferred_date) wlQuery = wlQuery.eq('preferred_date', apt.appointment_date)
+    wlQuery = wlQuery.eq('preferred_date', apt.appointment_date)
 
     const { data: waitlistItems } = await wlQuery
 
