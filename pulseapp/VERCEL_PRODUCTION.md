@@ -29,14 +29,6 @@ Vercel → Proje → **Settings** → **Environment Variables** bölümüne aşa
 | Değişken | Açıklama |
 |----------|----------|
 | `ANTHROPIC_API_KEY` | Claude AI (mesaj sınıflandırma vb.) |
-| `META_APP_ID` | Meta WhatsApp Cloud API – App ID |
-| `META_APP_SECRET` | Meta WhatsApp Cloud API – App Secret |
-| `NEXT_PUBLIC_META_APP_ID` | Meta App ID (client tarafı, WhatsApp bağlantı sayfası) |
-| `WHATSAPP_VERIFY_TOKEN` | Webhook doğrulama tokeni (Meta’da tanımladığınız) |
-| `WHATSAPP_ENCRYPTION_KEY` | 32 byte hex (örn. `openssl rand -hex 32`) |
-| `TWILIO_ACCOUNT_SID` | Twilio (legacy WhatsApp) |
-| `TWILIO_AUTH_TOKEN` | Twilio |
-| `TWILIO_WHATSAPP_NUMBER` | Twilio WhatsApp numarası |
 | `PAYTR_MERCHANT_ID` | PayTR ödeme |
 | `PAYTR_MERCHANT_KEY` | PayTR |
 | `PAYTR_MERCHANT_SALT` | PayTR |
@@ -126,7 +118,7 @@ CREATE TRIGGER after_appointment_status_sync_customer
 - [ ] `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` tanımlı.
 - [ ] `NEXT_PUBLIC_APP_URL` production domain’e ayarlı (https ile).
 - [ ] `CRON_SECRET` güçlü ve rastgele.
-- [ ] İsteğe bağlı: WhatsApp / ödeme / e-posta key’leri eklenmiş.
+- [ ] İsteğe bağlı: ödeme / e-posta key’leri eklenmiş.
 - [ ] Supabase’te `003_fix_appointment_customer_segment.sql` çalıştırılmış.
 - [ ] Deploy sonrası giriş / randevu / müşteri sayfalarını test edin.
 

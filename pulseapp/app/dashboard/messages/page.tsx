@@ -76,7 +76,7 @@ export default function MessagesPage() {
 
     const { data: allMessages, error } = await supabase
       .from('messages')
-      .select('*, customers(id, name, phone, segment, whatsapp_opted_in)')
+      .select('*, customers(id, name, phone, segment)')
       .eq('business_id', businessId)
       .not('customer_id', 'is', null)
       .order('created_at', { ascending: false })
@@ -383,7 +383,7 @@ export default function MessagesPage() {
                 <p className="text-xs text-gray-500">
                   {search
                     ? 'Farklı bir arama terimi deneyin.'
-                    : 'WhatsApp entegrasyonu aktif olduğunda müşteri mesajları burada görünecek.'}
+                    : 'Müşteri mesajları burada görünecek.'}
                 </p>
               </div>
             ) : (
@@ -486,11 +486,6 @@ export default function MessagesPage() {
                 </div>
 
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  {selectedCustomer.whatsapp_opted_in && (
-                    <span className="badge bg-green-100 text-green-700 text-[10px]">
-                      WhatsApp Aktif
-                    </span>
-                  )}
                   <a
                     href={`/dashboard/customers`}
                     className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
@@ -584,7 +579,7 @@ export default function MessagesPage() {
                                 <span className="text-[10px]">
                                   {format(parseISO(msg.created_at), 'HH:mm')}
                                 </span>
-                                {msg.direction === 'outbound' && msg.channel === 'whatsapp' && (
+                                {msg.direction === 'outbound' && msg.twilio_status && (
                                   <span className="text-[10px]">
                                     {msg.twilio_status === 'delivered' ? '✓✓' :
                                      msg.twilio_status === 'read' ? '✓✓' :
@@ -708,8 +703,8 @@ export default function MessagesPage() {
                 />
                 <FeatureItem
                   icon={<Phone className="h-4 w-4 text-green-500" />}
-                  title="WhatsApp Entegrasyonu"
-                  desc="Doğrudan WhatsApp üzerinden mesajlaşma"
+                  title="Çok Kanallı Mesajlaşma"
+                  desc="SMS ve web üzerinden müşteri iletişimi"
                 />
               </div>
             </div>

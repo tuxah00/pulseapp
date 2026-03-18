@@ -12,7 +12,7 @@ export async function GET(
 ) {
   const { data: business, error } = await supabase
     .from('businesses')
-    .select('id, name, sector, phone, address, city, district, working_hours, google_maps_url, whatsapp_number')
+    .select('id, name, sector, phone, address, city, district, working_hours, google_maps_url')
     .eq('id', params.id)
     .eq('is_active', true)
     .single()

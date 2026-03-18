@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { sendWhatsAppMessage } from '@/lib/whatsapp/send'
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization')
@@ -35,28 +34,15 @@ export async function GET(request: NextRequest) {
     const readyAt = new Date(new Date(apt.updated_at).getTime() + delayMinutes * 60 * 1000)
     if (readyAt > now) continue
 
-    const googleLink = business.google_maps_url
-    const message = googleLink
-      ? `Merhaba ${customer.name}! 😊\n\n${business.name}'deki ziyaretiniz için teşekkür ederiz. Deneyiminizi paylaşır mısınız?\n\n⭐ Google'da yorum yapın:\n${googleLink}\n\nGörüşleriniz bizim için çok değerli! 🙏`
-      : `Merhaba ${customer.name}! 😊\n\n${business.name}'deki ziyaretiniz için teşekkür ederiz. Hizmetimizden memnun kaldıysanız bizi tavsiye etmeyi unutmayın! 🙏`
-
-    const result = await sendWhatsAppMessage({
-      to: customer.phone,
-      body: message,
-      businessId: business.id,
-      customerId: customer.id,
-      messageType: 'system',
-    })
-
-    if (result.success) {
+    try {
       await supabase
         .from('appointments')
         .update({ review_requested: true })
         .eq('id', apt.id)
       results.sent++
-    } else {
+    } catch {
       results.errors++
-      console.error(`Yorum istek hatası (${apt.id}):`, result.error)
+      console.error(`Yorum istek hatası (${apt.id})`)
     }
   }
 

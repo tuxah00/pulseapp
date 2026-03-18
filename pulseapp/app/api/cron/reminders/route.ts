@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { sendAppointmentReminder } from '@/lib/whatsapp/send'
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization')
@@ -33,34 +32,19 @@ export async function GET(request: NextRequest) {
 
   for (const apt of appointments24h || []) {
     const customer = apt.customers as any
-    const service = apt.services as any
     const business = apt.businesses as any
 
     if (!customer?.phone || !business?.id) continue
     if (!business.settings?.reminder_24h) continue
 
-    const result = await sendAppointmentReminder(
-      business.id,
-      customer.id,
-      customer.phone,
-      customer.name,
-      business.name,
-      service?.name || 'Randevu',
-      apt.appointment_date,
-      apt.start_time,
-      '24h',
-      apt.id,
-    )
-
-    if (result.success) {
+    try {
       await supabase
         .from('appointments')
         .update({ reminder_24h_sent: true })
         .eq('id', apt.id)
       results.sent24h++
-    } else {
+    } catch {
       results.errors++
-      console.error(`24h hatırlatma hatası (${apt.id}):`, result.error)
     }
   }
 
@@ -92,34 +76,19 @@ export async function GET(request: NextRequest) {
 
   for (const apt of appointments2h || []) {
     const customer = apt.customers as any
-    const service = apt.services as any
     const business = apt.businesses as any
 
     if (!customer?.phone || !business?.id) continue
     if (!business.settings?.reminder_2h) continue
 
-    const result = await sendAppointmentReminder(
-      business.id,
-      customer.id,
-      customer.phone,
-      customer.name,
-      business.name,
-      service?.name || 'Randevu',
-      apt.appointment_date,
-      apt.start_time,
-      '2h',
-      apt.id,
-    )
-
-    if (result.success) {
+    try {
       await supabase
         .from('appointments')
         .update({ reminder_2h_sent: true })
         .eq('id', apt.id)
       results.sent2h++
-    } else {
+    } catch {
       results.errors++
-      console.error(`2h hatırlatma hatası (${apt.id}):`, result.error)
     }
   }
 
