@@ -153,3 +153,13 @@ Opsiyonel: `PAYTR_*`, `RESEND_API_KEY`, `GOOGLE_PLACES_API_KEY`
 
 - `be08ca0`: `app/[id]` route çakışması giderildi, businesses panel kaldırıldı
 - `cd5cd72`: `tsconfig` hedefi ES2017'ye çekildi (Set/Map iteration fix)
+- `2026-03-19`: Bildirimler paneline "Yeni" badge göstergesi eklendi (son 24 saat)
+- `2026-03-19`: Sektör alanı ayarlar sayfasında değiştirilebilir hale getirildi (test modu)
+- `2026-03-19`: Vardiye yönetimi hata handling düzeltildi; `008_fix_shifts_trigger.sql` migration eklendi (moddatetime → standart trigger)
+
+---
+
+## Supabase Migration Durumu
+
+Aşağıdaki migration'lar Supabase SQL Editor'de manuel olarak çalıştırılmalıdır:
+- `008_fix_shifts_trigger.sql` — shifts tablosunun updated_at trigger'ını moddatetime'dan bağımsız hale getirir (vardiye kaydetme için kritik)

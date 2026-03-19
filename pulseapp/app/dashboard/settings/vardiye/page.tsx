@@ -52,6 +52,7 @@ export default function VardiyePage() {
   const [shifts, setShifts] = useState<Shift[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   // Modal
   const [modal, setModal] = useState<{ staffId: string; date: string } | null>(null)
@@ -100,14 +101,16 @@ export default function VardiyePage() {
     setModalStart(existing?.start_time?.slice(0, 5) || '09:00')
     setModalEnd(existing?.end_time?.slice(0, 5) || '18:00')
     setModalNotes(existing?.notes || '')
+    setSaveError(null)
     setModal({ staffId, date })
   }
 
   async function saveShift() {
     if (!modal || !businessId) return
     setSaving(true)
+    setSaveError(null)
     try {
-      await fetch('/api/shifts', {
+      const res = await fetch('/api/shifts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -120,16 +123,32 @@ export default function VardiyePage() {
           notes: modalNotes || null,
         }),
       })
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}))
+        setSaveError(json.error || `Sunucu hatası (${res.status})`)
+        return
+      }
       setModal(null)
       await fetchData()
+    } catch (err) {
+      setSaveError('Bağlantı hatası. Lütfen tekrar deneyin.')
     } finally {
       setSaving(false)
     }
   }
 
   async function deleteShift(shiftId: string) {
-    await fetch(`/api/shifts/${shiftId}`, { method: 'DELETE' })
-    await fetchData()
+    try {
+      const res = await fetch(`/api/shifts/${shiftId}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}))
+        alert(json.error || 'Silme işlemi başarısız.')
+        return
+      }
+      await fetchData()
+    } catch {
+      alert('Bağlantı hatası. Lütfen tekrar deneyin.')
+    }
   }
 
   /** Otomatik haftalık dağıtım: hedef saati personele eşit böl */
@@ -418,6 +437,12 @@ export default function VardiyePage() {
                 className="input"
               />
             </div>
+
+            {saveError && (
+              <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
+                {saveError}
+              </div>
+            )}
 
             <div className="flex gap-3">
               <button onClick={() => setModal(null)} className="btn-secondary flex-1">İptal</button>

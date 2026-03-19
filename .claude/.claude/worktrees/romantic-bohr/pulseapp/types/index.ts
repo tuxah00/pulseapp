@@ -1,0 +1,380 @@
+// ============================================
+// PulseApp — TypeScript Tip Tanımları
+// Veritabanı şemasıyla birebir uyumlu
+// ============================================
+
+// ── Enum Tipleri ──
+
+export type SectorType =
+  | 'hair_salon' | 'beauty_salon' | 'dental_clinic'
+  | 'psychologist' | 'lawyer' | 'restaurant'
+  | 'cafe' | 'auto_service' | 'veterinary'
+  | 'physiotherapy' | 'other'
+
+export type PlanType = 'starter' | 'standard' | 'pro'
+
+export type SubscriptionStatusType =
+  | 'trial' | 'active' | 'past_due' | 'cancelled' | 'expired'
+
+export type StaffRole = 'owner' | 'manager' | 'staff'
+
+export type AppointmentStatus =
+  | 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show'
+
+export type AppointmentSource = 'whatsapp' | 'web' | 'manual' | 'phone'
+
+export type CustomerSegment = 'new' | 'regular' | 'vip' | 'risk' | 'lost'
+
+export type MessageDirection = 'inbound' | 'outbound'
+export type MessageChannel = 'whatsapp' | 'sms' | 'web'
+export type MessageType = 'text' | 'template' | 'ai_generated' | 'system'
+export type AiClassification =
+  | 'appointment' | 'question' | 'complaint' | 'cancellation' | 'greeting' | 'other'
+
+export type ReviewStatus = 'pending' | 'responded' | 'escalated'
+export type NotificationType = 'appointment' | 'review' | 'payment' | 'customer' | 'system'
+export type WhatsAppAccountStatus = 'pending' | 'active' | 'disconnected' | 'suspended'
+
+export type ConversationState =
+  | 'idle'
+  | 'awaiting_reschedule_date'
+  | 'awaiting_reschedule_confirm'
+  | 'awaiting_cancel_confirm'
+
+
+// ── Çalışma Saati Tipi ──
+
+export interface DayHours {
+  open: string   // "09:00"
+  close: string  // "18:00"
+}
+
+export interface WorkingHours {
+  mon: DayHours | null
+  tue: DayHours | null
+  wed: DayHours | null
+  thu: DayHours | null
+  fri: DayHours | null
+  sat: DayHours | null
+  sun: DayHours | null
+}
+
+
+// ── İşletme Ayarları ──
+
+export interface BusinessSettings {
+  reminder_24h: boolean
+  reminder_2h: boolean
+  auto_review_request: boolean
+  review_request_delay_minutes: number
+  winback_days: number
+  ai_auto_reply: boolean
+  language: string
+}
+
+
+// ── Tablo Tipleri ──
+
+export interface Business {
+  id: string
+  name: string
+  sector: SectorType
+  phone: string | null
+  email: string | null
+  address: string | null
+  city: string | null
+  district: string | null
+  subscription_plan: PlanType
+  subscription_status: SubscriptionStatusType
+  trial_ends_at: string | null
+  working_hours: WorkingHours
+  settings: BusinessSettings
+  google_place_id: string | null
+  google_maps_url: string | null
+  whatsapp_number: string | null
+  twilio_whatsapp_sid: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface StaffMember {
+  id: string
+  business_id: string
+  user_id: string | null
+  name: string
+  role: StaffRole
+  phone: string | null
+  email: string | null
+  avatar_url: string | null
+  working_hours: WorkingHours | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface Service {
+  id: string
+  business_id: string
+  name: string
+  description: string | null
+  duration_minutes: number
+  price: number | null
+  sort_order: number
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface Customer {
+  id: string
+  business_id: string
+  name: string
+  phone: string
+  email: string | null
+  birthday: string | null
+  notes: string | null
+  segment: CustomerSegment
+  total_visits: number
+  total_revenue: number
+  total_no_shows: number
+  last_visit_at: string | null
+  preferences: Record<string, any>
+  whatsapp_opted_in: boolean
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface Appointment {
+  id: string
+  business_id: string
+  customer_id: string
+  staff_id: string | null
+  service_id: string | null
+  appointment_date: string
+  start_time: string
+  end_time: string
+  status: AppointmentStatus
+  source: AppointmentSource
+  reminder_24h_sent: boolean
+  reminder_2h_sent: boolean
+  review_requested: boolean
+  notes: string | null
+  cancellation_reason: string | null
+  created_at: string
+  updated_at: string
+  // JOIN'lerden gelen opsiyonel alanlar
+  customer?: Customer
+  staff?: StaffMember
+  service?: Service
+}
+
+export interface Message {
+  id: string
+  business_id: string
+  customer_id: string | null
+  direction: MessageDirection
+  channel: MessageChannel
+  message_type: MessageType
+  content: string
+  twilio_sid: string | null
+  twilio_status: string | null
+  meta_message_id: string | null
+  ai_classification: AiClassification | null
+  ai_confidence: number | null
+  appointment_id: string | null
+  created_at: string
+  // JOIN
+  customer?: Customer
+}
+
+export interface Review {
+  id: string
+  business_id: string
+  customer_id: string | null
+  appointment_id: string | null
+  rating: number
+  comment: string | null
+  ai_response_draft: string | null
+  actual_response: string | null
+  status: ReviewStatus
+  google_review_link_sent: boolean
+  created_at: string
+  updated_at: string
+  // JOIN
+  customer?: Customer
+}
+
+export interface Subscription {
+  id: string
+  business_id: string
+  plan: PlanType
+  status: SubscriptionStatusType
+  paytr_merchant_oid: string | null
+  paytr_token: string | null
+  current_period_start: string | null
+  current_period_end: string | null
+  amount: number
+  currency: string
+  billing_name: string | null
+  billing_address: string | null
+  billing_tax_id: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface Payment {
+  id: string
+  business_id: string
+  subscription_id: string | null
+  amount: number
+  currency: string
+  status: string
+  paytr_merchant_oid: string | null
+  paytr_response: Record<string, any> | null
+  paid_at: string | null
+  created_at: string
+}
+
+export interface Notification {
+  id: string
+  business_id: string
+  type: NotificationType
+  title: string
+  body: string | null
+  related_id: string | null
+  related_type: string | null
+  is_read: boolean
+  created_at: string
+}
+
+export interface MessageTemplate {
+  id: string
+  business_id: string | null
+  name: string
+  slug: string
+  channel: MessageChannel
+  content: string
+  is_active: boolean
+  created_at: string
+}
+
+export interface WaitlistEntry {
+  id: string
+  business_id: string
+  customer_id: string
+  service_id: string | null
+  staff_id: string | null
+  preferred_date: string | null
+  preferred_time_start: string | null
+  preferred_time_end: string | null
+  notes: string | null
+  is_notified: boolean
+  is_active: boolean
+  created_at: string
+  // JOIN
+  customer?: Customer
+  service?: Service
+}
+
+
+export interface WhatsAppAccount {
+  id: string
+  business_id: string
+  waba_id: string
+  phone_number_id: string
+  phone_number: string
+  display_name: string | null
+  status: WhatsAppAccountStatus
+  quality_rating: string | null
+  messaging_limit: string | null
+  connected_at: string
+  created_at: string
+  updated_at: string
+}
+
+
+export interface WhatsAppConversation {
+  id: string
+  business_id: string
+  customer_phone: string
+  customer_id: string | null
+  state: ConversationState
+  context: {
+    appointment_id?: string
+    proposed_date?: string
+    proposed_time?: string
+    service_name?: string
+  }
+  last_message_at: string
+  created_at: string
+  updated_at: string
+}
+
+
+// ── Dashboard View Tipleri ──
+
+export interface BusinessStats {
+  business_id: string
+  total_customers: number
+  today_appointments: number
+  today_completed: number
+  today_no_shows: number
+  total_reviews: number
+  avg_rating: number | null
+  unread_notifications: number
+}
+
+export interface TodayAppointment extends Appointment {
+  customer_name: string
+  customer_phone: string
+  service_name: string | null
+  duration_minutes: number | null
+  staff_name: string | null
+}
+
+
+// ── Yardımcı Tipler ──
+
+export const SECTOR_LABELS: Record<SectorType, string> = {
+  hair_salon: 'Kuaför / Berber',
+  beauty_salon: 'Güzellik Salonu',
+  dental_clinic: 'Diş Kliniği',
+  psychologist: 'Psikolog',
+  lawyer: 'Avukat',
+  restaurant: 'Restoran',
+  cafe: 'Kafe',
+  auto_service: 'Oto Servis',
+  veterinary: 'Veteriner',
+  physiotherapy: 'Fizyoterapi',
+  other: 'Diğer',
+}
+
+export const PLAN_LABELS: Record<PlanType, string> = {
+  starter: 'Başlangıç',
+  standard: 'Standart',
+  pro: 'Asistan Pro',
+}
+
+export const PLAN_PRICES: Record<PlanType, number> = {
+  starter: 499,
+  standard: 999,
+  pro: 1999,
+}
+
+export const STATUS_LABELS: Record<AppointmentStatus, string> = {
+  pending: 'Bekliyor',
+  confirmed: 'Onaylandı',
+  completed: 'Tamamlandı',
+  cancelled: 'İptal',
+  no_show: 'Gelmedi',
+}
+
+export const SEGMENT_LABELS: Record<CustomerSegment, string> = {
+  new: 'Yeni',
+  regular: 'Düzenli',
+  vip: 'VIP',
+  risk: 'Riskli',
+  lost: 'Kayıp',
+}

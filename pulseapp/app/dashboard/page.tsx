@@ -171,23 +171,36 @@ export default async function DashboardPage() {
               <p className="text-sm text-gray-400 text-center py-6">Yeni bildirim yok</p>
             ) : (
               <div className="space-y-3">
-                {notifications.map((notif: any) => (
-                  <div key={notif.id} className="flex gap-3">
-                    <div className="mt-0.5">
-                      {notif.type === 'review' ? (
-                        <AlertTriangle className="h-4 w-4 text-amber-500" />
-                      ) : notif.type === 'appointment' ? (
-                        <Clock className="h-4 w-4 text-blue-500" />
-                      ) : (
-                        <Bell className="h-4 w-4 text-gray-400" />
-                      )}
+                {notifications.map((notif: any) => {
+                  const isNew = notif.created_at && (Date.now() - new Date(notif.created_at).getTime()) < 24 * 60 * 60 * 1000
+                  return (
+                    <div key={notif.id} className="flex gap-3 items-start">
+                      <div className="mt-1.5 flex-shrink-0 relative">
+                        <span className="block h-2 w-2 rounded-full bg-blue-500" />
+                      </div>
+                      <div className="mt-0.5 flex-shrink-0">
+                        {notif.type === 'review' ? (
+                          <AlertTriangle className="h-4 w-4 text-amber-500" />
+                        ) : notif.type === 'appointment' ? (
+                          <Clock className="h-4 w-4 text-blue-500" />
+                        ) : (
+                          <Bell className="h-4 w-4 text-gray-400" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{notif.title}</p>
+                          {isNew && (
+                            <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 flex-shrink-0">
+                              Yeni
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-500 truncate">{notif.body}</p>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{notif.title}</p>
-                      <p className="text-xs text-gray-500 truncate">{notif.body}</p>
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </div>
