@@ -62,9 +62,12 @@ export default function VardiyePage() {
   const [modalNotes, setModalNotes] = useState('')
 
   // Otomatik dağıtım
-  const [autoHours, setAutoHours] = useState(45)
   const [showAutoPanel, setShowAutoPanel] = useState(false)
   const [autoSaving, setAutoSaving] = useState(false)
+  const [autoSelectedDays, setAutoSelectedDays] = useState<boolean[]>([true, true, true, true, true, false, false])
+  const [autoStartTime, setAutoStartTime] = useState('09:00')
+  const [autoEndTime, setAutoEndTime] = useState('18:00')
+  const [autoError, setAutoError] = useState<string | null>(null)
 
   const monday = addDays(getMonday(new Date()), weekOffset * 7)
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(monday, i))
@@ -151,65 +154,36 @@ export default function VardiyePage() {
     }
   }
 
-  /** Otomatik haftalık dağıtım: hedef saati personele eşit böl */
+  /** Otomatik haftalık dağıtım: seçili günlere ve mesai saatine göre tüm personele yaz */
   async function handleAutoDist() {
     if (!businessId || staff.length === 0) return
     setAutoSaving(true)
+    setAutoError(null)
     try {
-      // İşletmenin çalışma saatlerini çek
-      const { data: business } = await supabase
-        .from('businesses')
-        .select('working_hours')
-        .eq('id', businessId)
-        .single()
-
-      const wh = (business?.working_hours || {}) as any
-      const dayKeyMap: Record<number, string> = { 0: 'mon', 1: 'tue', 2: 'wed', 3: 'thu', 4: 'fri', 5: 'sat', 6: 'sun' }
-
-      // Personel başına hedef saat
-      const hoursPerStaff = autoHours / staff.length
-
       for (const member of staff) {
-        let remainingMinutes = hoursPerStaff * 60
-
         for (let di = 0; di < 7; di++) {
-          if (remainingMinutes <= 0) break
-          const day = weekDays[di]
-          const dateStr = formatDate(day)
-          const dayKey = dayKeyMap[di]
-          const dayHours = wh[dayKey]
-
-          // İzin günü varsa atla
-          const existingShift = getShift(member.id, dateStr)
-          if (existingShift?.shift_type === 'off') continue
-          if (existingShift?.shift_type === 'regular') continue // manuel kayıt varsa dokunma
-
-          if (!dayHours) continue // işletme o gün kapalı
-
-          const [openH, openM] = dayHours.open.split(':').map(Number)
-          const [closeH, closeM] = dayHours.close.split(':').map(Number)
-          const maxMinutes = (closeH * 60 + closeM) - (openH * 60 + openM)
-          const shiftMinutes = Math.min(remainingMinutes, maxMinutes)
-
-          const endMinutes = openH * 60 + openM + shiftMinutes
-          const endH = Math.floor(endMinutes / 60).toString().padStart(2, '0')
-          const endM = (endMinutes % 60).toString().padStart(2, '0')
-
-          await fetch('/api/shifts', {
+          if (!autoSelectedDays[di]) continue
+          const dateStr = formatDate(weekDays[di])
+          const existing = getShift(member.id, dateStr)
+          if (existing) continue
+          const res = await fetch('/api/shifts', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               businessId,
               staffId: member.id,
               shiftDate: dateStr,
-              startTime: dayHours.open,
-              endTime: `${endH}:${endM}`,
+              startTime: autoStartTime,
+              endTime: autoEndTime,
               shiftType: 'regular',
               notes: 'Otomatik dağıtım',
             }),
           })
-
-          remainingMinutes -= shiftMinutes
+          if (!res.ok) {
+            const json = await res.json().catch(() => ({}))
+            setAutoError(`${member.name} — ${dateStr}: ${json.error || `Sunucu hatası (${res.status})`}`)
+            return
+          }
         }
       }
       setShowAutoPanel(false)
@@ -245,32 +219,86 @@ export default function VardiyePage() {
 
       {/* Otomatik Dağıtım Paneli */}
       {showAutoPanel && (
-        <div className="card border-pulse-200 bg-pulse-50 dark:bg-pulse-900/20">
-          <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">Haftalık Otomatik Dağıtım</h3>
-          <p className="text-sm text-gray-500 mb-4">
-            Haftalık toplam saat hedefini girin. Sistem, {staff.length} personele eşit bölerek
-            manuel kayıtları ve izin günlerini atlayarak bu haftanın kalan günlerine dağıtır.
-          </p>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Haftalık saat hedefi:</label>
-              <input
-                type="number"
-                value={autoHours}
-                onChange={e => setAutoHours(Number(e.target.value))}
-                min={1}
-                max={168}
-                className="input w-24"
-              />
-              <span className="text-sm text-gray-500">saat</span>
+        <div className="card border-pulse-200 bg-pulse-50 dark:bg-pulse-900/20 space-y-4">
+          <h3 className="font-semibold text-gray-900 dark:text-gray-100">Haftalık Otomatik Dağıtım</h3>
+
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Çalışma Günleri</label>
+            <div className="flex gap-2 flex-wrap">
+              {DAY_LABELS.map((label, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setAutoSelectedDays(prev => prev.map((v, idx) => idx === i ? !v : v))}
+                  className={cn(
+                    'px-3 py-1.5 rounded-full text-sm font-medium border transition-colors',
+                    autoSelectedDays[i]
+                      ? 'bg-pulse-600 text-white border-pulse-600'
+                      : 'bg-white dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-600 hover:border-gray-400'
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Mesai Saatleri</label>
+            <div className="flex items-center gap-3">
+              <input
+                type="time"
+                value={autoStartTime}
+                onChange={e => setAutoStartTime(e.target.value)}
+                className="input w-32"
+              />
+              <span className="text-gray-400">—</span>
+              <input
+                type="time"
+                value={autoEndTime}
+                onChange={e => setAutoEndTime(e.target.value)}
+                className="input w-32"
+              />
+            </div>
+          </div>
+
+          {(() => {
+            const selectedCount = autoSelectedDays.filter(Boolean).length
+            const [sh, sm] = autoStartTime.split(':').map(Number)
+            const [eh, em] = autoEndTime.split(':').map(Number)
+            const hours = ((eh * 60 + em) - (sh * 60 + sm)) / 60
+            return selectedCount > 0 && hours > 0 ? (
+              <p className="text-sm text-gray-500 bg-gray-50 dark:bg-gray-800/50 rounded-lg px-3 py-2">
+                <span className="font-medium text-gray-700 dark:text-gray-200">{selectedCount} gün</span>
+                {' × '}
+                <span className="font-medium text-gray-700 dark:text-gray-200">{hours.toFixed(1)} saat</span>
+                {' = '}
+                <span className="font-medium text-pulse-600">{(selectedCount * hours).toFixed(1)} saat/personel</span>
+                {' · '}mevcut kayıtlar korunur
+              </p>
+            ) : null
+          })()}
+
+          {autoError && (
+            <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
+              {autoError}
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-1">
+            <button
+              onClick={() => { setShowAutoPanel(false); setAutoError(null) }}
+              className="btn-secondary flex-1"
+            >
+              İptal
+            </button>
             <button
               onClick={handleAutoDist}
-              disabled={autoSaving}
-              className="flex items-center gap-2 rounded-lg bg-pulse-600 px-4 py-2 text-sm font-medium text-white hover:bg-pulse-700 disabled:opacity-50"
+              disabled={autoSaving || autoSelectedDays.every(d => !d)}
+              className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-pulse-600 px-4 py-2 text-sm font-medium text-white hover:bg-pulse-700 disabled:opacity-50"
             >
               {autoSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
-              Dağıt ({staff.length} personel × {(autoHours / staff.length).toFixed(1)} saat)
+              Dağıt ({staff.length} personel)
             </button>
           </div>
         </div>
