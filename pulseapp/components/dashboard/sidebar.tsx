@@ -63,7 +63,6 @@ const ICON_MAP: Record<string, LucideIcon> = {
 
 const bottomNav = [
   { name: 'Vardiye', href: '/dashboard/settings/vardiye', icon: CalendarDays },
-  { name: 'İşletmeler', href: '/dashboard/settings/businesses', icon: Briefcase },
   { name: 'Ayarlar', href: '/dashboard/settings/business', icon: Settings },
 ]
 
