@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import {
@@ -63,6 +64,7 @@ type TabId = 'info' | 'hours' | 'settings' | 'subscription'
 export default function BusinessSettingsPage() {
   const { businessId, loading: ctxLoading } = useBusinessContext()
   const supabase = createClient()
+  const router = useRouter()
   const { theme, toggleTheme } = useTheme()
 
   const [business, setBusiness] = useState<Business | null>(null)
@@ -180,6 +182,7 @@ export default function BusinessSettingsPage() {
       setSaveSuccess(true)
       setTimeout(() => setSaveSuccess(false), 3000)
       fetchBusiness()
+      router.refresh()
     }
     setSaving(false)
   }
