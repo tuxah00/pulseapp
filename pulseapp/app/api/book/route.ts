@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
-export async function GET(
-  _req: NextRequest,
-  { params }: { params: { slug: string } }
-) {
+export async function GET(req: NextRequest) {
+  const businessId = req.nextUrl.searchParams.get('businessId')
+  if (!businessId) {
+    return NextResponse.json({ error: 'businessId gerekli' }, { status: 400 })
+  }
+
   const supabase = createAdminClient()
-  const businessId = params.slug
 
   const { data: business, error: bizErr } = await supabase
     .from('businesses')
@@ -39,12 +40,13 @@ export async function GET(
   })
 }
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: { slug: string } }
-) {
+export async function POST(req: NextRequest) {
+  const businessId = req.nextUrl.searchParams.get('businessId')
+  if (!businessId) {
+    return NextResponse.json({ error: 'businessId gerekli' }, { status: 400 })
+  }
+
   const supabase = createAdminClient()
-  const businessId = params.slug
   const body = await req.json()
 
   const {
@@ -60,7 +62,6 @@ export async function POST(
     return NextResponse.json({ error: 'Eksik alanlar' }, { status: 400 })
   }
 
-  // İşletme kontrolü
   const { data: business } = await supabase
     .from('businesses')
     .select('id')
@@ -72,7 +73,6 @@ export async function POST(
     return NextResponse.json({ error: 'İşletme bulunamadı' }, { status: 404 })
   }
 
-  // Hizmet bilgisi (süre hesabı için)
   const { data: service } = await supabase
     .from('services')
     .select('duration_minutes')
@@ -84,14 +84,12 @@ export async function POST(
     return NextResponse.json({ error: 'Hizmet bulunamadı' }, { status: 404 })
   }
 
-  // end_time hesapla
   const [h, m] = start_time.split(':').map(Number)
   const totalMin = h * 60 + m + service.duration_minutes
   const endH = Math.floor(totalMin / 60)
   const endM = totalMin % 60
   const end_time = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`
 
-  // Çakışma kontrolü
   let conflictQuery = supabase
     .from('appointments')
     .select('id')
@@ -111,7 +109,6 @@ export async function POST(
     return NextResponse.json({ error: 'Bu saat dolu. Lütfen başka bir saat seçin.' }, { status: 409 })
   }
 
-  // Müşteriyi bul veya oluştur
   const normalizedPhone = customer_phone.replace(/\s/g, '')
   let customerId: string
 
@@ -147,7 +144,6 @@ export async function POST(
     customerId = newCustomer.id
   }
 
-  // Randevu oluştur
   const { data: appointment, error: apptErr } = await supabase
     .from('appointments')
     .insert({
