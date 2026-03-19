@@ -75,19 +75,15 @@ function getTodayStr(): string {
 
 export default function BookingPage() {
   const params = useParams()
-  const slug = params.slug as string
+  const businessId = params.businessId as string
 
-  // Data
   const [business, setBusiness] = useState<BusinessData | null>(null)
   const [services, setServices] = useState<ServiceData[]>([])
   const [staff, setStaff] = useState<StaffData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Step
   const [step, setStep] = useState(1)
-
-  // Selections
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null)
   const [selectedDate, setSelectedDate] = useState<string>('')
   const [selectedTime, setSelectedTime] = useState<string | null>(null)
@@ -95,31 +91,26 @@ export default function BookingPage() {
   const [customerName, setCustomerName] = useState('')
   const [customerPhone, setCustomerPhone] = useState('')
 
-  // Waitlist
   const [waitlistEnabled, setWaitlistEnabled] = useState(false)
   const [waitlistTime, setWaitlistTime] = useState('')
   const [waitlistDate, setWaitlistDate] = useState('')
   const [waitlistStaffId, setWaitlistStaffId] = useState('')
   const [waitlistEarliest, setWaitlistEarliest] = useState(false)
 
-  // Submit
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
-  // Computed
   const selectedService = services.find(s => s.id === selectedServiceId) || null
   const timeSlots = business && selectedDate && selectedService
     ? generateTimeSlots(business.working_hours, selectedDate, selectedService.duration_minutes)
     : []
-  const isDayClosed = business && selectedDate && getDayKey(selectedDate)
-    ? !business.working_hours[getDayKey(selectedDate)]
-    : false
+  const isDayClosed = !!(business && selectedDate && !business.working_hours[getDayKey(selectedDate)])
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const res = await fetch(`/api/book/${slug}`)
+        const res = await fetch(`/api/book?businessId=${businessId}`)
         if (!res.ok) {
           setError('İşletme bulunamadı')
           setLoading(false)
@@ -135,7 +126,7 @@ export default function BookingPage() {
       setLoading(false)
     }
     fetchData()
-  }, [slug])
+  }, [businessId])
 
   async function handleSubmit() {
     if (!selectedServiceId || !selectedDate || !selectedTime || !customerName || !customerPhone) return
@@ -144,7 +135,7 @@ export default function BookingPage() {
     setSubmitError(null)
 
     try {
-      const res = await fetch(`/api/book/${slug}`, {
+      const res = await fetch(`/api/book?businessId=${businessId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -171,7 +162,6 @@ export default function BookingPage() {
     setSubmitting(false)
   }
 
-  // Loading
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
@@ -181,7 +171,6 @@ export default function BookingPage() {
     )
   }
 
-  // Error
   if (error || !business) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
@@ -191,7 +180,6 @@ export default function BookingPage() {
     )
   }
 
-  // Success
   if (submitted) {
     return (
       <div className="text-center py-12">
@@ -304,7 +292,7 @@ export default function BookingPage() {
                       {service.price != null && (
                         <p className="font-semibold text-gray-900">{formatPrice(service.price)}</p>
                       )}
-                      <p className="text-sm text-gray-500 flex items-center gap-1">
+                      <p className="text-sm text-gray-500 flex items-center gap-1 justify-end">
                         <Clock className="h-3.5 w-3.5" />
                         {service.duration_minutes} dk
                       </p>
@@ -331,7 +319,6 @@ export default function BookingPage() {
         <div>
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Tarih & Saat Seçin</h2>
 
-          {/* Personel seçimi (opsiyonel) */}
           {staff.length > 0 && (
             <div className="mb-4">
               <label className="label">Personel (isteğe bağlı)</label>
@@ -348,7 +335,6 @@ export default function BookingPage() {
             </div>
           )}
 
-          {/* Tarih */}
           <div className="mb-4">
             <label className="label">
               <Calendar className="inline h-4 w-4 mr-1" />
@@ -366,7 +352,6 @@ export default function BookingPage() {
             />
           </div>
 
-          {/* Saat slotları */}
           {selectedDate && (
             <div>
               <label className="label">
@@ -507,7 +492,6 @@ export default function BookingPage() {
             </div>
           </div>
 
-          {/* Butonlar */}
           <div className="mt-6 flex gap-3">
             <button onClick={() => setStep(3)} className="btn-secondary flex items-center gap-1">
               <ChevronLeft className="h-4 w-4" /> Geri
@@ -517,9 +501,7 @@ export default function BookingPage() {
               disabled={submitting}
               className="btn-primary flex-1"
             >
-              {submitting ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : null}
+              {submitting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               Randevuyu Onayla
             </button>
           </div>
@@ -552,7 +534,6 @@ export default function BookingPage() {
 
             {waitlistEnabled && (
               <div className="mt-4 space-y-3 pl-7">
-                {/* Saat tercihi */}
                 <div>
                   <label className="text-sm text-gray-600">Şu saatte:</label>
                   <select
@@ -570,7 +551,6 @@ export default function BookingPage() {
                   </select>
                 </div>
 
-                {/* Tarih tercihi */}
                 <div>
                   <label className="text-sm text-gray-600">Şu tarihte:</label>
                   <input
@@ -585,7 +565,6 @@ export default function BookingPage() {
                   />
                 </div>
 
-                {/* Personel tercihi */}
                 {staff.length > 0 && (
                   <div>
                     <label className="text-sm text-gray-600">Şu personelde:</label>
@@ -605,7 +584,6 @@ export default function BookingPage() {
                   </div>
                 )}
 
-                {/* En yakın zamanda */}
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
