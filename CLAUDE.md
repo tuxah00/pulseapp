@@ -164,3 +164,6 @@ Opsiyonel: `PAYTR_*`, `RESEND_API_KEY`, `GOOGLE_PLACES_API_KEY`
 
 Aşağıdaki migration'lar Supabase SQL Editor'de manuel olarak çalıştırılmalıdır:
 - `008_fix_shifts_trigger.sql` — shifts tablosunun updated_at trigger'ını moddatetime'dan bağımsız hale getirir (vardiye kaydetme için kritik)
+
+### Uygulanan Migration'lar (Supabase'de çalıştırıldı)
+- `006_create_shifts.sql` + `008_fix_shifts_trigger.sql` → **✅ Uygulandı (2026-03-19)** — `shifts` tablosu oluşturuldu, `moddatetime` bağımlılığı kaldırıldı, RLS policy'leri ve indeksler aktif
