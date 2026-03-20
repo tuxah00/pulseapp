@@ -11,10 +11,28 @@ export async function PUT(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
 
+  const admin = createAdminClient()
+
+  const { data: existing } = await admin
+    .from('shifts')
+    .select('business_id')
+    .eq('id', params.id)
+    .single()
+
+  if (!existing) return NextResponse.json({ error: 'Bulunamadı' }, { status: 404 })
+
+  const { data: membership } = await supabase
+    .from('staff_members')
+    .select('business_id')
+    .eq('user_id', user.id)
+    .eq('business_id', existing.business_id)
+    .single()
+
+  if (!membership) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
+
   const body = await request.json()
   const { startTime, endTime, shiftType, notes } = body
 
-  const admin = createAdminClient()
   const { data, error } = await admin
     .from('shifts')
     .update({
@@ -41,6 +59,24 @@ export async function DELETE(
   if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
 
   const admin = createAdminClient()
+
+  const { data: existing } = await admin
+    .from('shifts')
+    .select('business_id')
+    .eq('id', params.id)
+    .single()
+
+  if (!existing) return NextResponse.json({ error: 'Bulunamadı' }, { status: 404 })
+
+  const { data: membership } = await supabase
+    .from('staff_members')
+    .select('business_id')
+    .eq('user_id', user.id)
+    .eq('business_id', existing.business_id)
+    .single()
+
+  if (!membership) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
+
   const { error } = await admin
     .from('shifts')
     .delete()

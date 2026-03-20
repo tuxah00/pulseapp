@@ -2,6 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
+async function verifyMembership(supabase: ReturnType<typeof createServerSupabaseClient>, userId: string, businessId: string) {
+  const { data } = await supabase
+    .from('staff_members')
+    .select('business_id')
+    .eq('user_id', userId)
+    .eq('business_id', businessId)
+    .single()
+  return !!data
+}
+
 // GET: Haftalık vardiye listesi
 export async function GET(request: NextRequest) {
   const supabase = createServerSupabaseClient()
@@ -10,12 +20,15 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url)
   const businessId = searchParams.get('businessId')
-  const weekStart = searchParams.get('weekStart') // YYYY-MM-DD (Pazartesi)
-  const weekEnd = searchParams.get('weekEnd')   // YYYY-MM-DD (Pazar)
+  const weekStart = searchParams.get('weekStart')
+  const weekEnd = searchParams.get('weekEnd')
 
   if (!businessId || !weekStart || !weekEnd) {
     return NextResponse.json({ error: 'businessId, weekStart, weekEnd gerekli' }, { status: 400 })
   }
+
+  const isMember = await verifyMembership(supabase, user.id, businessId)
+  if (!isMember) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
 
   const admin = createAdminClient()
   const { data, error } = await admin
@@ -47,6 +60,9 @@ export async function POST(request: NextRequest) {
   if (shiftType === 'regular' && (!startTime || !endTime)) {
     return NextResponse.json({ error: 'Vardiya tipi için başlangıç ve bitiş saati zorunlu' }, { status: 400 })
   }
+
+  const isMember = await verifyMembership(supabase, user.id, businessId)
+  if (!isMember) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
 
   const admin = createAdminClient()
   const { data, error } = await admin

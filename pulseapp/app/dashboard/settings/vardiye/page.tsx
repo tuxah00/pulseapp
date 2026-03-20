@@ -160,36 +160,51 @@ export default function VardiyePage() {
     setAutoSaving(true)
     setAutoError(null)
     try {
+      const tasks: { member: StaffMember; dateStr: string; promise: Promise<Response> }[] = []
       for (const member of staff) {
         for (let di = 0; di < 7; di++) {
           if (!autoSelectedDays[di]) continue
           const dateStr = formatDate(weekDays[di])
-          const existing = getShift(member.id, dateStr)
-          if (existing) continue
-          const res = await fetch('/api/shifts', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              businessId,
-              staffId: member.id,
-              shiftDate: dateStr,
-              startTime: autoStartTime,
-              endTime: autoEndTime,
-              shiftType: 'regular',
-              notes: 'Otomatik dağıtım',
+          if (getShift(member.id, dateStr)) continue
+          tasks.push({
+            member,
+            dateStr,
+            promise: fetch('/api/shifts', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                businessId,
+                staffId: member.id,
+                shiftDate: dateStr,
+                startTime: autoStartTime,
+                endTime: autoEndTime,
+                shiftType: 'regular',
+                notes: 'Otomatik dağıtım',
+              }),
             }),
           })
-          if (!res.ok) {
-            const json = await res.json().catch(() => ({}))
-            setAutoError(`${member.name} — ${dateStr}: ${json.error || `Sunucu hatası (${res.status})`}`)
-            return
-          }
         }
       }
-      setShowAutoPanel(false)
-      await fetchData()
+
+      const results = await Promise.allSettled(tasks.map(t => t.promise))
+      const errors: string[] = []
+      for (let i = 0; i < results.length; i++) {
+        const result = results[i]
+        if (result.status === 'rejected') {
+          errors.push(`${tasks[i].member.name} — ${tasks[i].dateStr}: Bağlantı hatası`)
+        } else if (!result.value.ok) {
+          const json = await result.value.json().catch(() => ({}))
+          errors.push(`${tasks[i].member.name} — ${tasks[i].dateStr}: ${json.error || result.value.status}`)
+        }
+      }
+      if (errors.length > 0) {
+        setAutoError(errors.join(' | '))
+      } else {
+        setShowAutoPanel(false)
+      }
     } finally {
       setAutoSaving(false)
+      await fetchData()
     }
   }
 
