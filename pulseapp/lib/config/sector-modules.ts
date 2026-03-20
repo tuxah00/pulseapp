@@ -103,9 +103,11 @@ const SECTOR_ITEMS: Partial<Record<SectorType, SidebarItem[]>> = {
     { key: 'reviews', name: 'Yorumlar', href: '/dashboard/reviews', iconName: 'Star' },
   ],
   restaurant: [
+    { key: 'reservations', name: 'Rezervasyonlar', href: '/dashboard/reservations', iconName: 'CalendarCheck' },
     { key: 'reviews', name: 'Yorumlar', href: '/dashboard/reviews', iconName: 'Star' },
   ],
   cafe: [
+    { key: 'reservations', name: 'Rezervasyonlar', href: '/dashboard/reservations', iconName: 'CalendarCheck' },
     { key: 'reviews', name: 'Yorumlar', href: '/dashboard/reviews', iconName: 'Star' },
   ],
   other: [
@@ -117,19 +119,16 @@ const SECTOR_ITEMS: Partial<Record<SectorType, SidebarItem[]>> = {
 export function getSidebarSections(sector: SectorType, _plan: PlanType): SidebarSection[] {
   const sectorItems = SECTOR_ITEMS[sector] ?? []
 
+  // Sectors that replace appointments with reservations
+  const excludeAppointments: SectorType[] = ['restaurant', 'cafe']
+  const filteredBase = excludeAppointments.includes(sector)
+    ? BASE_ITEMS.filter(item => item.key !== 'appointments')
+    : BASE_ITEMS
+
   return [
-    {
-      label: 'Ana',
-      items: BASE_ITEMS,
-    },
-    ...(sectorItems.length > 0 ? [{
-      label: 'Sektör',
-      items: sectorItems,
-    }] : []),
-    {
-      label: 'Yönetim',
-      items: MANAGEMENT_ITEMS,
-    },
+    { label: 'Ana', items: filteredBase },
+    ...(sectorItems.length > 0 ? [{ label: 'Sektör', items: sectorItems }] : []),
+    { label: 'Yönetim', items: MANAGEMENT_ITEMS },
   ]
 }
 

@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 import {
   LayoutDashboard,
   Calendar,
+  CalendarCheck,
   Users,
   UserPlus,
   MessageSquare,
@@ -39,6 +40,7 @@ import { getSidebarSections } from '@/lib/config/sector-modules'
 const ICON_MAP: Record<string, LucideIcon> = {
   LayoutDashboard,
   Calendar,
+  CalendarCheck,
   Users,
   UserPlus,
   MessageSquare,
