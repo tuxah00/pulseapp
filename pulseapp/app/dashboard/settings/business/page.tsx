@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import {
-  Loader2, Save, Building2, Clock, Bell, Sparkles,
+  Loader2, Save, Building2, Bell, Sparkles,
   CreditCard, MapPin, Phone, Mail, Globe,
   MessageSquare, ChevronDown, ChevronUp, Sun, Moon,
 } from 'lucide-react'
@@ -60,7 +60,7 @@ function generateTimeOptions(): string[] {
 
 const TIME_OPTIONS = generateTimeOptions()
 
-type TabId = 'info' | 'hours' | 'settings' | 'subscription'
+type TabId = 'info' | 'settings' | 'subscription'
 
 export default function BusinessSettingsPage() {
   const { businessId, loading: ctxLoading, permissions } = useBusinessContext()
@@ -216,7 +216,6 @@ export default function BusinessSettingsPage() {
 
   const tabs: { id: TabId; label: string; icon: React.ReactNode }[] = [
     { id: 'info', label: 'İşletme Bilgileri', icon: <Building2 className="h-4 w-4" /> },
-    { id: 'hours', label: 'Çalışma Saatleri', icon: <Clock className="h-4 w-4" /> },
     { id: 'settings', label: 'Bildirim & AI', icon: <Bell className="h-4 w-4" /> },
     { id: 'subscription', label: 'Abonelik', icon: <CreditCard className="h-4 w-4" /> },
   ]
@@ -418,79 +417,6 @@ export default function BusinessSettingsPage() {
               <button type="submit" disabled={saving} className="btn-primary">
                 {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                 Bilgileri Kaydet
-              </button>
-            </div>
-          </div>
-        </form>
-      )}
-
-      {/* Çalışma Saatleri */}
-      {activeTab === 'hours' && (
-        <form onSubmit={handleSaveHours}>
-          <div className="card">
-            <h2 className="text-lg font-semibold text-gray-900 mb-1">Çalışma Saatleri</h2>
-            <p className="text-sm text-gray-500 mb-6">
-              İşletmenizin açık olduğu gün ve saatleri belirleyin.
-            </p>
-
-            <div className="space-y-3">
-              {DAY_KEYS.map((day) => {
-                const hours = workingHours[day]
-                const isOpen = hours !== null
-
-                return (
-                  <div
-                    key={day}
-                    className={`flex items-center gap-4 rounded-lg border p-4 transition-colors ${
-                      isOpen ? 'border-gray-200 bg-white' : 'border-gray-100 bg-gray-50'
-                    }`}
-                  >
-                    <div className="w-28 flex-shrink-0">
-                      <span className={`text-sm font-medium ${isOpen ? 'text-gray-900' : 'text-gray-400'}`}>
-                        {DAY_LABELS[day]}
-                      </span>
-                    </div>
-
-                    <label className="relative inline-flex cursor-pointer items-center flex-shrink-0">
-                      <input
-                        type="checkbox"
-                        checked={isOpen}
-                        onChange={() => toggleDay(day)}
-                        className="peer sr-only"
-                      />
-                      <div className="h-6 w-11 rounded-full bg-gray-300 dark:bg-gray-600 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-pulse-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:ring-2 peer-focus:ring-pulse-300" />
-                    </label>
-
-                    {isOpen ? (
-                      <div className="flex flex-1 items-center gap-2">
-                        <select
-                          value={hours?.open || '09:00'}
-                          onChange={(e) => updateDayHours(day, 'open', e.target.value)}
-                          className="input w-28"
-                        >
-                          {TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
-                        </select>
-                        <span className="text-sm text-gray-400">—</span>
-                        <select
-                          value={hours?.close || '18:00'}
-                          onChange={(e) => updateDayHours(day, 'close', e.target.value)}
-                          className="input w-28"
-                        >
-                          {TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
-                        </select>
-                      </div>
-                    ) : (
-                      <span className="text-sm text-gray-400">Kapalı</span>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-
-            <div className="mt-6 flex justify-end">
-              <button type="submit" disabled={saving} className="btn-primary">
-                {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                Saatleri Kaydet
               </button>
             </div>
           </div>

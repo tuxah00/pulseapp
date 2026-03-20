@@ -86,7 +86,8 @@ export default function WeeklyInsights() {
       } catch { /* localStorage dolu olabilir */ }
       setData(json)
       setOpen(true)
-    } catch {
+    } catch (err) {
+      console.error('Weekly insights fetch error:', err)
       setError('AI raporu şu an alınamıyor. Daha sonra tekrar deneyin.')
     } finally {
       setLoading(false)

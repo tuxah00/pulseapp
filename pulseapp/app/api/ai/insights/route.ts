@@ -43,6 +43,11 @@ export async function GET(_req: NextRequest) {
     if (!staff) return NextResponse.json({ error: 'İşletme bulunamadı' }, { status: 404 })
     const businessId = staff.business_id
 
+    if (!process.env.ANTHROPIC_API_KEY) {
+      // Return stats without AI if API key is missing
+      console.error('ANTHROPIC_API_KEY is not configured')
+    }
+
     const { data: business } = await supabase
       .from('businesses')
       .select('name, sector')
@@ -114,8 +119,15 @@ export async function GET(_req: NextRequest) {
 
     const noShowRate = totalAppointments > 0 ? Math.round((noShows / totalAppointments) * 100) : 0
 
-    // Claude'a gönder
-    const prompt = `
+    let aiData: { insights: InsightItem[]; actions: { label: string; type: string }[] } = {
+      insights: [],
+      actions: [],
+    }
+
+    if (process.env.ANTHROPIC_API_KEY) {
+      try {
+        // Claude'a gönder
+        const prompt = `
 İşletme: ${business?.name} (${business?.sector})
 Dönem: ${weekAgoStr} - ${nowStr} (son 7 gün)
 
@@ -149,25 +161,25 @@ Yanıtı SADECE JSON formatında ver, başka hiçbir şey yazma:
 }
 `
 
-    const anthropic = getAnthropicClient()
-    const message = await anthropic.messages.create({
-      model: AI_MODEL,
-      max_tokens: 512,
-      messages: [{ role: 'user', content: prompt }],
-    })
+        const anthropic = getAnthropicClient()
+        const message = await anthropic.messages.create({
+          model: AI_MODEL,
+          max_tokens: 512,
+          messages: [{ role: 'user', content: prompt }],
+        })
 
-    let aiData: { insights: InsightItem[]; actions: { label: string; type: string }[] } = {
-      insights: [],
-      actions: [],
-    }
-
-    const content = message.content[0]
-    if (content.type === 'text') {
-      try {
-        const jsonMatch = content.text.match(/\{[\s\S]*\}/)
-        if (jsonMatch) aiData = JSON.parse(jsonMatch[0])
-      } catch {
-        // JSON parse hatası — fallback kullan
+        const content = message.content[0]
+        if (content.type === 'text') {
+          try {
+            const jsonMatch = content.text.match(/\{[\s\S]*\}/)
+            if (jsonMatch) aiData = JSON.parse(jsonMatch[0])
+          } catch (parseErr) {
+            console.error('AI JSON parse hatası:', parseErr, 'Raw:', content.text)
+          }
+        }
+      } catch (aiErr) {
+        console.error('Anthropic API hatası:', aiErr)
+        // AI fails but we still return stats
       }
     }
 
@@ -191,7 +203,7 @@ Yanıtı SADECE JSON formatında ver, başka hiçbir şey yazma:
 
     return NextResponse.json(response)
   } catch (err) {
-    console.error('Insights error:', err)
-    return NextResponse.json({ error: 'Rapor oluşturulamadı' }, { status: 500 })
+    console.error('Insights error:', err instanceof Error ? err.message : err)
+    return NextResponse.json({ error: 'Rapor oluşturulamadı', details: err instanceof Error ? err.message : 'Bilinmeyen hata' }, { status: 500 })
   }
 }

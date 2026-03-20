@@ -20,6 +20,8 @@ const ROUTE_LABELS: Record<string, string> = {
   classes: 'Sınıf Programı',
   attendance: 'Devam Takibi',
   portfolio: 'Portfolyo',
+  orders: 'Siparişler',
+  notifications: 'Bildirimler',
   settings: 'Ayarlar',
   business: 'İşletme',
   vardiye: 'Vardiya',
@@ -106,7 +108,7 @@ export default function TopBar({ businessName, userName }: TopBarProps) {
       </nav>
 
       <div className="ml-auto flex items-center gap-3">
-        <Link href="/dashboard" className="relative p-1 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors" title="Bildirimler">
+        <Link href="/dashboard/notifications" className="relative p-1 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors" title="Bildirimler">
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
             <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white font-bold leading-none">

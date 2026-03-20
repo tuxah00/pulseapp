@@ -82,6 +82,7 @@ const PERMISSION_MAP: Record<string, keyof StaffPermissions> = {
   '/dashboard/memberships': 'memberships',
   '/dashboard/portfolio': 'portfolio',
   '/dashboard/settings/vardiye': 'shifts',
+  '/dashboard/orders': 'orders',
 }
 
 interface SidebarProps {

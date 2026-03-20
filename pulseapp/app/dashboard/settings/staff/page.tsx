@@ -31,6 +31,7 @@ const PERMISSION_LABELS: Record<keyof StaffPermissions, string> = {
   records: 'Dosyalar',
   portfolio: 'Portfolyo',
   inventory: 'Stoklar',
+  orders: 'Siparişler',
 }
 
 export default function StaffPage() {

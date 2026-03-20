@@ -166,7 +166,12 @@ export default async function DashboardPage() {
         <div className="space-y-6">
           {/* Son bildirimler */}
           <div className="card">
-            <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-gray-100">Bildirimler</h2>
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Bildirimler</h2>
+              <a href="/dashboard/notifications" className="text-xs text-blue-600 hover:text-blue-700 hover:underline">
+                Tümünü gör →
+              </a>
+            </div>
             {!notifications || notifications.length === 0 ? (
               <p className="text-sm text-gray-400 text-center py-6">Yeni bildirim yok</p>
             ) : (

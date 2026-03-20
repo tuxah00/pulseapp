@@ -3,12 +3,37 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { createClient } from '@/lib/supabase/client'
-import type { WorkingHours } from '@/types'
+import type { WorkingHours, DayHours } from '@/types'
 import { cn } from '@/lib/utils'
-import { ChevronLeft, ChevronRight, Plus, Trash2, Zap, Loader2, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Trash2, Zap, Loader2, X, Save, Clock } from 'lucide-react'
 
 const DAY_LABELS = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz']
 const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
+
+const DAY_LABELS_FULL: Record<string, string> = {
+  mon: 'Pazartesi', tue: 'Salı', wed: 'Çarşamba',
+  thu: 'Perşembe', fri: 'Cuma', sat: 'Cumartesi', sun: 'Pazar',
+}
+
+const DEFAULT_WORKING_HOURS: WorkingHours = {
+  mon: { open: '09:00', close: '18:00' },
+  tue: { open: '09:00', close: '18:00' },
+  wed: { open: '09:00', close: '18:00' },
+  thu: { open: '09:00', close: '18:00' },
+  fri: { open: '09:00', close: '18:00' },
+  sat: { open: '10:00', close: '16:00' },
+  sun: null,
+}
+
+function generateTimeOptions(): string[] {
+  const times: string[] = []
+  for (let h = 0; h < 24; h++) {
+    times.push(`${String(h).padStart(2, '0')}:00`)
+    times.push(`${String(h).padStart(2, '0')}:30`)
+  }
+  return times
+}
+const TIME_OPTIONS = generateTimeOptions()
 
 function getMonday(date: Date): Date {
   const d = new Date(date)
@@ -64,6 +89,9 @@ export default function VardiyePage() {
 
   // Working hours (closed days)
   const [workingHours, setWorkingHours] = useState<WorkingHours | null>(null)
+
+  // Tab
+  const [activeTab, setActiveTab] = useState<'shifts' | 'hours'>('shifts')
 
   // Otomatik dağıtım
   const [showAutoPanel, setShowAutoPanel] = useState(false)
@@ -226,6 +254,38 @@ export default function VardiyePage() {
     }
   }
 
+  function toggleDay(day: keyof WorkingHours) {
+    setWorkingHours(prev => {
+      if (!prev) return prev
+      return { ...prev, [day]: prev[day] ? null : { open: '09:00', close: '18:00' } }
+    })
+  }
+
+  function updateDayHours(day: keyof WorkingHours, field: 'open' | 'close', value: string) {
+    setWorkingHours(prev => {
+      if (!prev) return prev
+      return { ...prev, [day]: { ...(prev[day] || { open: '09:00', close: '18:00' }), [field]: value } }
+    })
+  }
+
+  async function handleSaveHours(e: React.FormEvent) {
+    e.preventDefault()
+    if (!businessId) return
+    setSaving(true)
+    setSaveError(null)
+    try {
+      const { error } = await supabase.from('businesses').update({ working_hours: workingHours }).eq('id', businessId)
+      if (error) {
+        setSaveError('Kaydetme hatası: ' + error.message)
+      } else {
+        setSaveError(null)
+        await fetchData()
+      }
+    } finally {
+      setSaving(false)
+    }
+  }
+
   if (permissions && !permissions.shifts) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
@@ -250,17 +310,46 @@ export default function VardiyePage() {
       {/* Başlık */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Vardiye Yönetimi</h1>
-          <p className="text-sm text-gray-500 mt-1">Personel vardiyelerini haftalık olarak yönetin</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Vardiya Yönetimi</h1>
+          <p className="text-sm text-gray-500 mt-1">Personel vardiyelerini ve çalışma saatlerini yönetin</p>
         </div>
+        {activeTab === 'shifts' && (
+          <button
+            onClick={() => setShowAutoPanel(p => !p)}
+            className="flex items-center gap-2 rounded-lg bg-pulse-600 px-4 py-2 text-sm font-medium text-white hover:bg-pulse-700"
+          >
+            <Zap className="h-4 w-4" /> Otomatik Dağıt
+          </button>
+        )}
+      </div>
+
+      {/* Tab Navigasyonu */}
+      <div className="flex gap-1 rounded-xl bg-gray-100 dark:bg-gray-800 p-1">
         <button
-          onClick={() => setShowAutoPanel(p => !p)}
-          className="flex items-center gap-2 rounded-lg bg-pulse-600 px-4 py-2 text-sm font-medium text-white hover:bg-pulse-700"
+          onClick={() => setActiveTab('shifts')}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
+            activeTab === 'shifts'
+              ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+              : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+          }`}
         >
-          <Zap className="h-4 w-4" /> Otomatik Dağıt
+          <Zap className="h-4 w-4" />
+          Vardiya Yönetimi
+        </button>
+        <button
+          onClick={() => setActiveTab('hours')}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
+            activeTab === 'hours'
+              ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+              : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+          }`}
+        >
+          <Clock className="h-4 w-4" />
+          Çalışma Saatleri
         </button>
       </div>
 
+      {activeTab === 'shifts' && (<>
       {/* Otomatik Dağıtım Paneli */}
       {showAutoPanel && (
         <div className="card border-pulse-200 bg-pulse-50 dark:bg-pulse-900/20 space-y-4">
@@ -538,6 +627,87 @@ export default function VardiyePage() {
             </div>
           </div>
         </div>
+      )}
+      </>)}
+
+      {activeTab === 'hours' && (
+        <form onSubmit={handleSaveHours}>
+          <div className="card">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">Çalışma Saatleri</h2>
+            <p className="text-sm text-gray-500 mb-6">
+              İşletmenizin açık olduğu gün ve saatleri belirleyin. Kapalı günlerde vardiya atanamaz.
+            </p>
+
+            <div className="space-y-3">
+              {DAY_KEYS.map((day) => {
+                const hours = workingHours?.[day as keyof WorkingHours]
+                const isOpen = hours !== null && hours !== undefined
+
+                return (
+                  <div
+                    key={day}
+                    className={`flex items-center gap-4 rounded-lg border p-4 transition-colors ${
+                      isOpen
+                        ? 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800'
+                        : 'border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50'
+                    }`}
+                  >
+                    <div className="w-28 flex-shrink-0">
+                      <span className={`text-sm font-medium ${isOpen ? 'text-gray-900 dark:text-gray-100' : 'text-gray-400'}`}>
+                        {DAY_LABELS_FULL[day]}
+                      </span>
+                    </div>
+
+                    <label className="relative inline-flex cursor-pointer items-center flex-shrink-0">
+                      <input
+                        type="checkbox"
+                        checked={isOpen}
+                        onChange={() => toggleDay(day as keyof WorkingHours)}
+                        className="peer sr-only"
+                      />
+                      <div className="h-6 w-11 rounded-full bg-gray-300 dark:bg-gray-600 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-pulse-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:ring-2 peer-focus:ring-pulse-300" />
+                    </label>
+
+                    {isOpen ? (
+                      <div className="flex flex-1 items-center gap-2">
+                        <select
+                          value={hours?.open || '09:00'}
+                          onChange={(e) => updateDayHours(day as keyof WorkingHours, 'open', e.target.value)}
+                          className="input w-28"
+                        >
+                          {TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                        <span className="text-sm text-gray-400">—</span>
+                        <select
+                          value={hours?.close || '18:00'}
+                          onChange={(e) => updateDayHours(day as keyof WorkingHours, 'close', e.target.value)}
+                          className="input w-28"
+                        >
+                          {TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-gray-400">Kapalı</span>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+
+            {saveError && (
+              <div className="mt-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-3 py-2 text-sm text-red-700 dark:text-red-300">
+                {saveError}
+              </div>
+            )}
+
+            <div className="mt-6 flex justify-end">
+              <button type="submit" disabled={saving} className="flex items-center gap-2 rounded-lg bg-pulse-600 px-4 py-2 text-sm font-medium text-white hover:bg-pulse-700 disabled:opacity-50">
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                Saatleri Kaydet
+              </button>
+            </div>
+          </div>
+        </form>
       )}
     </div>
   )

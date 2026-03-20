@@ -104,10 +104,12 @@ const SECTOR_ITEMS: Partial<Record<SectorType, SidebarItem[]>> = {
     { key: 'reviews', name: 'Yorumlar', href: '/dashboard/reviews', iconName: 'Star' },
   ],
   restaurant: [
+    { key: 'orders', name: 'Siparişler', href: '/dashboard/orders', iconName: 'ClipboardList' },
     { key: 'reservations', name: 'Rezervasyonlar', href: '/dashboard/reservations', iconName: 'CalendarCheck' },
     { key: 'reviews', name: 'Yorumlar', href: '/dashboard/reviews', iconName: 'Star' },
   ],
   cafe: [
+    { key: 'orders', name: 'Siparişler', href: '/dashboard/orders', iconName: 'ClipboardList' },
     { key: 'reservations', name: 'Rezervasyonlar', href: '/dashboard/reservations', iconName: 'CalendarCheck' },
     { key: 'reviews', name: 'Yorumlar', href: '/dashboard/reviews', iconName: 'Star' },
   ],

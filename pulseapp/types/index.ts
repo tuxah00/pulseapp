@@ -38,6 +38,7 @@ export interface StaffPermissions {
   records?: boolean
   portfolio?: boolean
   inventory?: boolean
+  orders?: boolean
 }
 
 export const DEFAULT_PERMISSIONS: Record<StaffRole, StaffPermissions> = {
@@ -45,19 +46,19 @@ export const DEFAULT_PERMISSIONS: Record<StaffRole, StaffPermissions> = {
     dashboard: true, appointments: true, customers: true, analytics: true,
     messages: true, reviews: true, services: true, staff: true, shifts: true,
     settings: true, reservations: true, classes: true, memberships: true,
-    records: true, portfolio: true, inventory: true,
+    records: true, portfolio: true, inventory: true, orders: true,
   },
   manager: {
     dashboard: true, appointments: true, customers: true, analytics: true,
     messages: true, reviews: true, services: true, staff: false, shifts: true,
     settings: false, reservations: true, classes: true, memberships: true,
-    records: true, portfolio: true, inventory: true,
+    records: true, portfolio: true, inventory: true, orders: true,
   },
   staff: {
     dashboard: true, appointments: true, customers: true, analytics: false,
     messages: false, reviews: false, services: false, staff: false, shifts: false,
     settings: false, reservations: false, classes: false, memberships: false,
-    records: false, portfolio: false, inventory: false,
+    records: false, portfolio: false, inventory: false, orders: false,
   },
 }
 
@@ -337,6 +338,29 @@ export interface Shift {
   updated_at: string
   // JOIN
   staff_members?: StaffMember
+}
+
+export type OrderStatus = 'pending' | 'preparing' | 'ready' | 'served' | 'paid' | 'cancelled'
+
+export interface OrderItem {
+  product_id: string
+  name: string
+  quantity: number
+  price: number
+}
+
+export interface Order {
+  id: string
+  business_id: string
+  reservation_id: string | null
+  customer_name: string | null
+  table_number: string | null
+  items: OrderItem[]
+  total_amount: number
+  status: OrderStatus
+  notes: string | null
+  created_at: string
+  updated_at: string
 }
 
 
