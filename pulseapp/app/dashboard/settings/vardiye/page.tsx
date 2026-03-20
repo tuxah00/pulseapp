@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { createClient } from '@/lib/supabase/client'
+import type { WorkingHours } from '@/types'
 import { cn } from '@/lib/utils'
 import { ChevronLeft, ChevronRight, Plus, Trash2, Zap, Loader2, X } from 'lucide-react'
 
@@ -44,7 +45,7 @@ interface Shift {
 }
 
 export default function VardiyePage() {
-  const { businessId, loading: ctxLoading } = useBusinessContext()
+  const { businessId, loading: ctxLoading, permissions } = useBusinessContext()
   const supabase = createClient()
 
   const [weekOffset, setWeekOffset] = useState(0)
@@ -60,6 +61,9 @@ export default function VardiyePage() {
   const [modalStart, setModalStart] = useState('09:00')
   const [modalEnd, setModalEnd] = useState('18:00')
   const [modalNotes, setModalNotes] = useState('')
+
+  // Working hours (closed days)
+  const [workingHours, setWorkingHours] = useState<WorkingHours | null>(null)
 
   // Otomatik dağıtım
   const [showAutoPanel, setShowAutoPanel] = useState(false)
@@ -78,11 +82,13 @@ export default function VardiyePage() {
     if (!businessId) return
     setLoading(true)
     try {
-      const [{ data: staffData }, shiftsRes] = await Promise.all([
+      const [{ data: staffData }, shiftsRes, { data: bizData }] = await Promise.all([
         supabase.from('staff_members').select('id, name').eq('business_id', businessId).eq('is_active', true).order('name'),
         fetch(`/api/shifts?businessId=${businessId}&weekStart=${weekStart}&weekEnd=${weekEnd}`),
+        supabase.from('businesses').select('working_hours').eq('id', businessId).single(),
       ])
       setStaff(staffData || [])
+      setWorkingHours(bizData?.working_hours || null)
       const { shifts: shiftsData } = await shiftsRes.json()
       setShifts(shiftsData || [])
     } finally {
@@ -98,7 +104,19 @@ export default function VardiyePage() {
     return shifts.find(s => s.staff_id === staffId && s.shift_date === date)
   }
 
+  const isDayOpen = (dayIndex: number): boolean => {
+    if (!workingHours) return true
+    const key = DAY_KEYS[dayIndex] as keyof WorkingHours
+    return workingHours[key] !== null
+  }
+
   function openModal(staffId: string, date: string) {
+    // Determine day index from date string and block closed days
+    const dateObj = new Date(date + 'T00:00:00')
+    const jsDay = dateObj.getDay() // 0=Sun
+    const dayIndex = jsDay === 0 ? 6 : jsDay - 1 // convert to 0=Mon
+    if (!isDayOpen(dayIndex)) return
+
     const existing = getShift(staffId, date)
     setModalType(existing?.shift_type || 'regular')
     setModalStart(existing?.start_time?.slice(0, 5) || '09:00')
@@ -208,6 +226,17 @@ export default function VardiyePage() {
     }
   }
 
+  if (permissions && !permissions.shifts) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="text-center">
+          <p className="text-lg font-medium text-gray-500 dark:text-gray-400">Bu sayfaya erişim yetkiniz bulunmamaktadır.</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">İşletme sahibinizle iletişime geçin.</p>
+        </div>
+      </div>
+    )
+  }
+
   if (ctxLoading || loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -240,21 +269,27 @@ export default function VardiyePage() {
           <div className="space-y-1">
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Çalışma Günleri</label>
             <div className="flex gap-2 flex-wrap">
-              {DAY_LABELS.map((label, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => setAutoSelectedDays(prev => prev.map((v, idx) => idx === i ? !v : v))}
-                  className={cn(
-                    'px-3 py-1.5 rounded-full text-sm font-medium border transition-colors',
-                    autoSelectedDays[i]
-                      ? 'bg-pulse-600 text-white border-pulse-600'
-                      : 'bg-white dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-600 hover:border-gray-400'
-                  )}
-                >
-                  {label}
-                </button>
-              ))}
+              {DAY_LABELS.map((label, i) => {
+                const closed = !isDayOpen(i)
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    disabled={closed}
+                    onClick={() => setAutoSelectedDays(prev => prev.map((v, idx) => idx === i ? !v : v))}
+                    className={cn(
+                      'px-3 py-1.5 rounded-full text-sm font-medium border transition-colors',
+                      closed
+                        ? 'bg-gray-100 dark:bg-gray-800 text-gray-300 dark:text-gray-600 border-gray-200 dark:border-gray-700 cursor-not-allowed'
+                        : autoSelectedDays[i]
+                          ? 'bg-pulse-600 text-white border-pulse-600'
+                          : 'bg-white dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-600 hover:border-gray-400'
+                    )}
+                  >
+                    {label}{closed ? ' (Kapali)' : ''}
+                  </button>
+                )
+              })}
             </div>
           </div>
 
@@ -354,12 +389,15 @@ export default function VardiyePage() {
             <thead>
               <tr>
                 <th className="py-3 pr-4 text-left font-medium text-gray-500 dark:text-gray-400 w-32">Personel</th>
-                {weekDays.map((day, i) => (
-                  <th key={i} className="py-3 px-2 text-center font-medium text-gray-500 dark:text-gray-400 min-w-[100px]">
-                    <div>{DAY_LABELS[i]}</div>
-                    <div className="text-xs text-gray-400">{formatDisplayDate(day)}</div>
-                  </th>
-                ))}
+                {weekDays.map((day, i) => {
+                  if (!isDayOpen(i)) return null
+                  return (
+                    <th key={i} className="py-3 px-2 text-center font-medium text-gray-500 dark:text-gray-400 min-w-[100px]">
+                      <div>{DAY_LABELS[i]}</div>
+                      <div className="text-xs text-gray-400">{formatDisplayDate(day)}</div>
+                    </th>
+                  )
+                })}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -369,6 +407,7 @@ export default function VardiyePage() {
                     {member.name}
                   </td>
                   {weekDays.map((day, di) => {
+                    if (!isDayOpen(di)) return null
                     const dateStr = formatDate(day)
                     const shift = getShift(member.id, dateStr)
                     return (

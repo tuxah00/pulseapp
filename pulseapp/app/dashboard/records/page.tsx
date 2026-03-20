@@ -188,7 +188,7 @@ function RecordsPageInner() {
   const rawType = searchParams.get('type')
   const recordType: RecordType = isValidType(rawType) ? rawType : DEFAULT_TYPE
 
-  const { businessId, loading: ctxLoading } = useBusinessContext()
+  const { businessId, loading: ctxLoading, permissions } = useBusinessContext()
   const config = TYPE_CONFIG[recordType]
 
   const [records, setRecords] = useState<BusinessRecord[]>([])
@@ -336,6 +336,17 @@ function RecordsPageInner() {
     const key = config.primarySubtitle
     if (!key) return ''
     return record.data[key] || ''
+  }
+
+  if (permissions && !permissions.records) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="text-center">
+          <p className="text-lg font-medium text-gray-500 dark:text-gray-400">Bu sayfaya erişim yetkiniz bulunmamaktadır.</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">İşletme sahibinizle iletişime geçin.</p>
+        </div>
+      </div>
+    )
   }
 
   if (loading) {

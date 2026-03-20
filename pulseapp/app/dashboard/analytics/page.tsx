@@ -40,7 +40,7 @@ function getPeriodDates(period: 'week' | 'month' | 'year', offset = 0): { start:
 }
 
 export default function AnalyticsPage() {
-  const { businessId, loading: ctxLoading } = useBusinessContext()
+  const { businessId, loading: ctxLoading, permissions } = useBusinessContext()
   const [loading, setLoading] = useState(true)
   const [period, setPeriod] = useState<'week' | 'month' | 'year'>('month')
   const [activeTab, setActiveTab] = useState<'overview' | 'staff' | 'customers' | 'sources'>('overview')
@@ -82,6 +82,17 @@ export default function AnalyticsPage() {
   }, [businessId, period])
 
   useEffect(() => { if (!ctxLoading) fetchData() }, [fetchData, ctxLoading])
+
+  if (permissions && !permissions.analytics) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="text-center">
+          <p className="text-lg font-medium text-gray-500 dark:text-gray-400">Bu sayfaya erişim yetkiniz bulunmamaktadır.</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">İşletme sahibinizle iletişime geçin.</p>
+        </div>
+      </div>
+    )
+  }
 
   if (loading || ctxLoading) {
     return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-pulse-500" /></div>
@@ -282,13 +293,13 @@ export default function AnalyticsPage() {
               <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
                 <Clock className="h-4 w-4" /> Yoğun Saatler
               </h3>
-              <div className="flex items-end gap-1 h-28">
+              <div className="flex items-end gap-1 h-32">
                 {hourDist.map(({ hour, count }) => (
-                  <div key={hour} className="flex-1 flex flex-col items-center gap-0.5">
-                    {count > 0 && <span className="text-[9px] font-medium text-gray-700">{count}</span>}
+                  <div key={hour} className="flex-1 flex flex-col items-center justify-end h-full">
+                    {count > 0 && <span className="text-[9px] font-medium text-gray-700 dark:text-gray-300 mb-0.5 shrink-0">{count}</span>}
                     <div className={cn('w-full rounded-t-sm transition-all', count > 0 ? 'bg-emerald-400' : 'bg-gray-100 dark:bg-gray-700')}
                       style={{ height: `${(count / maxHour) * 100}%`, minHeight: count > 0 ? '4px' : '2px' }} />
-                    <span className="text-[8px] text-gray-400">{hour}</span>
+                    <span className="text-[8px] text-gray-400 mt-1 shrink-0">{hour}</span>
                   </div>
                 ))}
               </div>

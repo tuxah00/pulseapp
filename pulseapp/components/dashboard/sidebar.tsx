@@ -34,7 +34,7 @@ import {
   Image,
   type LucideIcon,
 } from 'lucide-react'
-import type { SectorType, PlanType } from '@/types'
+import type { SectorType, PlanType, StaffPermissions } from '@/types'
 import { getSidebarSections } from '@/lib/config/sector-modules'
 
 const ICON_MAP: Record<string, LucideIcon> = {
@@ -64,24 +64,52 @@ const ICON_MAP: Record<string, LucideIcon> = {
 }
 
 const bottomNav = [
-  { name: 'Vardiye', href: '/dashboard/settings/vardiye', icon: CalendarDays },
+  { name: 'Vardiya', href: '/dashboard/settings/vardiye', icon: CalendarDays },
   { name: 'Ayarlar', href: '/dashboard/settings/business', icon: Settings },
 ]
+
+const PERMISSION_MAP: Record<string, keyof StaffPermissions> = {
+  '/dashboard/appointments': 'appointments',
+  '/dashboard/customers': 'customers',
+  '/dashboard/analytics': 'analytics',
+  '/dashboard/messages': 'messages',
+  '/dashboard/reviews': 'reviews',
+  '/dashboard/settings/services': 'services',
+  '/dashboard/settings/staff': 'staff',
+  '/dashboard/stoklar': 'inventory',
+  '/dashboard/records': 'records',
+  '/dashboard/reservations': 'reservations',
+  '/dashboard/classes': 'classes',
+  '/dashboard/memberships': 'memberships',
+  '/dashboard/portfolio': 'portfolio',
+}
 
 interface SidebarProps {
   businessName: string
   userName: string
   sector: SectorType
   plan: PlanType
+  permissions: StaffPermissions
 }
 
-export default function Sidebar({ businessName, userName, sector, plan }: SidebarProps) {
+export default function Sidebar({ businessName, userName, sector, plan, permissions }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
 
-  const sections = getSidebarSections(sector, plan)
+  const rawSections = getSidebarSections(sector, plan)
+
+  // Filter sections based on permissions
+  const sections = rawSections.map(section => ({
+    ...section,
+    items: section.items.filter(item => {
+      const hrefPath = item.href.split('?')[0]
+      const permKey = PERMISSION_MAP[hrefPath]
+      if (!permKey) return true // Dashboard and unmapped items always visible
+      return permissions[permKey] !== false
+    }),
+  })).filter(section => section.items.length > 0)
 
   async function handleLogout() {
     const supabase = createClient()
@@ -154,7 +182,11 @@ export default function Sidebar({ businessName, userName, sector, plan }: Sideba
 
       {/* Alt navigasyon */}
       <div className="border-t border-gray-200 dark:border-gray-700 px-3 py-4 space-y-0.5">
-        {bottomNav.map((item) => {
+        {bottomNav.filter((item) => {
+          if (item.href === '/dashboard/settings/vardiye') return permissions.shifts !== false
+          if (item.href === '/dashboard/settings/business') return permissions.settings !== false
+          return true
+        }).map((item) => {
           const active = isActive(item.href)
           return (
             <Link

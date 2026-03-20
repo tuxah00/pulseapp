@@ -21,6 +21,52 @@ export type SubscriptionStatusType =
 
 export type StaffRole = 'owner' | 'manager' | 'staff'
 
+export interface StaffPermissions {
+  dashboard: boolean
+  appointments: boolean
+  customers: boolean
+  analytics: boolean
+  messages: boolean
+  reviews: boolean
+  services: boolean
+  staff: boolean
+  shifts: boolean
+  settings: boolean
+  reservations?: boolean
+  classes?: boolean
+  memberships?: boolean
+  records?: boolean
+  portfolio?: boolean
+  inventory?: boolean
+}
+
+export const DEFAULT_PERMISSIONS: Record<StaffRole, StaffPermissions> = {
+  owner: {
+    dashboard: true, appointments: true, customers: true, analytics: true,
+    messages: true, reviews: true, services: true, staff: true, shifts: true,
+    settings: true, reservations: true, classes: true, memberships: true,
+    records: true, portfolio: true, inventory: true,
+  },
+  manager: {
+    dashboard: true, appointments: true, customers: true, analytics: true,
+    messages: true, reviews: true, services: true, staff: false, shifts: true,
+    settings: false, reservations: true, classes: true, memberships: true,
+    records: true, portfolio: true, inventory: true,
+  },
+  staff: {
+    dashboard: true, appointments: true, customers: true, analytics: false,
+    messages: false, reviews: false, services: false, staff: false, shifts: false,
+    settings: false, reservations: false, classes: false, memberships: false,
+    records: false, portfolio: false, inventory: false,
+  },
+}
+
+export function getEffectivePermissions(role: StaffRole, customPermissions?: StaffPermissions | null): StaffPermissions {
+  if (role === 'owner') return DEFAULT_PERMISSIONS.owner
+  if (customPermissions) return customPermissions
+  return DEFAULT_PERMISSIONS[role]
+}
+
 export type AppointmentStatus =
   | 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show'
 
@@ -66,6 +112,7 @@ export interface BusinessSettings {
   winback_days: number
   ai_auto_reply: boolean
   language: string
+  reservation_duration_minutes: number
 }
 
 
@@ -102,6 +149,7 @@ export interface StaffMember {
   email: string | null
   avatar_url: string | null
   working_hours: WorkingHours | null
+  permissions: StaffPermissions | null
   is_active: boolean
   created_at: string
   updated_at: string

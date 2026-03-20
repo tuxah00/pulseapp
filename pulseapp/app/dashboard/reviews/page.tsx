@@ -11,7 +11,7 @@ import { formatDate, cn } from '@/lib/utils'
 import type { Review } from '@/types'
 
 export default function ReviewsPage() {
-  const { businessId, loading: ctxLoading } = useBusinessContext()
+  const { businessId, loading: ctxLoading, permissions } = useBusinessContext()
   const [reviews, setReviews] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [filterRating, setFilterRating] = useState<number | null>(null)
@@ -135,6 +135,17 @@ export default function ReviewsPage() {
         {[1, 2, 3, 4, 5].map(i => (
           <Star key={i} className={cn(sizeClass, i <= rating ? 'fill-amber-400 text-amber-400' : 'text-gray-200')} />
         ))}
+      </div>
+    )
+  }
+
+  if (permissions && !permissions.reviews) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="text-center">
+          <p className="text-lg font-medium text-gray-500 dark:text-gray-400">Bu sayfaya erişim yetkiniz bulunmamaktadır.</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">İşletme sahibinizle iletişime geçin.</p>
+        </div>
       </div>
     )
   }

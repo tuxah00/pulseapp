@@ -5,6 +5,7 @@ import TopBar from '@/components/dashboard/top-bar'
 import OnboardingForm from '@/components/dashboard/onboarding-form'
 import { BusinessProvider } from '@/lib/hooks/business-context-provider'
 import { ThemeProvider } from '@/components/theme-provider'
+import { getEffectivePermissions, type StaffRole } from '@/types'
 
 export default async function DashboardLayout({
   children,
@@ -46,11 +47,13 @@ export default async function DashboardLayout({
   const businessName = business?.name || 'İşletme'
   const sector = business?.sector || 'other'
   const plan = business?.subscription_plan || 'starter'
+  const staffRole = (staffMember.role || 'staff') as StaffRole
+  const permissions = getEffectivePermissions(staffRole, staffMember.permissions)
 
   return (
     <ThemeProvider>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        <Sidebar businessName={businessName} userName={userName} sector={sector} plan={plan} />
+        <Sidebar businessName={businessName} userName={userName} sector={sector} plan={plan} permissions={permissions} />
         <main className="lg:pl-64 transition-all duration-200">
           <TopBar businessName={businessName} userName={userName} />
           <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
@@ -62,6 +65,8 @@ export default async function DashboardLayout({
               sector,
               plan,
               businessName,
+              staffRole,
+              permissions,
             }}>
               {children}
             </BusinessProvider>

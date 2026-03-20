@@ -25,7 +25,7 @@ interface Product {
 }
 
 export default function StoklarPage() {
-  const { businessId, loading: ctxLoading } = useBusinessContext()
+  const { businessId, loading: ctxLoading, permissions } = useBusinessContext()
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [dbError, setDbError] = useState<string | null>(null)
@@ -160,6 +160,17 @@ export default function StoklarPage() {
     if (product.stock_count <= product.min_stock_level)
       return <span className="badge bg-amber-100 text-amber-700">Az Stok</span>
     return <span className="badge bg-green-100 text-green-700">Stokta Var</span>
+  }
+
+  if (permissions && !permissions.inventory) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="text-center">
+          <p className="text-lg font-medium text-gray-500 dark:text-gray-400">Bu sayfaya erişim yetkiniz bulunmamaktadır.</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">İşletme sahibinizle iletişime geçin.</p>
+        </div>
+      </div>
+    )
   }
 
   if (loading) {

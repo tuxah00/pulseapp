@@ -46,6 +46,7 @@ const DEFAULT_SETTINGS: BusinessSettings = {
   winback_days: 30,
   ai_auto_reply: false,
   language: 'tr',
+  reservation_duration_minutes: 90,
 }
 
 function generateTimeOptions(): string[] {
@@ -62,7 +63,7 @@ const TIME_OPTIONS = generateTimeOptions()
 type TabId = 'info' | 'hours' | 'settings' | 'subscription'
 
 export default function BusinessSettingsPage() {
-  const { businessId, loading: ctxLoading } = useBusinessContext()
+  const { businessId, loading: ctxLoading, permissions } = useBusinessContext()
   const supabase = createClient()
   const router = useRouter()
   const { theme, toggleTheme } = useTheme()
@@ -183,6 +184,17 @@ export default function BusinessSettingsPage() {
       router.refresh()
     }
     setSaving(false)
+  }
+
+  if (permissions && !permissions.settings) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="text-center">
+          <p className="text-lg font-medium text-gray-500 dark:text-gray-400">Bu sayfaya erişim yetkiniz bulunmamaktadır.</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">İşletme sahibinizle iletişime geçin.</p>
+        </div>
+      </div>
+    )
   }
 
   if (loading || ctxLoading) {
@@ -565,6 +577,32 @@ export default function BusinessSettingsPage() {
                 </select>
                 <p className="mt-1.5 text-xs text-gray-400">
                   Bu süreden uzun süre gelmeyen müşteriler &quot;riskli&quot; olarak işaretlenir.
+                </p>
+              </div>
+            </div>
+
+            <div className="card">
+              <h2 className="text-lg font-semibold text-gray-900 mb-1">Rezervasyon Ayarları</h2>
+              <p className="text-sm text-gray-500 mb-6">
+                Masa rezervasyonu süresini ve çakışma kontrolünü ayarlayın.
+              </p>
+
+              <div>
+                <label className="label">Rezervasyon Süresi</label>
+                <select
+                  value={settings.reservation_duration_minutes}
+                  onChange={(e) => setSettings(prev => ({ ...prev, reservation_duration_minutes: Number(e.target.value) }))}
+                  className="input w-48"
+                >
+                  <option value={30}>30 dakika</option>
+                  <option value={60}>60 dakika</option>
+                  <option value={90}>90 dakika</option>
+                  <option value={120}>120 dakika</option>
+                  <option value={150}>150 dakika</option>
+                  <option value={180}>180 dakika</option>
+                </select>
+                <p className="mt-1.5 text-xs text-gray-400">
+                  Her rezervasyonun varsayılan süresi. Aynı masaya bu süre içinde çakışan rezervasyon yapılamaz.
                 </p>
               </div>
             </div>

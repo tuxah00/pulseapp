@@ -5,7 +5,8 @@ import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { Plus, Pencil, Trash2, Loader2, UserPlus, X, Mail, Phone } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { StaffMember, StaffRole } from '@/types'
+import type { StaffMember, StaffRole, StaffPermissions } from '@/types'
+import { DEFAULT_PERMISSIONS, getEffectivePermissions } from '@/types'
 
 const ROLE_LABELS: Record<StaffRole, string> = {
   owner: 'İşletme Sahibi',
@@ -13,8 +14,27 @@ const ROLE_LABELS: Record<StaffRole, string> = {
   staff: 'Personel',
 }
 
+const PERMISSION_LABELS: Record<keyof StaffPermissions, string> = {
+  dashboard: 'Genel Bakış',
+  appointments: 'Randevular',
+  customers: 'Müşteriler',
+  analytics: 'Analitik',
+  messages: 'Mesajlar',
+  reviews: 'Yorumlar',
+  services: 'Hizmetler',
+  staff: 'Personeller',
+  shifts: 'Vardiya',
+  settings: 'Ayarlar',
+  reservations: 'Rezervasyonlar',
+  classes: 'Sınıflar',
+  memberships: 'Üyelikler',
+  records: 'Dosyalar',
+  portfolio: 'Portfolyo',
+  inventory: 'Stoklar',
+}
+
 export default function StaffPage() {
-  const { businessId, loading: ctxLoading } = useBusinessContext()
+  const { businessId, loading: ctxLoading, staffRole: currentUserRole, permissions } = useBusinessContext()
   const [staff, setStaff] = useState<StaffMember[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
@@ -27,6 +47,7 @@ export default function StaffPage() {
   const [role, setRole] = useState<StaffRole>('staff')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
+  const [permsSaving, setPermsSaving] = useState(false)
 
   const supabase = createClient()
 
@@ -85,6 +106,34 @@ export default function StaffPage() {
     if (err) { alert('İşlem hatası: ' + err.message); return }
     if (selectedStaff?.id === member.id) setSelectedStaff(null)
     fetchStaff()
+  }
+
+  async function handlePermissionToggle(member: StaffMember, key: keyof StaffPermissions, value: boolean) {
+    setPermsSaving(true)
+    const currentPerms = getEffectivePermissions(member.role, member.permissions)
+    const newPerms: StaffPermissions = { ...currentPerms, [key]: value }
+    const { error: err } = await supabase
+      .from('staff_members')
+      .update({ permissions: newPerms })
+      .eq('id', member.id)
+    if (err) {
+      console.error('Yetki güncelleme hatası:', err)
+    } else {
+      setSelectedStaff(prev => prev?.id === member.id ? { ...prev, permissions: newPerms } as StaffMember : prev)
+      setStaff(prev => prev.map(s => s.id === member.id ? { ...s, permissions: newPerms } : s))
+    }
+    setPermsSaving(false)
+  }
+
+  if (permissions && !permissions.staff) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="text-center">
+          <p className="text-lg font-medium text-gray-500 dark:text-gray-400">Bu sayfaya erişim yetkiniz bulunmamaktadır.</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">İşletme sahibinizle iletişime geçin.</p>
+        </div>
+      </div>
+    )
   }
 
   if (loading) {
@@ -197,6 +246,31 @@ export default function StaffPage() {
                   <Trash2 className="mr-1.5 h-3.5 w-3.5" />Kaldır
                 </button>
               </div>
+
+              {/* Erişim Yetkileri — sadece owner, owner olmayan personel için */}
+              {currentUserRole === 'owner' && selectedStaff.role !== 'owner' && (
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Erişim Yetkileri</h4>
+                  <div className="space-y-2">
+                    {(Object.keys(PERMISSION_LABELS) as (keyof StaffPermissions)[]).map((key) => {
+                      const effectivePerms = getEffectivePermissions(selectedStaff.role, selectedStaff.permissions)
+                      const checked = effectivePerms[key] === true
+                      return (
+                        <label key={key} className="flex items-center gap-3 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            disabled={permsSaving}
+                            onChange={(e) => handlePermissionToggle(selectedStaff, key, e.target.checked)}
+                            className="h-4 w-4 rounded border-gray-300 text-pulse-600 focus:ring-pulse-500"
+                          />
+                          <span className="text-sm text-gray-700 dark:text-gray-300">{PERMISSION_LABELS[key]}</span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </>

@@ -46,7 +46,7 @@ function formatConversationDate(dateStr: string): string {
 }
 
 export default function MessagesPage() {
-  const { businessId, loading: ctxLoading } = useBusinessContext()
+  const { businessId, loading: ctxLoading, permissions } = useBusinessContext()
   const supabase = createClient()
 
   const [conversations, setConversations] = useState<Conversation[]>([])
@@ -295,6 +295,17 @@ export default function MessagesPage() {
       }
     }
     return groups
+  }
+
+  if (permissions && !permissions.messages) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="text-center">
+          <p className="text-lg font-medium text-gray-500 dark:text-gray-400">Bu sayfaya erişim yetkiniz bulunmamaktadır.</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">İşletme sahibinizle iletişime geçin.</p>
+        </div>
+      </div>
+    )
   }
 
   if (ctxLoading) {

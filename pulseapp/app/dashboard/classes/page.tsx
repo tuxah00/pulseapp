@@ -64,7 +64,7 @@ function formatDateISO(date: Date): string {
 }
 
 export default function ClassesPage() {
-  const { businessId } = useBusinessContext()
+  const { businessId, permissions } = useBusinessContext()
   const router = useRouter()
   const [classes, setClasses] = useState<ClassItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -187,6 +187,17 @@ export default function ClassesPage() {
   }
 
   const todayISO = formatDateISO(new Date())
+
+  if (permissions && !permissions.classes) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="text-center">
+          <p className="text-lg font-medium text-gray-500 dark:text-gray-400">Bu sayfaya erişim yetkiniz bulunmamaktadır.</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">İşletme sahibinizle iletişime geçin.</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="p-6 max-w-full">
