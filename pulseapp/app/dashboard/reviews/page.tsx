@@ -190,18 +190,18 @@ export default function ReviewsPage() {
 
       {/* Puan Dağılımı */}
       <div className="card p-4 mb-6">
-        <h3 className="text-sm font-semibold text-gray-700 mb-3">Puan Dağılımı</h3>
+        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Puan Dağılımı</h3>
         <div className="space-y-2">
           {ratingDist.map(({ rating, count, pct }) => (
             <button
               key={rating}
               onClick={() => setFilterRating(filterRating === rating ? null : rating)}
               className={cn('flex items-center gap-3 w-full text-left rounded-lg p-1.5 transition-colors',
-                filterRating === rating ? 'bg-amber-50' : 'hover:bg-gray-50'
+                filterRating === rating ? 'bg-amber-50 dark:bg-amber-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
               )}
             >
               <span className="text-sm font-medium w-8">{rating} ★</span>
-              <div className="flex-1 h-4 bg-gray-100 rounded-full overflow-hidden">
+              <div className="flex-1 h-4 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                 <div
                   className={cn('h-full rounded-full transition-all',
                     rating >= 4 ? 'bg-green-400' : rating === 3 ? 'bg-amber-400' : 'bg-red-400'
@@ -229,12 +229,12 @@ export default function ReviewsPage() {
       ) : (
         <div className="space-y-3">
           {reviews.map((review) => (
-            <div key={review.id} className={cn('card p-4', review.rating <= 3 && review.status !== 'responded' && 'border-red-200 bg-red-50/30')}>
+            <div key={review.id} className={cn('card p-4', review.rating <= 3 && review.status !== 'responded' && 'border-red-200 dark:border-red-800 bg-red-50/30 dark:bg-red-900/20')}>
               <div className="flex items-start gap-4">
                 {/* Avatar */}
                 <div className={cn(
                   'flex h-10 w-10 items-center justify-center rounded-full font-semibold text-sm flex-shrink-0',
-                  review.rating >= 4 ? 'bg-green-100 text-green-700' : review.rating === 3 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'
+                  review.rating >= 4 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' : review.rating === 3 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
                 )}>
                   {review.customers?.name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || '?'}
                 </div>
@@ -245,38 +245,38 @@ export default function ReviewsPage() {
                     <span className="font-medium text-gray-900">{review.customers?.name || 'Anonim'}</span>
                     {renderStars(review.rating)}
                     {review.rating <= 3 && review.status !== 'responded' && (
-                      <span className="badge bg-red-100 text-red-700"><AlertTriangle className="h-3 w-3 mr-1" />Dikkat</span>
+                      <span className="badge bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"><AlertTriangle className="h-3 w-3 mr-1" />Dikkat</span>
                     )}
                     {review.status === 'responded' && (
-                      <span className="badge bg-green-100 text-green-700">Yanıtlandı</span>
+                      <span className="badge bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">Yanıtlandı</span>
                     )}
                   </div>
 
                   {review.comment && (
-                    <p className="text-sm text-gray-600 mb-2">{review.comment}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">{review.comment}</p>
                   )}
 
                   <p className="text-xs text-gray-400">{formatDate(review.created_at)}</p>
 
                   {/* Mevcut yanıt */}
                   {review.actual_response && (
-                    <div className="mt-3 rounded-lg bg-blue-50 p-3">
-                      <p className="text-xs font-medium text-blue-700 mb-1">Yanıtınız:</p>
-                      <p className="text-sm text-blue-800">{review.actual_response}</p>
+                    <div className="mt-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 p-3">
+                      <p className="text-xs font-medium text-blue-700 dark:text-blue-300 mb-1">Yanıtınız:</p>
+                      <p className="text-sm text-blue-800 dark:text-blue-200">{review.actual_response}</p>
                     </div>
                   )}
 
                   {/* AI taslak */}
                   {review.ai_response_draft && !review.actual_response && respondingTo !== review.id && (
-                    <div className="mt-3 rounded-lg bg-purple-50 border border-purple-100 p-3">
+                    <div className="mt-3 rounded-lg bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 p-3">
                       <div className="flex items-center gap-1.5 mb-1">
-                        <Sparkles className="h-3.5 w-3.5 text-purple-600" />
-                        <p className="text-xs font-medium text-purple-700">AI Yanıt Taslağı</p>
+                        <Sparkles className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+                        <p className="text-xs font-medium text-purple-700 dark:text-purple-300">AI Yanıt Taslağı</p>
                       </div>
-                      <p className="text-sm text-purple-800">{review.ai_response_draft}</p>
+                      <p className="text-sm text-purple-800 dark:text-purple-200">{review.ai_response_draft}</p>
                       <button
                         onClick={() => { setResponseText(review.ai_response_draft); setRespondingTo(review.id) }}
-                        className="mt-2 text-xs font-medium text-purple-700 bg-purple-100 hover:bg-purple-200 rounded-lg px-3 py-1.5 transition-colors"
+                        className="mt-2 text-xs font-medium text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-800/50 hover:bg-purple-200 dark:hover:bg-purple-800 rounded-lg px-3 py-1.5 transition-colors"
                       >
                         Bu taslağı kullan
                       </button>
@@ -352,7 +352,7 @@ export default function ReviewsPage() {
                   {[1, 2, 3, 4, 5].map(r => (
                     <button key={r} type="button" onClick={() => setNewRating(r)}
                       className={cn('flex h-10 w-10 items-center justify-center rounded-lg text-lg transition-colors',
-                        r <= newRating ? 'bg-amber-100 text-amber-600' : 'bg-gray-100 text-gray-400'
+                        r <= newRating ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500'
                       )}>
                       ★
                     </button>

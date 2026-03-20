@@ -25,6 +25,7 @@ const MANAGEMENT_ITEMS: SidebarItem[] = [
   { key: 'staff', name: 'Personeller', href: '/dashboard/settings/staff', iconName: 'UserPlus' },
   { key: 'messages', name: 'Mesajlar', href: '/dashboard/messages', iconName: 'MessageSquare' },
   { key: 'analytics', name: 'Analitik', href: '/dashboard/analytics', iconName: 'BarChart3' },
+  { key: 'shifts', name: 'Vardiya', href: '/dashboard/settings/vardiye', iconName: 'CalendarDays' },
 ]
 
 // Sector-specific items

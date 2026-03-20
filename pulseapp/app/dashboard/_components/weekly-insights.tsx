@@ -29,24 +29,24 @@ interface InsightsData {
 const INSIGHT_CONFIG = {
   warning: {
     icon: AlertTriangle,
-    bg: 'bg-amber-50',
-    border: 'border-amber-200',
+    bg: 'bg-amber-50 dark:bg-amber-900/20',
+    border: 'border-amber-200 dark:border-amber-800',
     iconColor: 'text-amber-500',
-    textColor: 'text-amber-800',
+    textColor: 'text-amber-800 dark:text-amber-200',
   },
   opportunity: {
     icon: Lightbulb,
-    bg: 'bg-blue-50',
-    border: 'border-blue-200',
+    bg: 'bg-blue-50 dark:bg-blue-900/20',
+    border: 'border-blue-200 dark:border-blue-800',
     iconColor: 'text-blue-500',
-    textColor: 'text-blue-800',
+    textColor: 'text-blue-800 dark:text-blue-200',
   },
   success: {
     icon: CheckCircle,
-    bg: 'bg-green-50',
-    border: 'border-green-200',
+    bg: 'bg-green-50 dark:bg-green-900/20',
+    border: 'border-green-200 dark:border-green-800',
     iconColor: 'text-green-500',
-    textColor: 'text-green-800',
+    textColor: 'text-green-800 dark:text-green-200',
   },
 }
 
@@ -103,7 +103,7 @@ export default function WeeklyInsights() {
         className="card w-full text-left hover:border-blue-300 transition-colors border-dashed border-2"
       >
         <div className="flex items-center gap-3 py-2">
-          <div className="h-9 w-9 rounded-lg bg-blue-50 flex items-center justify-center">
+          <div className="h-9 w-9 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
             <TrendingUp className="h-5 w-5 text-blue-600" />
           </div>
           <div>
@@ -119,7 +119,7 @@ export default function WeeklyInsights() {
     <div className="card space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center">
+          <div className="h-8 w-8 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
             <TrendingUp className="h-4 w-4 text-blue-600" />
           </div>
           <div>
@@ -130,7 +130,7 @@ export default function WeeklyInsights() {
         <button
           onClick={() => load(true)}
           disabled={loading}
-          className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+          className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
           title="Yenile"
         >
           <RefreshCw className={`h-3.5 w-3.5 text-gray-400 ${loading ? 'animate-spin' : ''}`} />
@@ -145,22 +145,22 @@ export default function WeeklyInsights() {
       )}
 
       {error && !loading && (
-        <p className="text-xs text-red-500 bg-red-50 p-2 rounded-lg">{error}</p>
+        <p className="text-xs text-red-500 bg-red-50 dark:bg-red-900/20 p-2 rounded-lg">{error}</p>
       )}
 
       {data && !loading && (
         <>
           {/* Özet istatistikler */}
           <div className="grid grid-cols-3 gap-2">
-            <div className="text-center p-2 bg-gray-50 rounded-lg">
+            <div className="text-center p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
               <p className="text-lg font-bold text-gray-900">{data.stats.appointments}</p>
               <p className="text-xs text-gray-400">Randevu</p>
             </div>
-            <div className="text-center p-2 bg-gray-50 rounded-lg">
+            <div className="text-center p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
               <p className="text-lg font-bold text-gray-900">+{data.stats.new_customers}</p>
               <p className="text-xs text-gray-400">Yeni Müşteri</p>
             </div>
-            <div className={`text-center p-2 rounded-lg ${data.stats.risk_customers > 0 ? 'bg-amber-50' : 'bg-gray-50'}`}>
+            <div className={`text-center p-2 rounded-lg ${data.stats.risk_customers > 0 ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-gray-50 dark:bg-gray-700/50'}`}>
               <p className={`text-lg font-bold ${data.stats.risk_customers > 0 ? 'text-amber-600' : 'text-gray-900'}`}>
                 {data.stats.risk_customers}
               </p>
@@ -186,8 +186,8 @@ export default function WeeklyInsights() {
 
           {/* Önerilenler aksiyonlar */}
           {data.actions.length > 0 && (
-            <div className="space-y-1.5 border-t border-gray-100 pt-3">
-              <p className="text-xs font-medium text-gray-500 mb-2">Önerilen Aksiyonlar</p>
+            <div className="space-y-1.5 border-t border-gray-100 dark:border-gray-700 pt-3">
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Önerilen Aksiyonlar</p>
               {data.actions.map((action, i) => (
                 <button
                   key={i}

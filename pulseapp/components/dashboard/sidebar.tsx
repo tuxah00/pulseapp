@@ -64,7 +64,6 @@ const ICON_MAP: Record<string, LucideIcon> = {
 }
 
 const bottomNav = [
-  { name: 'Vardiya', href: '/dashboard/settings/vardiye', icon: CalendarDays },
   { name: 'Ayarlar', href: '/dashboard/settings/business', icon: Settings },
 ]
 
@@ -82,6 +81,7 @@ const PERMISSION_MAP: Record<string, keyof StaffPermissions> = {
   '/dashboard/classes': 'classes',
   '/dashboard/memberships': 'memberships',
   '/dashboard/portfolio': 'portfolio',
+  '/dashboard/settings/vardiye': 'shifts',
 }
 
 interface SidebarProps {
@@ -183,7 +183,6 @@ export default function Sidebar({ businessName, userName, sector, plan, permissi
       {/* Alt navigasyon */}
       <div className="border-t border-gray-200 dark:border-gray-700 px-3 py-4 space-y-0.5">
         {bottomNav.filter((item) => {
-          if (item.href === '/dashboard/settings/vardiye') return permissions.shifts !== false
           if (item.href === '/dashboard/settings/business') return permissions.settings !== false
           return true
         }).map((item) => {

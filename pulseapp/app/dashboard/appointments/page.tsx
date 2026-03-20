@@ -372,10 +372,10 @@ export default function AppointmentsPage() {
 
       {/* Şu anki saat */}
       <div className="mb-6 flex justify-center">
-        <div className="inline-flex items-center rounded-full bg-gray-200/90 dark:bg-gray-700/90 px-5 py-2 text-base font-semibold text-gray-800 dark:text-gray-100 shadow-sm">
+        <div className="inline-flex items-center rounded-2xl bg-gray-200/90 dark:bg-gray-700/90 px-8 py-4 text-3xl font-bold text-gray-800 dark:text-gray-100 shadow-sm">
           Şu an:{' '}
           <span className="ml-1 tabular-nums">
-            {now.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+            {now.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
           </span>
         </div>
       </div>
@@ -592,6 +592,16 @@ export default function AppointmentsPage() {
                   <button onClick={() => { updateStatus(selectedAppointment.id, 'confirmed'); setSelectedAppointment(null) }} className="btn-primary w-full justify-start gap-2">
                     <CheckCircle className="h-4 w-4" /> Onayla
                   </button>
+                )}
+                {(selectedAppointment.status === 'no_show' || selectedAppointment.status === 'cancelled') && (
+                  <>
+                    <button onClick={() => { updateStatus(selectedAppointment.id, 'confirmed'); setSelectedAppointment(null) }} className="w-full flex items-center gap-2 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 px-4 py-2.5 text-sm font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-800/30 transition-colors">
+                      <CheckCircle className="h-4 w-4" /> Aktif Et
+                    </button>
+                    <button onClick={() => { handleDeleteAppointment(selectedAppointment.id); setSelectedAppointment(null) }} className="w-full flex items-center gap-2 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-4 py-2.5 text-sm font-medium text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-800/30 transition-colors">
+                      <Trash2 className="h-4 w-4" /> Kalıcı Olarak Sil
+                    </button>
+                  </>
                 )}
               </div>
             </div>
