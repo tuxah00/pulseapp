@@ -11,8 +11,11 @@ import {
 import { formatPhone, formatDate, formatCurrency, getSegmentColor, cn } from '@/lib/utils'
 import { SEGMENT_LABELS, type Customer, type CustomerSegment } from '@/types'
 
+import { getCustomerLabel } from '@/lib/config/sector-modules'
+
 export default function CustomersPage() {
-  const { businessId, loading: ctxLoading } = useBusinessContext()
+  const { businessId, loading: ctxLoading, sector } = useBusinessContext()
+  const customerLabel = sector ? getCustomerLabel(sector) : 'Müşteriler'
   const [customers, setCustomers] = useState<Customer[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -101,11 +104,11 @@ export default function CustomersPage() {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Müşteriler</h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{customers.length} müşteri kayıtlı</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{customerLabel}</h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{customers.length} {customerLabel.toLowerCase()} kayıtlı</p>
         </div>
         <button onClick={openNewModal} className="btn-primary">
-          <Plus className="mr-2 h-4 w-4" />Yeni Müşteri
+          <Plus className="mr-2 h-4 w-4" />Yeni {customerLabel.endsWith('lar') || customerLabel.endsWith('ler') ? customerLabel.slice(0, -3) : customerLabel}
         </button>
       </div>
 

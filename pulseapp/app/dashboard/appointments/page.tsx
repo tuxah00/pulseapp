@@ -64,6 +64,7 @@ export default function AppointmentsPage() {
       .select('*, customers(name, phone), services(name, duration_minutes, price), staff_members(name)')
       .eq('business_id', businessId)
       .eq('appointment_date', selectedDate)
+      .is('deleted_at', null)
       .order('start_time', { ascending: true })
 
     if (data) setAppointments(data)
@@ -235,7 +236,10 @@ export default function AppointmentsPage() {
   async function handleDeleteAppointment(appointmentId: string, e?: React.MouseEvent) {
     e?.stopPropagation()
     if (!confirm('Bu randevuyu kalıcı olarak silmek istediğinizden emin misiniz?')) return
-    const { error } = await supabase.from('appointments').delete().eq('id', appointmentId)
+    const { error } = await supabase
+      .from('appointments')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', appointmentId)
     if (error) { alert('Silme hatası: ' + error.message); return }
     if (selectedAppointment?.id === appointmentId) setSelectedAppointment(null)
     fetchAppointments()
@@ -577,10 +581,10 @@ export default function AppointmentsPage() {
                 )}
                 {selectedAppointment.status === 'confirmed' && (
                   <>
-                    <button onClick={() => { updateStatus(selectedAppointment.id, 'completed'); setSelectedAppointment(null) }} className="w-full flex items-center gap-2 rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 px-4 py-2.5 text-sm font-medium text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-800/30 transition-colors">
+                    <button onClick={async () => { await updateStatus(selectedAppointment.id, 'completed'); setSelectedAppointment(null) }} className="w-full flex items-center gap-2 rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 px-4 py-2.5 text-sm font-medium text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-800/30 transition-colors">
                       <CheckCircle className="h-4 w-4" /> Tamamlandı İşaretle
                     </button>
-                    <button onClick={() => { updateStatus(selectedAppointment.id, 'no_show'); setSelectedAppointment(null) }} className="w-full flex items-center gap-2 rounded-lg border border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/20 px-4 py-2.5 text-sm font-medium text-orange-700 dark:text-orange-300 hover:bg-orange-100 dark:hover:bg-orange-800/30 transition-colors">
+                    <button onClick={async () => { await updateStatus(selectedAppointment.id, 'no_show'); setSelectedAppointment(null) }} className="w-full flex items-center gap-2 rounded-lg border border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/20 px-4 py-2.5 text-sm font-medium text-orange-700 dark:text-orange-300 hover:bg-orange-100 dark:hover:bg-orange-800/30 transition-colors">
                       <AlertTriangle className="h-4 w-4" /> Gelmedi İşaretle
                     </button>
                     <button onClick={(e) => { openCancelConfirm(selectedAppointment, e); setSelectedAppointment(null) }} className="w-full flex items-center gap-2 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-4 py-2.5 text-sm font-medium text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-800/30 transition-colors">
@@ -589,16 +593,16 @@ export default function AppointmentsPage() {
                   </>
                 )}
                 {selectedAppointment.status === 'pending' && (
-                  <button onClick={() => { updateStatus(selectedAppointment.id, 'confirmed'); setSelectedAppointment(null) }} className="btn-primary w-full justify-start gap-2">
+                  <button onClick={async () => { await updateStatus(selectedAppointment.id, 'confirmed'); setSelectedAppointment(null) }} className="btn-primary w-full justify-start gap-2">
                     <CheckCircle className="h-4 w-4" /> Onayla
                   </button>
                 )}
                 {(selectedAppointment.status === 'no_show' || selectedAppointment.status === 'cancelled') && (
                   <>
-                    <button onClick={() => { updateStatus(selectedAppointment.id, 'confirmed'); setSelectedAppointment(null) }} className="w-full flex items-center gap-2 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 px-4 py-2.5 text-sm font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-800/30 transition-colors">
+                    <button onClick={async () => { await updateStatus(selectedAppointment.id, 'confirmed'); setSelectedAppointment(null) }} className="w-full flex items-center gap-2 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 px-4 py-2.5 text-sm font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-800/30 transition-colors">
                       <CheckCircle className="h-4 w-4" /> Aktif Et
                     </button>
-                    <button onClick={() => { handleDeleteAppointment(selectedAppointment.id); setSelectedAppointment(null) }} className="w-full flex items-center gap-2 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-4 py-2.5 text-sm font-medium text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-800/30 transition-colors">
+                    <button onClick={() => handleDeleteAppointment(selectedAppointment.id)} className="w-full flex items-center gap-2 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-4 py-2.5 text-sm font-medium text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-800/30 transition-colors">
                       <Trash2 className="h-4 w-4" /> Kalıcı Olarak Sil
                     </button>
                   </>

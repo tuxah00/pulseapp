@@ -13,8 +13,11 @@ import {
   Pencil,
   CalendarCheck,
   Phone,
+  LayoutList,
+  LayoutGrid,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useViewMode } from '@/lib/hooks/use-view-mode'
 
 type ReservationStatus = 'pending' | 'confirmed' | 'seated' | 'completed' | 'cancelled' | 'no_show'
 
@@ -70,6 +73,7 @@ export default function ReservationsPage() {
   const [editingReservation, setEditingReservation] = useState<TableReservation | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useViewMode('reservations', 'list')
 
   // Form state
   const [formCustomerName, setFormCustomerName] = useState('')
@@ -231,13 +235,19 @@ export default function ReservationsPage() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Rezervasyonlar</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Masa rezervasyonlarını yönetin</p>
         </div>
-        <button
-          onClick={openNewModal}
-          className="flex items-center gap-2 rounded-lg bg-pulse-600 px-4 py-2 text-sm font-medium text-white hover:bg-pulse-700 transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Yeni Rezervasyon
-        </button>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <button onClick={() => setViewMode('list')} className={cn('p-1.5 rounded', viewMode === 'list' ? 'bg-gray-200 dark:bg-gray-700' : 'hover:bg-gray-100 dark:hover:bg-gray-800')} title="Liste"><LayoutList className="h-4 w-4" /></button>
+            <button onClick={() => setViewMode('box')} className={cn('p-1.5 rounded', viewMode === 'box' ? 'bg-gray-200 dark:bg-gray-700' : 'hover:bg-gray-100 dark:hover:bg-gray-800')} title="Kutu"><LayoutGrid className="h-4 w-4" /></button>
+          </div>
+          <button
+            onClick={openNewModal}
+            className="flex items-center gap-2 rounded-lg bg-pulse-600 px-4 py-2 text-sm font-medium text-white hover:bg-pulse-700 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Yeni Rezervasyon
+          </button>
+        </div>
       </div>
 
       {/* Date Navigation */}
@@ -293,115 +303,140 @@ export default function ReservationsPage() {
       </div>
 
       {/* List */}
-      <div className="rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 overflow-hidden">
-        {loading ? (
+      {loading ? (
+        <div className="rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 overflow-hidden">
           <div className="flex items-center justify-center py-16">
             <Loader2 className="h-6 w-6 animate-spin text-pulse-500" />
           </div>
-        ) : reservations.length === 0 ? (
+        </div>
+      ) : reservations.length === 0 ? (
+        <div className="rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 overflow-hidden">
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <CalendarCheck className="h-10 w-10 text-gray-300 dark:text-gray-600 mb-3" />
             <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Bu tarihte rezervasyon yok</p>
             <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Yeni rezervasyon eklemek için butona tıklayın</p>
           </div>
-        ) : (
-          <ul className="divide-y divide-gray-100 dark:divide-gray-700">
-            {reservations.map((r) => (
-              <li key={r.id} className="p-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-start gap-3 min-w-0">
-                    <div className="flex-shrink-0 w-14 text-center">
-                      <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{formatTime(r.reservation_time)}</span>
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium text-gray-900 dark:text-gray-100">{r.customer_name}</span>
-                        <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium', STATUS_COLORS[r.status])}>
-                          {STATUS_LABELS[r.status]}
-                        </span>
+        </div>
+      ) : (
+        <>
+          {viewMode === 'list' && (
+            <div className="rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <ul className="divide-y divide-gray-100 dark:divide-gray-700">
+                {reservations.map((r) => (
+                  <li key={r.id} className="p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-3 min-w-0">
+                        <div className="flex-shrink-0 w-14 text-center">
+                          <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{formatTime(r.reservation_time)}</span>
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium text-gray-900 dark:text-gray-100">{r.customer_name}</span>
+                            <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium', STATUS_COLORS[r.status])}>
+                              {STATUS_LABELS[r.status]}
+                            </span>
+                          </div>
+                          <div className="mt-1 flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400 flex-wrap">
+                            <span className="flex items-center gap-1">
+                              <Phone className="h-3.5 w-3.5" />
+                              {r.customer_phone}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Users className="h-3.5 w-3.5" />
+                              {r.party_size} kişi
+                            </span>
+                            {r.table_number && (
+                              <span className="text-xs bg-gray-100 dark:bg-gray-700 rounded px-1.5 py-0.5">
+                                Masa {r.table_number}
+                              </span>
+                            )}
+                          </div>
+                          {r.notes && (
+                            <p className="mt-1 text-xs text-gray-400 dark:text-gray-500 italic">{r.notes}</p>
+                          )}
+                        </div>
                       </div>
-                      <div className="mt-1 flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400 flex-wrap">
-                        <span className="flex items-center gap-1">
-                          <Phone className="h-3.5 w-3.5" />
-                          {r.customer_phone}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Users className="h-3.5 w-3.5" />
-                          {r.party_size} kişi
-                        </span>
-                        {r.table_number && (
-                          <span className="text-xs bg-gray-100 dark:bg-gray-700 rounded px-1.5 py-0.5">
-                            Masa {r.table_number}
-                          </span>
-                        )}
-                      </div>
-                      {r.notes && (
-                        <p className="mt-1 text-xs text-gray-400 dark:text-gray-500 italic">{r.notes}</p>
-                      )}
-                    </div>
-                  </div>
 
-                  {/* Actions */}
-                  <div className="flex items-center gap-1 flex-shrink-0 flex-wrap justify-end">
-                    {r.status === 'pending' && (
-                      <button
-                        onClick={() => updateStatus(r.id, 'confirmed')}
-                        className="rounded-md bg-blue-50 dark:bg-blue-900/20 px-2 py-1 text-xs font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
-                      >
-                        Onayla
-                      </button>
-                    )}
-                    {(r.status === 'confirmed' || r.status === 'pending') && (
-                      <button
-                        onClick={() => updateStatus(r.id, 'seated')}
-                        className="rounded-md bg-purple-50 dark:bg-purple-900/20 px-2 py-1 text-xs font-medium text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-colors"
-                      >
-                        Oturdu
-                      </button>
-                    )}
-                    {r.status === 'seated' && (
-                      <button
-                        onClick={() => updateStatus(r.id, 'completed')}
-                        className="rounded-md bg-green-50 dark:bg-green-900/20 px-2 py-1 text-xs font-medium text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/40 transition-colors"
-                      >
-                        Tamamlandı
-                      </button>
-                    )}
-                    {(r.status === 'pending' || r.status === 'confirmed') && (
-                      <button
-                        onClick={() => updateStatus(r.id, 'no_show')}
-                        className="rounded-md bg-red-50 dark:bg-red-900/20 px-2 py-1 text-xs font-medium text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
-                      >
-                        Gelmedi
-                      </button>
-                    )}
-                    {(r.status === 'pending' || r.status === 'confirmed') && (
-                      <button
-                        onClick={() => updateStatus(r.id, 'cancelled')}
-                        className="rounded-md bg-gray-50 dark:bg-gray-700 px-2 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
-                      >
-                        İptal
-                      </button>
-                    )}
-                    <button
-                      onClick={() => openEditModal(r)}
-                      className="flex h-7 w-7 items-center justify-center rounded-md text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(r.id)}
-                      className="flex h-7 w-7 items-center justify-center rounded-md text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500 dark:hover:text-red-400 transition-colors"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+                      {/* Actions */}
+                      <div className="flex items-center gap-1 flex-shrink-0 flex-wrap justify-end">
+                        {r.status === 'pending' && (
+                          <button
+                            onClick={() => updateStatus(r.id, 'confirmed')}
+                            className="rounded-md bg-blue-50 dark:bg-blue-900/20 px-2 py-1 text-xs font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
+                          >
+                            Onayla
+                          </button>
+                        )}
+                        {(r.status === 'confirmed' || r.status === 'pending') && (
+                          <button
+                            onClick={() => updateStatus(r.id, 'seated')}
+                            className="rounded-md bg-purple-50 dark:bg-purple-900/20 px-2 py-1 text-xs font-medium text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-colors"
+                          >
+                            Oturdu
+                          </button>
+                        )}
+                        {r.status === 'seated' && (
+                          <button
+                            onClick={() => updateStatus(r.id, 'completed')}
+                            className="rounded-md bg-green-50 dark:bg-green-900/20 px-2 py-1 text-xs font-medium text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/40 transition-colors"
+                          >
+                            Tamamlandı
+                          </button>
+                        )}
+                        {(r.status === 'pending' || r.status === 'confirmed') && (
+                          <button
+                            onClick={() => updateStatus(r.id, 'no_show')}
+                            className="rounded-md bg-red-50 dark:bg-red-900/20 px-2 py-1 text-xs font-medium text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+                          >
+                            Gelmedi
+                          </button>
+                        )}
+                        {(r.status === 'pending' || r.status === 'confirmed') && (
+                          <button
+                            onClick={() => updateStatus(r.id, 'cancelled')}
+                            className="rounded-md bg-gray-50 dark:bg-gray-700 px-2 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                          >
+                            İptal
+                          </button>
+                        )}
+                        <button
+                          onClick={() => openEditModal(r)}
+                          className="flex h-7 w-7 items-center justify-center rounded-md text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(r.id)}
+                          className="flex h-7 w-7 items-center justify-center rounded-md text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {viewMode === 'box' && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {reservations.map((r) => (
+                <div key={r.id} onClick={() => openEditModal(r)} className="card p-4 cursor-pointer hover:shadow-md transition-all">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-semibold text-gray-900 dark:text-gray-100">{r.customer_name}</span>
+                    <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium', STATUS_COLORS[r.status])}>
+                      {STATUS_LABELS[r.status]}
+                    </span>
                   </div>
+                  <p className="text-sm text-gray-500">{r.reservation_date} · {formatTime(r.reservation_time)}</p>
+                  {r.party_size && <p className="text-sm text-gray-500">{r.party_size} kişi</p>}
+                  {r.table_number && <p className="text-sm text-gray-500">Masa: {r.table_number}</p>}
                 </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
 
       {/* Modal */}
       {showModal && (

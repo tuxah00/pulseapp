@@ -6,9 +6,10 @@ import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import {
   Plus, Loader2, X, Pencil, Trash2, Search, AlertTriangle,
   ClipboardList, UserCheck, Briefcase, PawPrint, Car, BookOpen,
-  ChevronRight,
+  ChevronRight, LayoutList, LayoutGrid,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useViewMode } from '@/lib/hooks/use-view-mode'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -200,6 +201,7 @@ function RecordsPageInner() {
   const [selectedRecord, setSelectedRecord] = useState<BusinessRecord | null>(null)
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useViewMode('records', 'list')
 
   // Dynamic form state: one string per field key
   const [formData, setFormData] = useState<Record<string, string>>({})
@@ -367,9 +369,15 @@ function RecordsPageInner() {
             {dbError ? config.label : `${records.length} kayıt`}
           </p>
         </div>
-        <button onClick={openNewModal} className="btn-primary">
-          <Plus className="mr-2 h-4 w-4" />{config.addLabel}
-        </button>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <button onClick={() => setViewMode('list')} className={cn('p-1.5 rounded', viewMode === 'list' ? 'bg-gray-200 dark:bg-gray-700' : 'hover:bg-gray-100 dark:hover:bg-gray-800')} title="Liste"><LayoutList className="h-4 w-4" /></button>
+            <button onClick={() => setViewMode('box')} className={cn('p-1.5 rounded', viewMode === 'box' ? 'bg-gray-200 dark:bg-gray-700' : 'hover:bg-gray-100 dark:hover:bg-gray-800')} title="Kutu"><LayoutGrid className="h-4 w-4" /></button>
+          </div>
+          <button onClick={openNewModal} className="btn-primary">
+            <Plus className="mr-2 h-4 w-4" />{config.addLabel}
+          </button>
+        </div>
       </div>
 
       {/* ── DB Error ── */}
@@ -420,50 +428,65 @@ function RecordsPageInner() {
 
       {/* ── Record list ── */}
       {!dbError && records.length > 0 && (
-        <div className="space-y-3">
-          {records.map((record) => (
-            <div
-              key={record.id}
-              onClick={() => setSelectedRecord(record)}
-              className={cn(
-                'card flex items-center gap-4 p-4 cursor-pointer transition-all hover:shadow-md',
-                selectedRecord?.id === record.id && 'ring-2 ring-pulse-500'
-              )}
-            >
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-pulse-50 dark:bg-pulse-900/20 flex-shrink-0">
-                <Icon className="h-5 w-5 text-pulse-600 dark:text-pulse-400" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <span className="font-medium text-gray-900 dark:text-gray-100 truncate block">
-                  {record.title}
-                </span>
-                {getSubtitle(record) && (
-                  <span className="text-sm text-gray-500 dark:text-gray-400 truncate block">
-                    {getSubtitle(record)}
-                  </span>
-                )}
-                <span className="text-xs text-gray-400 dark:text-gray-500">
-                  {formatDate(record.created_at)}
-                </span>
-              </div>
-              <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                <button
-                  onClick={() => { openEditModal(record); setSelectedRecord(null) }}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 transition-colors"
+        <>
+          {viewMode === 'list' && (
+            <div className="space-y-3">
+              {records.map((record) => (
+                <div
+                  key={record.id}
+                  onClick={() => setSelectedRecord(record)}
+                  className={cn(
+                    'card flex items-center gap-4 p-4 cursor-pointer transition-all hover:shadow-md',
+                    selectedRecord?.id === record.id && 'ring-2 ring-pulse-500'
+                  )}
                 >
-                  <Pencil className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => handleDelete(record)}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 transition-colors"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-              <ChevronRight className="h-4 w-4 text-gray-300 dark:text-gray-600 flex-shrink-0" />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-pulse-50 dark:bg-pulse-900/20 flex-shrink-0">
+                    <Icon className="h-5 w-5 text-pulse-600 dark:text-pulse-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="font-medium text-gray-900 dark:text-gray-100 truncate block">
+                      {record.title}
+                    </span>
+                    {getSubtitle(record) && (
+                      <span className="text-sm text-gray-500 dark:text-gray-400 truncate block">
+                        {getSubtitle(record)}
+                      </span>
+                    )}
+                    <span className="text-xs text-gray-400 dark:text-gray-500">
+                      {formatDate(record.created_at)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={() => { openEditModal(record); setSelectedRecord(null) }}
+                      className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 transition-colors"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(record)}
+                      className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 transition-colors"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-gray-300 dark:text-gray-600 flex-shrink-0" />
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          )}
+          {viewMode === 'box' && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {records.map((record) => (
+                <div key={record.id} onClick={() => setSelectedRecord(record)} className="card p-4 cursor-pointer hover:shadow-md transition-all">
+                  <div className="font-semibold text-gray-900 dark:text-gray-100 mb-1">{record.title}</div>
+                  {getSubtitle(record) && <p className="text-sm text-gray-500">{getSubtitle(record)}</p>}
+                  <p className="text-xs text-gray-400 mt-2">{record.created_at ? new Date(record.created_at).toLocaleDateString('tr-TR') : ''}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       {/* ── Slide-over Detail Panel ── */}

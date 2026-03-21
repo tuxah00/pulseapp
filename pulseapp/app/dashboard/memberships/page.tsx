@@ -5,7 +5,10 @@ import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import {
   CreditCard, Users, Calendar, Plus, Search, X,
   Edit2, Trash2, Pause, Play, CheckCircle, Loader2,
+  LayoutList, LayoutGrid,
 } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { useViewMode } from '@/lib/hooks/use-view-mode'
 
 interface Membership {
   id: string
@@ -71,6 +74,7 @@ export default function MembershipsPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [dbError, setDbError] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useViewMode('memberships', 'list')
 
   // Form state
   const [customerName, setCustomerName] = useState('')
@@ -278,9 +282,15 @@ export default function MembershipsPage() {
             Üyelik planları, seans takibi ve süreli üyelikler
           </p>
         </div>
-        <button onClick={openNewModal} className="btn-primary">
-          <Plus className="mr-2 h-4 w-4" />Üyelik Ekle
-        </button>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <button onClick={() => setViewMode('list')} className={cn('p-1.5 rounded', viewMode === 'list' ? 'bg-gray-200 dark:bg-gray-700' : 'hover:bg-gray-100 dark:hover:bg-gray-800')} title="Liste"><LayoutList className="h-4 w-4" /></button>
+            <button onClick={() => setViewMode('box')} className={cn('p-1.5 rounded', viewMode === 'box' ? 'bg-gray-200 dark:bg-gray-700' : 'hover:bg-gray-100 dark:hover:bg-gray-800')} title="Kutu"><LayoutGrid className="h-4 w-4" /></button>
+          </div>
+          <button onClick={openNewModal} className="btn-primary">
+            <Plus className="mr-2 h-4 w-4" />Üyelik Ekle
+          </button>
+        </div>
       </div>
 
       {/* DB Error */}
@@ -357,7 +367,7 @@ export default function MembershipsPage() {
         </div>
       )}
 
-      {/* Grid */}
+      {/* List / Grid */}
       {!dbError && memberships.length === 0 ? (
         <div className="card flex flex-col items-center justify-center py-24 text-center">
           <CreditCard className="mb-4 h-16 w-16 text-gray-200 dark:text-gray-600" />
@@ -376,6 +386,29 @@ export default function MembershipsPage() {
           )}
         </div>
       ) : !dbError ? (
+        <>
+          {viewMode === 'list' && (
+            <div className="space-y-3">
+              {memberships.map(m => (
+                <div key={m.id} onClick={() => openEditModal(m)} className="card flex items-center gap-4 p-4 cursor-pointer hover:shadow-md transition-all">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium text-gray-900 dark:text-gray-100">{m.customer_name}</span>
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_COLORS[m.status]}`}>{STATUS_LABELS[m.status]}</span>
+                    </div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{m.plan_name}</p>
+                    {m.end_date && <p className="text-xs text-gray-400">Bitiş: {formatDate(m.end_date)}</p>}
+                  </div>
+                  {m.sessions_total != null && (
+                    <div className="text-sm text-gray-500 dark:text-gray-400 flex-shrink-0">
+                      {m.sessions_used}/{m.sessions_total} seans
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          {viewMode === 'box' && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {memberships.map(m => {
             const expired = isExpiredButActive(m)
@@ -517,6 +550,8 @@ export default function MembershipsPage() {
             )
           })}
         </div>
+          )}
+        </>
       ) : null}
 
       {/* Modal */}

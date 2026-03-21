@@ -15,6 +15,8 @@ import {
   MessageCircle,
   Star,
   BarChart3,
+  TrendingUp,
+  Shield,
   Settings,
   LogOut,
   ChevronLeft,
@@ -47,6 +49,8 @@ const ICON_MAP: Record<string, LucideIcon> = {
   MessageCircle,
   Star,
   BarChart3,
+  TrendingUp,
+  Shield,
   Settings,
   LogOut,
   Scissors,
@@ -83,6 +87,7 @@ const PERMISSION_MAP: Record<string, keyof StaffPermissions> = {
   '/dashboard/portfolio': 'portfolio',
   '/dashboard/settings/vardiye': 'shifts',
   '/dashboard/orders': 'orders',
+  '/dashboard/settings/audit': 'settings',
 }
 
 interface SidebarProps {

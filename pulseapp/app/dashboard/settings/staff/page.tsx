@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
-import { Plus, Pencil, Trash2, Loader2, UserPlus, X, Mail, Phone } from 'lucide-react'
+import { Plus, Pencil, Trash2, Loader2, UserPlus, X, Mail, Phone, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { StaffMember, StaffRole, StaffPermissions } from '@/types'
 import { DEFAULT_PERMISSIONS, getEffectivePermissions } from '@/types'
@@ -35,7 +35,7 @@ const PERMISSION_LABELS: Record<keyof StaffPermissions, string> = {
 }
 
 export default function StaffPage() {
-  const { businessId, loading: ctxLoading, staffRole: currentUserRole, permissions } = useBusinessContext()
+  const { businessId, loading: ctxLoading, staffRole: currentUserRole, permissions, staffId: currentStaffId } = useBusinessContext()
   const [staff, setStaff] = useState<StaffMember[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
@@ -49,6 +49,13 @@ export default function StaffPage() {
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
   const [permsSaving, setPermsSaving] = useState(false)
+  const [permPopupStaff, setPermPopupStaff] = useState<StaffMember | null>(null)
+
+  const [showInviteModal, setShowInviteModal] = useState(false)
+  const [inviteRole, setInviteRole] = useState<'manager' | 'staff'>('staff')
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteLink, setInviteLink] = useState<string | null>(null)
+  const [inviteLoading, setInviteLoading] = useState(false)
 
   const supabase = createClient()
 
@@ -126,6 +133,23 @@ export default function StaffPage() {
     setPermsSaving(false)
   }
 
+  async function handleCreateInvite() {
+    setInviteLoading(true)
+    setInviteLink(null)
+    const res = await fetch('/api/invite', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: inviteEmail || undefined, role: inviteRole }),
+    })
+    const data = await res.json()
+    if (res.ok) {
+      setInviteLink(data.link)
+    } else {
+      alert('Hata: ' + data.error)
+    }
+    setInviteLoading(false)
+  }
+
   if (permissions && !permissions.staff) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
@@ -150,9 +174,16 @@ export default function StaffPage() {
             Randevu atayabileceğiniz personelleri yönetin.
           </p>
         </div>
-        <button onClick={openNewModal} className="btn-primary">
-          <Plus className="mr-2 h-4 w-4" />Yeni Personel
-        </button>
+        <div className="flex gap-2">
+          {currentUserRole === 'owner' && (
+            <button onClick={() => { setShowInviteModal(true); setInviteLink(null); setInviteEmail('') }} className="btn-secondary">
+              <UserPlus className="mr-2 h-4 w-4" />Davet Et
+            </button>
+          )}
+          <button onClick={openNewModal} className="btn-primary">
+            <Plus className="mr-2 h-4 w-4" />Yeni Personel
+          </button>
+        </div>
       </div>
 
       {staff.length === 0 ? (
@@ -171,16 +202,20 @@ export default function StaffPage() {
               onClick={() => setSelectedStaff(member)}
               className={cn(
                 'card flex items-center gap-4 p-4 hover:shadow-md transition-all cursor-pointer',
-                selectedStaff?.id === member.id && 'ring-2 ring-pulse-500'
+                selectedStaff?.id === member.id && 'ring-2 ring-pulse-500',
+                currentStaffId === member.id && 'bg-blue-50/50 dark:bg-blue-900/10'
               )}
             >
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-pulse-100 text-pulse-700 font-semibold text-sm flex-shrink-0">
                 {member.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-medium text-gray-900 dark:text-gray-100">{member.name}</span>
                   <span className="badge bg-pulse-100 text-pulse-700">{ROLE_LABELS[member.role]}</span>
+                  {currentStaffId === member.id && (
+                    <span className="badge bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">Siz</span>
+                  )}
                 </div>
                 {(member.phone || member.email) && (
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
@@ -189,6 +224,11 @@ export default function StaffPage() {
                 )}
               </div>
               <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                {currentUserRole === 'owner' && member.role !== 'owner' && (
+                  <button onClick={() => setPermPopupStaff(member)} className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:text-purple-600 transition-colors" title="Yetkiler">
+                    <Settings className="h-4 w-4" />
+                  </button>
+                )}
                 <button onClick={() => openEditModal(member)} className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 transition-colors" title="Düzenle">
                   <Pencil className="h-4 w-4" />
                 </button>
@@ -314,6 +354,99 @@ export default function StaffPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Yetki Popup Modal */}
+      {permPopupStaff && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setPermPopupStaff(null)}>
+          <div className="card w-full max-w-sm max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{permPopupStaff.name}</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Erişim Yetkileri</p>
+              </div>
+              <button onClick={() => setPermPopupStaff(null)} className="text-gray-400 hover:text-gray-600">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="space-y-2">
+              {(Object.keys(PERMISSION_LABELS) as Array<keyof StaffPermissions>).map((key) => {
+                const perms = getEffectivePermissions(permPopupStaff.role, permPopupStaff.permissions)
+                return (
+                  <label key={key} className="flex items-center justify-between py-1.5 border-b border-gray-100 dark:border-gray-800 last:border-0 cursor-pointer">
+                    <span className="text-sm text-gray-700 dark:text-gray-300">{PERMISSION_LABELS[key]}</span>
+                    <input
+                      type="checkbox"
+                      checked={perms[key] ?? false}
+                      disabled={permsSaving}
+                      onChange={(e) => {
+                        handlePermissionToggle(permPopupStaff, key, e.target.checked)
+                        setPermPopupStaff(prev => prev ? { ...prev, permissions: { ...getEffectivePermissions(prev.role, prev.permissions), [key]: e.target.checked } } as StaffMember : null)
+                      }}
+                      className="h-4 w-4 rounded text-pulse-600 focus:ring-pulse-500"
+                    />
+                  </label>
+                )
+              })}
+            </div>
+            {permsSaving && (
+              <p className="text-xs text-center text-gray-400 mt-3 flex items-center justify-center gap-1">
+                <Loader2 className="h-3 w-3 animate-spin" /> Kaydediliyor...
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Davet Modal */}
+      {showInviteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowInviteModal(false)}>
+          <div className="card w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Personel Davet Et</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Link paylaşarak sisteme katmak için</p>
+              </div>
+              <button onClick={() => setShowInviteModal(false)} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
+            </div>
+
+            {!inviteLink ? (
+              <div className="space-y-4">
+                <div>
+                  <label className="label">Rol</label>
+                  <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value as 'manager' | 'staff')} className="input">
+                    <option value="staff">Personel</option>
+                    <option value="manager">Yönetici</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="label">E-posta (opsiyonel)</label>
+                  <input type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} className="input" placeholder="personel@ornek.com" />
+                </div>
+                <button onClick={handleCreateInvite} disabled={inviteLoading} className="btn-primary w-full">
+                  {inviteLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <UserPlus className="mr-2 h-4 w-4" />}
+                  Davet Linki Oluştur
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                  <p className="text-xs text-green-600 dark:text-green-400 font-medium mb-1">Davet linki oluşturuldu (7 gün geçerli):</p>
+                  <p className="text-xs text-gray-700 dark:text-gray-300 break-all font-mono">{inviteLink}</p>
+                </div>
+                <button
+                  onClick={() => { navigator.clipboard.writeText(inviteLink); alert('Link kopyalandı!') }}
+                  className="btn-secondary w-full text-sm"
+                >
+                  Linki Kopyala
+                </button>
+                <button onClick={() => { setInviteLink(null) }} className="text-sm text-gray-500 w-full text-center hover:text-gray-700">
+                  Yeni link oluştur
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

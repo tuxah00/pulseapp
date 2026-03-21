@@ -1,7 +1,7 @@
 'use client'
 
 import { useBusinessData } from './business-context-provider'
-import type { StaffRole, StaffPermissions } from '@/types'
+import type { SectorType, StaffRole, StaffPermissions } from '@/types'
 
 interface BusinessContext {
   businessId: string | null
@@ -10,6 +10,7 @@ interface BusinessContext {
   staffName: string | null
   staffRole: StaffRole | null
   permissions: StaffPermissions | null
+  sector: SectorType | null
   loading: boolean
 }
 
@@ -23,6 +24,7 @@ export function useBusinessContext(): BusinessContext {
       staffName: data.staffName,
       staffRole: data.staffRole,
       permissions: data.permissions,
+      sector: data.sector,
       loading: false,
     }
   } catch {
@@ -33,6 +35,7 @@ export function useBusinessContext(): BusinessContext {
       staffName: null,
       staffRole: null,
       permissions: null,
+      sector: null,
       loading: false,
     }
   }

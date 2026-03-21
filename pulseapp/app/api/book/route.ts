@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
 
   const { data: service } = await supabase
     .from('services')
-    .select('duration_minutes')
+    .select('duration_minutes, name')
     .eq('id', service_id)
     .eq('business_id', businessId)
     .single()
@@ -166,6 +166,18 @@ export async function POST(req: NextRequest) {
   if (apptErr) {
     return NextResponse.json({ error: 'Randevu oluşturulamadı' }, { status: 500 })
   }
+
+  // Online randevu bildirimi oluştur
+  try {
+    await supabase.from('notifications').insert({
+      business_id: businessId,
+      type: 'appointment',
+      title: 'Yeni Online Randevu',
+      message: `${customer_name} – ${service.name} – ${start_time}`,
+      data: { appointment_id: appointment.id },
+      is_read: false,
+    })
+  } catch { /* bildirim hatası randevu oluşturmayı etkilemez */ }
 
   return NextResponse.json({ success: true, appointment_id: appointment.id })
 }

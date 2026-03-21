@@ -24,8 +24,9 @@ const MANAGEMENT_ITEMS: SidebarItem[] = [
   { key: 'services', name: 'Hizmetler', href: '/dashboard/settings/services', iconName: 'Scissors' },
   { key: 'staff', name: 'Personeller', href: '/dashboard/settings/staff', iconName: 'UserPlus' },
   { key: 'messages', name: 'Mesajlar', href: '/dashboard/messages', iconName: 'MessageSquare' },
-  { key: 'analytics', name: 'Analitik', href: '/dashboard/analytics', iconName: 'BarChart3' },
+  { key: 'analytics', name: 'Gelir-Gider', href: '/dashboard/analytics', iconName: 'TrendingUp' },
   { key: 'shifts', name: 'Vardiya', href: '/dashboard/settings/vardiye', iconName: 'CalendarDays' },
+  { key: 'audit', name: 'Denetim', href: '/dashboard/settings/audit', iconName: 'Shield' },
 ]
 
 // Sector-specific items
@@ -119,14 +120,32 @@ const SECTOR_ITEMS: Partial<Record<SectorType, SidebarItem[]>> = {
   ],
 }
 
+const CUSTOMER_LABELS: Partial<Record<SectorType, string>> = {
+  psychologist: 'Danışanlar',
+  dental_clinic: 'Hastalar',
+  medical_aesthetic: 'Hastalar',
+  physiotherapy: 'Hastalar',
+  veterinary: 'Hastalar',
+  lawyer: 'Müvekkiller',
+  fitness: 'Üyeler',
+  yoga_pilates: 'Üyeler',
+  tutoring: 'Öğrenciler',
+}
+
+export function getCustomerLabel(sector: SectorType): string {
+  return CUSTOMER_LABELS[sector] ?? 'Müşteriler'
+}
+
 export function getSidebarSections(sector: SectorType, _plan: PlanType): SidebarSection[] {
   const sectorItems = SECTOR_ITEMS[sector] ?? []
 
   // Sectors that replace appointments with reservations
   const excludeAppointments: SectorType[] = ['restaurant', 'cafe']
-  const filteredBase = excludeAppointments.includes(sector)
-    ? BASE_ITEMS.filter(item => item.key !== 'appointments')
-    : BASE_ITEMS
+  const customerLabel = CUSTOMER_LABELS[sector] ?? 'Müşteriler'
+
+  const filteredBase = BASE_ITEMS.map(item =>
+    item.key === 'customers' ? { ...item, name: customerLabel } : item
+  ).filter(item => excludeAppointments.includes(sector) ? item.key !== 'appointments' : true)
 
   return [
     { label: 'Ana', items: filteredBase },

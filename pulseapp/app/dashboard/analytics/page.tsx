@@ -203,7 +203,7 @@ export default function AnalyticsPage() {
       {/* Başlık */}
       <div className="mb-6 flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Analitik</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Gelir-Gider Tablosu</h1>
           <p className="mt-1 text-sm text-gray-500">{periodLabel} · önceki dönemle karşılaştırmalı</p>
         </div>
         <div className="flex gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
