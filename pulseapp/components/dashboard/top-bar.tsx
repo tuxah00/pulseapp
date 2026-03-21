@@ -81,7 +81,7 @@ export default function TopBar({ businessName, userName }: TopBarProps) {
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center border-b border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm px-4 sm:px-6">
-      <nav className="flex items-center gap-1 text-sm" aria-label="Breadcrumb">
+      <nav className="hidden sm:flex items-center gap-1 text-sm min-w-0" aria-label="Breadcrumb">
         {crumbs.map((crumb, i) => (
           <span key={crumb.href} className="flex items-center gap-1">
             {i === 0 ? (

@@ -223,7 +223,7 @@ export default function StaffPage() {
                   </p>
                 )}
               </div>
-              <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                 {currentUserRole === 'owner' && member.role !== 'owner' && (
                   <button onClick={() => setPermPopupStaff(member)} className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:text-purple-600 transition-colors" title="Yetkiler">
                     <Settings className="h-4 w-4" />
