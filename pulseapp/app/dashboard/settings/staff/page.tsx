@@ -6,6 +6,7 @@ import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { Plus, Pencil, Trash2, Loader2, UserPlus, X, Mail, Phone, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { StaffMember, StaffRole, StaffPermissions } from '@/types'
+import { logAudit } from '@/lib/utils/audit'
 import { DEFAULT_PERMISSIONS, getEffectivePermissions } from '@/types'
 
 const ROLE_LABELS: Record<StaffRole, string> = {
@@ -35,7 +36,7 @@ const PERMISSION_LABELS: Record<keyof StaffPermissions, string> = {
 }
 
 export default function StaffPage() {
-  const { businessId, loading: ctxLoading, staffRole: currentUserRole, permissions, staffId: currentStaffId } = useBusinessContext()
+  const { businessId, staffId: currentStaffId, staffName: currentStaffName, loading: ctxLoading, staffRole: currentUserRole, permissions } = useBusinessContext()
   const [staff, setStaff] = useState<StaffMember[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
@@ -105,7 +106,17 @@ export default function StaffPage() {
       })
       if (err) { setError('Ekleme hatası: ' + err.message); setSaving(false); return }
     }
-    setSaving(false); setShowModal(false); fetchStaff()
+    setSaving(false); setShowModal(false)
+    await fetchStaff()
+    await logAudit({
+      businessId: businessId!,
+      staffId: currentStaffId,
+      staffName: currentStaffName,
+      action: editingStaff ? 'update' : 'create',
+      resource: 'staff',
+      resourceId: editingStaff?.id,
+      details: { name, role },
+    })
   }
 
   async function handleDeactivate(member: StaffMember) {
@@ -113,7 +124,16 @@ export default function StaffPage() {
     const { error: err } = await supabase.from('staff_members').update({ is_active: false }).eq('id', member.id)
     if (err) { alert('İşlem hatası: ' + err.message); return }
     if (selectedStaff?.id === member.id) setSelectedStaff(null)
-    fetchStaff()
+    await fetchStaff()
+    await logAudit({
+      businessId: businessId!,
+      staffId: currentStaffId,
+      staffName: currentStaffName,
+      action: 'delete',
+      resource: 'staff',
+      resourceId: member.id,
+      details: { name: member.name },
+    })
   }
 
   async function handlePermissionToggle(member: StaffMember, key: keyof StaffPermissions, value: boolean) {
@@ -129,6 +149,15 @@ export default function StaffPage() {
     } else {
       setSelectedStaff(prev => prev?.id === member.id ? { ...prev, permissions: newPerms } as StaffMember : prev)
       setStaff(prev => prev.map(s => s.id === member.id ? { ...s, permissions: newPerms } : s))
+      await logAudit({
+        businessId: businessId!,
+        staffId: currentStaffId,
+        staffName: currentStaffName,
+        action: 'update',
+        resource: 'permissions',
+        resourceId: member.id,
+        details: { staff_name: member.name, permission: key, value: value ? 'true' : 'false' },
+      })
     }
     setPermsSaving(false)
   }

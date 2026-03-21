@@ -12,6 +12,7 @@ import { formatCurrency } from '@/lib/utils'
 import { SEGMENT_LABELS } from '@/types'
 import TodayAppointments from './_components/today-appointments'
 import WeeklyInsights from './_components/weekly-insights'
+import PerformanceStats from './_components/performance-stats'
 
 export default async function DashboardPage() {
   const supabase = createServerSupabaseClient()
@@ -209,6 +210,9 @@ export default async function DashboardPage() {
               </div>
             )}
           </div>
+
+          {/* Performans İstatistikleri */}
+          <PerformanceStats />
 
           {/* Haftalık AI Raporu */}
           <WeeklyInsights />

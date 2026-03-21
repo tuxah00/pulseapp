@@ -182,6 +182,26 @@ export default function AnalyticsPage() {
       })
   const maxTrend = Math.max(...trendDays.map(d => d.count), 1)
 
+  // Gelir trendi
+  const trendRevenue = period === 'year'
+    ? Array.from({ length: 12 }, (_, i) => {
+        const d = new Date(startDate); d.setMonth(d.getMonth() + i)
+        const label = d.toLocaleDateString('tr-TR', { month: 'short' })
+        const ym = d.toISOString().slice(0, 7)
+        const rev = completed.filter(a => a.appointment_date?.startsWith(ym)).reduce((s: number, a: any) => s + (a.services?.price || 0), 0)
+        return { label, revenue: rev }
+      })
+    : Array.from({ length: dayCount }, (_, i) => {
+        const d = new Date(startDate); d.setDate(d.getDate() + i)
+        const dateStr = d.toISOString().split('T')[0]
+        const label = period === 'week'
+          ? ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'][d.getDay() === 0 ? 6 : d.getDay() - 1]
+          : String(d.getDate())
+        const rev = completed.filter(a => a.appointment_date === dateStr).reduce((s: number, a: any) => s + (a.services?.price || 0), 0)
+        return { label, revenue: rev }
+      })
+  const maxRevenue = Math.max(...trendRevenue.map(d => d.revenue), 1)
+
   // Saat dağılımı
   const hourDist = Array.from({ length: 14 }, (_, i) => {
     const hour = i + 8
@@ -219,33 +239,13 @@ export default function AnalyticsPage() {
       </div>
 
       {/* KPI Kartları (dönem karşılaştırmalı) */}
-      <div className="mb-6 grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPICard icon={<Calendar className="h-5 w-5" />} label="Randevu" value={total}
-          trend={totalTrend} color="blue" />
+      <div className="mb-6 grid grid-cols-3 gap-4">
         <KPICard icon={<DollarSign className="h-5 w-5" />} label="Gelir"
           value={formatCurrency(totalRevenue)} trend={revenueTrend} color="green" currency />
-        <KPICard icon={<Users className="h-5 w-5" />} label="Toplam Müşteri" value={totalCustomers} color="purple" />
-        <KPICard icon={<Star className="h-5 w-5" />} label="Ort. Puan" value={avgRating + ' ★'} color="amber" />
-      </div>
-
-      {/* Performans Oranları */}
-      <div className="mb-6 grid grid-cols-3 gap-4">
-        <div className="card p-4 text-center">
-          <p className={cn('text-2xl font-bold', completionRate >= 80 ? 'text-green-600' : completionRate >= 60 ? 'text-amber-600' : 'text-red-600')}>
-            %{completionRate}
-          </p>
-          <p className="text-xs text-gray-500 mt-1">Tamamlanma</p>
-        </div>
-        <div className="card p-4 text-center">
-          <p className={cn('text-2xl font-bold', noShowRate <= 5 ? 'text-green-600' : noShowRate <= 15 ? 'text-amber-600' : 'text-red-600')}>
-            %{noShowRate}
-          </p>
-          <p className="text-xs text-gray-500 mt-1">Gelmeme</p>
-        </div>
-        <div className="card p-4 text-center">
-          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{cancelled.length}</p>
-          <p className="text-xs text-gray-500 mt-1">İptal</p>
-        </div>
+        <KPICard icon={<Users className="h-5 w-5" />} label="Ort. Müşteri Değeri"
+          value={formatCurrency(avgCLV)} color="purple" currency />
+        <KPICard icon={<UserCheck className="h-5 w-5" />} label="Tamamlanan"
+          value={completed.length} color="blue" />
       </div>
 
       {/* Sekmeler */}
@@ -270,61 +270,20 @@ export default function AnalyticsPage() {
       {/* Genel Bakış Sekmesi */}
       {activeTab === 'overview' && (
         <div className="space-y-6">
-          {/* Randevu Trendi */}
+          {/* Gelir Trendi */}
           <div className="card p-4">
             <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
-              <Activity className="h-4 w-4" /> Randevu Trendi — {periodLabel}
+              <Activity className="h-4 w-4" /> Gelir Trendi — {periodLabel}
             </h3>
             <div className="flex items-end gap-1 h-36 overflow-x-auto">
-              {trendDays.map(({ label, count }, i) => (
+              {trendRevenue.map(({ label, revenue }, i) => (
                 <div key={i} className="flex-1 min-w-[20px] flex flex-col items-center gap-1">
-                  {count > 0 && <span className="text-[9px] font-medium text-gray-700 dark:text-gray-300">{count}</span>}
+                  {revenue > 0 && <span className="text-[9px] font-medium text-gray-700 dark:text-gray-300">{Math.round(revenue / 1000)}k</span>}
                   <div className="w-full bg-pulse-400 dark:bg-pulse-500 rounded-t-sm transition-all"
-                    style={{ height: `${(count / maxTrend) * 100}%`, minHeight: count > 0 ? '4px' : '0' }} />
+                    style={{ height: `${(revenue / maxRevenue) * 100}%`, minHeight: revenue > 0 ? '4px' : '0' }} />
                   <span className="text-[9px] text-gray-400">{label}</span>
                 </div>
               ))}
-            </div>
-          </div>
-
-          <div className="grid lg:grid-cols-2 gap-6">
-            {/* Yoğun Saatler */}
-            <div className="card p-4">
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
-                <Clock className="h-4 w-4" /> Yoğun Saatler
-              </h3>
-              <div className="flex items-end gap-1 h-32">
-                {hourDist.map(({ hour, count }) => (
-                  <div key={hour} className="flex-1 flex flex-col items-center justify-end h-full">
-                    {count > 0 && <span className="text-[9px] font-medium text-gray-700 dark:text-gray-300 mb-0.5 shrink-0">{count}</span>}
-                    <div className={cn('w-full rounded-t-sm transition-all', count > 0 ? 'bg-emerald-400' : 'bg-gray-100 dark:bg-gray-700')}
-                      style={{ height: `${(count / maxHour) * 100}%`, minHeight: count > 0 ? '4px' : '2px' }} />
-                    <span className="text-[8px] text-gray-400 mt-1 shrink-0">{hour}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Popüler Hizmetler */}
-            <div className="card p-4">
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">En Popüler Hizmetler</h3>
-              {serviceStats.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-8">Henüz veri yok</p>
-              ) : (
-                <div className="space-y-3">
-                  {serviceStats.slice(0, 5).map((svc, i) => (
-                    <div key={svc.id} className="flex items-center gap-3">
-                      <span className={cn('flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold',
-                        i === 0 ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'
-                      )}>{i + 1}</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{svc.name}</p>
-                        <p className="text-xs text-gray-500">{svc.count} randevu · {formatCurrency(svc.revenue)}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
           </div>
         </div>

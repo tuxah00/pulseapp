@@ -24,9 +24,10 @@ import {
 } from 'lucide-react'
 import { formatTime, formatDate, getStatusColor, formatCurrency, cn } from '@/lib/utils'
 import { STATUS_LABELS, type AppointmentStatus, type Customer, type Service, type StaffMember } from '@/types'
+import { logAudit } from '@/lib/utils/audit'
 
 export default function AppointmentsPage() {
-  const { businessId, loading: ctxLoading } = useBusinessContext()
+  const { businessId, staffId: currentStaffId, staffName: currentStaffName, loading: ctxLoading } = useBusinessContext()
   const [appointments, setAppointments] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
@@ -200,7 +201,16 @@ export default function AppointmentsPage() {
       const { error } = await supabase.from('appointments').insert({ business_id: businessId, ...payload, status: 'confirmed', source: 'manual' })
       if (error) { setError(error.message.includes('başka bir randevusu var') ? 'Bu personelin bu saatte başka bir randevusu var.' : error.message); setSaving(false); return }
     }
-    setSaving(false); setShowModal(false); fetchAppointments()
+    setSaving(false); setShowModal(false)
+    await fetchAppointments()
+    await logAudit({
+      businessId: businessId!,
+      staffId: currentStaffId,
+      staffName: currentStaffName,
+      action: editingAppointment ? 'update' : 'create',
+      resource: 'appointment',
+      resourceId: editingAppointment?.id,
+    })
   }
 
   async function handleRescheduleSave(e: React.FormEvent) {
@@ -241,6 +251,15 @@ export default function AppointmentsPage() {
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', appointmentId)
     if (error) { alert('Silme hatası: ' + error.message); return }
+    await logAudit({
+      businessId: businessId!,
+      staffId: currentStaffId,
+      staffName: currentStaffName,
+      action: 'delete',
+      resource: 'appointment',
+      resourceId: appointmentId,
+      details: { note: 'Soft deleted' },
+    })
     if (selectedAppointment?.id === appointmentId) setSelectedAppointment(null)
     fetchAppointments()
   }
@@ -260,6 +279,15 @@ export default function AppointmentsPage() {
     if (selectedAppointment?.id === appointmentId) {
       setSelectedAppointment((prev: any) => prev ? { ...prev, status: newStatus } : null)
     }
+    await logAudit({
+      businessId: businessId!,
+      staffId: currentStaffId,
+      staffName: currentStaffName,
+      action: 'status_change',
+      resource: 'appointment',
+      resourceId: appointmentId,
+      details: { status: newStatus },
+    })
     fetchAppointments()
   }
 

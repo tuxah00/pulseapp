@@ -41,11 +41,25 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  // Internal endpoint to log actions - uses admin client
   const admin = createAdminClient()
   const body = await req.json()
 
-  const { data, error } = await admin.from('audit_logs').insert(body).select().single()
+  // IP adresini al
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+    || req.headers.get('x-real-ip')
+    || null
+
+  const { data, error } = await admin.from('audit_logs').insert({
+    business_id: body.businessId,
+    staff_id: body.staffId || null,
+    staff_name: body.staffName || null,
+    action: body.action,
+    resource: body.resource,
+    resource_id: body.resourceId || null,
+    details: body.details || null,
+    ip_address: ip,
+  }).select().single()
+
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ log: data })
 }

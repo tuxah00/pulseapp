@@ -10,11 +10,12 @@ import {
 } from 'lucide-react'
 import { formatPhone, formatDate, formatCurrency, getSegmentColor, cn } from '@/lib/utils'
 import { SEGMENT_LABELS, type Customer, type CustomerSegment } from '@/types'
+import { logAudit } from '@/lib/utils/audit'
 
 import { getCustomerLabel } from '@/lib/config/sector-modules'
 
 export default function CustomersPage() {
-  const { businessId, loading: ctxLoading, sector } = useBusinessContext()
+  const { businessId, staffId, staffName, loading: ctxLoading, sector } = useBusinessContext()
   const customerLabel = sector ? getCustomerLabel(sector) : 'Müşteriler'
   const [customers, setCustomers] = useState<Customer[]>([])
   const [loading, setLoading] = useState(true)
@@ -86,14 +87,33 @@ export default function CustomersPage() {
       const { error } = await supabase.from('customers').insert(customerData)
       if (error) { setError(error.message.includes('idx_customers_business_phone') ? 'Bu telefon numarası zaten kayıtlı.' : error.message); setSaving(false); return }
     }
-    setSaving(false); setShowModal(false); fetchCustomers()
+    setSaving(false); setShowModal(false)
+    await fetchCustomers()
+    await logAudit({
+      businessId: businessId!,
+      staffId,
+      staffName,
+      action: editingCustomer ? 'update' : 'create',
+      resource: 'customer',
+      resourceId: editingCustomer?.id,
+      details: { name },
+    })
   }
 
   async function handleDelete(customer: Customer) {
     if (!confirm(`"${customer.name}" müşterisini silmek istediğinize emin misiniz?`)) return
     await supabase.from('customers').update({ is_active: false }).eq('id', customer.id)
     if (selectedCustomer?.id === customer.id) setSelectedCustomer(null)
-    fetchCustomers()
+    await fetchCustomers()
+    await logAudit({
+      businessId: businessId!,
+      staffId,
+      staffName,
+      action: 'delete',
+      resource: 'customer',
+      resourceId: customer.id,
+      details: { name: customer.name },
+    })
   }
 
   if (loading) {
