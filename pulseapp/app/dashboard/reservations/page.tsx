@@ -419,18 +419,22 @@ export default function ReservationsPage() {
             </div>
           )}
           {viewMode === 'box' && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {reservations.map((r) => (
                 <div key={r.id} onClick={() => openEditModal(r)} className="card p-4 cursor-pointer hover:shadow-md transition-all">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-semibold text-gray-900 dark:text-gray-100">{r.customer_name}</span>
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-gray-900 dark:text-gray-100">{r.customer_name}</span>
                     <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium', STATUS_COLORS[r.status])}>
                       {STATUS_LABELS[r.status]}
                     </span>
                   </div>
-                  <p className="text-sm text-gray-500">{r.reservation_date} · {formatTime(r.reservation_time)}</p>
-                  {r.party_size && <p className="text-sm text-gray-500">{r.party_size} kişi</p>}
-                  {r.table_number && <p className="text-sm text-gray-500">Masa: {r.table_number}</p>}
+                  <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800 space-y-1 text-sm text-gray-500">
+                    <p>{r.reservation_date} · {formatTime(r.reservation_time)}</p>
+                    <div className="flex items-center gap-3 text-xs text-gray-400">
+                      {r.party_size && <span>{r.party_size} kişi</span>}
+                      {r.table_number && <span>Masa: {r.table_number}</span>}
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
