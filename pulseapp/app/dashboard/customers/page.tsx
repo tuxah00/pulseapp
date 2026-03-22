@@ -7,9 +7,10 @@ import { useViewMode } from '@/lib/hooks/use-view-mode'
 import {
   Plus, Search, Loader2, Phone, Mail, Calendar,
   X, Pencil, Trash2, User, LayoutList, LayoutGrid,
+  Clock, Star, MessageSquare, CheckCircle, XCircle, AlertTriangle, Info,
 } from 'lucide-react'
-import { formatPhone, formatDate, formatCurrency, getSegmentColor, cn } from '@/lib/utils'
-import { SEGMENT_LABELS, type Customer, type CustomerSegment } from '@/types'
+import { formatPhone, formatDate, formatTime, formatCurrency, getSegmentColor, cn } from '@/lib/utils'
+import { SEGMENT_LABELS, STATUS_LABELS, type Customer, type CustomerSegment } from '@/types'
 import { logAudit } from '@/lib/utils/audit'
 
 import { getCustomerLabel } from '@/lib/config/sector-modules'
@@ -33,6 +34,11 @@ export default function CustomersPage() {
   const [email, setEmail] = useState('')
   const [birthday, setBirthday] = useState('')
   const [notes, setNotes] = useState('')
+
+  // Timeline state
+  const [panelTab, setPanelTab] = useState<'info' | 'history'>('info')
+  const [timeline, setTimeline] = useState<any[]>([])
+  const [timelineLoading, setTimelineLoading] = useState(false)
 
   const supabase = createClient()
 
@@ -114,6 +120,176 @@ export default function CustomersPage() {
       resourceId: customer.id,
       details: { name: customer.name },
     })
+  }
+
+  // Timeline verisi çekme
+  const fetchTimeline = useCallback(async (customerId: string) => {
+    if (!businessId) return
+    setTimelineLoading(true)
+    try {
+      const [aptsRes, msgsRes, reviewsRes] = await Promise.all([
+        supabase
+          .from('appointments')
+          .select('id, appointment_date, start_time, end_time, status, notes, services(name), staff_members(name)')
+          .eq('business_id', businessId)
+          .eq('customer_id', customerId)
+          .is('deleted_at', null)
+          .order('appointment_date', { ascending: false })
+          .order('start_time', { ascending: false })
+          .limit(50),
+        supabase
+          .from('messages')
+          .select('id, content, direction, channel, created_at')
+          .eq('business_id', businessId)
+          .eq('customer_id', customerId)
+          .order('created_at', { ascending: false })
+          .limit(30),
+        supabase
+          .from('reviews')
+          .select('id, rating, comment, status, created_at')
+          .eq('business_id', businessId)
+          .eq('customer_id', customerId)
+          .order('created_at', { ascending: false })
+          .limit(20),
+      ])
+
+      const items: any[] = []
+
+      // Randevuları ekle
+      if (aptsRes.data) {
+        aptsRes.data.forEach((apt: any) => {
+          items.push({
+            id: `apt-${apt.id}`,
+            type: 'appointment',
+            date: apt.appointment_date,
+            sortDate: `${apt.appointment_date}T${apt.start_time}`,
+            data: apt,
+          })
+        })
+      }
+
+      // Mesajları ekle
+      if (msgsRes.data) {
+        msgsRes.data.forEach((msg: any) => {
+          items.push({
+            id: `msg-${msg.id}`,
+            type: 'message',
+            date: msg.created_at.split('T')[0],
+            sortDate: msg.created_at,
+            data: msg,
+          })
+        })
+      }
+
+      // Yorumları ekle
+      if (reviewsRes.data) {
+        reviewsRes.data.forEach((rev: any) => {
+          items.push({
+            id: `rev-${rev.id}`,
+            type: 'review',
+            date: rev.created_at.split('T')[0],
+            sortDate: rev.created_at,
+            data: rev,
+          })
+        })
+      }
+
+      // Tarihe göre sırala (en yeni en üstte)
+      items.sort((a, b) => b.sortDate.localeCompare(a.sortDate))
+      setTimeline(items)
+    } catch (err) {
+      console.error('Timeline çekme hatası:', err)
+      setTimeline([])
+    } finally {
+      setTimelineLoading(false)
+    }
+  }, [businessId])
+
+  // Tab değiştiğinde geçmişi yükle
+  useEffect(() => {
+    if (panelTab === 'history' && selectedCustomer) {
+      fetchTimeline(selectedCustomer.id)
+    }
+  }, [panelTab, selectedCustomer?.id])
+
+  // Müşteri değiştiğinde tab'ı sıfırla
+  useEffect(() => {
+    setPanelTab('info')
+    setTimeline([])
+  }, [selectedCustomer?.id])
+
+  function getStatusIcon(status: string) {
+    switch (status) {
+      case 'completed': return <CheckCircle className="h-4 w-4 text-green-500" />
+      case 'confirmed': return <CheckCircle className="h-4 w-4 text-blue-500" />
+      case 'cancelled': return <XCircle className="h-4 w-4 text-red-500" />
+      case 'no_show': return <AlertTriangle className="h-4 w-4 text-orange-500" />
+      case 'pending': return <Clock className="h-4 w-4 text-yellow-500" />
+      default: return <Info className="h-4 w-4 text-gray-400" />
+    }
+  }
+
+  function renderTimelineItem(item: any) {
+    if (item.type === 'appointment') {
+      const apt = item.data
+      const statusLabel = STATUS_LABELS[apt.status as keyof typeof STATUS_LABELS] || apt.status
+      return (
+        <div className="flex items-start gap-3">
+          <div className="mt-0.5 flex-shrink-0">{getStatusIcon(apt.status)}</div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+              {apt.services?.name || 'Randevu'} — {statusLabel}
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              {formatDate(apt.appointment_date)} · {formatTime(apt.start_time)} – {formatTime(apt.end_time)}
+              {apt.staff_members?.name && ` · ${apt.staff_members.name}`}
+            </p>
+          </div>
+        </div>
+      )
+    }
+
+    if (item.type === 'message') {
+      const msg = item.data
+      const isInbound = msg.direction === 'inbound'
+      return (
+        <div className="flex items-start gap-3">
+          <div className="mt-0.5 flex-shrink-0">
+            <MessageSquare className={cn('h-4 w-4', isInbound ? 'text-purple-500' : 'text-blue-500')} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+              {isInbound ? 'Gelen Mesaj' : 'Gönderilen Mesaj'}
+              <span className="ml-1 text-xs font-normal text-gray-400">({msg.channel?.toUpperCase()})</span>
+            </p>
+            <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 line-clamp-2">{msg.content}</p>
+            <p className="text-xs text-gray-400 mt-0.5">{formatDate(msg.created_at)}</p>
+          </div>
+        </div>
+      )
+    }
+
+    if (item.type === 'review') {
+      const rev = item.data
+      return (
+        <div className="flex items-start gap-3">
+          <div className="mt-0.5 flex-shrink-0">
+            <Star className="h-4 w-4 text-amber-500" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+              {'★'.repeat(rev.rating)}{'☆'.repeat(5 - rev.rating)} Yorum
+            </p>
+            {rev.comment && (
+              <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 line-clamp-2">"{rev.comment}"</p>
+            )}
+            <p className="text-xs text-gray-400 mt-0.5">{formatDate(rev.created_at)}</p>
+          </div>
+        </div>
+      )
+    }
+
+    return null
   }
 
   if (loading) {
@@ -214,67 +390,131 @@ export default function CustomersPage() {
                 <X className="h-4 w-4" />
               </button>
             </div>
+
+            {/* Tab Başlıkları */}
+            <div className="flex border-b border-gray-200 dark:border-gray-700">
+              <button
+                onClick={() => setPanelTab('info')}
+                className={cn(
+                  'flex-1 py-2.5 text-sm font-medium text-center transition-colors',
+                  panelTab === 'info'
+                    ? 'text-pulse-600 border-b-2 border-pulse-500'
+                    : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                )}
+              >
+                Bilgiler
+              </button>
+              <button
+                onClick={() => setPanelTab('history')}
+                className={cn(
+                  'flex-1 py-2.5 text-sm font-medium text-center transition-colors',
+                  panelTab === 'history'
+                    ? 'text-pulse-600 border-b-2 border-pulse-500'
+                    : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                )}
+              >
+                Geçmiş
+              </button>
+            </div>
+
             <div className="flex-1 overflow-y-auto p-5 space-y-5">
-              {/* Avatar + isim */}
-              <div className="text-center">
-                <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-pulse-100 text-pulse-700 font-bold text-lg">
-                  {selectedCustomer.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-                </div>
-                <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{selectedCustomer.name}</h4>
-                <span className={`badge mt-1 ${getSegmentColor(selectedCustomer.segment)}`}>{SEGMENT_LABELS[selectedCustomer.segment]}</span>
-              </div>
-
-              {/* İletişim */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-3 text-sm">
-                  <Phone className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                  <a href={`tel:${selectedCustomer.phone}`} className="text-pulse-600 hover:underline">{formatPhone(selectedCustomer.phone)}</a>
-                </div>
-                {selectedCustomer.email && (
-                  <div className="flex items-center gap-3 text-sm">
-                    <Mail className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                    <span className="text-gray-700 dark:text-gray-300 truncate">{selectedCustomer.email}</span>
+              {panelTab === 'info' ? (
+                <>
+                  {/* Avatar + isim */}
+                  <div className="text-center">
+                    <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-pulse-100 text-pulse-700 font-bold text-lg">
+                      {selectedCustomer.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                    </div>
+                    <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{selectedCustomer.name}</h4>
+                    <span className={`badge mt-1 ${getSegmentColor(selectedCustomer.segment)}`}>{SEGMENT_LABELS[selectedCustomer.segment]}</span>
                   </div>
-                )}
-                {selectedCustomer.birthday && (
-                  <div className="flex items-center gap-3 text-sm">
-                    <Calendar className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                    <span className="text-gray-700 dark:text-gray-300">{formatDate(selectedCustomer.birthday)}</span>
+
+                  {/* İletişim */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3 text-sm">
+                      <Phone className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                      <a href={`tel:${selectedCustomer.phone}`} className="text-pulse-600 hover:underline">{formatPhone(selectedCustomer.phone)}</a>
+                    </div>
+                    {selectedCustomer.email && (
+                      <div className="flex items-center gap-3 text-sm">
+                        <Mail className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                        <span className="text-gray-700 dark:text-gray-300 truncate">{selectedCustomer.email}</span>
+                      </div>
+                    )}
+                    {selectedCustomer.birthday && (
+                      <div className="flex items-center gap-3 text-sm">
+                        <Calendar className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                        <span className="text-gray-700 dark:text-gray-300">{formatDate(selectedCustomer.birthday)}</span>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
 
-              {/* İstatistikler */}
-              <div className="grid grid-cols-3 gap-3">
-                <div className="text-center p-2 rounded-lg bg-gray-50 dark:bg-gray-700/50">
-                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{selectedCustomer.total_visits}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Ziyaret</p>
-                </div>
-                <div className="text-center p-2 rounded-lg bg-gray-50 dark:bg-gray-700/50">
-                  <p className="text-lg font-bold text-price">{formatCurrency(selectedCustomer.total_revenue)}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Toplam</p>
-                </div>
-                <div className="text-center p-2 rounded-lg bg-gray-50 dark:bg-gray-700/50">
-                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{selectedCustomer.total_no_shows}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Gelmedi</p>
-                </div>
-              </div>
+                  {/* İstatistikler */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="text-center p-2 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+                      <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{selectedCustomer.total_visits}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Ziyaret</p>
+                    </div>
+                    <div className="text-center p-2 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+                      <p className="text-lg font-bold text-price">{formatCurrency(selectedCustomer.total_revenue)}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Toplam</p>
+                    </div>
+                    <div className="text-center p-2 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+                      <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{selectedCustomer.total_no_shows}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Gelmedi</p>
+                    </div>
+                  </div>
 
-              {selectedCustomer.notes && (
-                <div>
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Notlar</p>
-                  <p className="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">{selectedCustomer.notes}</p>
-                </div>
+                  {selectedCustomer.notes && (
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Notlar</p>
+                      <p className="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">{selectedCustomer.notes}</p>
+                    </div>
+                  )}
+
+                  <div className="border-t border-gray-200 dark:border-gray-700 pt-4 flex gap-2">
+                    <button onClick={() => { openEditModal(selectedCustomer); setSelectedCustomer(null) }} className="btn-secondary flex-1 text-sm">
+                      <Pencil className="mr-1.5 h-3.5 w-3.5" />Düzenle
+                    </button>
+                    <button onClick={() => handleDelete(selectedCustomer)} className="btn-danger flex-1 text-sm">
+                      <Trash2 className="mr-1.5 h-3.5 w-3.5" />Sil
+                    </button>
+                  </div>
+                </>
+              ) : (
+                /* ── Geçmiş / Zaman Çizelgesi ── */
+                timelineLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="h-6 w-6 animate-spin text-pulse-500" />
+                  </div>
+                ) : timeline.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                    <Clock className="h-10 w-10 mb-3" />
+                    <p className="text-sm">Henüz aktivite kaydı yok</p>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    {/* Timeline çizgisi */}
+                    <div className="absolute left-[7px] top-2 bottom-2 w-px bg-gray-200 dark:bg-gray-700" />
+                    <div className="space-y-4">
+                      {timeline.map((item) => (
+                        <div key={item.id} className="relative pl-6">
+                          {/* Timeline noktası */}
+                          <div className={cn(
+                            'absolute left-0 top-1.5 h-[15px] w-[15px] rounded-full border-2 border-white dark:border-gray-800',
+                            item.type === 'appointment' ? 'bg-blue-400' :
+                            item.type === 'message' ? 'bg-purple-400' :
+                            item.type === 'review' ? 'bg-amber-400' : 'bg-gray-400'
+                          )} />
+                          <div className="rounded-lg bg-gray-50 dark:bg-gray-700/50 p-3">
+                            {renderTimelineItem(item)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
               )}
-
-              <div className="border-t border-gray-200 dark:border-gray-700 pt-4 flex gap-2">
-                <button onClick={() => { openEditModal(selectedCustomer); setSelectedCustomer(null) }} className="btn-secondary flex-1 text-sm">
-                  <Pencil className="mr-1.5 h-3.5 w-3.5" />Düzenle
-                </button>
-                <button onClick={() => handleDelete(selectedCustomer)} className="btn-danger flex-1 text-sm">
-                  <Trash2 className="mr-1.5 h-3.5 w-3.5" />Sil
-                </button>
-              </div>
             </div>
           </div>
         </>
