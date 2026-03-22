@@ -64,7 +64,15 @@ export default function TopBar({ businessName, userName }: TopBarProps) {
         schema: 'public',
         table: 'notifications',
         filter: `business_id=eq.${businessId}`,
-      }, () => { fetchUnread() })
+      }, (payload) => {
+        fetchUnread()
+        // Yeni bildirim geldiğinde toast göster
+        if (payload.eventType === 'INSERT' && payload.new) {
+          window.dispatchEvent(new CustomEvent('pulse-toast', {
+            detail: payload.new,
+          }))
+        }
+      })
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }

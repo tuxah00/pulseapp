@@ -151,6 +151,19 @@
 .booking-page .border-gray-100 { border-color: #f3f4f6 !important; }
 .booking-page .border-gray-200 { border-color: #e5e7eb !important; }
 
+/* Toast animasyonları */
+@keyframes toast-slide-in {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes toast-slide-out {
+  from { transform: translateX(0); opacity: 1; }
+  to { transform: translateX(100%); opacity: 0; }
+}
+.toast-enter {
+  animation: toast-slide-in 0.3s ease-out forwards;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

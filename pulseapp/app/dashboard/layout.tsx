@@ -5,6 +5,7 @@ import TopBar from '@/components/dashboard/top-bar'
 import OnboardingForm from '@/components/dashboard/onboarding-form'
 import { BusinessProvider } from '@/lib/hooks/business-context-provider'
 import { ThemeProvider } from '@/components/theme-provider'
+import ToastContainer from '@/components/ui/toast'
 import { getEffectivePermissions, type StaffRole } from '@/types'
 
 export default async function DashboardLayout({
@@ -70,6 +71,7 @@ export default async function DashboardLayout({
             }}>
               {children}
             </BusinessProvider>
+            <ToastContainer />
           </div>
         </main>
       </div>
