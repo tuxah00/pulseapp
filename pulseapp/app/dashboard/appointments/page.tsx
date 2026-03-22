@@ -21,6 +21,7 @@ import {
   LayoutGrid,
   Phone,
   Trash2,
+  Repeat,
 } from 'lucide-react'
 import { formatTime, formatDate, getStatusColor, formatCurrency, cn } from '@/lib/utils'
 import { STATUS_LABELS, type AppointmentStatus, type Customer, type Service, type StaffMember } from '@/types'
@@ -54,6 +55,11 @@ export default function AppointmentsPage() {
   const [date, setDate] = useState('')
   const [startTime, setStartTime] = useState('09:00')
   const [notes, setNotes] = useState('')
+
+  // Tekrarlayan randevu state
+  const [isRecurring, setIsRecurring] = useState(false)
+  const [recurrenceFrequency, setRecurrenceFrequency] = useState<'weekly' | 'biweekly' | 'monthly'>('weekly')
+  const [recurrenceCount, setRecurrenceCount] = useState(4)
 
   const supabase = createClient()
 
@@ -127,6 +133,7 @@ export default function AppointmentsPage() {
     setEditingAppointment(null)
     setCustomerId(''); setServiceId(''); setStaffId('')
     setDate(selectedDate); setStartTime('09:00'); setNotes('')
+    setIsRecurring(false); setRecurrenceFrequency('weekly'); setRecurrenceCount(4)
     setError(null); setShowModal(true)
   }
 
@@ -135,6 +142,7 @@ export default function AppointmentsPage() {
     setEditingAppointment(apt)
     setCustomerId(apt.customer_id); setServiceId(apt.service_id || ''); setStaffId(apt.staff_id || '')
     setDate(apt.appointment_date); setStartTime(apt.start_time); setNotes(apt.notes || '')
+    setIsRecurring(false)
     setError(null); setShowModal(true)
   }
 
@@ -182,6 +190,32 @@ export default function AppointmentsPage() {
     })
   }
 
+  function generateRecurringDates(startDate: string, frequency: string, count: number): string[] {
+    const dates: string[] = []
+    const [y, m, d] = startDate.split('-').map(Number)
+    const baseDate = new Date(y, m - 1, d)
+    for (let i = 0; i < count; i++) {
+      const dt = new Date(baseDate)
+      if (frequency === 'weekly') dt.setDate(baseDate.getDate() + i * 7)
+      else if (frequency === 'biweekly') dt.setDate(baseDate.getDate() + i * 14)
+      else if (frequency === 'monthly') dt.setMonth(baseDate.getMonth() + i)
+      const dateStr = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`
+      dates.push(dateStr)
+    }
+    return dates
+  }
+
+  function getRecurrenceSummary(): string {
+    const labels: Record<string, string> = { weekly: 'Her hafta', biweekly: 'Her 2 haftada bir', monthly: 'Her ay' }
+    const dates = generateRecurringDates(date, recurrenceFrequency, recurrenceCount)
+    const lastDate = dates[dates.length - 1]
+    if (!lastDate) return ''
+    const [ly, lm, ld] = lastDate.split('-').map(Number)
+    const lastDt = new Date(ly, lm - 1, ld)
+    const months = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık']
+    return `${labels[recurrenceFrequency]}, ${recurrenceCount} seans (${lastDt.getDate()} ${months[lastDt.getMonth()]}'a kadar)`
+  }
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault(); setSaving(true); setError(null)
     const selectedService = services.find(s => s.id === serviceId)
@@ -197,6 +231,51 @@ export default function AppointmentsPage() {
     if (editingAppointment) {
       const { error } = await supabase.from('appointments').update(payload).eq('id', editingAppointment.id)
       if (error) { setError(error.message.includes('başka bir randevusu var') ? 'Bu personelin bu saatte başka bir randevusu var.' : error.message); setSaving(false); return }
+    } else if (isRecurring && recurrenceCount > 1) {
+      // Tekrarlayan randevu: Toplu oluşturma
+      const groupId = crypto.randomUUID()
+      const dates = generateRecurringDates(date, recurrenceFrequency, recurrenceCount)
+      const conflictDates: string[] = []
+
+      // Çakışma kontrolü
+      for (const d of dates) {
+        const hasConflict = await checkStaffConflict(staffId || null, d, startTime, endTime, null)
+        if (hasConflict) conflictDates.push(d)
+      }
+
+      const validDates = dates.filter(d => !conflictDates.includes(d))
+
+      if (validDates.length === 0) {
+        setError('Tüm tarihlerde çakışma var. Farklı saat veya personel seçin.')
+        setSaving(false)
+        return
+      }
+
+      const insertPayloads = validDates.map(d => ({
+        business_id: businessId,
+        customer_id: customerId,
+        service_id: serviceId || null,
+        staff_id: staffId || null,
+        appointment_date: d,
+        start_time: startTime,
+        end_time: endTime,
+        notes: notes || null,
+        status: 'confirmed' as const,
+        source: 'manual' as const,
+        recurrence_group_id: groupId,
+        recurrence_pattern: { frequency: recurrenceFrequency, count: recurrenceCount },
+      }))
+
+      const { error } = await supabase.from('appointments').insert(insertPayloads)
+      if (error) { setError(error.message); setSaving(false); return }
+
+      if (conflictDates.length > 0) {
+        const skipped = conflictDates.map(d => {
+          const [y, m, dd] = d.split('-').map(Number)
+          return `${dd}/${m}`
+        }).join(', ')
+        alert(`${validDates.length} randevu oluşturuldu. ${conflictDates.length} tarih çakışma nedeniyle atlandı: ${skipped}`)
+      }
     } else {
       const { error } = await supabase.from('appointments').insert({ business_id: businessId, ...payload, status: 'confirmed', source: 'manual' })
       if (error) { setError(error.message.includes('başka bir randevusu var') ? 'Bu personelin bu saatte başka bir randevusu var.' : error.message); setSaving(false); return }
@@ -219,6 +298,7 @@ export default function AppointmentsPage() {
         staff_name: auditStaff?.name || null,
         date,
         time: startTime,
+        recurring: isRecurring && !editingAppointment ? recurrenceCount : null,
       },
     })
   }
@@ -502,6 +582,7 @@ export default function AppointmentsPage() {
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-gray-900 dark:text-gray-100">{apt.customers?.name || 'İsimsiz'}</span>
                       <span className={`badge ${getStatusColor(apt.status)}`}>{STATUS_LABELS[apt.status as keyof typeof STATUS_LABELS]}</span>
+                      {apt.recurrence_group_id && <span title="Tekrarlayan randevu"><Repeat className="h-3.5 w-3.5 text-purple-400" /></span>}
                     </div>
                     <div className="mt-1 flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
                       {apt.services?.name && <span>{apt.services.name}</span>}
@@ -544,7 +625,10 @@ export default function AppointmentsPage() {
                 )}
                 <div className="flex flex-col items-center gap-1">
                   <div className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{formatTime(apt.start_time)}</div>
-                  <span className={`badge ${getStatusColor(apt.status)}`}>{STATUS_LABELS[apt.status as keyof typeof STATUS_LABELS]}</span>
+                  <div className="flex items-center gap-1">
+                    <span className={`badge ${getStatusColor(apt.status)}`}>{STATUS_LABELS[apt.status as keyof typeof STATUS_LABELS]}</span>
+                    {apt.recurrence_group_id && <Repeat className="h-3 w-3 text-purple-400" />}
+                  </div>
                 </div>
 
                 <div className="mt-3 min-h-[5rem] flex flex-col justify-center space-y-0.5 text-xs text-gray-600 dark:text-gray-400">
@@ -584,9 +668,16 @@ export default function AppointmentsPage() {
               <div className="flex flex-col items-center gap-2 py-4">
                 <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{formatTime(selectedAppointment.start_time)}</p>
                 <p className="text-sm text-gray-500 dark:text-gray-400">{formatTime(selectedAppointment.start_time)} – {formatTime(selectedAppointment.end_time)}</p>
-                <span className={`badge ${getStatusColor(selectedAppointment.status)}`}>
-                  {STATUS_LABELS[selectedAppointment.status as keyof typeof STATUS_LABELS]}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className={`badge ${getStatusColor(selectedAppointment.status)}`}>
+                    {STATUS_LABELS[selectedAppointment.status as keyof typeof STATUS_LABELS]}
+                  </span>
+                  {selectedAppointment.recurrence_group_id && (
+                    <span className="badge bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
+                      <Repeat className="h-3 w-3 mr-1" />Tekrarlayan
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Bilgiler */}
@@ -657,6 +748,27 @@ export default function AppointmentsPage() {
                     </button>
                   </>
                 )}
+                {/* Tekrarlayan seri iptal butonu */}
+                {selectedAppointment.recurrence_group_id && (
+                  <button
+                    onClick={async () => {
+                      if (!confirm('Bu serinin gelecekteki tüm randevularını iptal etmek istediğinize emin misiniz?')) return
+                      const today = new Date().toISOString().split('T')[0]
+                      const { error } = await supabase
+                        .from('appointments')
+                        .update({ status: 'cancelled' })
+                        .eq('recurrence_group_id', selectedAppointment.recurrence_group_id)
+                        .gte('appointment_date', today)
+                        .in('status', ['pending', 'confirmed'])
+                      if (error) { alert('Seri iptal hatası: ' + error.message); return }
+                      setSelectedAppointment(null)
+                      fetchAppointments()
+                    }}
+                    className="w-full flex items-center gap-2 rounded-lg border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-900/20 px-4 py-2.5 text-sm font-medium text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-800/30 transition-colors"
+                  >
+                    <Repeat className="h-4 w-4" /> Tüm Seriyi İptal Et
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -721,12 +833,66 @@ export default function AppointmentsPage() {
                 <label className="label">Not (opsiyonel)</label>
                 <input type="text" value={notes} onChange={(e) => setNotes(e.target.value)} className="input" placeholder="Ek bilgi..." />
               </div>
+
+              {/* Tekrarlayan Randevu */}
+              {!editingAppointment && (
+                <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-3">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={isRecurring}
+                      onChange={(e) => setIsRecurring(e.target.checked)}
+                      className="rounded border-gray-300"
+                    />
+                    <Repeat className="h-4 w-4 text-gray-500" />
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Tekrarlayan randevu</span>
+                  </label>
+
+                  {isRecurring && (
+                    <>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Sıklık</label>
+                          <select
+                            value={recurrenceFrequency}
+                            onChange={(e) => setRecurrenceFrequency(e.target.value as any)}
+                            className="input text-sm"
+                          >
+                            <option value="weekly">Her hafta</option>
+                            <option value="biweekly">Her 2 haftada bir</option>
+                            <option value="monthly">Her ay</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Seans sayısı</label>
+                          <select
+                            value={recurrenceCount}
+                            onChange={(e) => setRecurrenceCount(Number(e.target.value))}
+                            className="input text-sm"
+                          >
+                            {[2, 3, 4, 6, 8, 10, 12].map(n => (
+                              <option key={n} value={n}>{n} seans</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                      {date && (
+                        <div className="rounded-lg bg-purple-50 dark:bg-purple-900/20 px-3 py-2 text-xs text-purple-700 dark:text-purple-300">
+                          <Repeat className="inline h-3 w-3 mr-1" />
+                          {getRecurrenceSummary()}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+
               {error && <div className="rounded-lg bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-400">{error}</div>}
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => { setShowModal(false); setEditingAppointment(null) }} className="btn-secondary flex-1">İptal</button>
                 <button type="submit" disabled={saving || !customerId} className="btn-primary flex-1">
                   {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {editingAppointment ? 'Güncelle' : 'Randevu Oluştur'}
+                  {editingAppointment ? 'Güncelle' : isRecurring ? `${recurrenceCount} Randevu Oluştur` : 'Randevu Oluştur'}
                 </button>
               </div>
             </form>

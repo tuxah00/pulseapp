@@ -204,6 +204,8 @@ export interface Appointment {
   review_requested: boolean
   notes: string | null
   cancellation_reason: string | null
+  recurrence_group_id: string | null
+  recurrence_pattern: Record<string, any> | null
   created_at: string
   updated_at: string
   // JOIN'lerden gelen opsiyonel alanlar
