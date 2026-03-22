@@ -6,10 +6,12 @@ import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import {
   Plus, Loader2, X, Pencil, Trash2, Search, AlertTriangle,
   ClipboardList, UserCheck, Briefcase, PawPrint, Car, BookOpen,
-  ChevronRight, LayoutList, LayoutGrid,
+  ChevronRight, LayoutList, LayoutGrid, Upload, FileText, Image as ImageIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
+import { createClient } from '@/lib/supabase/client'
+import type { Customer } from '@/types'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -48,7 +50,7 @@ const TYPE_CONFIG: Record<RecordType, TypeConfig> = {
   patient_file: {
     label: 'Hasta Dosyaları',
     Icon: ClipboardList,
-    addLabel: 'Hasta Ekle',
+    addLabel: 'Dosya Oluştur',
     primarySubtitle: 'diagnosis',
     fields: [
       { key: 'title', label: 'Ad Soyad', placeholder: 'Ahmet Yılmaz' },
@@ -63,7 +65,7 @@ const TYPE_CONFIG: Record<RecordType, TypeConfig> = {
   client_file: {
     label: 'Danışan Dosyaları',
     Icon: UserCheck,
-    addLabel: 'Danışan Ekle',
+    addLabel: 'Dosya Oluştur',
     primarySubtitle: 'treatment_plan',
     fields: [
       { key: 'title', label: 'Ad Soyad', placeholder: 'Fatma Kaya' },
@@ -75,7 +77,7 @@ const TYPE_CONFIG: Record<RecordType, TypeConfig> = {
   case_file: {
     label: 'Müvekkil Dosyaları',
     Icon: Briefcase,
-    addLabel: 'Dava Ekle',
+    addLabel: 'Dosya Oluştur',
     primarySubtitle: 'client_name',
     fields: [
       { key: 'title', label: 'Dava Adı', placeholder: 'Miras Davası - Kaya Ailesi' },
@@ -99,7 +101,7 @@ const TYPE_CONFIG: Record<RecordType, TypeConfig> = {
   pet: {
     label: 'Hasta Dosyaları',
     Icon: PawPrint,
-    addLabel: 'Hasta Ekle',
+    addLabel: 'Dosya Oluştur',
     primarySubtitle: 'owner_name',
     fields: [
       { key: 'title', label: 'Hayvan Adı', placeholder: 'Karamel' },
@@ -125,7 +127,7 @@ const TYPE_CONFIG: Record<RecordType, TypeConfig> = {
   vehicle: {
     label: 'Araç Kayıtları',
     Icon: Car,
-    addLabel: 'Araç Ekle',
+    addLabel: 'Dosya Oluştur',
     primarySubtitle: 'owner_name',
     fields: [
       { key: 'title', label: 'Plaka', placeholder: '34 ABC 123' },
@@ -140,7 +142,7 @@ const TYPE_CONFIG: Record<RecordType, TypeConfig> = {
   diet_plan: {
     label: 'Diyet Programları',
     Icon: ClipboardList,
-    addLabel: 'Danışan Ekle',
+    addLabel: 'Dosya Oluştur',
     primarySubtitle: 'goal',
     fields: [
       { key: 'title', label: 'Danışan Adı', placeholder: 'Ayşe Şahin' },
@@ -154,7 +156,7 @@ const TYPE_CONFIG: Record<RecordType, TypeConfig> = {
   student: {
     label: 'Öğrenci Bilgileri',
     Icon: BookOpen,
-    addLabel: 'Öğrenci Ekle',
+    addLabel: 'Dosya Oluştur',
     primarySubtitle: 'subject',
     fields: [
       { key: 'title', label: 'Öğrenci Adı', placeholder: 'Can Yıldız' },
@@ -191,8 +193,10 @@ function RecordsPageInner() {
 
   const { businessId, loading: ctxLoading, permissions } = useBusinessContext()
   const config = TYPE_CONFIG[recordType]
+  const supabase = createClient()
 
   const [records, setRecords] = useState<BusinessRecord[]>([])
+  const [customers, setCustomers] = useState<Customer[]>([])
   const [loading, setLoading] = useState(true)
   const [dbError, setDbError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
@@ -202,6 +206,9 @@ function RecordsPageInner() {
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [viewMode, setViewMode] = useViewMode('records', 'list')
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string>('')
+  const [uploadFiles, setUploadFiles] = useState<File[]>([])
+  const [uploading, setUploading] = useState(false)
 
   // Dynamic form state: one string per field key
   const [formData, setFormData] = useState<Record<string, string>>({})
@@ -237,9 +244,36 @@ function RecordsPageInner() {
     setLoading(false)
   }, [businessId, recordType, search])
 
+  const fetchCustomers = useCallback(async () => {
+    if (!businessId) return
+    const { data } = await supabase.from('customers').select('id, name, phone').eq('business_id', businessId).eq('is_active', true).order('name')
+    if (data) setCustomers(data as Customer[])
+  }, [businessId])
+
   useEffect(() => {
-    if (!ctxLoading) fetchRecords()
-  }, [fetchRecords, ctxLoading])
+    if (!ctxLoading) {
+      fetchRecords()
+      fetchCustomers()
+    }
+  }, [fetchRecords, fetchCustomers, ctxLoading])
+
+  // ── File upload helpers ────────────────────────────────────────────────────
+
+  const ACCEPTED_TYPES = '.pdf,.jpg,.jpeg,.png,.heic,.doc,.docx,.xls,.xlsx'
+
+  async function uploadFilesToStorage(recordId: string): Promise<string[]> {
+    const urls: string[] = []
+    for (const file of uploadFiles) {
+      const ext = file.name.split('.').pop()?.toLowerCase() || 'bin'
+      const path = `${businessId}/${recordId}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
+      const { error } = await supabase.storage.from('records-files').upload(path, file)
+      if (!error) {
+        const { data: urlData } = supabase.storage.from('records-files').getPublicUrl(path)
+        urls.push(urlData.publicUrl)
+      }
+    }
+    return urls
+  }
 
   // ── Modal helpers ──────────────────────────────────────────────────────────
 
@@ -259,18 +293,21 @@ function RecordsPageInner() {
     setEditingRecord(null)
     setFormData(buildEmptyForm())
     setFormError(null)
+    setSelectedCustomerId('')
+    setUploadFiles([])
     setShowModal(true)
   }
 
   function openEditModal(record: BusinessRecord) {
     setEditingRecord(record)
     const fd = buildEmptyForm()
-    // Merge saved data into form; title is top-level
     fd['title'] = record.title
     Object.entries(record.data).forEach(([k, v]) => {
       fd[k] = v ?? ''
     })
     setFormError(null)
+    setSelectedCustomerId(record.customer_id || '')
+    setUploadFiles([])
     setShowModal(true)
   }
 
@@ -297,22 +334,68 @@ function RecordsPageInner() {
       const res = await fetch(`/api/records?id=${editingRecord.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: title.trim(), data: dataPayload }),
+        body: JSON.stringify({ title: title.trim(), data: dataPayload, customer_id: selectedCustomerId || null }),
       })
       const json = await res.json()
       if (!res.ok) { setFormError(json.error || 'Güncelleme hatası'); setSaving(false); return }
-      // Update selectedRecord if open
+
+      // Upload files if any
+      if (uploadFiles.length > 0) {
+        setUploading(true)
+        const fileUrls = await uploadFilesToStorage(editingRecord.id)
+        if (fileUrls.length > 0) {
+          await fetch(`/api/records?id=${editingRecord.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ file_urls: fileUrls }),
+          })
+        }
+        setUploading(false)
+      }
+
       if (selectedRecord?.id === editingRecord.id) {
         setSelectedRecord({ ...selectedRecord, title: title.trim(), data: dataPayload })
       }
     } else {
+      // Auto-fill title from customer name if not set
+      let finalTitle = title.trim()
+      if (!finalTitle && selectedCustomerId) {
+        const cust = customers.find(c => c.id === selectedCustomerId)
+        if (cust) finalTitle = cust.name
+      }
+      if (!finalTitle) {
+        setFormError('Başlık alanı zorunludur.')
+        setSaving(false)
+        return
+      }
+
       const res = await fetch('/api/records', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ business_id: businessId, type: recordType, title: title.trim(), data: dataPayload }),
+        body: JSON.stringify({
+          business_id: businessId,
+          type: recordType,
+          title: finalTitle,
+          data: dataPayload,
+          customer_id: selectedCustomerId || null,
+        }),
       })
       const json = await res.json()
       if (!res.ok) { setFormError(json.error || 'Ekleme hatası'); setSaving(false); return }
+
+      // Upload files if any
+      if (uploadFiles.length > 0 && json.record?.id) {
+        setUploading(true)
+        const fileUrls = await uploadFilesToStorage(json.record.id)
+        if (fileUrls.length > 0) {
+          await fetch(`/api/records?id=${json.record.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ file_urls: fileUrls }),
+          })
+        }
+        setUploading(false)
+      }
     }
 
     setSaving(false)
@@ -589,6 +672,31 @@ function RecordsPageInner() {
             </div>
 
             <form onSubmit={handleSave} className="space-y-4">
+              {/* Danışan / Müşteri Seçimi */}
+              {!editingRecord && (
+                <div>
+                  <label className="label">Danışan Seç (opsiyonel)</label>
+                  <select
+                    value={selectedCustomerId}
+                    onChange={(e) => {
+                      setSelectedCustomerId(e.target.value)
+                      if (e.target.value) {
+                        const cust = customers.find(c => c.id === e.target.value)
+                        if (cust && !formData['title']) {
+                          setFormData(prev => ({ ...prev, title: cust.name }))
+                        }
+                      }
+                    }}
+                    className="input"
+                  >
+                    <option value="">— Danışan seçin —</option>
+                    {customers.map(c => (
+                      <option key={c.id} value={c.id}>{c.name}{c.phone ? ` (${c.phone})` : ''}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               {config.fields.map((f) => (
                 <div key={f.key}>
                   <label className="label">{f.label}</label>
@@ -599,7 +707,7 @@ function RecordsPageInner() {
                       className="input"
                       rows={3}
                       placeholder={f.placeholder}
-                      required={f.key === 'title'}
+                      required={f.key === 'title' && !selectedCustomerId}
                     />
                   ) : f.type === 'select' ? (
                     <select
@@ -618,12 +726,48 @@ function RecordsPageInner() {
                       onChange={(e) => setFormData((prev) => ({ ...prev, [f.key]: e.target.value }))}
                       className="input"
                       placeholder={f.placeholder}
-                      required={f.key === 'title'}
+                      required={f.key === 'title' && !selectedCustomerId}
                       autoFocus={f.key === 'title'}
                     />
                   )}
                 </div>
               ))}
+
+              {/* Dosya Yükleme */}
+              <div>
+                <label className="label">Dosya Ekle (opsiyonel)</label>
+                <div className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg p-4 text-center hover:border-pulse-300 transition-colors">
+                  <input
+                    type="file"
+                    multiple
+                    accept={ACCEPTED_TYPES}
+                    onChange={(e) => {
+                      if (e.target.files) setUploadFiles(Array.from(e.target.files))
+                    }}
+                    className="hidden"
+                    id="file-upload"
+                  />
+                  <label htmlFor="file-upload" className="cursor-pointer">
+                    <Upload className="h-6 w-6 text-gray-400 mx-auto mb-2" />
+                    <p className="text-sm text-gray-500">Dosya seçmek için tıklayın</p>
+                    <p className="text-xs text-gray-400 mt-1">PDF, JPG, PNG, HEIC, DOC, DOCX, XLS, XLSX</p>
+                  </label>
+                </div>
+                {uploadFiles.length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    {uploadFiles.map((file, i) => (
+                      <div key={i} className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-1.5">
+                        {file.type.startsWith('image/') ? <ImageIcon className="h-3.5 w-3.5" /> : <FileText className="h-3.5 w-3.5" />}
+                        <span className="truncate flex-1">{file.name}</span>
+                        <span className="text-xs text-gray-400">{(file.size / 1024).toFixed(0)} KB</span>
+                        <button type="button" onClick={() => setUploadFiles(prev => prev.filter((_, idx) => idx !== i))} className="text-gray-400 hover:text-red-500">
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               {formError && (
                 <div className="rounded-lg bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-400">
@@ -635,9 +779,9 @@ function RecordsPageInner() {
                 <button type="button" onClick={() => setShowModal(false)} className="btn-secondary flex-1">
                   İptal
                 </button>
-                <button type="submit" disabled={saving} className="btn-primary flex-1">
-                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {editingRecord ? 'Güncelle' : 'Ekle'}
+                <button type="submit" disabled={saving || uploading} className="btn-primary flex-1">
+                  {(saving || uploading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {uploading ? 'Yükleniyor...' : editingRecord ? 'Güncelle' : 'Oluştur'}
                 </button>
               </div>
             </form>
