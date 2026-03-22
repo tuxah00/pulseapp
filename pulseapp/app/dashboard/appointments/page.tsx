@@ -22,6 +22,7 @@ import {
   Phone,
   Trash2,
   Repeat,
+  CalendarDays,
 } from 'lucide-react'
 import { formatTime, formatDate, getStatusColor, formatCurrency, cn } from '@/lib/utils'
 import { STATUS_LABELS, type AppointmentStatus, type Customer, type Service, type StaffMember } from '@/types'
@@ -63,21 +64,54 @@ export default function AppointmentsPage() {
 
   const supabase = createClient()
 
+  // Hafta hesaplama yardımcıları
+  function getWeekRange(dateStr: string): { start: string; end: string } {
+    const [y, m, d] = dateStr.split('-').map(Number)
+    const dt = new Date(y, m - 1, d)
+    const day = dt.getDay() // 0=Pazar
+    const mondayOffset = day === 0 ? -6 : 1 - day
+    const monday = new Date(dt)
+    monday.setDate(dt.getDate() + mondayOffset)
+    const sunday = new Date(monday)
+    sunday.setDate(monday.getDate() + 6)
+    const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    return { start: fmt(monday), end: fmt(sunday) }
+  }
+
+  function getWeekDays(dateStr: string): string[] {
+    const { start } = getWeekRange(dateStr)
+    const [y, m, d] = start.split('-').map(Number)
+    const monday = new Date(y, m - 1, d)
+    return Array.from({ length: 7 }, (_, i) => {
+      const dt = new Date(monday)
+      dt.setDate(monday.getDate() + i)
+      return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`
+    })
+  }
+
   const fetchAppointments = useCallback(async () => {
     if (!businessId) return
     setLoading(true)
-    const { data, error } = await supabase
+
+    let query = supabase
       .from('appointments')
       .select('*, customers(name, phone), services(name, duration_minutes, price), staff_members(name)')
       .eq('business_id', businessId)
-      .eq('appointment_date', selectedDate)
       .is('deleted_at', null)
       .order('start_time', { ascending: true })
 
+    if (viewMode === 'week') {
+      const { start, end } = getWeekRange(selectedDate)
+      query = query.gte('appointment_date', start).lte('appointment_date', end)
+    } else {
+      query = query.eq('appointment_date', selectedDate)
+    }
+
+    const { data, error } = await query
     if (data) setAppointments(data)
     if (error) console.error('Randevu çekme hatası:', error)
     setLoading(false)
-  }, [selectedDate, businessId])
+  }, [selectedDate, businessId, viewMode])
 
   const fetchFormData = useCallback(async () => {
     if (!businessId) return
@@ -100,9 +134,9 @@ export default function AppointmentsPage() {
   useEffect(() => { if (!ctxLoading) fetchFormData() }, [fetchFormData, ctxLoading])
 
   function changeDate(days: number) {
-    const d = new Date(selectedDate)
-    d.setDate(d.getDate() + days)
-    setSelectedDate(d.toISOString().split('T')[0])
+    const d = new Date(selectedDate + 'T12:00:00')
+    d.setDate(d.getDate() + (viewMode === 'week' ? days * 7 : days))
+    setSelectedDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`)
   }
 
   function goToday() { setSelectedDate(new Date().toISOString().split('T')[0]) }
@@ -127,6 +161,15 @@ export default function AppointmentsPage() {
     const days = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi']
     const months = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık']
     return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}, ${days[d.getDay()]}`
+  }
+
+  function formatWeekRange() {
+    const days = getWeekDays(selectedDate)
+    const months = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık']
+    const [sy, sm, sd] = days[0].split('-').map(Number)
+    const [ey, em, ed] = days[6].split('-').map(Number)
+    if (sm === em) return `${sd} – ${ed} ${months[sm - 1]} ${sy}`
+    return `${sd} ${months[sm - 1]} – ${ed} ${months[em - 1]} ${ey}`
   }
 
   function openNewModal() {
@@ -493,11 +536,20 @@ export default function AppointmentsPage() {
           <ChevronLeft className="h-5 w-5" />
         </button>
         <div className="text-center">
-          <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{formatSelectedDate()}</p>
-          {!isToday && (
-            <button onClick={goToday} className="text-sm text-pulse-600 hover:text-pulse-700 mt-0.5">Bugüne Dön</button>
+          {viewMode === 'week' ? (
+            <>
+              <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{formatWeekRange()}</p>
+              <button onClick={goToday} className="text-sm text-pulse-600 hover:text-pulse-700 mt-0.5">Bu Haftaya Dön</button>
+            </>
+          ) : (
+            <>
+              <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{formatSelectedDate()}</p>
+              {!isToday && (
+                <button onClick={goToday} className="text-sm text-pulse-600 hover:text-pulse-700 mt-0.5">Bugüne Dön</button>
+              )}
+              {isToday && <p className="text-sm text-pulse-600 mt-0.5">Bugün</p>}
+            </>
           )}
-          {isToday && <p className="text-sm text-pulse-600 mt-0.5">Bugün</p>}
         </div>
         <button onClick={() => changeDate(1)} className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
           <ChevronRight className="h-5 w-5" />
@@ -534,6 +586,14 @@ export default function AppointmentsPage() {
             </button>
             <button
               type="button"
+              onClick={() => setViewMode('week')}
+              className={cn('inline-flex items-center rounded-full px-2.5 py-1 text-xs transition-colors', viewMode === 'week' ? 'bg-pulse-50 text-pulse-700 dark:bg-pulse-900/40 dark:text-pulse-300' : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700')}
+              title="Haftalık takvim"
+            >
+              <CalendarDays className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
               onClick={() => setViewMode('box')}
               className={cn('inline-flex items-center rounded-full px-2.5 py-1 text-xs transition-colors', viewMode === 'box' ? 'bg-pulse-50 text-pulse-700 dark:bg-pulse-900/40 dark:text-pulse-300' : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700')}
               title="Kutu görünüm"
@@ -544,11 +604,158 @@ export default function AppointmentsPage() {
         </div>
       </div>
 
-      {/* Randevu Listesi */}
+      {/* Randevu Listesi / Takvim */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <Loader2 className="h-8 w-8 animate-spin text-pulse-500" />
         </div>
+      ) : viewMode === 'week' ? (
+        /* ── Haftalık Takvim Görünümü ── */
+        (() => {
+          const weekDays = getWeekDays(selectedDate)
+          const dayNames = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz']
+          const hours = Array.from({ length: 14 }, (_, i) => i + 8) // 08:00 - 21:00
+          const staffColors = ['bg-blue-200 dark:bg-blue-800', 'bg-green-200 dark:bg-green-800', 'bg-purple-200 dark:bg-purple-800', 'bg-amber-200 dark:bg-amber-800', 'bg-pink-200 dark:bg-pink-800', 'bg-cyan-200 dark:bg-cyan-800', 'bg-orange-200 dark:bg-orange-800', 'bg-rose-200 dark:bg-rose-800']
+          const staffTextColors = ['text-blue-800 dark:text-blue-200', 'text-green-800 dark:text-green-200', 'text-purple-800 dark:text-purple-200', 'text-amber-800 dark:text-amber-200', 'text-pink-800 dark:text-pink-200', 'text-cyan-800 dark:text-cyan-200', 'text-orange-800 dark:text-orange-200', 'text-rose-800 dark:text-rose-200']
+
+          function getStaffColorIndex(sId: string | null): number {
+            if (!sId) return 0
+            const idx = staffMembers.findIndex(s => s.id === sId)
+            return idx >= 0 ? idx % staffColors.length : 0
+          }
+
+          // Hesapla: her saat 60px yükseklik
+          const hourHeight = 60
+          const toMinutes = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
+
+          return (
+            <div className="card overflow-hidden">
+              <div className="overflow-x-auto">
+                <div className="min-w-[800px]">
+                  {/* Gün başlıkları */}
+                  <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-gray-200 dark:border-gray-700">
+                    <div className="p-2" />
+                    {weekDays.map((day, i) => {
+                      const [dy, dm, dd] = day.split('-').map(Number)
+                      const isDayToday = day === todayStr
+                      return (
+                        <div
+                          key={day}
+                          className={cn(
+                            'p-2 text-center border-l border-gray-200 dark:border-gray-700',
+                            isDayToday && 'bg-pulse-50 dark:bg-pulse-900/20'
+                          )}
+                        >
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{dayNames[i]}</p>
+                          <p className={cn(
+                            'text-lg font-bold',
+                            isDayToday ? 'text-pulse-600' : 'text-gray-900 dark:text-gray-100'
+                          )}>{dd}</p>
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  {/* Saat grid'i */}
+                  <div className="relative grid grid-cols-[60px_repeat(7,1fr)]" style={{ height: hours.length * hourHeight }}>
+                    {/* Saat etiketleri */}
+                    {hours.map((hour, i) => (
+                      <div
+                        key={`h-${hour}`}
+                        className="absolute left-0 w-[60px] text-right pr-2 text-xs text-gray-400"
+                        style={{ top: i * hourHeight - 6 }}
+                      >
+                        {String(hour).padStart(2, '0')}:00
+                      </div>
+                    ))}
+
+                    {/* Yatay çizgiler */}
+                    {hours.map((hour, i) => (
+                      <div
+                        key={`line-${hour}`}
+                        className="absolute left-[60px] right-0 border-t border-gray-100 dark:border-gray-800"
+                        style={{ top: i * hourHeight }}
+                      />
+                    ))}
+
+                    {/* Gün sütunları (dikey çizgiler + randevu blokları) */}
+                    {weekDays.map((day, dayIdx) => {
+                      const dayAppointments = appointments.filter(a => a.appointment_date === day)
+                      const isDayToday = day === todayStr
+
+                      return (
+                        <div
+                          key={`col-${day}`}
+                          className={cn(
+                            'absolute border-l border-gray-200 dark:border-gray-700',
+                            isDayToday && 'bg-pulse-50/30 dark:bg-pulse-900/10'
+                          )}
+                          style={{
+                            left: `calc(60px + ${dayIdx} * ((100% - 60px) / 7))`,
+                            width: `calc((100% - 60px) / 7)`,
+                            top: 0,
+                            height: '100%',
+                          }}
+                          onClick={() => {
+                            setDate(day)
+                            setStartTime('09:00')
+                            openNewModal()
+                            setDate(day)
+                          }}
+                        >
+                          {/* Randevu blokları */}
+                          {dayAppointments.map(apt => {
+                            const startMin = toMinutes(apt.start_time) - 8 * 60 // 08:00'dan itibaren
+                            const endMin = toMinutes(apt.end_time) - 8 * 60
+                            const top = (startMin / 60) * hourHeight
+                            const height = Math.max(((endMin - startMin) / 60) * hourHeight, 20)
+                            const colorIdx = getStaffColorIndex(apt.staff_id)
+
+                            return (
+                              <div
+                                key={apt.id}
+                                className={cn(
+                                  'absolute left-0.5 right-0.5 rounded-md px-1.5 py-0.5 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity border border-white/20',
+                                  staffColors[colorIdx]
+                                )}
+                                style={{ top, height }}
+                                onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
+                              >
+                                <p className={cn('text-[10px] font-semibold truncate', staffTextColors[colorIdx])}>
+                                  {apt.customers?.name || 'İsimsiz'}
+                                </p>
+                                {height > 30 && (
+                                  <p className={cn('text-[9px] truncate opacity-75', staffTextColors[colorIdx])}>
+                                    {apt.services?.name || ''} · {formatTime(apt.start_time)}
+                                  </p>
+                                )}
+                              </div>
+                            )
+                          })}
+
+                          {/* Şu anki saat çizgisi (sadece bugün) */}
+                          {isDayToday && (() => {
+                            const currentMin = nowMinutes - 8 * 60
+                            if (currentMin < 0 || currentMin > 14 * 60) return null
+                            const top = (currentMin / 60) * hourHeight
+                            return (
+                              <div className="absolute left-0 right-0 z-10 pointer-events-none" style={{ top }}>
+                                <div className="flex items-center">
+                                  <div className="h-2.5 w-2.5 rounded-full bg-red-500 -ml-1" />
+                                  <div className="flex-1 h-px bg-red-500" />
+                                </div>
+                              </div>
+                            )
+                          })()}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )
+        })()
       ) : appointments.length === 0 ? (
         <div className="card flex flex-col items-center justify-center py-16">
           <Calendar className="mb-4 h-12 w-12 text-gray-300" />
