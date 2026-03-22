@@ -5,7 +5,7 @@ import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { createClient } from '@/lib/supabase/client'
 import type { WorkingHours, DayHours } from '@/types'
 import { cn } from '@/lib/utils'
-import { ChevronLeft, ChevronRight, Plus, Trash2, Zap, Loader2, X, Save, Clock } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Trash2, Zap, Loader2, X, Save, Clock, CalendarDays } from 'lucide-react'
 
 const DAY_LABELS = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz']
 const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
@@ -65,7 +65,7 @@ interface Shift {
   shift_date: string
   start_time: string | null
   end_time: string | null
-  shift_type: 'regular' | 'off'
+  shift_type: 'regular' | 'off' | 'part_time'
   notes: string | null
 }
 
@@ -82,7 +82,7 @@ export default function VardiyePage() {
 
   // Modal
   const [modal, setModal] = useState<{ staffId: string; date: string } | null>(null)
-  const [modalType, setModalType] = useState<'regular' | 'off'>('regular')
+  const [modalType, setModalType] = useState<'regular' | 'off' | 'part_time'>('regular')
   const [modalStart, setModalStart] = useState('09:00')
   const [modalEnd, setModalEnd] = useState('18:00')
   const [modalNotes, setModalNotes] = useState('')
@@ -139,8 +139,9 @@ export default function VardiyePage() {
   }
 
   function openModal(staffId: string, date: string) {
-    // Determine day index from date string and block closed days
-    const dateObj = new Date(date + 'T00:00:00')
+    // Determine day index from date string safely (avoid timezone issues)
+    const [year, month, day] = date.split('-').map(Number)
+    const dateObj = new Date(year, month - 1, day)
     const jsDay = dateObj.getDay() // 0=Sun
     const dayIndex = jsDay === 0 ? 6 : jsDay - 1 // convert to 0=Mon
     if (!isDayOpen(dayIndex)) return
@@ -168,8 +169,8 @@ export default function VardiyePage() {
           shiftDate: modal.date,
           startTime: modalType === 'off' ? null : modalStart,
           endTime: modalType === 'off' ? null : modalEnd,
-          shiftType: modalType,
-          notes: modalNotes || null,
+          shiftType: modalType === 'part_time' ? 'regular' : modalType,
+          notes: modalType === 'part_time' ? (modalNotes ? `Yarı zamanlı · ${modalNotes}` : 'Yarı zamanlı') : (modalNotes || null),
         }),
       })
       if (!res.ok) {
@@ -333,7 +334,7 @@ export default function VardiyePage() {
               : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
           }`}
         >
-          <Zap className="h-4 w-4" />
+          <CalendarDays className="h-4 w-4" />
           Vardiya Yönetimi
         </button>
         <button
@@ -375,7 +376,7 @@ export default function VardiyePage() {
                           : 'bg-white dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-600 hover:border-gray-400'
                     )}
                   >
-                    {label}{closed ? ' (Kapali)' : ''}
+                    {label}{closed ? ' (Kapalı)' : ''}
                   </button>
                 )
               })}
@@ -506,7 +507,9 @@ export default function VardiyePage() {
                             'relative group rounded-lg px-2 py-1.5 text-xs cursor-pointer',
                             shift.shift_type === 'off'
                               ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                              : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                              : shift.shift_type === 'part_time'
+                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                                : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                           )}>
                             <button
                               onClick={() => openModal(member.id, dateStr)}
@@ -570,7 +573,18 @@ export default function VardiyePage() {
                     : 'border-gray-200 text-gray-600 hover:border-gray-300'
                 )}
               >
-                Çalışma
+                Tam Mesai
+              </button>
+              <button
+                onClick={() => { setModalType('part_time'); setModalStart('09:00'); setModalEnd('13:00') }}
+                className={cn(
+                  'flex-1 py-2 rounded-lg text-sm font-medium border transition-colors',
+                  modalType === 'part_time'
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                )}
+              >
+                Yarı Zamanlı
               </button>
               <button
                 onClick={() => setModalType('off')}
@@ -581,11 +595,39 @@ export default function VardiyePage() {
                     : 'border-gray-200 text-gray-600 hover:border-gray-300'
                 )}
               >
-                İzin Günü
+                İzin
               </button>
             </div>
 
-            {modalType === 'regular' && (
+            {/* Yarı zamanlı hızlı seçim */}
+            {modalType === 'part_time' && (
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setModalStart('09:00'); setModalEnd('13:00') }}
+                  className={cn('flex-1 py-1.5 rounded-lg text-xs font-medium border transition-colors',
+                    modalStart === '09:00' && modalEnd === '13:00'
+                      ? 'bg-blue-50 border-blue-300 text-blue-700 dark:bg-blue-900/30 dark:border-blue-600 dark:text-blue-300'
+                      : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                  )}
+                >
+                  Sabah (09:00-13:00)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setModalStart('13:00'); setModalEnd('18:00') }}
+                  className={cn('flex-1 py-1.5 rounded-lg text-xs font-medium border transition-colors',
+                    modalStart === '13:00' && modalEnd === '18:00'
+                      ? 'bg-blue-50 border-blue-300 text-blue-700 dark:bg-blue-900/30 dark:border-blue-600 dark:text-blue-300'
+                      : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                  )}
+                >
+                  Öğleden Sonra (13:00-18:00)
+                </button>
+              </div>
+            )}
+
+            {(modalType === 'regular' || modalType === 'part_time') && (
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="label">Başlangıç</label>
