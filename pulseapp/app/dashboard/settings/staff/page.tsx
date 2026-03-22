@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
-import { Plus, Pencil, Trash2, Loader2, UserPlus, X, Mail, Phone, Settings } from 'lucide-react'
+import { useViewMode } from '@/lib/hooks/use-view-mode'
+import { Plus, Pencil, Trash2, Loader2, UserPlus, X, Mail, Phone, Settings, Crown, Shield, LayoutList, LayoutGrid, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { StaffMember, StaffRole, StaffPermissions } from '@/types'
 import { logAudit } from '@/lib/utils/audit'
@@ -13,6 +14,18 @@ const ROLE_LABELS: Record<StaffRole, string> = {
   owner: 'İşletme Sahibi',
   manager: 'Yönetici',
   staff: 'Personel',
+}
+
+const ROLE_ORDER: Record<StaffRole, number> = {
+  owner: 0,
+  manager: 1,
+  staff: 2,
+}
+
+const ROLE_COLORS: Record<StaffRole, string> = {
+  owner: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+  manager: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
+  staff: 'bg-pulse-100 text-pulse-700 dark:bg-pulse-900/30 dark:text-pulse-300',
 }
 
 const PERMISSION_LABELS: Record<keyof StaffPermissions, string> = {
@@ -35,6 +48,22 @@ const PERMISSION_LABELS: Record<keyof StaffPermissions, string> = {
   orders: 'Siparişler',
 }
 
+const PERMISSION_CATEGORIES: { label: string; keys: (keyof StaffPermissions)[] }[] = [
+  { label: 'Ana', keys: ['dashboard', 'appointments', 'customers'] },
+  { label: 'İçerik', keys: ['records', 'portfolio', 'classes', 'memberships', 'reservations', 'orders'] },
+  { label: 'Yönetim', keys: ['services', 'staff', 'shifts', 'messages', 'analytics', 'reviews', 'inventory', 'settings'] },
+]
+
+function canEditMember(myRole: StaffRole, targetRole: StaffRole): boolean {
+  if (myRole === 'owner') return targetRole !== 'owner'
+  if (myRole === 'manager') return targetRole === 'staff'
+  return false
+}
+
+function canEditPermissions(myRole: StaffRole, targetRole: StaffRole): boolean {
+  return canEditMember(myRole, targetRole)
+}
+
 export default function StaffPage() {
   const { businessId, staffId: currentStaffId, staffName: currentStaffName, loading: ctxLoading, staffRole: currentUserRole, permissions } = useBusinessContext()
   const [staff, setStaff] = useState<StaffMember[]>([])
@@ -44,12 +73,14 @@ export default function StaffPage() {
   const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useViewMode('staff', 'list')
 
   const [name, setName] = useState('')
   const [role, setRole] = useState<StaffRole>('staff')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
   const [permsSaving, setPermsSaving] = useState(false)
+  const [permsSaved, setPermsSaved] = useState(false)
   const [permPopupStaff, setPermPopupStaff] = useState<StaffMember | null>(null)
 
   const [showInviteModal, setShowInviteModal] = useState(false)
@@ -75,6 +106,20 @@ export default function StaffPage() {
 
   useEffect(() => { if (!ctxLoading) fetchStaff() }, [fetchStaff, ctxLoading])
 
+  // Sort by role hierarchy, then name
+  const sortedStaff = [...staff].sort((a, b) => {
+    const roleA = ROLE_ORDER[a.role] ?? 3
+    const roleB = ROLE_ORDER[b.role] ?? 3
+    if (roleA !== roleB) return roleA - roleB
+    return a.name.localeCompare(b.name, 'tr')
+  })
+
+  const staffGroups = [
+    { role: 'owner' as StaffRole, label: 'İşletme Sahibi', members: sortedStaff.filter(s => s.role === 'owner') },
+    { role: 'manager' as StaffRole, label: 'Yöneticiler', members: sortedStaff.filter(s => s.role === 'manager') },
+    { role: 'staff' as StaffRole, label: 'Personeller', members: sortedStaff.filter(s => s.role === 'staff') },
+  ].filter(g => g.members.length > 0)
+
   function openNewModal() {
     setEditingStaff(null)
     setName(''); setRole('staff'); setPhone(''); setEmail('')
@@ -90,6 +135,14 @@ export default function StaffPage() {
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault(); setSaving(true); setError(null)
+
+    // Manager can't set role to owner or manager
+    if (currentUserRole === 'manager' && (role === 'owner' || role === 'manager')) {
+      setError('Yönetici olarak sadece Personel rolü atayabilirsiniz.')
+      setSaving(false)
+      return
+    }
+
     if (editingStaff) {
       const { error: err } = await supabase
         .from('staff_members')
@@ -138,6 +191,7 @@ export default function StaffPage() {
 
   async function handlePermissionToggle(member: StaffMember, key: keyof StaffPermissions, value: boolean) {
     setPermsSaving(true)
+    setPermsSaved(false)
     const currentPerms = getEffectivePermissions(member.role, member.permissions)
     const newPerms: StaffPermissions = { ...currentPerms, [key]: value }
     const { error: err } = await supabase
@@ -149,6 +203,8 @@ export default function StaffPage() {
     } else {
       setSelectedStaff(prev => prev?.id === member.id ? { ...prev, permissions: newPerms } as StaffMember : prev)
       setStaff(prev => prev.map(s => s.id === member.id ? { ...s, permissions: newPerms } : s))
+      setPermsSaved(true)
+      setTimeout(() => setPermsSaved(false), 2000)
       await logAudit({
         businessId: businessId!,
         staffId: currentStaffId,
@@ -162,6 +218,41 @@ export default function StaffPage() {
           permission_label: PERMISSION_LABELS[key],
           permission_key: key,
           enabled: value,
+        },
+      })
+    }
+    setPermsSaving(false)
+  }
+
+  async function handleToggleAll(member: StaffMember, value: boolean) {
+    setPermsSaving(true)
+    setPermsSaved(false)
+    const newPerms: StaffPermissions = {} as StaffPermissions
+    for (const key of Object.keys(PERMISSION_LABELS) as (keyof StaffPermissions)[]) {
+      newPerms[key] = value
+    }
+    const { error: err } = await supabase
+      .from('staff_members')
+      .update({ permissions: newPerms })
+      .eq('id', member.id)
+    if (err) {
+      console.error('Yetki güncelleme hatası:', err)
+    } else {
+      setSelectedStaff(prev => prev?.id === member.id ? { ...prev, permissions: newPerms } as StaffMember : prev)
+      setStaff(prev => prev.map(s => s.id === member.id ? { ...s, permissions: newPerms } : s))
+      setPermPopupStaff(prev => prev?.id === member.id ? { ...prev, permissions: newPerms } as StaffMember : prev)
+      setPermsSaved(true)
+      setTimeout(() => setPermsSaved(false), 2000)
+      await logAudit({
+        businessId: businessId!,
+        staffId: currentStaffId,
+        staffName: currentStaffName,
+        action: 'update',
+        resource: 'permissions',
+        resourceId: member.id,
+        details: {
+          target_name: member.name,
+          action_desc: value ? 'Tüm yetkiler açıldı' : 'Tüm yetkiler kapatıldı',
         },
       })
     }
@@ -185,6 +276,11 @@ export default function StaffPage() {
     setInviteLoading(false)
   }
 
+  function getPermissionCount(member: StaffMember): number {
+    const perms = getEffectivePermissions(member.role, member.permissions)
+    return (Object.values(perms) as boolean[]).filter(Boolean).length
+  }
+
   if (permissions && !permissions.staff) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
@@ -200,6 +296,113 @@ export default function StaffPage() {
     return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-pulse-500" /></div>
   }
 
+  const availableRoles: StaffRole[] = currentUserRole === 'owner'
+    ? ['staff', 'manager', 'owner']
+    : currentUserRole === 'manager'
+      ? ['staff']
+      : ['staff']
+
+  const renderStaffCard = (member: StaffMember) => {
+    const isMe = currentStaffId === member.id
+    const canEdit = canEditMember(currentUserRole as StaffRole, member.role)
+    const canPerms = canEditPermissions(currentUserRole as StaffRole, member.role)
+    const permCount = getPermissionCount(member)
+    const totalPerms = Object.keys(PERMISSION_LABELS).length
+
+    return (
+      <div
+        key={member.id}
+        onClick={() => setSelectedStaff(member)}
+        className={cn(
+          'card p-4 hover:shadow-md transition-all cursor-pointer',
+          selectedStaff?.id === member.id && 'ring-2 ring-pulse-500',
+          isMe && 'bg-blue-50/50 dark:bg-blue-900/10',
+          member.role === 'owner' && 'border-amber-200 dark:border-amber-800/50',
+        )}
+      >
+        {viewMode === 'box' ? (
+          /* Grid card layout */
+          <div className="flex flex-col items-center text-center">
+            <div className={cn(
+              'flex h-14 w-14 items-center justify-center rounded-full font-bold text-lg mb-3',
+              member.role === 'owner' ? 'bg-amber-100 text-amber-700' : 'bg-pulse-100 text-pulse-700'
+            )}>
+              {member.role === 'owner' ? <Crown className="h-6 w-6" /> : member.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
+            </div>
+            <span className="font-medium text-gray-900 dark:text-gray-100 truncate w-full">{member.name}</span>
+            <div className="flex items-center gap-1.5 mt-1.5">
+              <span className={cn('badge text-xs', ROLE_COLORS[member.role])}>{ROLE_LABELS[member.role]}</span>
+              {isMe && <span className="badge bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 text-xs">Siz</span>}
+            </div>
+            {(member.phone || member.email) && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 truncate w-full">
+                {member.phone || member.email}
+              </p>
+            )}
+            {member.role !== 'owner' && (
+              <p className="text-xs text-gray-400 mt-1.5">{permCount}/{totalPerms} yetki</p>
+            )}
+            {canEdit && (
+              <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-gray-100 dark:border-gray-800 w-full justify-center" onClick={(e) => e.stopPropagation()}>
+                {canPerms && (
+                  <button onClick={() => setPermPopupStaff(member)} className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:text-purple-600 transition-colors" title="Yetkiler">
+                    <Shield className="h-3.5 w-3.5" />
+                  </button>
+                )}
+                <button onClick={() => openEditModal(member)} className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 transition-colors" title="Düzenle">
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+                <button onClick={() => handleDeactivate(member)} className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 transition-colors" title="Kaldır">
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          /* List card layout */
+          <div className="flex items-center gap-4">
+            <div className={cn(
+              'flex h-10 w-10 items-center justify-center rounded-full font-semibold text-sm flex-shrink-0',
+              member.role === 'owner' ? 'bg-amber-100 text-amber-700' : 'bg-pulse-100 text-pulse-700'
+            )}>
+              {member.role === 'owner' ? <Crown className="h-5 w-5" /> : member.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-medium text-gray-900 dark:text-gray-100">{member.name}</span>
+                <span className={cn('badge', ROLE_COLORS[member.role])}>{ROLE_LABELS[member.role]}</span>
+                {isMe && <span className="badge bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">Siz</span>}
+                {member.role !== 'owner' && (
+                  <span className="text-xs text-gray-400">{permCount}/{totalPerms} yetki</span>
+                )}
+              </div>
+              {(member.phone || member.email) && (
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                  {[member.phone, member.email].filter(Boolean).join(' · ')}
+                </p>
+              )}
+            </div>
+            {canEdit && (
+              <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                {canPerms && (
+                  <button onClick={() => setPermPopupStaff(member)} className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:text-purple-600 transition-colors" title="Yetkiler">
+                    <Shield className="h-4 w-4" />
+                  </button>
+                )}
+                <button onClick={() => openEditModal(member)} className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 transition-colors" title="Düzenle">
+                  <Pencil className="h-4 w-4" />
+                </button>
+                <button onClick={() => handleDeactivate(member)} className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 transition-colors" title="Listeden kaldır">
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
@@ -209,8 +412,16 @@ export default function StaffPage() {
             Randevu atayabileceğiniz personelleri yönetin.
           </p>
         </div>
-        <div className="flex gap-2">
-          {currentUserRole === 'owner' && (
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
+            <button onClick={() => setViewMode('list')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'list' ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800')} title="Liste">
+              <LayoutList className="h-4 w-4" />
+            </button>
+            <button onClick={() => setViewMode('box')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'box' ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800')} title="Kutular">
+              <LayoutGrid className="h-4 w-4" />
+            </button>
+          </div>
+          {(currentUserRole === 'owner' || currentUserRole === 'manager') && (
             <button onClick={() => { setShowInviteModal(true); setInviteLink(null); setInviteEmail('') }} className="btn-secondary">
               <UserPlus className="mr-2 h-4 w-4" />Davet Et
             </button>
@@ -230,47 +441,25 @@ export default function StaffPage() {
           </button>
         </div>
       ) : (
-        <div className="space-y-3">
-          {staff.map((member) => (
-            <div
-              key={member.id}
-              onClick={() => setSelectedStaff(member)}
-              className={cn(
-                'card flex items-center gap-4 p-4 hover:shadow-md transition-all cursor-pointer',
-                selectedStaff?.id === member.id && 'ring-2 ring-pulse-500',
-                currentStaffId === member.id && 'bg-blue-50/50 dark:bg-blue-900/10'
-              )}
-            >
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-pulse-100 text-pulse-700 font-semibold text-sm flex-shrink-0">
-                {member.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
+        <div className="space-y-6">
+          {staffGroups.map((group) => (
+            <div key={group.role}>
+              <div className="flex items-center gap-2 mb-3">
+                {group.role === 'owner' && <Crown className="h-4 w-4 text-amber-500" />}
+                {group.role === 'manager' && <Shield className="h-4 w-4 text-purple-500" />}
+                {group.role === 'staff' && <UserPlus className="h-4 w-4 text-gray-400" />}
+                <h2 className="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">{group.label}</h2>
+                <span className="text-xs text-gray-400">({group.members.length})</span>
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-medium text-gray-900 dark:text-gray-100">{member.name}</span>
-                  <span className="badge bg-pulse-100 text-pulse-700">{ROLE_LABELS[member.role]}</span>
-                  {currentStaffId === member.id && (
-                    <span className="badge bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">Siz</span>
-                  )}
+              {viewMode === 'box' ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {group.members.map(renderStaffCard)}
                 </div>
-                {(member.phone || member.email) && (
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                    {[member.phone, member.email].filter(Boolean).join(' · ')}
-                  </p>
-                )}
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                {currentUserRole === 'owner' && member.role !== 'owner' && (
-                  <button onClick={() => setPermPopupStaff(member)} className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:text-purple-600 transition-colors" title="Yetkiler">
-                    <Settings className="h-4 w-4" />
-                  </button>
-                )}
-                <button onClick={() => openEditModal(member)} className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 transition-colors" title="Düzenle">
-                  <Pencil className="h-4 w-4" />
-                </button>
-                <button onClick={() => handleDeactivate(member)} className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 transition-colors" title="Listeden kaldır">
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
+              ) : (
+                <div className="space-y-3">
+                  {group.members.map(renderStaffCard)}
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -289,11 +478,14 @@ export default function StaffPage() {
             </div>
             <div className="flex-1 overflow-y-auto p-5 space-y-5">
               <div className="text-center">
-                <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-pulse-100 text-pulse-700 font-bold text-lg">
-                  {selectedStaff.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                <div className={cn(
+                  'mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full font-bold text-lg',
+                  selectedStaff.role === 'owner' ? 'bg-amber-100 text-amber-700' : 'bg-pulse-100 text-pulse-700'
+                )}>
+                  {selectedStaff.role === 'owner' ? <Crown className="h-7 w-7" /> : selectedStaff.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                 </div>
                 <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{selectedStaff.name}</h4>
-                <span className="badge mt-1 bg-pulse-100 text-pulse-700">{ROLE_LABELS[selectedStaff.role]}</span>
+                <span className={cn('badge mt-1', ROLE_COLORS[selectedStaff.role])}>{ROLE_LABELS[selectedStaff.role]}</span>
               </div>
 
               <div className="space-y-3">
@@ -314,37 +506,52 @@ export default function StaffPage() {
                 )}
               </div>
 
-              <div className="border-t border-gray-200 dark:border-gray-700 pt-4 flex gap-2">
-                <button onClick={() => { openEditModal(selectedStaff); setSelectedStaff(null) }} className="btn-secondary flex-1 text-sm">
-                  <Pencil className="mr-1.5 h-3.5 w-3.5" />Düzenle
-                </button>
-                <button onClick={() => handleDeactivate(selectedStaff)} className="btn-danger flex-1 text-sm">
-                  <Trash2 className="mr-1.5 h-3.5 w-3.5" />Kaldır
-                </button>
-              </div>
+              {canEditMember(currentUserRole as StaffRole, selectedStaff.role) && (
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-4 flex gap-2">
+                  <button onClick={() => { openEditModal(selectedStaff); setSelectedStaff(null) }} className="btn-secondary flex-1 text-sm">
+                    <Pencil className="mr-1.5 h-3.5 w-3.5" />Düzenle
+                  </button>
+                  <button onClick={() => handleDeactivate(selectedStaff)} className="btn-danger flex-1 text-sm">
+                    <Trash2 className="mr-1.5 h-3.5 w-3.5" />Kaldır
+                  </button>
+                </div>
+              )}
 
-              {/* Erişim Yetkileri — sadece owner, owner olmayan personel için */}
-              {currentUserRole === 'owner' && selectedStaff.role !== 'owner' && (
+              {/* Erişim Yetkileri — hiyerarşiye göre */}
+              {canEditPermissions(currentUserRole as StaffRole, selectedStaff.role) && (
                 <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-                  <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Erişim Yetkileri</h4>
-                  <div className="space-y-2">
-                    {(Object.keys(PERMISSION_LABELS) as (keyof StaffPermissions)[]).map((key) => {
-                      const effectivePerms = getEffectivePermissions(selectedStaff.role, selectedStaff.permissions)
-                      const checked = effectivePerms[key] === true
-                      return (
-                        <label key={key} className="flex items-center gap-3 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            disabled={permsSaving}
-                            onChange={(e) => handlePermissionToggle(selectedStaff, key, e.target.checked)}
-                            className="h-4 w-4 rounded border-gray-300 text-pulse-600 focus:ring-pulse-500"
-                          />
-                          <span className="text-sm text-gray-700 dark:text-gray-300">{PERMISSION_LABELS[key]}</span>
-                        </label>
-                      )
-                    })}
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Erişim Yetkileri</h4>
+                    {permsSaved && (
+                      <span className="flex items-center gap-1 text-xs text-green-600"><Check className="h-3 w-3" /> Kaydedildi</span>
+                    )}
                   </div>
+                  {PERMISSION_CATEGORIES.map(cat => (
+                    <div key={cat.label} className="mb-3">
+                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">{cat.label}</p>
+                      <div className="space-y-1">
+                        {cat.keys.map((key) => {
+                          const effectivePerms = getEffectivePermissions(selectedStaff.role, selectedStaff.permissions)
+                          const checked = effectivePerms[key] === true
+                          return (
+                            <label key={key} className="flex items-center justify-between py-1.5 cursor-pointer group">
+                              <span className="text-sm text-gray-700 dark:text-gray-300">{PERMISSION_LABELS[key]}</span>
+                              <div className="relative">
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  disabled={permsSaving}
+                                  onChange={(e) => handlePermissionToggle(selectedStaff, key, e.target.checked)}
+                                  className="peer sr-only"
+                                />
+                                <div className="h-5 w-9 rounded-full bg-gray-300 dark:bg-gray-600 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-pulse-500 peer-checked:after:translate-x-4 peer-disabled:opacity-50" />
+                              </div>
+                            </label>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -367,9 +574,9 @@ export default function StaffPage() {
               <div>
                 <label htmlFor="staffRole" className="label">Rol</label>
                 <select id="staffRole" value={role} onChange={(e) => setRole(e.target.value as StaffRole)} className="input">
-                  <option value="staff">{ROLE_LABELS.staff}</option>
-                  <option value="manager">{ROLE_LABELS.manager}</option>
-                  <option value="owner">{ROLE_LABELS.owner}</option>
+                  {availableRoles.map(r => (
+                    <option key={r} value={r}>{ROLE_LABELS[r]}</option>
+                  ))}
                 </select>
               </div>
               <div>
@@ -393,44 +600,93 @@ export default function StaffPage() {
         </div>
       )}
 
-      {/* Yetki Popup Modal */}
+      {/* Yetki Popup Modal — Yeniden tasarlanmış */}
       {permPopupStaff && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setPermPopupStaff(null)}>
-          <div className="card w-full max-w-sm max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
+          <div className="card w-full max-w-md max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{permPopupStaff.name}</h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Erişim Yetkileri</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <span className={cn('badge text-xs mr-2', ROLE_COLORS[permPopupStaff.role])}>{ROLE_LABELS[permPopupStaff.role]}</span>
+                  Erişim Yetkileri
+                </p>
               </div>
               <button onClick={() => setPermPopupStaff(null)} className="text-gray-400 hover:text-gray-600">
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="space-y-2">
-              {(Object.keys(PERMISSION_LABELS) as Array<keyof StaffPermissions>).map((key) => {
-                const perms = getEffectivePermissions(permPopupStaff.role, permPopupStaff.permissions)
-                return (
-                  <label key={key} className="flex items-center justify-between py-1.5 border-b border-gray-100 dark:border-gray-800 last:border-0 cursor-pointer">
-                    <span className="text-sm text-gray-700 dark:text-gray-300">{PERMISSION_LABELS[key]}</span>
-                    <input
-                      type="checkbox"
-                      checked={perms[key] ?? false}
-                      disabled={permsSaving}
-                      onChange={(e) => {
-                        handlePermissionToggle(permPopupStaff, key, e.target.checked)
-                        setPermPopupStaff(prev => prev ? { ...prev, permissions: { ...getEffectivePermissions(prev.role, prev.permissions), [key]: e.target.checked } } as StaffMember : null)
-                      }}
-                      className="h-4 w-4 rounded text-pulse-600 focus:ring-pulse-500"
-                    />
-                  </label>
-                )
-              })}
+
+            <div className="flex-1 overflow-y-auto p-5">
+              {/* Tümünü Aç/Kapat */}
+              <div className="flex gap-2 mb-4">
+                <button
+                  onClick={() => handleToggleAll(permPopupStaff, true)}
+                  disabled={permsSaving}
+                  className="flex-1 py-1.5 rounded-lg text-xs font-medium border border-green-200 text-green-700 hover:bg-green-50 dark:border-green-800 dark:text-green-400 dark:hover:bg-green-900/20 transition-colors disabled:opacity-50"
+                >
+                  Tümünü Aç
+                </button>
+                <button
+                  onClick={() => handleToggleAll(permPopupStaff, false)}
+                  disabled={permsSaving}
+                  className="flex-1 py-1.5 rounded-lg text-xs font-medium border border-red-200 text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
+                >
+                  Tümünü Kapat
+                </button>
+              </div>
+
+              {PERMISSION_CATEGORIES.map(cat => (
+                <div key={cat.label} className="mb-5 last:mb-0">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    {cat.label === 'Ana' && <Crown className="h-3 w-3" />}
+                    {cat.label === 'İçerik' && <Settings className="h-3 w-3" />}
+                    {cat.label === 'Yönetim' && <Shield className="h-3 w-3" />}
+                    {cat.label}
+                  </p>
+                  <div className="space-y-0.5">
+                    {cat.keys.map((key) => {
+                      const perms = getEffectivePermissions(permPopupStaff.role, permPopupStaff.permissions)
+                      const checked = perms[key] ?? false
+                      return (
+                        <label key={key} className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors">
+                          <span className="text-sm text-gray-700 dark:text-gray-300">{PERMISSION_LABELS[key]}</span>
+                          <div className="relative">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              disabled={permsSaving}
+                              onChange={(e) => {
+                                handlePermissionToggle(permPopupStaff, key, e.target.checked)
+                                setPermPopupStaff(prev => prev ? { ...prev, permissions: { ...getEffectivePermissions(prev.role, prev.permissions), [key]: e.target.checked } } as StaffMember : null)
+                              }}
+                              className="peer sr-only"
+                            />
+                            <div className="h-5 w-9 rounded-full bg-gray-300 dark:bg-gray-600 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-pulse-500 peer-checked:after:translate-x-4 peer-disabled:opacity-50" />
+                          </div>
+                        </label>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
-            {permsSaving && (
-              <p className="text-xs text-center text-gray-400 mt-3 flex items-center justify-center gap-1">
-                <Loader2 className="h-3 w-3 animate-spin" /> Kaydediliyor...
-              </p>
-            )}
+
+            {/* Alt bar */}
+            <div className="border-t border-gray-100 dark:border-gray-800 px-5 py-3 flex items-center justify-between">
+              {permsSaving ? (
+                <span className="flex items-center gap-1.5 text-xs text-gray-400">
+                  <Loader2 className="h-3 w-3 animate-spin" /> Kaydediliyor...
+                </span>
+              ) : permsSaved ? (
+                <span className="flex items-center gap-1.5 text-xs text-green-600">
+                  <Check className="h-3.5 w-3.5" /> Kaydedildi
+                </span>
+              ) : (
+                <span className="text-xs text-gray-400">{getPermissionCount(permPopupStaff)}/{Object.keys(PERMISSION_LABELS).length} yetki açık</span>
+              )}
+              <button onClick={() => setPermPopupStaff(null)} className="btn-secondary text-sm py-1.5 px-4">Kapat</button>
+            </div>
           </div>
         </div>
       )}
@@ -453,7 +709,7 @@ export default function StaffPage() {
                   <label className="label">Rol</label>
                   <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value as 'manager' | 'staff')} className="input">
                     <option value="staff">Personel</option>
-                    <option value="manager">Yönetici</option>
+                    {currentUserRole === 'owner' && <option value="manager">Yönetici</option>}
                   </select>
                 </div>
                 <div>
