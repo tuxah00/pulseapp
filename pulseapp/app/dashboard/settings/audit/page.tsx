@@ -31,6 +31,73 @@ const RESOURCE_LABELS: Record<string, string> = {
   settings: 'Ayarlar',
   permissions: 'Yetki',
   inventory: 'Stok',
+  shift: 'Vardiya',
+}
+
+const STATUS_LABELS_TR: Record<string, string> = {
+  confirmed: 'Onaylandı',
+  completed: 'Tamamlandı',
+  cancelled: 'İptal Edildi',
+  no_show: 'Gelmedi',
+  pending: 'Bekliyor',
+}
+
+function formatAuditDetail(log: AuditLog): string {
+  const d = log.details
+  if (!d) return ''
+
+  // Yetki değişikliği
+  if (log.resource === 'permissions') {
+    const label = d.permission_label || d.permission_key || ''
+    const enabled = d.enabled === true || d.enabled === 'true'
+    const target = d.target_name || ''
+    return `${target}: "${label}" yetkisi ${enabled ? 'açıldı' : 'kapatıldı'}`
+  }
+
+  // Randevu durum değişikliği
+  if (log.action === 'status_change' && log.resource === 'appointment') {
+    const from = STATUS_LABELS_TR[String(d.from || '')] || d.from || ''
+    const to = STATUS_LABELS_TR[String(d.to || '')] || d.to || ''
+    const name = d.customer_name || ''
+    return `${name ? name + ' — ' : ''}${from} → ${to}`
+  }
+
+  // Randevu oluşturma/silme
+  if (log.resource === 'appointment') {
+    const parts: string[] = []
+    if (d.customer_name) parts.push(String(d.customer_name))
+    if (d.service_name) parts.push(String(d.service_name))
+    if (d.date) parts.push(String(d.date))
+    if (d.time) parts.push(String(d.time))
+    return parts.join(' · ')
+  }
+
+  // Hizmet fiyat değişikliği
+  if (log.resource === 'service' && (d.old_price !== undefined || d.new_price !== undefined)) {
+    const svcName = d.service_name || ''
+    if (d.old_price !== undefined && d.new_price !== undefined) {
+      return `${svcName}: ₺${d.old_price} → ₺${d.new_price}`
+    }
+    return String(svcName)
+  }
+
+  // Hizmet oluşturma/silme
+  if (log.resource === 'service') {
+    return d.service_name ? String(d.service_name) : ''
+  }
+
+  // Müşteri
+  if (d.name) return String(d.name)
+
+  // Personel
+  if (log.resource === 'staff') {
+    const parts: string[] = []
+    if (d.name) parts.push(String(d.name))
+    if (d.role) parts.push(`(${d.role})`)
+    return parts.join(' ')
+  }
+
+  return ''
 }
 
 const ACTION_COLORS: Record<string, string> = {
@@ -123,7 +190,7 @@ export default function AuditPage() {
                     <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Personel</th>
                     <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Eylem</th>
                     <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Kaynak</th>
-                    <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400 hidden md:table-cell">IP</th>
+                    <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400 hidden md:table-cell">Detay</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -142,10 +209,9 @@ export default function AuditPage() {
                       </td>
                       <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
                         {RESOURCE_LABELS[log.resource] ?? log.resource}
-                        {log.details?.name && <span className="ml-1 text-gray-400">— {String(log.details.name)}</span>}
                       </td>
-                      <td className="px-4 py-3 text-gray-400 text-xs hidden md:table-cell">
-                        {log.ip_address ?? '—'}
+                      <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs hidden md:table-cell max-w-xs truncate" title={formatAuditDetail(log)}>
+                        {formatAuditDetail(log) || '—'}
                       </td>
                     </tr>
                   ))}

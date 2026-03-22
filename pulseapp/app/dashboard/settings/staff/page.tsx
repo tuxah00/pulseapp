@@ -156,7 +156,13 @@ export default function StaffPage() {
         action: 'update',
         resource: 'permissions',
         resourceId: member.id,
-        details: { staff_name: member.name, permission: key, value: value ? 'true' : 'false' },
+        details: {
+          target_name: member.name,
+          target_role: ROLE_LABELS[member.role],
+          permission_label: PERMISSION_LABELS[key],
+          permission_key: key,
+          enabled: value,
+        },
       })
     }
     setPermsSaving(false)

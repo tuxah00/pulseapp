@@ -7,9 +7,10 @@ import { Plus, Pencil, Trash2, Loader2, Banknote, LayoutList, LayoutGrid } from 
 import { formatCurrency, cn } from '@/lib/utils'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
 import type { Service } from '@/types'
+import { logAudit } from '@/lib/utils/audit'
 
 export default function ServicesPage() {
-  const { businessId, loading: ctxLoading, permissions } = useBusinessContext()
+  const { businessId, staffId: currentStaffId, staffName: currentStaffName, loading: ctxLoading, permissions } = useBusinessContext()
   const [services, setServices] = useState<Service[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
@@ -105,6 +106,25 @@ export default function ServicesPage() {
     setSaving(false)
     setShowModal(false)
     fetchServices()
+    await logAudit({
+      businessId: businessId!,
+      staffId: currentStaffId,
+      staffName: currentStaffName,
+      action: editingService ? 'update' : 'create',
+      resource: 'service',
+      resourceId: editingService?.id,
+      details: {
+        service_name: name,
+        ...(editingService && editingService.price !== (price ? parseFloat(price) : null) ? {
+          old_price: editingService.price,
+          new_price: price ? parseFloat(price) : null,
+        } : {}),
+        ...(editingService && editingService.duration_minutes !== durationMinutes ? {
+          old_duration: editingService.duration_minutes,
+          new_duration: durationMinutes,
+        } : {}),
+      },
+    })
   }
 
   async function handleDelete(service: Service) {
@@ -121,6 +141,15 @@ export default function ServicesPage() {
     }
 
     fetchServices()
+    await logAudit({
+      businessId: businessId!,
+      staffId: currentStaffId,
+      staffName: currentStaffName,
+      action: 'delete',
+      resource: 'service',
+      resourceId: service.id,
+      details: { service_name: service.name, price: service.price },
+    })
   }
 
   if (permissions && !permissions.services) {

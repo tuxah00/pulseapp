@@ -203,6 +203,9 @@ export default function AppointmentsPage() {
     }
     setSaving(false); setShowModal(false)
     await fetchAppointments()
+    const auditCustomer = customers.find(c => c.id === customerId)
+    const auditService = services.find(s => s.id === serviceId)
+    const auditStaff = staffMembers.find(s => s.id === staffId)
     await logAudit({
       businessId: businessId!,
       staffId: currentStaffId,
@@ -210,6 +213,13 @@ export default function AppointmentsPage() {
       action: editingAppointment ? 'update' : 'create',
       resource: 'appointment',
       resourceId: editingAppointment?.id,
+      details: {
+        customer_name: auditCustomer?.name || null,
+        service_name: auditService?.name || null,
+        staff_name: auditStaff?.name || null,
+        date,
+        time: startTime,
+      },
     })
   }
 
@@ -251,6 +261,7 @@ export default function AppointmentsPage() {
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', appointmentId)
     if (error) { alert('Silme hatası: ' + error.message); return }
+    const deletedApt = appointments.find(a => a.id === appointmentId)
     await logAudit({
       businessId: businessId!,
       staffId: currentStaffId,
@@ -258,7 +269,12 @@ export default function AppointmentsPage() {
       action: 'delete',
       resource: 'appointment',
       resourceId: appointmentId,
-      details: { note: 'Soft deleted' },
+      details: {
+        customer_name: deletedApt?.customers?.name || null,
+        service_name: deletedApt?.services?.name || null,
+        date: deletedApt?.appointment_date || null,
+        time: deletedApt?.start_time || null,
+      },
     })
     if (selectedAppointment?.id === appointmentId) setSelectedAppointment(null)
     fetchAppointments()
@@ -279,6 +295,7 @@ export default function AppointmentsPage() {
     if (selectedAppointment?.id === appointmentId) {
       setSelectedAppointment((prev: any) => prev ? { ...prev, status: newStatus } : null)
     }
+    const statusApt = appointments.find(a => a.id === appointmentId)
     await logAudit({
       businessId: businessId!,
       staffId: currentStaffId,
@@ -286,7 +303,12 @@ export default function AppointmentsPage() {
       action: 'status_change',
       resource: 'appointment',
       resourceId: appointmentId,
-      details: { status: newStatus },
+      details: {
+        from: statusApt?.status || null,
+        to: newStatus,
+        customer_name: statusApt?.customers?.name || null,
+        service_name: statusApt?.services?.name || null,
+      },
     })
     fetchAppointments()
   }
