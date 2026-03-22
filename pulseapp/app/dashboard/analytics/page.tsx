@@ -275,16 +275,44 @@ export default function AnalyticsPage() {
             <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
               <Activity className="h-4 w-4" /> Gelir Trendi — {periodLabel}
             </h3>
-            <div className="flex items-end gap-1 h-36 overflow-x-auto">
-              {trendRevenue.map(({ label, revenue }, i) => (
-                <div key={i} className="flex-1 min-w-[20px] flex flex-col items-center gap-1">
-                  {revenue > 0 && <span className="text-[9px] font-medium text-gray-700 dark:text-gray-300">{Math.round(revenue / 1000)}k</span>}
-                  <div className="w-full bg-pulse-400 dark:bg-pulse-500 rounded-t-sm transition-all"
-                    style={{ height: `${(revenue / maxRevenue) * 100}%`, minHeight: revenue > 0 ? '4px' : '0' }} />
-                  <span className="text-[9px] text-gray-400">{label}</span>
+            {trendRevenue.every(d => d.revenue === 0) ? (
+              <div className="flex items-center justify-center h-44 text-sm text-gray-400">
+                Bu dönem için gelir verisi bulunmuyor
+              </div>
+            ) : (
+              <div className="relative">
+                {/* Y ekseni */}
+                <div className="absolute left-0 top-0 bottom-6 flex flex-col justify-between text-[9px] text-gray-400 w-10">
+                  <span>{maxRevenue >= 1000 ? `${Math.round(maxRevenue / 1000)}k` : maxRevenue}</span>
+                  <span>{maxRevenue >= 1000 ? `${Math.round(maxRevenue / 2000)}k` : Math.round(maxRevenue / 2)}</span>
+                  <span>0</span>
                 </div>
-              ))}
-            </div>
+                <div className="ml-10 overflow-x-auto">
+                  <div className={cn(
+                    'flex items-end gap-1 h-44 pb-1',
+                    period === 'month' ? 'min-w-[600px]' : ''
+                  )}>
+                    {trendRevenue.map(({ label, revenue }, i) => {
+                      const pct = (revenue / maxRevenue) * 100
+                      const opacity = pct > 70 ? '' : pct > 40 ? 'opacity-80' : 'opacity-60'
+                      return (
+                        <div key={i} className="flex-1 min-w-[18px] flex flex-col items-center gap-1 group relative">
+                          {/* Hover tooltip */}
+                          {revenue > 0 && (
+                            <div className="absolute -top-8 left-1/2 -translate-x-1/2 hidden group-hover:block bg-gray-900 text-white text-[10px] px-2 py-1 rounded shadow-lg whitespace-nowrap z-10">
+                              {new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 }).format(revenue)}
+                            </div>
+                          )}
+                          <div className={cn('w-full bg-pulse-400 dark:bg-pulse-500 rounded-t-sm transition-all hover:bg-pulse-500 dark:hover:bg-pulse-400', opacity)}
+                            style={{ height: `${pct}%`, minHeight: revenue > 0 ? '4px' : '0' }} />
+                          <span className="text-[9px] text-gray-400 truncate w-full text-center">{label}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
