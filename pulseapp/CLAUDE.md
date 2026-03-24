@@ -82,11 +82,14 @@ Supabase'de çalıştırılmış olması gereken SQL'ler:
 2. `CREATE TABLE IF NOT EXISTS audit_logs (...)`
 3. `CREATE TABLE IF NOT EXISTS staff_invitations (...)`
 4. `ALTER TABLE business_records ADD COLUMN IF NOT EXISTS file_urls jsonb DEFAULT '[]';`
+5. `ALTER TABLE appointments ADD COLUMN IF NOT EXISTS recurrence_group_id uuid;`
+6. `ALTER TABLE appointments ADD COLUMN IF NOT EXISTS recurrence_pattern jsonb;`
 
 ## Sayfa Yapısı
 - `/dashboard` → Genel Bakış (server component, bugünkü durum + PerformanceStats)
-- `/dashboard/appointments` → Randevular (liste/kutu görünüm, soft delete)
+- `/dashboard/appointments` → Randevular (liste/kutu/haftalık takvim görünüm, soft delete, tekrarlayan randevu desteği)
 - `/dashboard/analytics` → Gelir-Gider Tablosu (sadece gelir odaklı)
+- `/dashboard/customers` → Müşteriler (slide-over panelde Bilgiler + Geçmiş tabları, timeline)
 - `/dashboard/settings/audit` → Denetim Kaydı (sadece owner)
 - `/invite/[token]` → Personel davet kabul sayfası (public)
 
@@ -114,6 +117,41 @@ Supabase'de çalıştırılmış olması gereken SQL'ler:
 | fitness, yoga_pilates | Üyeler |
 | tutoring | Öğrenciler |
 | Diğer tüm sektörler | Müşteriler |
+
+## Gerçek Zamanlı Bildirim (Toast)
+- **Bileşen:** `components/ui/toast.tsx` — sağ alt köşe toast stack
+- **Tetikleme:** `top-bar.tsx` Supabase Realtime INSERT event → `window.dispatchEvent(new CustomEvent('pulse-toast', { detail }))`
+- **Container:** `app/dashboard/layout.tsx` içinde `<ToastContainer />` render
+- **Animasyon:** `globals.css` → `@keyframes toast-slide-in`, `.toast-enter` class
+- 5 saniye otomatik kapanma, max 3 toast, bildirim tipine göre renk/ikon
+
+## Tekrarlayan Randevular
+- `appointments` tablosunda `recurrence_group_id` (uuid) ve `recurrence_pattern` (jsonb) alanları
+- Tüm tekrar randevular tek seferde oluşturulur (cron yok)
+- Modal'da: haftalık/2 haftalık/aylık sıklık, 2-12 seans
+- Çakışma kontrolü her tarih için yapılır, çakışanlar atlanır
+- Detay panelde "Tüm Seriyi İptal Et" butonu (gelecekteki seansları iptal eder)
+
+## Müşteri Zaman Çizelgesi (Timeline)
+- `customers/page.tsx` slide-over panelde "Bilgiler" ve "Geçmiş" tabları
+- Geçmiş: appointments + messages + reviews birleştirilip kronolojik sıra
+- Lazy loading: sadece tab açıldığında fetch
+
+## Haftalık Takvim Görünümü
+- `appointments/page.tsx` → `viewMode === 'week'`
+- `useViewMode` hook: `'list' | 'box' | 'week'` destekler
+- CSS Grid: 08:00-21:00 saat dilimleri × 7 gün (Pazartesi-Pazar)
+- Personel renk kodu ile randevu blokları
+- Bugün sütunu vurgulanır + kırmızı saat çizgisi
+
+## Box Görünüm Kartları
+- Tüm box görünüm kartları `aspect-square` ile kare/karemsi
+- `flex flex-col justify-between` ile içerik dağılımı
+- Uygulanan sayfalar: customers, records, reservations, memberships, stoklar, staff
+
+## Bilinen Timezone Düzeltmeleri
+- **Vardiya sayfası:** `formatDate()` → `toISOString()` yerine yerel tarih getter'ları kullanılır (UTC kayma sorunu)
+- **Randevu sayfası:** Tarih oluşturmada `new Date(year, month - 1, day)` pattern kullanılır
 
 ## Ücretlendirme (ne zaman ücretli plana geç)
 - **Vercel Pro ($20/ay):** İlk ticari müşteride → free plan ticari kullanıma kapalı
