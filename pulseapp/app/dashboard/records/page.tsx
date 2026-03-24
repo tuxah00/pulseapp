@@ -305,7 +305,7 @@ function RecordsPageInner() {
     const fd = buildEmptyForm()
     fd['title'] = record.title
     Object.entries(record.data).forEach(([k, v]) => {
-      fd[k] = v ?? ''
+      if (k !== 'file_urls') fd[k] = v ?? ''  // array'leri formData'ya kopyalama
     })
     setFormError(null)
     setSelectedCustomerId(record.customer_id || '')
@@ -321,10 +321,14 @@ function RecordsPageInner() {
     setFormError(null)
 
     const { title, ...rest } = formData
-    const dataPayload: Record<string, string> = {}
+    const dataPayload: Record<string, any> = {}
     Object.entries(rest).forEach(([k, v]) => {
-      if (v.trim()) dataPayload[k] = v.trim()
+      if (typeof v === 'string' && v.trim()) dataPayload[k] = v.trim()
     })
+    // Mevcut dosyaları koru — kullanıcı yeni dosya yüklemese bile
+    if (editingRecord?.data?.file_urls && Array.isArray(editingRecord.data.file_urls)) {
+      dataPayload.file_urls = editingRecord.data.file_urls
+    }
 
     if (!title.trim()) {
       setFormError('Başlık alanı zorunludur.')
