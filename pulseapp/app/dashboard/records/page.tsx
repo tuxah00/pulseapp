@@ -561,7 +561,7 @@ function RecordsPageInner() {
           {viewMode === 'box' && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {records.map((record) => (
-                <div key={record.id} onClick={() => setSelectedRecord(record)} className="card p-4 cursor-pointer hover:shadow-md transition-all">
+                <div key={record.id} onClick={() => setSelectedRecord(record)} className="card p-4 cursor-pointer hover:shadow-md transition-all aspect-square flex flex-col justify-between">
                   <div className="flex items-start gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-pulse-100 text-pulse-700 font-semibold text-sm flex-shrink-0">
                       {record.title?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || 'D'}

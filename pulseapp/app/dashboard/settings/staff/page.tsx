@@ -315,6 +315,7 @@ export default function StaffPage() {
         onClick={() => setSelectedStaff(member)}
         className={cn(
           'card p-4 hover:shadow-md transition-all cursor-pointer',
+          viewMode === 'box' && 'aspect-square flex flex-col justify-between',
           selectedStaff?.id === member.id && 'ring-2 ring-pulse-500',
           isMe && 'bg-blue-50/50 dark:bg-blue-900/10',
           member.role === 'owner' && 'border-amber-200 dark:border-amber-800/50',

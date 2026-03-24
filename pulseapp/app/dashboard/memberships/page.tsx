@@ -418,7 +418,7 @@ export default function MembershipsPage() {
                 : null
 
             return (
-              <div key={m.id} className="card p-4 flex flex-col gap-3">
+              <div key={m.id} className="card p-4 flex flex-col gap-3 aspect-square justify-between">
                 {/* Top */}
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">

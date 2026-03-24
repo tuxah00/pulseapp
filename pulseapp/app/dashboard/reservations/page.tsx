@@ -421,7 +421,7 @@ export default function ReservationsPage() {
           {viewMode === 'box' && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {reservations.map((r) => (
-                <div key={r.id} onClick={() => openEditModal(r)} className="card p-4 cursor-pointer hover:shadow-md transition-all">
+                <div key={r.id} onClick={() => openEditModal(r)} className="card p-4 cursor-pointer hover:shadow-md transition-all aspect-square flex flex-col justify-between">
                   <div className="flex items-center justify-between">
                     <span className="font-medium text-gray-900 dark:text-gray-100">{r.customer_name}</span>
                     <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium', STATUS_COLORS[r.status])}>

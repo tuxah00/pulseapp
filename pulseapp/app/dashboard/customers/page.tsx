@@ -357,7 +357,7 @@ export default function CustomersPage() {
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {customers.map((customer) => (
-            <div key={customer.id} onClick={() => setSelectedCustomer(customer)} className={cn('card p-4 cursor-pointer transition-all hover:shadow-md', selectedCustomer?.id === customer.id && 'ring-2 ring-pulse-500')}>
+            <div key={customer.id} onClick={() => setSelectedCustomer(customer)} className={cn('card p-4 cursor-pointer transition-all hover:shadow-md aspect-square flex flex-col justify-between', selectedCustomer?.id === customer.id && 'ring-2 ring-pulse-500')}>
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-pulse-100 text-pulse-700 font-semibold text-sm flex-shrink-0">
                   {customer.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}

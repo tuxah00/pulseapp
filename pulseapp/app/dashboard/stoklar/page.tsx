@@ -298,7 +298,7 @@ CREATE POLICY "business_products" ON public.products
             <div
               key={product.id}
               onClick={() => setSelectedProduct(product)}
-              className={cn('card flex flex-col justify-between p-4 cursor-pointer transition-all hover:shadow-md', selectedProduct?.id === product.id && 'ring-2 ring-pulse-500')}
+              className={cn('card flex flex-col justify-between p-4 cursor-pointer transition-all hover:shadow-md aspect-square', selectedProduct?.id === product.id && 'ring-2 ring-pulse-500')}
             >
               <div>
                 <div className="flex items-start justify-between gap-2 mb-2">
