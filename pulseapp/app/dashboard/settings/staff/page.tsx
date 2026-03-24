@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
-import { Plus, Pencil, Trash2, Loader2, UserPlus, X, Mail, Phone, Settings, Crown, Shield, LayoutList, LayoutGrid, Check } from 'lucide-react'
+import { Plus, Pencil, Trash2, Loader2, UserPlus, X, Mail, Phone, Settings, LayoutList, LayoutGrid, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { StaffMember, StaffRole, StaffPermissions } from '@/types'
 import { logAudit } from '@/lib/utils/audit'
@@ -327,7 +327,7 @@ export default function StaffPage() {
               'flex h-14 w-14 items-center justify-center rounded-full font-bold text-lg mb-3',
               member.role === 'owner' ? 'bg-amber-100 text-amber-700' : 'bg-pulse-100 text-pulse-700'
             )}>
-              {member.role === 'owner' ? <Crown className="h-6 w-6" /> : member.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
+              {member.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
             </div>
             <span className="font-medium text-gray-900 dark:text-gray-100 truncate w-full">{member.name}</span>
             <div className="flex items-center gap-1.5 mt-1.5">
@@ -346,7 +346,7 @@ export default function StaffPage() {
               <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-gray-100 dark:border-gray-800 w-full justify-center" onClick={(e) => e.stopPropagation()}>
                 {canPerms && (
                   <button onClick={() => setPermPopupStaff(member)} className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:text-purple-600 transition-colors" title="Yetkiler">
-                    <Shield className="h-3.5 w-3.5" />
+                    <Settings className="h-3.5 w-3.5" />
                   </button>
                 )}
                 <button onClick={() => openEditModal(member)} className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 transition-colors" title="Düzenle">
@@ -365,7 +365,7 @@ export default function StaffPage() {
               'flex h-10 w-10 items-center justify-center rounded-full font-semibold text-sm flex-shrink-0',
               member.role === 'owner' ? 'bg-amber-100 text-amber-700' : 'bg-pulse-100 text-pulse-700'
             )}>
-              {member.role === 'owner' ? <Crown className="h-5 w-5" /> : member.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
+              {member.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
@@ -386,7 +386,7 @@ export default function StaffPage() {
               <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                 {canPerms && (
                   <button onClick={() => setPermPopupStaff(member)} className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:text-purple-600 transition-colors" title="Yetkiler">
-                    <Shield className="h-4 w-4" />
+                    <Settings className="h-4 w-4" />
                   </button>
                 )}
                 <button onClick={() => openEditModal(member)} className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 transition-colors" title="Düzenle">
@@ -445,9 +445,6 @@ export default function StaffPage() {
           {staffGroups.map((group) => (
             <div key={group.role}>
               <div className="flex items-center gap-2 mb-3">
-                {group.role === 'owner' && <Crown className="h-4 w-4 text-amber-500" />}
-                {group.role === 'manager' && <Shield className="h-4 w-4 text-purple-500" />}
-                {group.role === 'staff' && <UserPlus className="h-4 w-4 text-gray-400" />}
                 <h2 className="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">{group.label}</h2>
                 <span className="text-xs text-gray-400">({group.members.length})</span>
               </div>
@@ -482,7 +479,7 @@ export default function StaffPage() {
                   'mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full font-bold text-lg',
                   selectedStaff.role === 'owner' ? 'bg-amber-100 text-amber-700' : 'bg-pulse-100 text-pulse-700'
                 )}>
-                  {selectedStaff.role === 'owner' ? <Crown className="h-7 w-7" /> : selectedStaff.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                  {selectedStaff.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                 </div>
                 <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{selectedStaff.name}</h4>
                 <span className={cn('badge mt-1', ROLE_COLORS[selectedStaff.role])}>{ROLE_LABELS[selectedStaff.role]}</span>
@@ -638,10 +635,7 @@ export default function StaffPage() {
 
               {PERMISSION_CATEGORIES.map(cat => (
                 <div key={cat.label} className="mb-5 last:mb-0">
-                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                    {cat.label === 'Ana' && <Crown className="h-3 w-3" />}
-                    {cat.label === 'İçerik' && <Settings className="h-3 w-3" />}
-                    {cat.label === 'Yönetim' && <Shield className="h-3 w-3" />}
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
                     {cat.label}
                   </p>
                   <div className="space-y-0.5">
