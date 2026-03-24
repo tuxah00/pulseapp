@@ -559,21 +559,13 @@ function RecordsPageInner() {
             </div>
           )}
           {viewMode === 'box' && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 gap-2">
               {records.map((record) => (
-                <div key={record.id} onClick={() => setSelectedRecord(record)} className="card p-4 cursor-pointer hover:shadow-md transition-all aspect-square flex flex-col justify-between">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-pulse-100 text-pulse-700 font-semibold text-sm flex-shrink-0">
-                      {record.title?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || 'D'}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-gray-900 dark:text-gray-100 truncate">{record.title}</div>
-                      {getSubtitle(record) && <p className="text-sm text-gray-500 truncate">{getSubtitle(record)}</p>}
-                    </div>
+                <div key={record.id} onClick={() => setSelectedRecord(record)} className="card p-2 cursor-pointer hover:shadow-md transition-all aspect-square flex flex-col items-center justify-center text-center">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-pulse-100 text-pulse-700 font-semibold text-xs flex-shrink-0">
+                    {record.title?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || 'D'}
                   </div>
-                  <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800 text-xs text-gray-400">
-                    {record.created_at ? new Date(record.created_at).toLocaleDateString('tr-TR') : ''}
-                  </div>
+                  <p className="mt-1.5 text-xs font-medium text-gray-900 dark:text-gray-100 truncate w-full">{record.title}</p>
                 </div>
               ))}
             </div>
