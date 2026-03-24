@@ -317,18 +317,18 @@ export default function MessagesPage() {
   }
 
   return (
-    <div className="-mx-4 -my-6 sm:-mx-6 lg:-mx-8">
-      <div className="flex h-[calc(100vh-80px)] lg:h-[calc(100vh-80px)]">
+    <div className="fixed inset-0 lg:left-64 top-14 z-30 bg-white dark:bg-gray-900">
+      <div className="flex h-full">
 
         {/* Sol Panel — Konuşma Listesi */}
         <div className={cn(
-          'flex flex-col border-r border-gray-200 bg-white w-full lg:w-96 lg:flex-shrink-0',
+          'flex flex-col border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 w-full lg:w-96 lg:flex-shrink-0',
           mobileShowChat ? 'hidden lg:flex' : 'flex'
         )}>
           {/* Başlık */}
-          <div className="flex-shrink-0 border-b border-gray-200 p-4">
+          <div className="flex-shrink-0 border-b border-gray-200 dark:border-gray-700 p-4">
             <div className="flex items-center justify-between mb-3">
-              <h1 className="text-xl font-bold text-gray-900">Mesajlar</h1>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Mesajlar</h1>
               <span className="badge bg-pulse-100 text-pulse-700">
                 {conversations.length} konuşma
               </span>
@@ -404,8 +404,8 @@ export default function MessagesPage() {
                     key={conv.customer.id}
                     onClick={() => selectConversation(conv)}
                     className={cn(
-                      'w-full flex items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-50 border-b border-gray-100',
-                      selectedCustomer?.id === conv.customer.id && 'bg-pulse-50 hover:bg-pulse-50'
+                      'w-full flex items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-800 border-b border-gray-100 dark:border-gray-800',
+                      selectedCustomer?.id === conv.customer.id && 'bg-pulse-50 hover:bg-pulse-50 dark:bg-pulse-900/20 dark:hover:bg-pulse-900/20'
                     )}
                   >
                     {/* Avatar */}
@@ -430,7 +430,7 @@ export default function MessagesPage() {
                       <div className="flex items-center justify-between gap-2">
                         <span className={cn(
                           'text-sm truncate',
-                          conv.unreadCount > 0 ? 'font-bold text-gray-900' : 'font-medium text-gray-900'
+                          conv.unreadCount > 0 ? 'font-bold text-gray-900 dark:text-gray-100' : 'font-medium text-gray-900 dark:text-gray-100'
                         )}>
                           {conv.customer.name}
                         </span>
@@ -473,13 +473,13 @@ export default function MessagesPage() {
 
         {/* Sağ Panel — Chat Görünümü */}
         <div className={cn(
-          'flex-1 flex flex-col bg-gray-50',
+          'flex-1 flex flex-col bg-gray-50 dark:bg-gray-950',
           mobileShowChat ? 'flex' : 'hidden lg:flex'
         )}>
           {selectedCustomer ? (
             <>
               {/* Chat Header */}
-              <div className="flex-shrink-0 flex items-center gap-3 border-b border-gray-200 bg-white px-4 py-3">
+              <div className="flex-shrink-0 flex items-center gap-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-3">
                 <button
                   onClick={goBackToList}
                   className="lg:hidden flex h-9 w-9 items-center justify-center rounded-lg hover:bg-gray-100"
@@ -492,7 +492,7 @@ export default function MessagesPage() {
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <h2 className="font-semibold text-gray-900 truncate">{selectedCustomer.name}</h2>
+                  <h2 className="font-semibold text-gray-900 dark:text-gray-100 truncate">{selectedCustomer.name}</h2>
                   <p className="text-xs text-gray-500">{formatPhone(selectedCustomer.phone)}</p>
                 </div>
 
@@ -525,7 +525,7 @@ export default function MessagesPage() {
                       <div key={group.date}>
                         {/* Tarih ayırıcı */}
                         <div className="flex items-center justify-center my-4">
-                          <span className="rounded-full bg-white border border-gray-200 px-3 py-1 text-xs text-gray-500 shadow-sm">
+                          <span className="rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-1 text-xs text-gray-500 dark:text-gray-400 shadow-sm">
                             {group.date}
                           </span>
                         </div>
@@ -543,7 +543,7 @@ export default function MessagesPage() {
                               'max-w-[75%] rounded-2xl px-4 py-2.5 shadow-sm',
                               msg.direction === 'outbound'
                                 ? 'bg-pulse-500 text-white rounded-br-md'
-                                : 'bg-white text-gray-900 border border-gray-100 rounded-bl-md'
+                                : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-100 dark:border-gray-700 rounded-bl-md'
                             )}>
                               {/* AI sınıflandırma */}
                               {msg.ai_classification && msg.direction === 'inbound' && (
@@ -638,7 +638,7 @@ export default function MessagesPage() {
               )}
 
               {/* Mesaj Yazma Alanı */}
-              <div className="flex-shrink-0 border-t border-gray-200 bg-white p-4">
+              <div className="flex-shrink-0 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4">
                 <form onSubmit={handleSend} className="flex items-end gap-3">
                   <button
                     type="button"
