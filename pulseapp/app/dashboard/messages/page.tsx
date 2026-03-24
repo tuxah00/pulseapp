@@ -317,8 +317,8 @@ export default function MessagesPage() {
   }
 
   return (
-    <div className="-mx-4 -my-8 sm:-mx-6 lg:-mx-8">
-      <div className="flex h-[calc(100vh-0px)] lg:h-[calc(100vh-0px)]">
+    <div className="-mx-4 -my-6 sm:-mx-6 lg:-mx-8">
+      <div className="flex h-[calc(100vh-80px)] lg:h-[calc(100vh-80px)]">
 
         {/* Sol Panel — Konuşma Listesi */}
         <div className={cn(
