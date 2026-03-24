@@ -6,6 +6,7 @@ import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
 import { Plus, Pencil, Trash2, Loader2, UserPlus, X, Mail, Phone, Settings, LayoutList, LayoutGrid, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import CompactBoxCard from '@/components/ui/compact-box-card'
 import type { StaffMember, StaffRole, StaffPermissions } from '@/types'
 import { logAudit } from '@/lib/utils/audit'
 import { DEFAULT_PERMISSIONS, getEffectivePermissions } from '@/types'
@@ -309,59 +310,59 @@ export default function StaffPage() {
     const permCount = getPermissionCount(member)
     const totalPerms = Object.keys(PERMISSION_LABELS).length
 
+    if (viewMode === 'box') {
+      return (
+        <CompactBoxCard
+          key={member.id}
+          initials={member.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
+          title={member.name}
+          colorClass={member.role === 'owner' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-pulse-100 text-pulse-700'}
+          selected={selectedStaff?.id === member.id}
+          onClick={() => setSelectedStaff(member)}
+          badge={
+            <>
+              <span className={cn('badge text-xs', ROLE_COLORS[member.role])}>{ROLE_LABELS[member.role]}</span>
+              {isMe && <span className="badge bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 text-xs">Siz</span>}
+            </>
+          }
+          meta={member.role !== 'owner' ? `${permCount}/${totalPerms} yetki` : undefined}
+          className={cn(
+            isMe && 'bg-blue-50/50 dark:bg-blue-900/10',
+            member.role === 'owner' && 'border-amber-200 dark:border-amber-800/50',
+          )}
+        >
+          {canEdit && (
+            <>
+              {canPerms && (
+                <button onClick={() => setPermPopupStaff(member)} className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:text-purple-600 transition-colors" title="Yetkiler">
+                  <Settings className="h-3 w-3" />
+                </button>
+              )}
+              <button onClick={() => openEditModal(member)} className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 transition-colors" title="Düzenle">
+                <Pencil className="h-3 w-3" />
+              </button>
+              <button onClick={() => handleDeactivate(member)} className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 transition-colors" title="Kaldır">
+                <Trash2 className="h-3 w-3" />
+              </button>
+            </>
+          )}
+        </CompactBoxCard>
+      )
+    }
+
     return (
       <div
         key={member.id}
         onClick={() => setSelectedStaff(member)}
         className={cn(
           'card p-4 hover:shadow-md transition-all cursor-pointer',
-          viewMode === 'box' && 'aspect-square flex flex-col justify-between',
           selectedStaff?.id === member.id && 'ring-2 ring-pulse-500',
           isMe && 'bg-blue-50/50 dark:bg-blue-900/10',
           member.role === 'owner' && 'border-amber-200 dark:border-amber-800/50',
         )}
       >
-        {viewMode === 'box' ? (
-          /* Grid card layout */
-          <div className="flex flex-col items-center text-center">
-            <div className={cn(
-              'flex h-14 w-14 items-center justify-center rounded-full font-bold text-lg mb-3',
-              member.role === 'owner' ? 'bg-amber-100 text-amber-700' : 'bg-pulse-100 text-pulse-700'
-            )}>
-              {member.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
-            </div>
-            <span className="font-medium text-gray-900 dark:text-gray-100 truncate w-full">{member.name}</span>
-            <div className="flex items-center gap-1.5 mt-1.5">
-              <span className={cn('badge text-xs', ROLE_COLORS[member.role])}>{ROLE_LABELS[member.role]}</span>
-              {isMe && <span className="badge bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 text-xs">Siz</span>}
-            </div>
-            {(member.phone || member.email) && (
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 truncate w-full">
-                {member.phone || member.email}
-              </p>
-            )}
-            {member.role !== 'owner' && (
-              <p className="text-xs text-gray-400 mt-1.5">{permCount}/{totalPerms} yetki</p>
-            )}
-            {canEdit && (
-              <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-gray-100 dark:border-gray-800 w-full justify-center" onClick={(e) => e.stopPropagation()}>
-                {canPerms && (
-                  <button onClick={() => setPermPopupStaff(member)} className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:text-purple-600 transition-colors" title="Yetkiler">
-                    <Settings className="h-3.5 w-3.5" />
-                  </button>
-                )}
-                <button onClick={() => openEditModal(member)} className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 transition-colors" title="Düzenle">
-                  <Pencil className="h-3.5 w-3.5" />
-                </button>
-                <button onClick={() => handleDeactivate(member)} className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 transition-colors" title="Kaldır">
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            )}
-          </div>
-        ) : (
-          /* List card layout */
-          <div className="flex items-center gap-4">
+        {/* List card layout */}
+        <div className="flex items-center gap-4">
             <div className={cn(
               'flex h-10 w-10 items-center justify-center rounded-full font-semibold text-sm flex-shrink-0',
               member.role === 'owner' ? 'bg-amber-100 text-amber-700' : 'bg-pulse-100 text-pulse-700'
@@ -399,7 +400,6 @@ export default function StaffPage() {
               </div>
             )}
           </div>
-        )}
       </div>
     )
   }
@@ -450,7 +450,7 @@ export default function StaffPage() {
                 <span className="text-xs text-gray-400">({group.members.length})</span>
               </div>
               {viewMode === 'box' ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
                   {group.members.map(renderStaffCard)}
                 </div>
               ) : (
