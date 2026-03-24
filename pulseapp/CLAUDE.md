@@ -152,9 +152,11 @@ Supabase'de çalıştırılmış olması gereken SQL'ler:
   - Satırda 7-8 küçük kare kart, sadece baş harfler + isim gösterilir
 
 ## Records Dosya Yükleme
-- **Storage bucket:** `records-files` (Supabase Storage, public)
+- **Storage bucket:** `records-files` (Supabase Storage, public) — ilk yüklemede otomatik oluşturulur
+- **Upload API:** `POST /api/records/upload` — `multipart/form-data` (file, businessId, recordId)
+- **Admin client:** `createAdminClient()` ile bucket oluşturma + dosya yükleme (RLS bypass)
 - **Yol yapısı:** `{businessId}/{recordId}/{timestamp}_{uniqueId}.{ext}`
-- **Desteklenen:** PDF, JPG, PNG, HEIC, DOC, DOCX, XLS, XLSX
+- **Desteklenen:** PDF, JPG, PNG, HEIC, DOC, DOCX, XLS, XLSX (maks 50MB)
 - **API PATCH:** `file_urls` gönderildiğinde mevcut dosyalara merge edilir (veri bozulmaz)
 - **Detay paneli:** Yüklenen resimler thumbnail, dokümanlar ikon+isim olarak gösterilir
 - **data tipi:** `Record<string, any>` — `file_urls` string array olarak data içinde saklanır
