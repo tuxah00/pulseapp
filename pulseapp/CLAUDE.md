@@ -148,6 +148,22 @@ Supabase'de çalıştırılmış olması gereken SQL'ler:
 - Tüm box görünüm kartları `aspect-square` ile kare/karemsi
 - `flex flex-col justify-between` ile içerik dağılımı
 - Uygulanan sayfalar: customers, records, reservations, memberships, stoklar, staff
+- **Records sayfası:** Kompakt kart düzeni — `grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8`
+  - Satırda 7-8 küçük kare kart, sadece baş harfler + isim gösterilir
+
+## Records Dosya Yükleme
+- **Storage bucket:** `records-files` (Supabase Storage, public)
+- **Yol yapısı:** `{businessId}/{recordId}/{timestamp}_{uniqueId}.{ext}`
+- **Desteklenen:** PDF, JPG, PNG, HEIC, DOC, DOCX, XLS, XLSX
+- **API PATCH:** `file_urls` gönderildiğinde mevcut dosyalara merge edilir (veri bozulmaz)
+- **Detay paneli:** Yüklenen resimler thumbnail, dokümanlar ikon+isim olarak gösterilir
+- **data tipi:** `Record<string, any>` — `file_urls` string array olarak data içinde saklanır
+
+## Mesajlar Sayfası Layout
+- **Fixed positioning:** `fixed inset-0 lg:left-64 top-14 z-30` — parent max-w-7xl kısıtlamasını bypass eder
+- `lg:left-64` = ana sidebar genişliği (256px)
+- `top-14` = TopBar yüksekliği (56px)
+- Dark mode: sidebar, chat header, mesaj balonları, input area, tarih ayırıcıları
 
 ## Bilinen Timezone Düzeltmeleri
 - **Vardiya sayfası:** `formatDate()` → `toISOString()` yerine yerel tarih getter'ları kullanılır (UTC kayma sorunu)
