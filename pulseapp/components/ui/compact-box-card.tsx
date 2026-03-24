@@ -41,7 +41,7 @@ export default function CompactBoxCard({
     <div
       onClick={onClick}
       className={cn(
-        'card p-2 cursor-pointer hover:shadow-md transition-all aspect-square flex flex-col items-center justify-start pt-3 text-center',
+        'card p-2 cursor-pointer hover:shadow-md transition-all aspect-square flex flex-col items-center justify-center text-center',
         selected && 'ring-2 ring-pulse-500',
         className
       )}

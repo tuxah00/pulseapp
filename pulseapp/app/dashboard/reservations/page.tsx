@@ -427,12 +427,6 @@ export default function ReservationsPage() {
                   initials={r.customer_name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
                   title={r.customer_name}
                   onClick={() => openEditModal(r)}
-                  badge={
-                    <span className={cn('inline-flex items-center rounded-full px-1.5 py-0 text-[10px] font-medium', STATUS_COLORS[r.status])}>
-                      {STATUS_LABELS[r.status]}
-                    </span>
-                  }
-                  meta={`${r.reservation_date} ${formatTime(r.reservation_time)}`}
                 />
               ))}
             </div>

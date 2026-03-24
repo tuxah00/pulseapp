@@ -364,11 +364,6 @@ export default function CustomersPage() {
               title={customer.name}
               selected={selectedCustomer?.id === customer.id}
               onClick={() => setSelectedCustomer(customer)}
-              badge={
-                <span className={`badge text-[10px] py-0 px-1.5 ${getSegmentColor(customer.segment)}`}>
-                  {SEGMENT_LABELS[customer.segment]}
-                </span>
-              }
             />
           ))}
         </div>

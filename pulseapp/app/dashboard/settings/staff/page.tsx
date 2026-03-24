@@ -319,7 +319,6 @@ export default function StaffPage() {
           colorClass={member.role === 'owner' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-pulse-100 text-pulse-700'}
           selected={selectedStaff?.id === member.id}
           onClick={() => setSelectedStaff(member)}
-          badge={<span className={cn('badge text-[10px] py-0 px-1.5', ROLE_COLORS[member.role])}>{ROLE_LABELS[member.role]}</span>}
           className={cn(
             isMe && 'bg-blue-50/50 dark:bg-blue-900/10',
             member.role === 'owner' && 'border-amber-200 dark:border-amber-800/50',

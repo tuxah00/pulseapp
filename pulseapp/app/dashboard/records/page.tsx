@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
 import { createClient } from '@/lib/supabase/client'
 import type { Customer } from '@/types'
+import CompactBoxCard from '@/components/ui/compact-box-card'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -256,6 +257,17 @@ function RecordsPageInner() {
       fetchCustomers()
     }
   }, [fetchRecords, fetchCustomers, ctxLoading])
+
+  // ESC tuşu ile detay modalını kapat
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSelectedRecord(null)
+    }
+    if (selectedRecord) {
+      document.addEventListener('keydown', handleEsc)
+      return () => document.removeEventListener('keydown', handleEsc)
+    }
+  }, [selectedRecord])
 
   // ── File upload helpers ────────────────────────────────────────────────────
 
@@ -567,101 +579,109 @@ function RecordsPageInner() {
           {viewMode === 'box' && (
             <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 gap-2">
               {records.map((record) => (
-                <div key={record.id} onClick={() => setSelectedRecord(record)} className="card p-2 cursor-pointer hover:shadow-md transition-all aspect-square flex flex-col items-center justify-center text-center">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-pulse-100 text-pulse-700 font-semibold text-xs flex-shrink-0">
-                    {record.title?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || 'D'}
-                  </div>
-                  <p className="mt-1.5 text-xs font-medium text-gray-900 dark:text-gray-100 truncate w-full">{record.title}</p>
-                </div>
+                <CompactBoxCard
+                  key={record.id}
+                  initials={record.title?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || 'D'}
+                  title={record.title}
+                  onClick={() => setSelectedRecord(record)}
+                />
               ))}
             </div>
           )}
         </>
       )}
 
-      {/* ── Slide-over Detail Panel ── */}
+      {/* ── Kayıt Detay Modal ── */}
       {selectedRecord && (
         <>
           <div
             className="fixed inset-0 z-40 bg-black/30 dark:bg-black/50"
             onClick={() => setSelectedRecord(null)}
           />
-          <div className="slide-panel border-l border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-5 py-4">
-              <h3 className="font-semibold text-gray-900 dark:text-gray-100">Kayıt Detayı</h3>
-              <button
-                onClick={() => setSelectedRecord(null)}
-                className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-5 space-y-5">
-              {/* Avatar + title */}
-              <div className="text-center">
-                <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-pulse-50 dark:bg-pulse-900/20">
-                  <Icon className="h-8 w-8 text-pulse-600 dark:text-pulse-400" />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setSelectedRecord(null)}>
+            <div
+              className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex-shrink-0">
+                <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100">Kayıt Detayı</h3>
+                <button
+                  onClick={() => setSelectedRecord(null)}
+                  className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                {/* Avatar + title */}
+                <div className="text-center">
+                  <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-pulse-50 dark:bg-pulse-900/20">
+                    <Icon className="h-8 w-8 text-pulse-600 dark:text-pulse-400" />
+                  </div>
+                  <h4 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+                    {selectedRecord.title}
+                  </h4>
+                  <p className="text-sm text-gray-400 mt-1">{formatDate(selectedRecord.created_at)}</p>
                 </div>
-                <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  {selectedRecord.title}
-                </h4>
-                <p className="text-xs text-gray-400 mt-1">{formatDate(selectedRecord.created_at)}</p>
-              </div>
 
-              {/* Fields */}
-              <div className="space-y-3 text-sm">
-                {config.fields
-                  .filter((f) => f.key !== 'title')
-                  .map((f) => {
-                    const val = selectedRecord.data[f.key]
-                    if (!val) return null
-                    return (
-                      <div key={f.key}>
-                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-0.5">{f.label}</p>
-                        {f.type === 'textarea' ? (
-                          <p className="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 whitespace-pre-wrap">
-                            {val}
-                          </p>
-                        ) : f.type === 'select' ? (
-                          <p className="text-sm text-gray-900 dark:text-gray-100">
-                            {f.options?.find((o) => o.value === val)?.label ?? val}
-                          </p>
-                        ) : f.type === 'date' ? (
-                          <p className="text-sm text-gray-900 dark:text-gray-100">{formatDate(val)}</p>
-                        ) : (
-                          <p className="text-sm text-gray-900 dark:text-gray-100">{val}</p>
-                        )}
-                      </div>
-                    )
-                  })}
-              </div>
-
-              {/* Dosyalar */}
-              {selectedRecord.data.file_urls && Array.isArray(selectedRecord.data.file_urls) && selectedRecord.data.file_urls.length > 0 && (
-                <div>
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Dosyalar</p>
-                  <div className="grid grid-cols-3 gap-2">
-                    {selectedRecord.data.file_urls.map((url: string, i: number) => {
-                      const isImage = /\.(jpg|jpeg|png|heic|webp)$/i.test(url)
-                      return isImage ? (
-                        <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="block rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 hover:opacity-80 transition-opacity aspect-square">
-                          <img src={url} alt="" className="h-full w-full object-cover" />
-                        </a>
-                      ) : (
-                        <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700 p-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors aspect-square">
-                          <FileText className="h-6 w-6 text-gray-400 mb-1" />
-                          <span className="text-xs text-gray-500 truncate w-full text-center">
-                            {decodeURIComponent(url.split('/').pop() || 'Dosya').slice(0, 15)}
-                          </span>
-                        </a>
+                {/* Fields */}
+                <div className="space-y-4 text-sm">
+                  {config.fields
+                    .filter((f) => f.key !== 'title')
+                    .map((f) => {
+                      const val = selectedRecord.data[f.key]
+                      if (!val) return null
+                      return (
+                        <div key={f.key}>
+                          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{f.label}</p>
+                          {f.type === 'textarea' ? (
+                            <p className="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 whitespace-pre-wrap">
+                              {val}
+                            </p>
+                          ) : f.type === 'select' ? (
+                            <p className="text-sm text-gray-900 dark:text-gray-100">
+                              {f.options?.find((o) => o.value === val)?.label ?? val}
+                            </p>
+                          ) : f.type === 'date' ? (
+                            <p className="text-sm text-gray-900 dark:text-gray-100">{formatDate(val)}</p>
+                          ) : (
+                            <p className="text-sm text-gray-900 dark:text-gray-100">{val}</p>
+                          )}
+                        </div>
                       )
                     })}
-                  </div>
                 </div>
-              )}
 
-              {/* Actions */}
-              <div className="border-t border-gray-200 dark:border-gray-700 pt-4 flex gap-2">
+                {/* Dosyalar */}
+                {selectedRecord.data.file_urls && Array.isArray(selectedRecord.data.file_urls) && selectedRecord.data.file_urls.length > 0 && (
+                  <div>
+                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">Dosyalar</p>
+                    <div className="grid grid-cols-4 gap-3">
+                      {selectedRecord.data.file_urls.map((url: string, i: number) => {
+                        const isImage = /\.(jpg|jpeg|png|heic|webp)$/i.test(url)
+                        return isImage ? (
+                          <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="block rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 hover:opacity-80 transition-opacity aspect-square">
+                            <img src={url} alt="" className="h-full w-full object-cover" />
+                          </a>
+                        ) : (
+                          <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors aspect-square">
+                            <FileText className="h-8 w-8 text-gray-400 mb-1.5" />
+                            <span className="text-xs text-gray-500 truncate w-full text-center">
+                              {decodeURIComponent(url.split('/').pop() || 'Dosya').slice(0, 20)}
+                            </span>
+                          </a>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="border-t border-gray-200 dark:border-gray-700 px-6 py-4 flex gap-3 flex-shrink-0">
                 <button
                   onClick={() => { openEditModal(selectedRecord); setSelectedRecord(null) }}
                   className="btn-secondary flex-1 text-sm"

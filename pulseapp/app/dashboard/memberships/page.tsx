@@ -417,12 +417,6 @@ export default function MembershipsPage() {
               initials={m.customer_name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
               title={m.customer_name}
               onClick={() => openEditModal(m)}
-              badge={
-                <span className={`text-[10px] font-medium px-1.5 py-0 rounded-full ${STATUS_COLORS[m.status]}`}>
-                  {STATUS_LABELS[m.status]}
-                </span>
-              }
-              meta={m.plan_name}
             />
           ))}
         </div>

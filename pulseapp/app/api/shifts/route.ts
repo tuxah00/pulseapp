@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
 
   const body = await request.json()
-  const { businessId, staffId, shiftDate, startTime, endTime, shiftType = 'regular', notes } = body
+  const { businessId, staffId, shiftDate, startTime, endTime, shiftType = 'regular', notes, overtimeRanges } = body
 
   if (!businessId || !staffId || !shiftDate || !shiftType) {
     return NextResponse.json({ error: 'businessId, staffId, shiftDate zorunlu' }, { status: 400 })
@@ -75,6 +75,7 @@ export async function POST(request: NextRequest) {
       end_time: shiftType === 'off' ? null : endTime,
       shift_type: shiftType,
       notes: notes || null,
+      overtime_ranges: Array.isArray(overtimeRanges) && overtimeRanges.length > 0 ? overtimeRanges : [],
       created_by: user.id,
     }, { onConflict: 'business_id,staff_id,shift_date' })
     .select()

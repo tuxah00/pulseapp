@@ -59,6 +59,7 @@ function formatDisplayDate(date: Date): string {
 }
 
 interface StaffMember { id: string; name: string }
+interface OvertimeRange { start: string; end: string }
 interface Shift {
   id: string
   staff_id: string
@@ -67,6 +68,7 @@ interface Shift {
   end_time: string | null
   shift_type: 'regular' | 'off' | 'part_time'
   notes: string | null
+  overtime_ranges?: OvertimeRange[] | null
 }
 
 export default function VardiyePage() {
@@ -100,6 +102,10 @@ export default function VardiyePage() {
   const [autoStartTime, setAutoStartTime] = useState('09:00')
   const [autoEndTime, setAutoEndTime] = useState('18:00')
   const [autoError, setAutoError] = useState<string | null>(null)
+  const [extraTimeRanges, setExtraTimeRanges] = useState<OvertimeRange[]>([])
+
+  // Modal ek mesai
+  const [modalOvertimeRanges, setModalOvertimeRanges] = useState<OvertimeRange[]>([])
 
   const monday = addDays(getMonday(new Date()), weekOffset * 7)
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(monday, i))
@@ -151,6 +157,7 @@ export default function VardiyePage() {
     setModalStart(existing?.start_time?.slice(0, 5) || '09:00')
     setModalEnd(existing?.end_time?.slice(0, 5) || '18:00')
     setModalNotes(existing?.notes || '')
+    setModalOvertimeRanges(existing?.overtime_ranges || [])
     setSaveError(null)
     setModal({ staffId, date })
   }
@@ -171,6 +178,7 @@ export default function VardiyePage() {
           endTime: modalType === 'off' ? null : modalEnd,
           shiftType: modalType === 'part_time' ? 'regular' : modalType,
           notes: modalType === 'part_time' ? (modalNotes ? `Yarı zamanlı · ${modalNotes}` : 'Yarı zamanlı') : (modalNotes || null),
+          overtimeRanges: modalType !== 'off' && modalOvertimeRanges.length > 0 ? modalOvertimeRanges : undefined,
         }),
       })
       if (!res.ok) {
@@ -227,6 +235,7 @@ export default function VardiyePage() {
                 endTime: autoEndTime,
                 shiftType: 'regular',
                 notes: 'Otomatik dağıtım',
+                overtimeRanges: extraTimeRanges.length > 0 ? extraTimeRanges : undefined,
               }),
             }),
           })
@@ -402,18 +411,73 @@ export default function VardiyePage() {
             </div>
           </div>
 
+          {/* Ek Mesai Saatleri */}
+          {extraTimeRanges.length > 0 && (
+            <div className="space-y-2">
+              {extraTimeRanges.map((range, idx) => (
+                <div key={idx} className="flex items-center gap-3">
+                  <label className="text-xs font-medium text-orange-600 dark:text-orange-400 w-20 flex-shrink-0">
+                    Ek Mesai {idx + 1}
+                  </label>
+                  <input
+                    type="time"
+                    value={range.start}
+                    onChange={e => {
+                      const updated = [...extraTimeRanges]
+                      updated[idx] = { ...updated[idx], start: e.target.value }
+                      setExtraTimeRanges(updated)
+                    }}
+                    className="input w-28"
+                  />
+                  <span className="text-gray-400">—</span>
+                  <input
+                    type="time"
+                    value={range.end}
+                    onChange={e => {
+                      const updated = [...extraTimeRanges]
+                      updated[idx] = { ...updated[idx], end: e.target.value }
+                      setExtraTimeRanges(updated)
+                    }}
+                    className="input w-28"
+                  />
+                  <button
+                    onClick={() => setExtraTimeRanges(prev => prev.filter((_, i) => i !== idx))}
+                    className="rounded-lg p-1 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 transition-colors"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <button
+            onClick={() => setExtraTimeRanges(prev => [...prev, { start: '19:00', end: '22:00' }])}
+            className="flex items-center gap-1.5 text-sm font-medium text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Mesai Saati Ekle
+          </button>
+
           {(() => {
             const selectedCount = autoSelectedDays.filter(Boolean).length
             const [sh, sm] = autoStartTime.split(':').map(Number)
             const [eh, em] = autoEndTime.split(':').map(Number)
-            const hours = ((eh * 60 + em) - (sh * 60 + sm)) / 60
-            return selectedCount > 0 && hours > 0 ? (
+            const mainHours = ((eh * 60 + em) - (sh * 60 + sm)) / 60
+            const extraHours = extraTimeRanges.reduce((sum, r) => {
+              const [s1, s2] = r.start.split(':').map(Number)
+              const [e1, e2] = r.end.split(':').map(Number)
+              return sum + ((e1 * 60 + e2) - (s1 * 60 + s2)) / 60
+            }, 0)
+            const totalHours = mainHours + extraHours
+            return selectedCount > 0 && totalHours > 0 ? (
               <p className="text-sm text-gray-500 bg-gray-50 dark:bg-gray-800/50 rounded-lg px-3 py-2">
                 <span className="font-medium text-gray-700 dark:text-gray-200">{selectedCount} gün</span>
                 {' × '}
-                <span className="font-medium text-gray-700 dark:text-gray-200">{hours.toFixed(1)} saat</span>
+                <span className="font-medium text-gray-700 dark:text-gray-200">{totalHours.toFixed(1)} saat</span>
+                {extraHours > 0 && <span className="text-orange-600 dark:text-orange-400"> (+{extraHours.toFixed(1)} ek mesai)</span>}
                 {' = '}
-                <span className="font-medium text-pulse-600">{(selectedCount * hours).toFixed(1)} saat/personel</span>
+                <span className="font-medium text-pulse-600">{(selectedCount * totalHours).toFixed(1)} saat/personel</span>
                 {' · '}mevcut kayıtlar korunur
               </p>
             ) : null
@@ -521,6 +585,13 @@ export default function VardiyePage() {
                                 <>
                                   <div className="font-medium">{shift.start_time?.slice(0, 5)}</div>
                                   <div className="opacity-70">{shift.end_time?.slice(0, 5)}</div>
+                                  {shift.overtime_ranges && shift.overtime_ranges.length > 0 && (
+                                    <div className="text-[9px] text-orange-600 dark:text-orange-400 mt-0.5">
+                                      {shift.overtime_ranges.map((r, ri) => (
+                                        <span key={ri}>+{r.start.slice(0, 5)}-{r.end.slice(0, 5)}</span>
+                                      ))}
+                                    </div>
+                                  )}
                                 </>
                               )}
                             </button>
@@ -628,16 +699,46 @@ export default function VardiyePage() {
             )}
 
             {(modalType === 'regular' || modalType === 'part_time') && (
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="label">Başlangıç</label>
-                  <input type="time" value={modalStart} onChange={e => setModalStart(e.target.value)} className="input" />
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="label">Başlangıç</label>
+                    <input type="time" value={modalStart} onChange={e => setModalStart(e.target.value)} className="input" />
+                  </div>
+                  <div>
+                    <label className="label">Bitiş</label>
+                    <input type="time" value={modalEnd} onChange={e => setModalEnd(e.target.value)} className="input" />
+                  </div>
                 </div>
-                <div>
-                  <label className="label">Bitiş</label>
-                  <input type="time" value={modalEnd} onChange={e => setModalEnd(e.target.value)} className="input" />
-                </div>
-              </div>
+
+                {/* Ek Mesai */}
+                {modalOvertimeRanges.length > 0 && (
+                  <div className="space-y-2">
+                    {modalOvertimeRanges.map((range, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <span className="text-xs text-orange-600 dark:text-orange-400 w-16 flex-shrink-0">Ek Mesai {idx + 1}</span>
+                        <input type="time" value={range.start}
+                          onChange={e => { const u = [...modalOvertimeRanges]; u[idx] = { ...u[idx], start: e.target.value }; setModalOvertimeRanges(u) }}
+                          className="input w-24 text-xs" />
+                        <span className="text-gray-400 text-xs">—</span>
+                        <input type="time" value={range.end}
+                          onChange={e => { const u = [...modalOvertimeRanges]; u[idx] = { ...u[idx], end: e.target.value }; setModalOvertimeRanges(u) }}
+                          className="input w-24 text-xs" />
+                        <button onClick={() => setModalOvertimeRanges(prev => prev.filter((_, i) => i !== idx))}
+                          className="text-red-400 hover:text-red-600 p-0.5"><X className="h-3.5 w-3.5" /></button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setModalOvertimeRanges(prev => [...prev, { start: '19:00', end: '22:00' }])}
+                  className="flex items-center gap-1 text-xs font-medium text-orange-600 dark:text-orange-400 hover:text-orange-700 transition-colors"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Mesai Saati Ekle
+                </button>
+              </>
             )}
 
             <div>

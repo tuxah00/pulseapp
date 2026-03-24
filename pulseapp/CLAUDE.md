@@ -158,10 +158,10 @@ ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'dietitian';
 ## Box Görünüm Kartları — Standart Bileşen
 - **Paylaşımlı bileşen:** `components/ui/compact-box-card.tsx` → `CompactBoxCard`
 - Props: `initials`, `title`, `colorClass`, `badge`, `meta`, `selected`, `onClick`, `children`
-- Yeni box görünüm sayfalarında hep bu bileşen kullanılmalı
-- Uygulanan sayfalar: customers, records, reservations, memberships, stoklar, **staff** (CompactBoxCard)
-- **Records sayfası:** `grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8` — 7-8 kart/satır
-- **Staff sayfası:** `grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5` — 4-5 kart/satır
+- **Tüm sayfalar birebir aynı:** sadece initials (yuvarlak) + isim. Badge/meta kullanılmaz (kompakt görünüm).
+- Stoklar sayfasında children (+/- butonları) hariç — stok yönetimi için işlevsel
+- Grid: `grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 gap-2` (tüm sayfalar aynı)
+- Uygulanan sayfalar: customers, records, reservations, memberships, stoklar, staff
 
 ## Records Dosya Yükleme
 - **Storage bucket:** `records-files` (Supabase Storage, public) — ilk yüklemede otomatik oluşturulur
@@ -179,6 +179,19 @@ ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'dietitian';
 - `lg:left-64` = ana sidebar genişliği (256px)
 - `top-14` = TopBar yüksekliği (56px)
 - Dark mode: sidebar, chat header, mesaj balonları, input area, tarih ayırıcıları
+
+## Kayıt Detay Modalı
+- Records sayfasında kayıt detayı **merkezi modal** olarak açılır (slide-over değil)
+- `max-w-2xl max-h-[90vh]`, rounded-2xl, ESC tuşu ile kapanır
+- Üst: ikon + başlık + tarih, orta: dinamik alanlar, alt: dosyalar (grid-cols-4), footer: Düzenle/Sil
+
+## Ek Mesai (Overtime)
+- `shifts` tablosunda `overtime_ranges jsonb DEFAULT '[]'` kolonu
+- Her shift kaydı birden fazla ek mesai aralığı içerebilir: `[{start: "19:00", end: "22:00"}]`
+- Otomatik dağıtımda ve tekil vardiya modalında ek mesai girişi mevcut
+- Izgarada ek mesai `+19:00-22:00` formatında küçük turuncu yazıyla gösterilir
+- API: `POST /api/shifts` body'de `overtimeRanges` parametresi kabul eder
+- **SQL Migration gerekli:** `ALTER TABLE public.shifts ADD COLUMN IF NOT EXISTS overtime_ranges jsonb DEFAULT '[]';`
 
 ## Bilinen Timezone Düzeltmeleri
 - **Vardiya sayfası:** `formatDate()` → `toISOString()` yerine yerel tarih getter'ları kullanılır (UTC kayma sorunu)
