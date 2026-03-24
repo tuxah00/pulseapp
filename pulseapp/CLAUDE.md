@@ -84,6 +84,17 @@ Supabase'de çalıştırılmış olması gereken SQL'ler:
 4. `ALTER TABLE business_records ADD COLUMN IF NOT EXISTS file_urls jsonb DEFAULT '[]';`
 5. `ALTER TABLE appointments ADD COLUMN IF NOT EXISTS recurrence_group_id uuid;`
 6. `ALTER TABLE appointments ADD COLUMN IF NOT EXISTS recurrence_pattern jsonb;`
+7. **Sektör enum genişletme** (yoga_pilates, spa_massage vb. için):
+```sql
+ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'spa_massage';
+ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'yoga_pilates';
+ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'tattoo_piercing';
+ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'fitness';
+ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'medical_aesthetic';
+ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'car_wash';
+ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'photo_studio';
+ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'dietitian';
+```
 
 ## Sayfa Yapısı
 - `/dashboard` → Genel Bakış (server component, bugünkü durum + PerformanceStats)
@@ -144,12 +155,13 @@ Supabase'de çalıştırılmış olması gereken SQL'ler:
 - Personel renk kodu ile randevu blokları
 - Bugün sütunu vurgulanır + kırmızı saat çizgisi
 
-## Box Görünüm Kartları
-- Tüm box görünüm kartları `aspect-square` ile kare/karemsi
-- `flex flex-col justify-between` ile içerik dağılımı
-- Uygulanan sayfalar: customers, records, reservations, memberships, stoklar, staff
-- **Records sayfası:** Kompakt kart düzeni — `grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8`
-  - Satırda 7-8 küçük kare kart, sadece baş harfler + isim gösterilir
+## Box Görünüm Kartları — Standart Bileşen
+- **Paylaşımlı bileşen:** `components/ui/compact-box-card.tsx` → `CompactBoxCard`
+- Props: `initials`, `title`, `colorClass`, `badge`, `meta`, `selected`, `onClick`, `children`
+- Yeni box görünüm sayfalarında hep bu bileşen kullanılmalı
+- Uygulanan sayfalar: customers, records, reservations, memberships, stoklar, **staff** (CompactBoxCard)
+- **Records sayfası:** `grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8` — 7-8 kart/satır
+- **Staff sayfası:** `grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5` — 4-5 kart/satır
 
 ## Records Dosya Yükleme
 - **Storage bucket:** `records-files` (Supabase Storage, public) — ilk yüklemede otomatik oluşturulur
@@ -160,6 +172,7 @@ Supabase'de çalıştırılmış olması gereken SQL'ler:
 - **API PATCH:** `file_urls` gönderildiğinde mevcut dosyalara merge edilir (veri bozulmaz)
 - **Detay paneli:** Yüklenen resimler thumbnail, dokümanlar ikon+isim olarak gösterilir
 - **data tipi:** `Record<string, any>` — `file_urls` string array olarak data içinde saklanır
+- **Güncelleme koruması:** `openEditModal`'da `file_urls` formData'ya kopyalanmaz, `handleSave`'de `editingRecord.data.file_urls` her zaman dataPayload'a eklenir — kullanıcı yeni dosya yüklemese bile eski dosyalar korunur
 
 ## Mesajlar Sayfası Layout
 - **Fixed positioning:** `fixed inset-0 lg:left-64 top-14 z-30` — parent max-w-7xl kısıtlamasını bypass eder
