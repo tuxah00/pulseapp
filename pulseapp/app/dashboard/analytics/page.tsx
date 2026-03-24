@@ -6,10 +6,12 @@ import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import {
   Loader2, TrendingUp, TrendingDown, Users, Calendar,
   DollarSign, AlertTriangle, Clock, Star, UserCheck, Minus,
-  BarChart3, PieChart, Activity,
+  BarChart3, PieChart, Activity, Plus, X, Wallet, Download,
 } from 'lucide-react'
 import { formatCurrency, cn } from '@/lib/utils'
 import { SEGMENT_LABELS } from '@/types'
+import { exportToCSV } from '@/lib/utils/export'
+import type { Expense } from '@/types'
 
 function getPeriodDates(period: 'week' | 'month' | 'year', offset = 0): { start: string; end: string } {
   const now = new Date()
@@ -43,7 +45,7 @@ export default function AnalyticsPage() {
   const { businessId, loading: ctxLoading, permissions } = useBusinessContext()
   const [loading, setLoading] = useState(true)
   const [period, setPeriod] = useState<'week' | 'month' | 'year'>('month')
-  const [activeTab, setActiveTab] = useState<'overview' | 'staff' | 'customers' | 'sources'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'staff' | 'customers' | 'sources' | 'expenses'>('overview')
 
   const [appointments, setAppointments] = useState<any[]>([])
   const [prevAppointments, setPrevAppointments] = useState<any[]>([])
@@ -51,6 +53,18 @@ export default function AnalyticsPage() {
   const [reviews, setReviews] = useState<any[]>([])
   const [services, setServices] = useState<any[]>([])
   const [staffMembers, setStaffMembers] = useState<any[]>([])
+
+  // Expenses state
+  const [expenses, setExpenses] = useState<Expense[]>([])
+  const [expensesLoading, setExpensesLoading] = useState(false)
+  const [showExpenseForm, setShowExpenseForm] = useState(false)
+  const [expCategory, setExpCategory] = useState('')
+  const [expDescription, setExpDescription] = useState('')
+  const [expAmount, setExpAmount] = useState('')
+  const [expDate, setExpDate] = useState(() => new Date().toISOString().split('T')[0])
+  const [expIsRecurring, setExpIsRecurring] = useState(false)
+  const [expRecurringPeriod, setExpRecurringPeriod] = useState('monthly')
+  const [savingExpense, setSavingExpense] = useState(false)
 
   const supabase = createClient()
 
@@ -80,6 +94,51 @@ export default function AnalyticsPage() {
     if (staffRes.data) setStaffMembers(staffRes.data)
     setLoading(false)
   }, [businessId, period])
+
+  const fetchExpenses = useCallback(async () => {
+    if (!businessId) return
+    setExpensesLoading(true)
+    const { start, end } = getPeriodDates(period, 0)
+    const res = await fetch(`/api/expenses?businessId=${businessId}&from=${start}&to=${end}`)
+    const json = await res.json()
+    setExpenses(json.expenses || [])
+    setExpensesLoading(false)
+  }, [businessId, period])
+
+  useEffect(() => {
+    if (activeTab === 'expenses' && businessId) fetchExpenses()
+  }, [activeTab, fetchExpenses, businessId])
+
+  async function handleAddExpense(e: React.FormEvent) {
+    e.preventDefault()
+    if (!expCategory || !expAmount || !expDate) return
+    setSavingExpense(true)
+    await fetch('/api/expenses', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        business_id: businessId,
+        category: expCategory,
+        description: expDescription || null,
+        amount: parseFloat(expAmount),
+        expense_date: expDate,
+        is_recurring: expIsRecurring,
+        recurring_period: expIsRecurring ? expRecurringPeriod : null,
+      }),
+    })
+    setSavingExpense(false)
+    setShowExpenseForm(false)
+    setExpCategory(''); setExpDescription(''); setExpAmount('')
+    setExpDate(new Date().toISOString().split('T')[0])
+    setExpIsRecurring(false)
+    fetchExpenses()
+  }
+
+  async function handleDeleteExpense(id: string) {
+    if (!confirm('Bu gideri silmek istediğinize emin misiniz?')) return
+    await fetch(`/api/expenses?id=${id}`, { method: 'DELETE' })
+    fetchExpenses()
+  }
 
   useEffect(() => { if (!ctxLoading) fetchData() }, [fetchData, ctxLoading])
 
@@ -255,6 +314,7 @@ export default function AnalyticsPage() {
           ['staff', 'Personel', <Users key="s" className="h-3.5 w-3.5" />],
           ['customers', 'Müşteriler', <UserCheck key="c" className="h-3.5 w-3.5" />],
           ['sources', 'Kaynak', <PieChart key="sr" className="h-3.5 w-3.5" />],
+          ['expenses', 'Giderler', <Wallet key="e" className="h-3.5 w-3.5" />],
         ] as const).map(([key, label, icon]) => (
           <button key={key} onClick={() => setActiveTab(key as any)}
             className={cn('flex-shrink-0 flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors',
@@ -413,6 +473,171 @@ export default function AnalyticsPage() {
                   <span className="badge bg-amber-100 text-amber-700">+{riskCustomers.length - 10} daha</span>
                 )}
               </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Giderler Sekmesi */}
+      {activeTab === 'expenses' && (
+        <div className="space-y-6">
+          {/* Kar-Zarar Özeti */}
+          <div className="grid grid-cols-3 gap-4">
+            <div className="card p-4 text-center">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Toplam Gelir</p>
+              <p className="text-xl font-bold text-green-600">{formatCurrency(totalRevenue)}</p>
+            </div>
+            <div className="card p-4 text-center">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Toplam Gider</p>
+              <p className="text-xl font-bold text-red-600">{formatCurrency(expenses.reduce((s, e) => s + e.amount, 0))}</p>
+            </div>
+            <div className="card p-4 text-center">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Net Kâr</p>
+              {(() => {
+                const net = totalRevenue - expenses.reduce((s, e) => s + e.amount, 0)
+                return <p className={cn('text-xl font-bold', net >= 0 ? 'text-pulse-600 dark:text-pulse-400' : 'text-red-600')}>{formatCurrency(net)}</p>
+              })()}
+            </div>
+          </div>
+
+          {/* Gider Listesi Başlığı */}
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{periodLabel} Giderleri</h3>
+            <div className="flex items-center gap-2">
+              {expenses.length > 0 && (
+                <button
+                  onClick={() => exportToCSV(
+                    expenses.map(e => ({
+                      category: e.category,
+                      description: e.description || '',
+                      amount: e.amount,
+                      expense_date: new Date(e.expense_date).toLocaleDateString('tr-TR'),
+                      is_recurring: e.is_recurring ? 'Evet' : 'Hayır',
+                    })),
+                    'gider-raporu',
+                    [
+                      { key: 'category', label: 'Kategori' },
+                      { key: 'description', label: 'Açıklama' },
+                      { key: 'amount', label: 'Tutar (TL)' },
+                      { key: 'expense_date', label: 'Tarih' },
+                      { key: 'is_recurring', label: 'Tekrarlayan' },
+                    ]
+                  )}
+                  className="btn-secondary text-sm gap-1.5"
+                >
+                  <Download className="h-3.5 w-3.5" />Dışa Aktar
+                </button>
+              )}
+              <button onClick={() => setShowExpenseForm(v => !v)} className="btn-primary text-sm">
+                <Plus className="mr-1.5 h-4 w-4" />Gider Ekle
+              </button>
+            </div>
+          </div>
+
+          {/* Gider Ekleme Formu */}
+          {showExpenseForm && (
+            <div className="card p-4">
+              <form onSubmit={handleAddExpense} className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="label">Kategori</label>
+                    <select value={expCategory} onChange={(e) => setExpCategory(e.target.value)} className="input" required>
+                      <option value="">— Seçin —</option>
+                      <option value="Kira">Kira</option>
+                      <option value="Malzeme">Malzeme & Sarf</option>
+                      <option value="Personel">Personel Gideri</option>
+                      <option value="Fatura">Faturalar (Elektrik/Su/Doğalgaz)</option>
+                      <option value="Pazarlama">Pazarlama & Reklam</option>
+                      <option value="Bakım">Bakım & Onarım</option>
+                      <option value="Yazılım">Yazılım & Abonelik</option>
+                      <option value="Diğer">Diğer</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label">Tutar (TL)</label>
+                    <input type="number" value={expAmount} onChange={(e) => setExpAmount(e.target.value)} className="input" placeholder="0.00" min="0" step="0.01" required />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="label">Açıklama (opsiyonel)</label>
+                    <input type="text" value={expDescription} onChange={(e) => setExpDescription(e.target.value)} className="input" placeholder="Aylık kira ödemesi" />
+                  </div>
+                  <div>
+                    <label className="label">Tarih</label>
+                    <input type="date" value={expDate} onChange={(e) => setExpDate(e.target.value)} className="input" required />
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input type="checkbox" id="isRecurring" checked={expIsRecurring} onChange={(e) => setExpIsRecurring(e.target.checked)} className="rounded" />
+                  <label htmlFor="isRecurring" className="text-sm text-gray-700 dark:text-gray-300">Tekrarlayan gider</label>
+                  {expIsRecurring && (
+                    <select value={expRecurringPeriod} onChange={(e) => setExpRecurringPeriod(e.target.value)} className="input ml-2 w-auto text-sm py-1">
+                      <option value="weekly">Haftalık</option>
+                      <option value="monthly">Aylık</option>
+                      <option value="yearly">Yıllık</option>
+                    </select>
+                  )}
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <button type="button" onClick={() => setShowExpenseForm(false)} className="btn-secondary text-sm flex-1">İptal</button>
+                  <button type="submit" disabled={savingExpense} className="btn-primary text-sm flex-1">
+                    {savingExpense && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
+                    Kaydet
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* Gider Listesi */}
+          {expensesLoading ? (
+            <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-pulse-500" /></div>
+          ) : expenses.length === 0 ? (
+            <div className="card flex flex-col items-center justify-center py-16 text-center">
+              <Wallet className="mb-3 h-12 w-12 text-gray-200 dark:text-gray-600" />
+              <p className="text-sm text-gray-500 dark:text-gray-400">Bu dönem için gider kaydı bulunmuyor</p>
+            </div>
+          ) : (
+            <div className="card p-0 overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 dark:bg-gray-700/50">
+                  <tr>
+                    <th className="px-4 py-3 text-left font-medium text-gray-500">Tarih</th>
+                    <th className="px-4 py-3 text-left font-medium text-gray-500">Kategori</th>
+                    <th className="px-4 py-3 text-left font-medium text-gray-500">Açıklama</th>
+                    <th className="px-4 py-3 text-right font-medium text-gray-500">Tutar</th>
+                    <th className="px-4 py-3 w-10"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                  {expenses.map(expense => (
+                    <tr key={expense.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                      <td className="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                        {new Date(expense.expense_date).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' })}
+                      </td>
+                      <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
+                        {expense.category}
+                        {expense.is_recurring && <span className="ml-1.5 badge bg-blue-100 text-blue-700 text-[10px]">Tekrar</span>}
+                      </td>
+                      <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{expense.description || '—'}</td>
+                      <td className="px-4 py-3 text-right font-medium text-red-600">{formatCurrency(expense.amount)}</td>
+                      <td className="px-4 py-3">
+                        <button onClick={() => handleDeleteExpense(expense.id)} className="text-gray-400 hover:text-red-500 transition-colors">
+                          <X className="h-4 w-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="bg-gray-50 dark:bg-gray-700/50">
+                  <tr>
+                    <td colSpan={3} className="px-4 py-3 font-semibold text-gray-700 dark:text-gray-300 text-right">Toplam Gider</td>
+                    <td className="px-4 py-3 text-right font-bold text-red-600">{formatCurrency(expenses.reduce((s, e) => s + e.amount, 0))}</td>
+                    <td></td>
+                  </tr>
+                </tfoot>
+              </table>
             </div>
           )}
         </div>

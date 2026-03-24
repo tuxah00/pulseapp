@@ -1,0 +1,113 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+
+// GET: Gider listesi
+export async function GET(req: NextRequest) {
+  const supabase = createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
+
+  const { searchParams } = new URL(req.url)
+  const businessId = searchParams.get('businessId')
+  const from = searchParams.get('from')
+  const to = searchParams.get('to')
+  const category = searchParams.get('category')
+
+  if (!businessId) return NextResponse.json({ error: 'businessId gerekli' }, { status: 400 })
+
+  const admin = createAdminClient()
+  let query = admin
+    .from('expenses')
+    .select('*')
+    .eq('business_id', businessId)
+    .order('expense_date', { ascending: false })
+
+  if (from) query = query.gte('expense_date', from)
+  if (to) query = query.lte('expense_date', to)
+  if (category) query = query.eq('category', category)
+
+  const { data, error } = await query
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ expenses: data })
+}
+
+// POST: Yeni gider ekle
+export async function POST(req: NextRequest) {
+  const supabase = createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
+
+  const body = await req.json()
+  const { business_id, category, description, amount, expense_date, is_recurring, recurring_period } = body
+
+  if (!business_id || !category || amount === undefined || !expense_date) {
+    return NextResponse.json({ error: 'business_id, category, amount, expense_date gerekli' }, { status: 400 })
+  }
+
+  const admin = createAdminClient()
+  const { data: expense, error } = await admin
+    .from('expenses')
+    .insert({
+      business_id,
+      category,
+      description: description || null,
+      amount,
+      expense_date,
+      is_recurring: is_recurring || false,
+      recurring_period: recurring_period || null,
+    })
+    .select()
+    .single()
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ expense })
+}
+
+// PATCH: Gider güncelle
+export async function PATCH(req: NextRequest) {
+  const supabase = createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
+
+  const { searchParams } = new URL(req.url)
+  const id = searchParams.get('id')
+  if (!id) return NextResponse.json({ error: 'id gerekli' }, { status: 400 })
+
+  const body = await req.json()
+  const updateObj: Record<string, unknown> = {}
+
+  if (body.category !== undefined) updateObj.category = body.category
+  if (body.description !== undefined) updateObj.description = body.description
+  if (body.amount !== undefined) updateObj.amount = body.amount
+  if (body.expense_date !== undefined) updateObj.expense_date = body.expense_date
+  if (body.is_recurring !== undefined) updateObj.is_recurring = body.is_recurring
+  if (body.recurring_period !== undefined) updateObj.recurring_period = body.recurring_period
+
+  const admin = createAdminClient()
+  const { data: expense, error } = await admin
+    .from('expenses')
+    .update(updateObj)
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ expense })
+}
+
+// DELETE: Gider sil
+export async function DELETE(req: NextRequest) {
+  const supabase = createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
+
+  const { searchParams } = new URL(req.url)
+  const id = searchParams.get('id')
+  if (!id) return NextResponse.json({ error: 'id gerekli' }, { status: 400 })
+
+  const admin = createAdminClient()
+  const { error } = await admin.from('expenses').delete().eq('id', id)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ success: true })
+}

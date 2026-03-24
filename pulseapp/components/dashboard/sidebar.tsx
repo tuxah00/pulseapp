@@ -34,6 +34,7 @@ import {
   CheckSquare,
   BookOpen,
   Image,
+  Receipt,
   type LucideIcon,
 } from 'lucide-react'
 import type { SectorType, PlanType, StaffPermissions } from '@/types'
@@ -65,6 +66,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   CheckSquare,
   BookOpen,
   Image,
+  Receipt,
 }
 
 const bottomNav = [
@@ -87,6 +89,7 @@ const PERMISSION_MAP: Record<string, keyof StaffPermissions> = {
   '/dashboard/portfolio': 'portfolio',
   '/dashboard/settings/vardiye': 'shifts',
   '/dashboard/orders': 'orders',
+  '/dashboard/invoices': 'invoices',
   '/dashboard/settings/audit': 'settings',
 }
 

@@ -39,6 +39,7 @@ export interface StaffPermissions {
   portfolio?: boolean
   inventory?: boolean
   orders?: boolean
+  invoices?: boolean
 }
 
 export const DEFAULT_PERMISSIONS: Record<StaffRole, StaffPermissions> = {
@@ -46,13 +47,13 @@ export const DEFAULT_PERMISSIONS: Record<StaffRole, StaffPermissions> = {
     dashboard: true, appointments: true, customers: true, analytics: true,
     messages: true, reviews: true, services: true, staff: true, shifts: true,
     settings: true, reservations: true, classes: true, memberships: true,
-    records: true, portfolio: true, inventory: true, orders: true,
+    records: true, portfolio: true, inventory: true, orders: true, invoices: true,
   },
   manager: {
     dashboard: true, appointments: true, customers: true, analytics: true,
     messages: true, reviews: true, services: true, staff: false, shifts: true,
     settings: false, reservations: true, classes: true, memberships: true,
-    records: true, portfolio: true, inventory: true, orders: true,
+    records: true, portfolio: true, inventory: true, orders: true, invoices: true,
   },
   staff: {
     dashboard: true, appointments: true, customers: true, analytics: false,
@@ -82,7 +83,81 @@ export type AiClassification =
   | 'appointment' | 'question' | 'complaint' | 'cancellation' | 'greeting' | 'other'
 
 export type ReviewStatus = 'pending' | 'responded' | 'escalated'
-export type NotificationType = 'appointment' | 'review' | 'payment' | 'customer' | 'system'
+export type NotificationType = 'appointment' | 'review' | 'payment' | 'customer' | 'system' | 'stock_alert'
+
+export type InvoiceStatus = 'pending' | 'paid' | 'partial' | 'overdue' | 'cancelled'
+export type PaymentMethod = 'cash' | 'card' | 'transfer' | 'online'
+export type StockMovementType = 'in' | 'out' | 'adjustment' | 'appointment' | 'order'
+
+// ── Fatura Kalemleri ──
+export interface InvoiceItem {
+  service_name: string
+  quantity: number
+  unit_price: number
+  total: number
+}
+
+// ── Fatura ──
+export interface Invoice {
+  id: string
+  business_id: string
+  customer_id: string | null
+  appointment_id: string | null
+  invoice_number: string
+  items: InvoiceItem[]
+  subtotal: number
+  tax_rate: number
+  tax_amount: number
+  total: number
+  status: InvoiceStatus
+  payment_method: PaymentMethod | null
+  paid_at: string | null
+  due_date: string | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+  // JOINs
+  customers?: { name: string; phone: string }
+}
+
+// ── Gider ──
+export interface Expense {
+  id: string
+  business_id: string
+  category: string
+  description: string | null
+  amount: number
+  expense_date: string
+  is_recurring: boolean
+  recurring_period: string | null
+  created_at: string
+}
+
+// ── Stok Hareketi ──
+export interface StockMovement {
+  id: string
+  business_id: string
+  product_id: string
+  quantity: number
+  type: StockMovementType
+  reference_id: string | null
+  notes: string | null
+  staff_id: string | null
+  created_at: string
+  // JOINs
+  staff_members?: { name: string }
+}
+
+// ── Tedarikçi ──
+export interface Supplier {
+  id: string
+  business_id: string
+  name: string
+  phone: string | null
+  email: string | null
+  notes: string | null
+  created_at: string
+}
 
 
 // ── Çalışma Saati Tipi ──

@@ -7,12 +7,13 @@ import { useViewMode } from '@/lib/hooks/use-view-mode'
 import {
   Plus, Search, Loader2, Phone, Mail, Calendar,
   X, Pencil, Trash2, User, LayoutList, LayoutGrid,
-  Clock, Star, MessageSquare, CheckCircle, XCircle, AlertTriangle, Info,
+  Clock, Star, MessageSquare, CheckCircle, XCircle, AlertTriangle, Info, Download,
 } from 'lucide-react'
 import { formatPhone, formatDate, formatTime, formatCurrency, getSegmentColor, cn } from '@/lib/utils'
 import { SEGMENT_LABELS, STATUS_LABELS, type Customer, type CustomerSegment } from '@/types'
 import { logAudit } from '@/lib/utils/audit'
 import CompactBoxCard from '@/components/ui/compact-box-card'
+import { exportToCSV } from '@/lib/utils/export'
 
 import { getCustomerLabel } from '@/lib/config/sector-modules'
 
@@ -304,9 +305,42 @@ export default function CustomersPage() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{customerLabel}</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{customers.length} {customerLabel.toLowerCase()} kayıtlı</p>
         </div>
-        <button onClick={openNewModal} className="btn-primary">
-          <Plus className="mr-2 h-4 w-4" />Yeni {customerLabel.endsWith('lar') || customerLabel.endsWith('ler') ? customerLabel.slice(0, -3) : customerLabel}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportToCSV(
+              customers.map(c => ({
+                name: c.name,
+                phone: c.phone,
+                email: c.email || '',
+                segment: SEGMENT_LABELS[c.segment] || c.segment,
+                total_visits: c.total_visits,
+                total_revenue: c.total_revenue,
+                total_no_shows: c.total_no_shows,
+                last_visit: c.last_visit_at ? new Date(c.last_visit_at).toLocaleDateString('tr-TR') : '',
+                created_at: new Date(c.created_at).toLocaleDateString('tr-TR'),
+              })),
+              'musteri-listesi',
+              [
+                { key: 'name', label: 'İsim' },
+                { key: 'phone', label: 'Telefon' },
+                { key: 'email', label: 'E-posta' },
+                { key: 'segment', label: 'Segment' },
+                { key: 'total_visits', label: 'Toplam Ziyaret' },
+                { key: 'total_revenue', label: 'Toplam Gelir (TL)' },
+                { key: 'total_no_shows', label: 'Gelmeme' },
+                { key: 'last_visit', label: 'Son Ziyaret' },
+                { key: 'created_at', label: 'Kayıt Tarihi' },
+              ]
+            )}
+            className="btn-secondary text-sm gap-1.5"
+          >
+            <Download className="h-4 w-4" />
+            <span className="hidden sm:inline">Dışa Aktar</span>
+          </button>
+          <button onClick={openNewModal} className="btn-primary">
+            <Plus className="mr-2 h-4 w-4" />Yeni {customerLabel.endsWith('lar') || customerLabel.endsWith('ler') ? customerLabel.slice(0, -3) : customerLabel}
+          </button>
+        </div>
       </div>
 
       <div className="mb-6 flex flex-col sm:flex-row gap-3">
