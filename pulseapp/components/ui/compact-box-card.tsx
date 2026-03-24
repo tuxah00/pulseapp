@@ -41,14 +41,14 @@ export default function CompactBoxCard({
     <div
       onClick={onClick}
       className={cn(
-        'card p-3 cursor-pointer hover:shadow-md transition-all aspect-square flex flex-col items-center justify-center text-center',
+        'card p-2 cursor-pointer hover:shadow-md transition-all aspect-square flex flex-col items-center justify-start pt-3 text-center',
         selected && 'ring-2 ring-pulse-500',
         className
       )}
     >
       {/* Avatar */}
       <div className={cn(
-        'flex h-10 w-10 items-center justify-center rounded-full font-bold text-sm flex-shrink-0',
+        'flex h-8 w-8 items-center justify-center rounded-full font-bold text-xs flex-shrink-0',
         colorClass
       )}>
         {initials}

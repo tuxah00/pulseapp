@@ -319,34 +319,12 @@ export default function StaffPage() {
           colorClass={member.role === 'owner' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-pulse-100 text-pulse-700'}
           selected={selectedStaff?.id === member.id}
           onClick={() => setSelectedStaff(member)}
-          badge={
-            <>
-              <span className={cn('badge text-xs', ROLE_COLORS[member.role])}>{ROLE_LABELS[member.role]}</span>
-              {isMe && <span className="badge bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 text-xs">Siz</span>}
-            </>
-          }
-          meta={member.role !== 'owner' ? `${permCount}/${totalPerms} yetki` : undefined}
+          badge={<span className={cn('badge text-[10px] py-0 px-1.5', ROLE_COLORS[member.role])}>{ROLE_LABELS[member.role]}</span>}
           className={cn(
             isMe && 'bg-blue-50/50 dark:bg-blue-900/10',
             member.role === 'owner' && 'border-amber-200 dark:border-amber-800/50',
           )}
-        >
-          {canEdit && (
-            <>
-              {canPerms && (
-                <button onClick={() => setPermPopupStaff(member)} className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:text-purple-600 transition-colors" title="Yetkiler">
-                  <Settings className="h-3 w-3" />
-                </button>
-              )}
-              <button onClick={() => openEditModal(member)} className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 transition-colors" title="Düzenle">
-                <Pencil className="h-3 w-3" />
-              </button>
-              <button onClick={() => handleDeactivate(member)} className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 transition-colors" title="Kaldır">
-                <Trash2 className="h-3 w-3" />
-              </button>
-            </>
-          )}
-        </CompactBoxCard>
+        />
       )
     }
 
@@ -450,7 +428,7 @@ export default function StaffPage() {
                 <span className="text-xs text-gray-400">({group.members.length})</span>
               </div>
               {viewMode === 'box' ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
+                <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 gap-2">
                   {group.members.map(renderStaffCard)}
                 </div>
               ) : (
