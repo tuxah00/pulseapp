@@ -55,11 +55,35 @@ export async function PATCH(req: NextRequest) {
   if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 })
 
   const body = await req.json()
-  const { title, data, customer_id } = body
+  const updateObj: Record<string, any> = {}
+
+  if (body.title !== undefined) updateObj.title = body.title
+  if (body.customer_id !== undefined) updateObj.customer_id = body.customer_id
+  if (body.data !== undefined) updateObj.data = body.data
+
+  // file_urls: mevcut dosyalara ekle (merge)
+  if (body.file_urls && Array.isArray(body.file_urls)) {
+    const { data: existing } = await supabase
+      .from('business_records')
+      .select('data')
+      .eq('id', id)
+      .single()
+    const existingData = (existing?.data as Record<string, any>) || {}
+    const existingFileUrls: string[] = existingData.file_urls || []
+    updateObj.data = {
+      ...existingData,
+      ...(updateObj.data || {}),
+      file_urls: [...existingFileUrls, ...body.file_urls],
+    }
+  }
+
+  if (Object.keys(updateObj).length === 0) {
+    return NextResponse.json({ error: 'No fields to update' }, { status: 400 })
+  }
 
   const { data: record, error } = await supabase
     .from('business_records')
-    .update({ title, data, customer_id })
+    .update(updateObj)
     .eq('id', id)
     .select()
     .single()
