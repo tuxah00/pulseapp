@@ -22,7 +22,7 @@ interface BusinessRecord {
   business_id: string
   type: RecordType
   title: string
-  data: Record<string, string>
+  data: Record<string, any>
   customer_id: string | null
   created_at: string
   updated_at: string
@@ -629,6 +629,30 @@ function RecordsPageInner() {
                     )
                   })}
               </div>
+
+              {/* Dosyalar */}
+              {selectedRecord.data.file_urls && Array.isArray(selectedRecord.data.file_urls) && selectedRecord.data.file_urls.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Dosyalar</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {selectedRecord.data.file_urls.map((url: string, i: number) => {
+                      const isImage = /\.(jpg|jpeg|png|heic|webp)$/i.test(url)
+                      return isImage ? (
+                        <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="block rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 hover:opacity-80 transition-opacity aspect-square">
+                          <img src={url} alt="" className="h-full w-full object-cover" />
+                        </a>
+                      ) : (
+                        <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700 p-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors aspect-square">
+                          <FileText className="h-6 w-6 text-gray-400 mb-1" />
+                          <span className="text-xs text-gray-500 truncate w-full text-center">
+                            {decodeURIComponent(url.split('/').pop() || 'Dosya').slice(0, 15)}
+                          </span>
+                        </a>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Actions */}
               <div className="border-t border-gray-200 dark:border-gray-700 pt-4 flex gap-2">
