@@ -264,12 +264,14 @@ function RecordsPageInner() {
   async function uploadFilesToStorage(recordId: string): Promise<string[]> {
     const urls: string[] = []
     for (const file of uploadFiles) {
-      const ext = file.name.split('.').pop()?.toLowerCase() || 'bin'
-      const path = `${businessId}/${recordId}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
-      const { error } = await supabase.storage.from('records-files').upload(path, file)
-      if (!error) {
-        const { data: urlData } = supabase.storage.from('records-files').getPublicUrl(path)
-        urls.push(urlData.publicUrl)
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('businessId', businessId ?? '')
+      fd.append('recordId', recordId)
+      const res = await fetch('/api/records/upload', { method: 'POST', body: fd })
+      if (res.ok) {
+        const json = await res.json()
+        if (json.url) urls.push(json.url)
       }
     }
     return urls
