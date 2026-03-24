@@ -12,6 +12,7 @@ import {
 import { formatPhone, formatDate, formatTime, formatCurrency, getSegmentColor, cn } from '@/lib/utils'
 import { SEGMENT_LABELS, STATUS_LABELS, type Customer, type CustomerSegment } from '@/types'
 import { logAudit } from '@/lib/utils/audit'
+import CompactBoxCard from '@/components/ui/compact-box-card'
 
 import { getCustomerLabel } from '@/lib/config/sector-modules'
 
@@ -355,26 +356,20 @@ export default function CustomersPage() {
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 gap-2">
           {customers.map((customer) => (
-            <div key={customer.id} onClick={() => setSelectedCustomer(customer)} className={cn('card p-4 cursor-pointer transition-all hover:shadow-md aspect-square flex flex-col justify-between', selectedCustomer?.id === customer.id && 'ring-2 ring-pulse-500')}>
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-pulse-100 text-pulse-700 font-semibold text-sm flex-shrink-0">
-                  {customer.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="font-medium text-gray-900 dark:text-gray-100 truncate">{customer.name}</p>
-                    <span className={`badge text-xs ${getSegmentColor(customer.segment)}`}>{SEGMENT_LABELS[customer.segment]}</span>
-                  </div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{formatPhone(customer.phone)}</p>
-                </div>
-              </div>
-              <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between text-xs text-gray-400">
-                <span>{customer.total_visits} ziyaret</span>
-                <span>{customer.last_visit_at ? formatDate(customer.last_visit_at) : 'İlk ziyaret bekleniyor'}</span>
-              </div>
-            </div>
+            <CompactBoxCard
+              key={customer.id}
+              initials={customer.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+              title={customer.name}
+              selected={selectedCustomer?.id === customer.id}
+              onClick={() => setSelectedCustomer(customer)}
+              badge={
+                <span className={`badge text-[10px] py-0 px-1.5 ${getSegmentColor(customer.segment)}`}>
+                  {SEGMENT_LABELS[customer.segment]}
+                </span>
+              }
+            />
           ))}
         </div>
       )}

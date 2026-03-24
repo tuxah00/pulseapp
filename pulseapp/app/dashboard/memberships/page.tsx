@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
+import CompactBoxCard from '@/components/ui/compact-box-card'
 
 interface Membership {
   id: string
@@ -409,146 +410,21 @@ export default function MembershipsPage() {
             </div>
           )}
           {viewMode === 'box' && (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {memberships.map(m => {
-            const expired = isExpiredButActive(m)
-            const progressPct =
-              m.sessions_total != null && m.sessions_total > 0
-                ? Math.min(100, Math.round((m.sessions_used / m.sessions_total) * 100))
-                : null
-
-            return (
-              <div key={m.id} className="card p-4 flex flex-col gap-3 aspect-square justify-between">
-                {/* Top */}
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 truncate">
-                      {m.customer_name}
-                    </h3>
-                    {m.customer_phone && (
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{m.customer_phone}</p>
-                    )}
-                  </div>
-                  <span className={`text-xs font-medium px-2 py-1 rounded-full flex-shrink-0 ${STATUS_COLORS[m.status]}`}>
-                    {STATUS_LABELS[m.status]}
-                  </span>
-                </div>
-
-                {/* Plan badge */}
-                <div>
-                  <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full bg-pulse-100 text-pulse-700 dark:bg-pulse-900/30 dark:text-pulse-400">
-                    <CreditCard className="h-3 w-3" />
-                    {m.plan_name}
-                  </span>
-                </div>
-
-                {/* Dates */}
-                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-                  <Calendar className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                  <span>{formatDate(m.start_date)}</span>
-                  {m.end_date && (
-                    <>
-                      <span className="text-gray-400">→</span>
-                      <span className={expired ? 'text-red-600 dark:text-red-400 font-medium' : ''}>
-                        {formatDate(m.end_date)}
-                      </span>
-                    </>
-                  )}
-                </div>
-
-                {/* Expired warning */}
-                {expired && (
-                  <div className="text-xs text-red-600 dark:text-red-400 font-medium bg-red-50 dark:bg-red-900/20 rounded-lg px-3 py-1.5">
-                    Süresi dolmuş — lütfen durumu güncelleyin
-                  </div>
-                )}
-
-                {/* Price */}
-                {m.price != null && (
-                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">
-                    {m.price.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })}
-                  </p>
-                )}
-
-                {/* Sessions */}
-                {m.sessions_total != null ? (
-                  <div>
-                    <div className="flex items-center justify-between text-sm mb-1">
-                      <span className="text-gray-500 dark:text-gray-400">Seans</span>
-                      <span className="font-medium text-gray-800 dark:text-gray-200">
-                        {m.sessions_used} / {m.sessions_total}
-                      </span>
-                    </div>
-                    <div className="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all ${
-                          progressPct != null && progressPct >= 100
-                            ? 'bg-red-500'
-                            : progressPct != null && progressPct >= 80
-                            ? 'bg-orange-500'
-                            : 'bg-pulse-500'
-                        }`}
-                        style={{ width: `${progressPct ?? 0}%` }}
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Seans: {m.sessions_used} kullanıldı (Sınırsız)
-                  </p>
-                )}
-
-                {/* Notes */}
-                {m.notes && (
-                  <p className="text-xs text-gray-400 dark:text-gray-500 italic line-clamp-2">{m.notes}</p>
-                )}
-
-                {/* Actions */}
-                <div className="flex items-center gap-1 pt-1 border-t border-gray-100 dark:border-gray-700 flex-wrap">
-                  <button
-                    onClick={() => handleAddSession(m)}
-                    className="flex items-center gap-1 px-2 py-1.5 text-xs font-medium rounded-lg bg-pulse-50 dark:bg-pulse-900/20 text-pulse-700 dark:text-pulse-400 hover:bg-pulse-100 dark:hover:bg-pulse-900/30 transition-colors"
-                    title="Seans Ekle"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    Seans Ekle
-                  </button>
-
-                  <button
-                    onClick={() => openEditModal(m)}
-                    className="flex items-center gap-1 px-2 py-1.5 text-xs font-medium rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
-                    title="Düzenle"
-                  >
-                    <Edit2 className="h-3.5 w-3.5" />
-                    Düzenle
-                  </button>
-
-                  {(m.status === 'active' || m.status === 'frozen') && (
-                    <button
-                      onClick={() => handleToggleFreeze(m)}
-                      className="flex items-center gap-1 px-2 py-1.5 text-xs font-medium rounded-lg text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-                      title={m.status === 'frozen' ? 'Aktive Et' : 'Dondur'}
-                    >
-                      {m.status === 'frozen' ? (
-                        <><Play className="h-3.5 w-3.5" />Aktive Et</>
-                      ) : (
-                        <><Pause className="h-3.5 w-3.5" />Dondur</>
-                      )}
-                    </button>
-                  )}
-
-                  <button
-                    onClick={() => handleDelete(m)}
-                    className="flex items-center gap-1 px-2 py-1.5 text-xs font-medium rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-700 transition-colors ml-auto"
-                    title="Sil"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    Sil
-                  </button>
-                </div>
-              </div>
-            )
-          })}
+        <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 gap-2">
+          {memberships.map(m => (
+            <CompactBoxCard
+              key={m.id}
+              initials={m.customer_name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
+              title={m.customer_name}
+              onClick={() => openEditModal(m)}
+              badge={
+                <span className={`text-[10px] font-medium px-1.5 py-0 rounded-full ${STATUS_COLORS[m.status]}`}>
+                  {STATUS_LABELS[m.status]}
+                </span>
+              }
+              meta={m.plan_name}
+            />
+          ))}
         </div>
           )}
         </>

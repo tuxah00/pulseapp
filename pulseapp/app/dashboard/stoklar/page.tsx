@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { formatCurrency, cn } from '@/lib/utils'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
+import CompactBoxCard from '@/components/ui/compact-box-card'
 
 interface Product {
   id: string
@@ -293,32 +294,21 @@ CREATE POLICY "business_products" ON public.products
           ))}
         </div>
       ) : !dbError ? (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+        <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 gap-2">
           {filteredProducts.map((product) => (
-            <div
+            <CompactBoxCard
               key={product.id}
+              initials={product.name.slice(0, 2).toUpperCase()}
+              title={product.name}
+              colorClass="bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"
+              selected={selectedProduct?.id === product.id}
               onClick={() => setSelectedProduct(product)}
-              className={cn('card flex flex-col justify-between p-4 cursor-pointer transition-all hover:shadow-md aspect-square', selectedProduct?.id === product.id && 'ring-2 ring-pulse-500')}
+              badge={stockBadge(product)}
+              meta={`${product.stock_count} ${product.unit}`}
             >
-              <div>
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate text-sm">{product.name}</h3>
-                  {stockBadge(product)}
-                </div>
-                {product.category && <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{product.category}</p>}
-                {product.description && <p className="text-xs text-gray-400 line-clamp-2 mb-2">{product.description}</p>}
-              </div>
-              <div className="mt-3 space-y-2">
-                {product.price && <p className="text-price text-sm">{formatCurrency(product.price)}</p>}
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-500 dark:text-gray-400">{product.stock_count} {product.unit}</span>
-                  <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                    <button onClick={() => updateStock(product, -1)} className="flex h-6 w-6 items-center justify-center rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 font-bold text-sm">−</button>
-                    <button onClick={() => updateStock(product, 1)} className="flex h-6 w-6 items-center justify-center rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 font-bold text-sm">+</button>
-                  </div>
-                </div>
-              </div>
-            </div>
+              <button onClick={() => updateStock(product, -1)} className="flex h-5 w-5 items-center justify-center rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 font-bold text-xs">−</button>
+              <button onClick={() => updateStock(product, 1)} className="flex h-5 w-5 items-center justify-center rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 font-bold text-xs">+</button>
+            </CompactBoxCard>
           ))}
         </div>
       ) : null}
