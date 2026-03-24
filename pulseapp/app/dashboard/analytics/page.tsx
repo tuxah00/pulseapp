@@ -296,16 +296,18 @@ export default function AnalyticsPage() {
                       const pct = (revenue / maxRevenue) * 100
                       const opacity = pct > 70 ? '' : pct > 40 ? 'opacity-80' : 'opacity-60'
                       return (
-                        <div key={i} className="flex-1 min-w-[18px] flex flex-col items-center gap-1 group relative">
+                        <div key={i} className="flex-1 min-w-[18px] flex flex-col items-center h-full group relative">
                           {/* Hover tooltip */}
                           {revenue > 0 && (
                             <div className="absolute -top-8 left-1/2 -translate-x-1/2 hidden group-hover:block bg-gray-900 text-white text-[10px] px-2 py-1 rounded shadow-lg whitespace-nowrap z-10">
                               {new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 }).format(revenue)}
                             </div>
                           )}
-                          <div className={cn('w-full bg-pulse-400 dark:bg-pulse-500 rounded-t-sm transition-all hover:bg-pulse-500 dark:hover:bg-pulse-400', opacity)}
-                            style={{ height: `${pct}%`, minHeight: revenue > 0 ? '4px' : '0' }} />
-                          <span className="text-[9px] text-gray-400 truncate w-full text-center">{label}</span>
+                          <div className="flex-1 w-full flex items-end">
+                            <div className={cn('w-full bg-pulse-400 dark:bg-pulse-500 rounded-t-sm transition-all hover:bg-pulse-500 dark:hover:bg-pulse-400', opacity)}
+                              style={{ height: `${pct}%`, minHeight: revenue > 0 ? '4px' : '0' }} />
+                          </div>
+                          <span className="text-[9px] text-gray-400 truncate w-full text-center flex-shrink-0">{label}</span>
                         </div>
                       )
                     })}
