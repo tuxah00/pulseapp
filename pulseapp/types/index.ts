@@ -95,6 +95,8 @@ export interface InvoiceItem {
   quantity: number
   unit_price: number
   total: number
+  product_id?: string
+  type?: 'service' | 'product'
 }
 
 // ── Fatura ──
@@ -180,6 +182,12 @@ export interface WorkingHours {
 
 // ── İşletme Ayarları ──
 
+export interface ShiftDefinition {
+  name: string
+  start: string
+  end: string
+}
+
 export interface BusinessSettings {
   reminder_24h: boolean
   reminder_2h: boolean
@@ -189,6 +197,7 @@ export interface BusinessSettings {
   ai_auto_reply: boolean
   language: string
   reservation_duration_minutes: number
+  shift_definitions?: ShiftDefinition[]
 }
 
 

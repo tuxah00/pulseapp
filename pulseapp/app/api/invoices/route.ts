@@ -117,6 +117,39 @@ export async function PATCH(req: NextRequest) {
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Fatura ödendi → ürün kalemlerini stoktan düş
+  if (body.status === 'paid' && invoice?.items && Array.isArray(invoice.items)) {
+    for (const item of invoice.items as InvoiceItem[]) {
+      if (item.product_id && item.type === 'product') {
+        // Stok düş
+        const { data: product } = await admin
+          .from('products')
+          .select('stock_quantity')
+          .eq('id', item.product_id)
+          .single()
+
+        if (product) {
+          const newQty = Math.max(0, (product.stock_quantity || 0) - item.quantity)
+          await admin
+            .from('products')
+            .update({ stock_quantity: newQty, updated_at: new Date().toISOString() })
+            .eq('id', item.product_id)
+
+          // Stok hareketi kaydet
+          await admin.from('stock_movements').insert({
+            business_id: invoice.business_id,
+            product_id: item.product_id,
+            type: 'out',
+            quantity: item.quantity,
+            notes: `Fatura ${invoice.invoice_number} ile satış`,
+            created_by: user.id,
+          })
+        }
+      }
+    }
+  }
+
   return NextResponse.json({ invoice })
 }
 

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { createClient } from '@/lib/supabase/client'
-import type { WorkingHours, DayHours } from '@/types'
+import type { WorkingHours, ShiftDefinition } from '@/types'
 import { cn } from '@/lib/utils'
 import { ChevronLeft, ChevronRight, Plus, Trash2, Zap, Loader2, X, Save, Clock, CalendarDays } from 'lucide-react'
 
@@ -59,7 +59,6 @@ function formatDisplayDate(date: Date): string {
 }
 
 interface StaffMember { id: string; name: string }
-interface OvertimeRange { start: string; end: string }
 interface Shift {
   id: string
   staff_id: string
@@ -68,7 +67,6 @@ interface Shift {
   end_time: string | null
   shift_type: 'regular' | 'off' | 'part_time'
   notes: string | null
-  overtime_ranges?: OvertimeRange[] | null
 }
 
 export default function VardiyePage() {
@@ -95,17 +93,15 @@ export default function VardiyePage() {
   // Tab
   const [activeTab, setActiveTab] = useState<'shifts' | 'hours'>('shifts')
 
+  // Mesai tanımları (shift definitions)
+  const [shiftDefs, setShiftDefs] = useState<ShiftDefinition[]>([])
+  const [shiftDefsSaving, setShiftDefsSaving] = useState(false)
+
   // Otomatik dağıtım
   const [showAutoPanel, setShowAutoPanel] = useState(false)
   const [autoSaving, setAutoSaving] = useState(false)
   const [autoSelectedDays, setAutoSelectedDays] = useState<boolean[]>([true, true, true, true, true, false, false])
-  const [autoStartTime, setAutoStartTime] = useState('09:00')
-  const [autoEndTime, setAutoEndTime] = useState('18:00')
   const [autoError, setAutoError] = useState<string | null>(null)
-  const [extraTimeRanges, setExtraTimeRanges] = useState<OvertimeRange[]>([])
-
-  // Modal ek mesai
-  const [modalOvertimeRanges, setModalOvertimeRanges] = useState<OvertimeRange[]>([])
 
   const monday = addDays(getMonday(new Date()), weekOffset * 7)
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(monday, i))
@@ -119,10 +115,15 @@ export default function VardiyePage() {
       const [{ data: staffData }, shiftsRes, { data: bizData }] = await Promise.all([
         supabase.from('staff_members').select('id, name').eq('business_id', businessId).eq('is_active', true).order('name'),
         fetch(`/api/shifts?businessId=${businessId}&weekStart=${weekStart}&weekEnd=${weekEnd}`),
-        supabase.from('businesses').select('working_hours').eq('id', businessId).single(),
+        supabase.from('businesses').select('working_hours, settings').eq('id', businessId).single(),
       ])
       setStaff(staffData || [])
       setWorkingHours(bizData?.working_hours || null)
+      // Load shift definitions from business settings
+      const settings = bizData?.settings as Record<string, unknown> | null
+      if (settings?.shift_definitions && Array.isArray(settings.shift_definitions)) {
+        setShiftDefs(settings.shift_definitions as ShiftDefinition[])
+      }
       const { shifts: shiftsData } = await shiftsRes.json()
       setShifts(shiftsData || [])
     } finally {
@@ -145,11 +146,10 @@ export default function VardiyePage() {
   }
 
   function openModal(staffId: string, date: string) {
-    // Determine day index from date string safely (avoid timezone issues)
     const [year, month, day] = date.split('-').map(Number)
     const dateObj = new Date(year, month - 1, day)
-    const jsDay = dateObj.getDay() // 0=Sun
-    const dayIndex = jsDay === 0 ? 6 : jsDay - 1 // convert to 0=Mon
+    const jsDay = dateObj.getDay()
+    const dayIndex = jsDay === 0 ? 6 : jsDay - 1
     if (!isDayOpen(dayIndex)) return
 
     const existing = getShift(staffId, date)
@@ -157,7 +157,6 @@ export default function VardiyePage() {
     setModalStart(existing?.start_time?.slice(0, 5) || '09:00')
     setModalEnd(existing?.end_time?.slice(0, 5) || '18:00')
     setModalNotes(existing?.notes || '')
-    setModalOvertimeRanges(existing?.overtime_ranges || [])
     setSaveError(null)
     setModal({ staffId, date })
   }
@@ -178,7 +177,6 @@ export default function VardiyePage() {
           endTime: modalType === 'off' ? null : modalEnd,
           shiftType: modalType === 'part_time' ? 'regular' : modalType,
           notes: modalType === 'part_time' ? (modalNotes ? `Yarı zamanlı · ${modalNotes}` : 'Yarı zamanlı') : (modalNotes || null),
-          overtimeRanges: modalType !== 'off' && modalOvertimeRanges.length > 0 ? modalOvertimeRanges : undefined,
         }),
       })
       if (!res.ok) {
@@ -209,18 +207,41 @@ export default function VardiyePage() {
     }
   }
 
-  /** Otomatik haftalık dağıtım: seçili günlere ve mesai saatine göre tüm personele yaz */
+  /** Mesai tanımlarını business settings'e kaydet */
+  async function saveShiftDefinitions() {
+    if (!businessId) return
+    setShiftDefsSaving(true)
+    try {
+      // Mevcut settings'i al
+      const { data: biz } = await supabase.from('businesses').select('settings').eq('id', businessId).single()
+      const currentSettings = (biz?.settings as Record<string, unknown>) || {}
+      const updatedSettings = { ...currentSettings, shift_definitions: shiftDefs }
+      const { error } = await supabase.from('businesses').update({ settings: updatedSettings }).eq('id', businessId)
+      if (error) {
+        alert('Kaydetme hatası: ' + error.message)
+      }
+    } finally {
+      setShiftDefsSaving(false)
+    }
+  }
+
+  /** Otomatik haftalık dağıtım: Round-robin — mesai tanımlarına göre personellere sırayla ata */
   async function handleAutoDist() {
-    if (!businessId || staff.length === 0) return
+    if (!businessId || staff.length === 0 || shiftDefs.length === 0) return
     setAutoSaving(true)
     setAutoError(null)
     try {
       const tasks: { member: StaffMember; dateStr: string; promise: Promise<Response> }[] = []
-      for (const member of staff) {
-        for (let di = 0; di < 7; di++) {
-          if (!autoSelectedDays[di]) continue
-          const dateStr = formatDate(weekDays[di])
+
+      for (let di = 0; di < 7; di++) {
+        if (!autoSelectedDays[di]) continue
+        const dateStr = formatDate(weekDays[di])
+
+        // Round-robin: her gün için personellere sırayla mesai tanımı ata
+        let defIndex = 0
+        for (const member of staff) {
           if (getShift(member.id, dateStr)) continue
+          const def = shiftDefs[defIndex % shiftDefs.length]
           tasks.push({
             member,
             dateStr,
@@ -231,14 +252,14 @@ export default function VardiyePage() {
                 businessId,
                 staffId: member.id,
                 shiftDate: dateStr,
-                startTime: autoStartTime,
-                endTime: autoEndTime,
+                startTime: def.start,
+                endTime: def.end,
                 shiftType: 'regular',
-                notes: 'Otomatik dağıtım',
-                overtimeRanges: extraTimeRanges.length > 0 ? extraTimeRanges : undefined,
+                notes: def.name,
               }),
             }),
           })
+          defIndex++
         }
       }
 
@@ -365,6 +386,79 @@ export default function VardiyePage() {
         <div className="card border-pulse-200 bg-pulse-50 dark:bg-pulse-900/20 space-y-4">
           <h3 className="font-semibold text-gray-900 dark:text-gray-100">Haftalık Otomatik Dağıtım</h3>
 
+          {/* Mesai Tanımları */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Mesai Tanımları</label>
+            <p className="text-xs text-gray-500">Sabahçı, öğlenci gibi mesai tanımları oluşturun. Otomatik dağıtımda personellere sırayla atanır.</p>
+
+            {shiftDefs.length > 0 && (
+              <div className="space-y-2">
+                {shiftDefs.map((def, idx) => (
+                  <div key={idx} className="flex items-center gap-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 p-2.5">
+                    <input
+                      type="text"
+                      value={def.name}
+                      onChange={e => {
+                        const updated = [...shiftDefs]
+                        updated[idx] = { ...updated[idx], name: e.target.value }
+                        setShiftDefs(updated)
+                      }}
+                      placeholder="Mesai adı (ör: Sabahçı)"
+                      className="input flex-1"
+                    />
+                    <input
+                      type="time"
+                      value={def.start}
+                      onChange={e => {
+                        const updated = [...shiftDefs]
+                        updated[idx] = { ...updated[idx], start: e.target.value }
+                        setShiftDefs(updated)
+                      }}
+                      className="input w-28"
+                    />
+                    <span className="text-gray-400">—</span>
+                    <input
+                      type="time"
+                      value={def.end}
+                      onChange={e => {
+                        const updated = [...shiftDefs]
+                        updated[idx] = { ...updated[idx], end: e.target.value }
+                        setShiftDefs(updated)
+                      }}
+                      className="input w-28"
+                    />
+                    <button
+                      onClick={() => setShiftDefs(prev => prev.filter((_, i) => i !== idx))}
+                      className="rounded-lg p-1.5 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 transition-colors"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShiftDefs(prev => [...prev, { name: '', start: '08:00', end: '14:00' }])}
+                className="flex items-center gap-1.5 text-sm font-medium text-pulse-600 dark:text-pulse-400 hover:text-pulse-700 dark:hover:text-pulse-300 transition-colors"
+              >
+                <Plus className="h-4 w-4" />
+                Mesai Tanımı Ekle
+              </button>
+              {shiftDefs.length > 0 && (
+                <button
+                  onClick={saveShiftDefinitions}
+                  disabled={shiftDefsSaving}
+                  className="flex items-center gap-1.5 text-sm font-medium text-green-600 dark:text-green-400 hover:text-green-700 transition-colors ml-auto"
+                >
+                  {shiftDefsSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                  Tanımları Kaydet
+                </button>
+              )}
+            </div>
+          </div>
+
           <div className="space-y-1">
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Çalışma Günleri</label>
             <div className="flex gap-2 flex-wrap">
@@ -392,96 +486,33 @@ export default function VardiyePage() {
             </div>
           </div>
 
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Mesai Saatleri</label>
-            <div className="flex items-center gap-3">
-              <input
-                type="time"
-                value={autoStartTime}
-                onChange={e => setAutoStartTime(e.target.value)}
-                className="input w-32"
-              />
-              <span className="text-gray-400">—</span>
-              <input
-                type="time"
-                value={autoEndTime}
-                onChange={e => setAutoEndTime(e.target.value)}
-                className="input w-32"
-              />
-            </div>
-          </div>
-
-          {/* Ek Mesai Saatleri */}
-          {extraTimeRanges.length > 0 && (
-            <div className="space-y-2">
-              {extraTimeRanges.map((range, idx) => (
-                <div key={idx} className="flex items-center gap-3">
-                  <label className="text-xs font-medium text-orange-600 dark:text-orange-400 w-20 flex-shrink-0">
-                    Ek Mesai {idx + 1}
-                  </label>
-                  <input
-                    type="time"
-                    value={range.start}
-                    onChange={e => {
-                      const updated = [...extraTimeRanges]
-                      updated[idx] = { ...updated[idx], start: e.target.value }
-                      setExtraTimeRanges(updated)
-                    }}
-                    className="input w-28"
-                  />
-                  <span className="text-gray-400">—</span>
-                  <input
-                    type="time"
-                    value={range.end}
-                    onChange={e => {
-                      const updated = [...extraTimeRanges]
-                      updated[idx] = { ...updated[idx], end: e.target.value }
-                      setExtraTimeRanges(updated)
-                    }}
-                    className="input w-28"
-                  />
-                  <button
-                    onClick={() => setExtraTimeRanges(prev => prev.filter((_, i) => i !== idx))}
-                    className="rounded-lg p-1 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 transition-colors"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <button
-            onClick={() => setExtraTimeRanges(prev => [...prev, { start: '19:00', end: '22:00' }])}
-            className="flex items-center gap-1.5 text-sm font-medium text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            Mesai Saati Ekle
-          </button>
-
-          {(() => {
+          {/* Dağıtım özeti */}
+          {shiftDefs.length > 0 && (() => {
             const selectedCount = autoSelectedDays.filter(Boolean).length
-            const [sh, sm] = autoStartTime.split(':').map(Number)
-            const [eh, em] = autoEndTime.split(':').map(Number)
-            const mainHours = ((eh * 60 + em) - (sh * 60 + sm)) / 60
-            const extraHours = extraTimeRanges.reduce((sum, r) => {
-              const [s1, s2] = r.start.split(':').map(Number)
-              const [e1, e2] = r.end.split(':').map(Number)
-              return sum + ((e1 * 60 + e2) - (s1 * 60 + s2)) / 60
-            }, 0)
-            const totalHours = mainHours + extraHours
-            return selectedCount > 0 && totalHours > 0 ? (
-              <p className="text-sm text-gray-500 bg-gray-50 dark:bg-gray-800/50 rounded-lg px-3 py-2">
-                <span className="font-medium text-gray-700 dark:text-gray-200">{selectedCount} gün</span>
-                {' × '}
-                <span className="font-medium text-gray-700 dark:text-gray-200">{totalHours.toFixed(1)} saat</span>
-                {extraHours > 0 && <span className="text-orange-600 dark:text-orange-400"> (+{extraHours.toFixed(1)} ek mesai)</span>}
-                {' = '}
-                <span className="font-medium text-pulse-600">{(selectedCount * totalHours).toFixed(1)} saat/personel</span>
-                {' · '}mevcut kayıtlar korunur
-              </p>
+            return selectedCount > 0 ? (
+              <div className="text-sm text-gray-500 bg-gray-50 dark:bg-gray-800/50 rounded-lg px-3 py-2 space-y-1">
+                <p>
+                  <span className="font-medium text-gray-700 dark:text-gray-200">{selectedCount} gün</span>
+                  {' × '}
+                  <span className="font-medium text-gray-700 dark:text-gray-200">{staff.length} personel</span>
+                  {' · Round-robin dağıtım · mevcut kayıtlar korunur'}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {shiftDefs.map((def, i) => (
+                    <span key={i} className="inline-flex items-center gap-1 bg-pulse-100 dark:bg-pulse-900/30 text-pulse-700 dark:text-pulse-300 px-2 py-0.5 rounded-full text-xs font-medium">
+                      {def.name || `Tanım ${i + 1}`}: {def.start}–{def.end}
+                    </span>
+                  ))}
+                </div>
+              </div>
             ) : null
           })()}
+
+          {shiftDefs.length === 0 && (
+            <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
+              Otomatik dağıtım için en az bir mesai tanımı oluşturun.
+            </div>
+          )}
 
           {autoError && (
             <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
@@ -498,7 +529,7 @@ export default function VardiyePage() {
             </button>
             <button
               onClick={handleAutoDist}
-              disabled={autoSaving || autoSelectedDays.every(d => !d)}
+              disabled={autoSaving || autoSelectedDays.every(d => !d) || shiftDefs.length === 0}
               className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-pulse-600 px-4 py-2 text-sm font-medium text-white hover:bg-pulse-700 disabled:opacity-50"
             >
               {autoSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
@@ -571,9 +602,7 @@ export default function VardiyePage() {
                             'relative group rounded-lg px-2 py-1.5 text-xs cursor-pointer',
                             shift.shift_type === 'off'
                               ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                              : shift.shift_type === 'part_time'
-                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                                : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                              : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                           )}>
                             <button
                               onClick={() => openModal(member.id, dateStr)}
@@ -585,11 +614,9 @@ export default function VardiyePage() {
                                 <>
                                   <div className="font-medium">{shift.start_time?.slice(0, 5)}</div>
                                   <div className="opacity-70">{shift.end_time?.slice(0, 5)}</div>
-                                  {shift.overtime_ranges && shift.overtime_ranges.length > 0 && (
-                                    <div className="text-[9px] text-orange-600 dark:text-orange-400 mt-0.5">
-                                      {shift.overtime_ranges.map((r, ri) => (
-                                        <span key={ri}>+{r.start.slice(0, 5)}-{r.end.slice(0, 5)}</span>
-                                      ))}
+                                  {shift.notes && !shift.notes.startsWith('Otomatik') && (
+                                    <div className="text-[9px] text-gray-500 dark:text-gray-400 mt-0.5 truncate max-w-[80px]">
+                                      {shift.notes.replace('Yarı zamanlı · ', '')}
                                     </div>
                                   )}
                                 </>
@@ -670,75 +697,41 @@ export default function VardiyePage() {
               </button>
             </div>
 
-            {/* Yarı zamanlı hızlı seçim */}
-            {modalType === 'part_time' && (
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => { setModalStart('09:00'); setModalEnd('13:00') }}
-                  className={cn('flex-1 py-1.5 rounded-lg text-xs font-medium border transition-colors',
-                    modalStart === '09:00' && modalEnd === '13:00'
-                      ? 'bg-blue-50 border-blue-300 text-blue-700 dark:bg-blue-900/30 dark:border-blue-600 dark:text-blue-300'
-                      : 'border-gray-200 text-gray-500 hover:border-gray-300'
-                  )}
-                >
-                  Sabah (09:00-13:00)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setModalStart('13:00'); setModalEnd('18:00') }}
-                  className={cn('flex-1 py-1.5 rounded-lg text-xs font-medium border transition-colors',
-                    modalStart === '13:00' && modalEnd === '18:00'
-                      ? 'bg-blue-50 border-blue-300 text-blue-700 dark:bg-blue-900/30 dark:border-blue-600 dark:text-blue-300'
-                      : 'border-gray-200 text-gray-500 hover:border-gray-300'
-                  )}
-                >
-                  Öğleden Sonra (13:00-18:00)
-                </button>
+            {/* Mesai tanımı hızlı seçim */}
+            {(modalType === 'regular' || modalType === 'part_time') && shiftDefs.length > 0 && (
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Hızlı Seçim</label>
+                <div className="flex gap-2 flex-wrap">
+                  {shiftDefs.map((def, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => { setModalStart(def.start); setModalEnd(def.end); setModalNotes(def.name) }}
+                      className={cn(
+                        'py-1.5 px-3 rounded-lg text-xs font-medium border transition-colors',
+                        modalStart === def.start && modalEnd === def.end
+                          ? 'bg-pulse-50 border-pulse-300 text-pulse-700 dark:bg-pulse-900/30 dark:border-pulse-600 dark:text-pulse-300'
+                          : 'border-gray-200 dark:border-gray-600 text-gray-500 hover:border-gray-300'
+                      )}
+                    >
+                      {def.name || `Tanım ${i + 1}`} ({def.start}–{def.end})
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
 
             {(modalType === 'regular' || modalType === 'part_time') && (
-              <>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="label">Başlangıç</label>
-                    <input type="time" value={modalStart} onChange={e => setModalStart(e.target.value)} className="input" />
-                  </div>
-                  <div>
-                    <label className="label">Bitiş</label>
-                    <input type="time" value={modalEnd} onChange={e => setModalEnd(e.target.value)} className="input" />
-                  </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label">Başlangıç</label>
+                  <input type="time" value={modalStart} onChange={e => setModalStart(e.target.value)} className="input" />
                 </div>
-
-                {/* Ek Mesai */}
-                {modalOvertimeRanges.length > 0 && (
-                  <div className="space-y-2">
-                    {modalOvertimeRanges.map((range, idx) => (
-                      <div key={idx} className="flex items-center gap-2">
-                        <span className="text-xs text-orange-600 dark:text-orange-400 w-16 flex-shrink-0">Ek Mesai {idx + 1}</span>
-                        <input type="time" value={range.start}
-                          onChange={e => { const u = [...modalOvertimeRanges]; u[idx] = { ...u[idx], start: e.target.value }; setModalOvertimeRanges(u) }}
-                          className="input w-24 text-xs" />
-                        <span className="text-gray-400 text-xs">—</span>
-                        <input type="time" value={range.end}
-                          onChange={e => { const u = [...modalOvertimeRanges]; u[idx] = { ...u[idx], end: e.target.value }; setModalOvertimeRanges(u) }}
-                          className="input w-24 text-xs" />
-                        <button onClick={() => setModalOvertimeRanges(prev => prev.filter((_, i) => i !== idx))}
-                          className="text-red-400 hover:text-red-600 p-0.5"><X className="h-3.5 w-3.5" /></button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setModalOvertimeRanges(prev => [...prev, { start: '19:00', end: '22:00' }])}
-                  className="flex items-center gap-1 text-xs font-medium text-orange-600 dark:text-orange-400 hover:text-orange-700 transition-colors"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  Mesai Saati Ekle
-                </button>
-              </>
+                <div>
+                  <label className="label">Bitiş</label>
+                  <input type="time" value={modalEnd} onChange={e => setModalEnd(e.target.value)} className="input" />
+                </div>
+              </div>
             )}
 
             <div>
@@ -747,7 +740,7 @@ export default function VardiyePage() {
                 type="text"
                 value={modalNotes}
                 onChange={e => setModalNotes(e.target.value)}
-                placeholder="İzin sebebi vb."
+                placeholder="İzin sebebi, mesai adı vb."
                 className="input"
               />
             </div>

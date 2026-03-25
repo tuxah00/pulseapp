@@ -84,6 +84,7 @@ export default function StaffPage() {
   const [permsSaving, setPermsSaving] = useState(false)
   const [permsSaved, setPermsSaved] = useState(false)
   const [permPopupStaff, setPermPopupStaff] = useState<StaffMember | null>(null)
+  const [localPerms, setLocalPerms] = useState<StaffPermissions | null>(null)
 
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [inviteRole, setInviteRole] = useState<'manager' | 'staff'>('staff')
@@ -261,6 +262,37 @@ export default function StaffPage() {
     setPermsSaving(false)
   }
 
+  async function handleBatchSavePermissions() {
+    if (!selectedStaff || !localPerms) return
+    setPermsSaving(true)
+    setPermsSaved(false)
+    const { error: err } = await supabase
+      .from('staff_members')
+      .update({ permissions: localPerms })
+      .eq('id', selectedStaff.id)
+    if (err) {
+      console.error('Yetki güncelleme hatası:', err)
+    } else {
+      setSelectedStaff(prev => prev ? { ...prev, permissions: localPerms } as StaffMember : null)
+      setStaff(prev => prev.map(s => s.id === selectedStaff.id ? { ...s, permissions: localPerms } : s))
+      setPermsSaved(true)
+      setTimeout(() => setPermsSaved(false), 2000)
+      await logAudit({
+        businessId: businessId!,
+        staffId: currentStaffId,
+        staffName: currentStaffName,
+        action: 'update',
+        resource: 'permissions',
+        resourceId: selectedStaff.id,
+        details: {
+          target_name: selectedStaff.name,
+          action_desc: 'Yetkiler toplu güncellendi',
+        },
+      })
+    }
+    setPermsSaving(false)
+  }
+
   async function handleCreateInvite() {
     setInviteLoading(true)
     setInviteLink(null)
@@ -319,7 +351,7 @@ export default function StaffPage() {
           title={member.name}
           colorClass={member.role === 'owner' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-pulse-100 text-pulse-700'}
           selected={selectedStaff?.id === member.id}
-          onClick={() => setSelectedStaff(member)}
+          onClick={() => { setSelectedStaff(member); setLocalPerms(getEffectivePermissions(member.role, member.permissions)); setPermsSaved(false) }}
           className={cn(
             isMe && 'bg-blue-50/50 dark:bg-blue-900/10',
             member.role === 'owner' && 'border-amber-200 dark:border-amber-800/50',
@@ -441,18 +473,20 @@ export default function StaffPage() {
         </div>
       )}
 
-      {/* ── Personel Detay Slide-Over Paneli ── */}
+      {/* ── Personel Detay Popup (Ortada) ── */}
       {selectedStaff && (
-        <>
-          <div className="fixed inset-0 z-40 bg-black/30 dark:bg-black/50" onClick={() => setSelectedStaff(null)} />
-          <div className="slide-panel border-l border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-5 py-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setSelectedStaff(null)}>
+          <div className="card w-full max-w-xl max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            {/* Başlık */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
               <h3 className="font-semibold text-gray-900 dark:text-gray-100">Personel Detayı</h3>
               <button onClick={() => setSelectedStaff(null)} className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600">
                 <X className="h-4 w-4" />
               </button>
             </div>
+
             <div className="flex-1 overflow-y-auto p-5 space-y-5">
+              {/* Profil */}
               <div className="text-center">
                 <div className={cn(
                   'mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full font-bold text-lg',
@@ -464,6 +498,7 @@ export default function StaffPage() {
                 <span className={cn('badge mt-1', ROLE_COLORS[selectedStaff.role])}>{ROLE_LABELS[selectedStaff.role]}</span>
               </div>
 
+              {/* İletişim */}
               <div className="space-y-3">
                 {selectedStaff.phone && (
                   <div className="flex items-center gap-3 text-sm">
@@ -478,10 +513,11 @@ export default function StaffPage() {
                   </div>
                 )}
                 {!selectedStaff.phone && !selectedStaff.email && (
-                  <p className="text-sm text-gray-400 text-center py-4">İletişim bilgisi bulunmuyor</p>
+                  <p className="text-sm text-gray-400 text-center py-2">İletişim bilgisi bulunmuyor</p>
                 )}
               </div>
 
+              {/* Düzenle / Kaldır */}
               {canEditMember(currentUserRole as StaffRole, selectedStaff.role) && (
                 <div className="border-t border-gray-200 dark:border-gray-700 pt-4 flex gap-2">
                   <button onClick={() => { openEditModal(selectedStaff); setSelectedStaff(null) }} className="btn-secondary flex-1 text-sm">
@@ -493,8 +529,8 @@ export default function StaffPage() {
                 </div>
               )}
 
-              {/* Erişim Yetkileri — hiyerarşiye göre */}
-              {canEditPermissions(currentUserRole as StaffRole, selectedStaff.role) && (
+              {/* Erişim Yetkileri — batch save */}
+              {canEditPermissions(currentUserRole as StaffRole, selectedStaff.role) && localPerms && (
                 <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
                   <div className="flex items-center justify-between mb-3">
                     <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Erişim Yetkileri</h4>
@@ -507,8 +543,7 @@ export default function StaffPage() {
                       <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">{cat.label}</p>
                       <div className="space-y-1">
                         {cat.keys.map((key) => {
-                          const effectivePerms = getEffectivePermissions(selectedStaff.role, selectedStaff.permissions)
-                          const checked = effectivePerms[key] === true
+                          const checked = localPerms[key] === true
                           return (
                             <label key={key} className="flex items-center justify-between py-1.5 cursor-pointer group">
                               <span className="text-sm text-gray-700 dark:text-gray-300">{PERMISSION_LABELS[key]}</span>
@@ -517,7 +552,7 @@ export default function StaffPage() {
                                   type="checkbox"
                                   checked={checked}
                                   disabled={permsSaving}
-                                  onChange={(e) => handlePermissionToggle(selectedStaff, key, e.target.checked)}
+                                  onChange={(e) => setLocalPerms(prev => prev ? { ...prev, [key]: e.target.checked } : prev)}
                                   className="peer sr-only"
                                 />
                                 <div className="h-5 w-9 rounded-full bg-gray-300 dark:bg-gray-600 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-pulse-500 peer-checked:after:translate-x-4 peer-disabled:opacity-50" />
@@ -531,8 +566,19 @@ export default function StaffPage() {
                 </div>
               )}
             </div>
+
+            {/* Alt butonlar */}
+            {canEditPermissions(currentUserRole as StaffRole, selectedStaff.role) && localPerms && (
+              <div className="border-t border-gray-200 dark:border-gray-700 px-5 py-3 flex gap-3 flex-shrink-0">
+                <button onClick={() => setSelectedStaff(null)} className="btn-secondary flex-1 text-sm">İptal</button>
+                <button onClick={handleBatchSavePermissions} disabled={permsSaving} className="btn-primary flex-1 text-sm">
+                  {permsSaving && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin inline" />}
+                  Kaydet
+                </button>
+              </div>
+            )}
           </div>
-        </>
+        </div>
       )}
 
       {/* Modal */}

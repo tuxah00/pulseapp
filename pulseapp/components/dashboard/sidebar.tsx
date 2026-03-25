@@ -130,7 +130,7 @@ export default function Sidebar({ businessName, userName, sector, plan, permissi
   function isActive(href: string) {
     const path = href.split('?')[0]
     if (path === '/dashboard') return pathname === '/dashboard'
-    return pathname.startsWith(path)
+    return pathname === path || pathname.startsWith(path + '/')
   }
 
   const sidebarContent = (

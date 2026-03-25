@@ -99,7 +99,7 @@ ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'dietitian';
 ## Sayfa Yapısı
 - `/dashboard` → Genel Bakış (server component, bugünkü durum + PerformanceStats)
 - `/dashboard/appointments` → Randevular (liste/kutu/haftalık takvim görünüm, soft delete, tekrarlayan randevu desteği)
-- `/dashboard/analytics` → Gelir-Gider Tablosu (sadece gelir odaklı)
+- `/dashboard/analytics` → Gelir-Gider Tablosu (randevu + fatura geliri, gider takibi, kâr-zarar)
 - `/dashboard/customers` → Müşteriler (slide-over panelde Bilgiler + Geçmiş tabları, timeline)
 - `/dashboard/settings/audit` → Denetim Kaydı (sadece owner)
 - `/invite/[token]` → Personel davet kabul sayfası (public)
@@ -185,13 +185,25 @@ ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'dietitian';
 - `max-w-2xl max-h-[90vh]`, rounded-2xl, ESC tuşu ile kapanır
 - Üst: ikon + başlık + tarih, orta: dinamik alanlar, alt: dosyalar (grid-cols-4), footer: Düzenle/Sil
 
-## Ek Mesai (Overtime)
-- `shifts` tablosunda `overtime_ranges jsonb DEFAULT '[]'` kolonu
-- Her shift kaydı birden fazla ek mesai aralığı içerebilir: `[{start: "19:00", end: "22:00"}]`
-- Otomatik dağıtımda ve tekil vardiya modalında ek mesai girişi mevcut
-- Izgarada ek mesai `+19:00-22:00` formatında küçük turuncu yazıyla gösterilir
-- API: `POST /api/shifts` body'de `overtimeRanges` parametresi kabul eder
-- **SQL Migration gerekli:** `ALTER TABLE public.shifts ADD COLUMN IF NOT EXISTS overtime_ranges jsonb DEFAULT '[]';`
+## Mesai Tanımları (Shift Definitions)
+- `businesses.settings` JSONB'de `shift_definitions` anahtarı: `ShiftDefinition[]`
+- `ShiftDefinition`: `{ name: string; start: string; end: string }` (ör: Sabahçı 08:00-14:00, Öğlenci 14:00-20:00)
+- Vardiye sayfası "Otomatik Dağıt" panelinde tanım oluşturma/kaydetme
+- Otomatik dağıtım: Round-robin — personellere mesai tanımları sırayla atanır
+- Tekil vardiya modalında "Hızlı Seçim" butonlarıyla tanımlı mesailer seçilebilir
+- `types/index.ts` → `ShiftDefinition` interface, `BusinessSettings.shift_definitions`
+
+## Fatura-Analytics Entegrasyonu
+- Analytics geliri: `appointmentRevenue + invoiceOnlyRevenue` (çift sayma önlenir)
+- `appointment_id`'si olan faturalar, zaten tamamlanan randevulardan sayılıyorsa tekrar sayılmaz
+- Giderler tabında gelir ayrıntısı: Randevu ve Fatura geliri ayrı gösterilir
+- **Fatura → Stok otomatik düşürme:** Fatura ödendiğinde (`status: 'paid'`), `product_id` olan kalemler stoktan düşer + `stock_movements` kaydı oluşur
+- `InvoiceItem` type'ında `product_id?: string` ve `type?: 'service' | 'product'` alanları mevcut
+
+## Personel Detay Popup
+- Personel detayı slide-over yerine ortada popup (centered modal) olarak açılır
+- Yetkiler `localPerms` state'inde toplanır, tek seferde "Kaydet" butonuyla güncellenir
+- `handleBatchSavePermissions()` → tüm yetkileri tek API çağrısı ile kaydeder + audit log
 
 ## Bilinen Timezone Düzeltmeleri
 - **Vardiya sayfası:** `formatDate()` → `toISOString()` yerine yerel tarih getter'ları kullanılır (UTC kayma sorunu)

@@ -53,6 +53,7 @@ export default function AnalyticsPage() {
   const [reviews, setReviews] = useState<any[]>([])
   const [services, setServices] = useState<any[]>([])
   const [staffMembers, setStaffMembers] = useState<any[]>([])
+  const [paidInvoices, setPaidInvoices] = useState<any[]>([])
 
   // Expenses state
   const [expenses, setExpenses] = useState<Expense[]>([])
@@ -75,7 +76,7 @@ export default function AnalyticsPage() {
     const { start, end } = getPeriodDates(period, 0)
     const { start: prevStart, end: prevEnd } = getPeriodDates(period, 1)
 
-    const [aptRes, prevAptRes, custRes, revRes, svcRes, staffRes] = await Promise.all([
+    const [aptRes, prevAptRes, custRes, revRes, svcRes, staffRes, invRes] = await Promise.all([
       supabase.from('appointments').select('*, services(name, price)')
         .eq('business_id', businessId).gte('appointment_date', start).lte('appointment_date', end).order('appointment_date'),
       supabase.from('appointments').select('status, services(price)')
@@ -84,6 +85,10 @@ export default function AnalyticsPage() {
       supabase.from('reviews').select('*').eq('business_id', businessId).gte('created_at', start + 'T00:00:00'),
       supabase.from('services').select('*').eq('business_id', businessId).eq('is_active', true),
       supabase.from('staff_members').select('id, name').eq('business_id', businessId).eq('is_active', true),
+      // Ödenen faturalar (dönem filtresine göre)
+      supabase.from('invoices').select('id, total, appointment_id, paid_at, created_at')
+        .eq('business_id', businessId).eq('status', 'paid')
+        .gte('paid_at', start + 'T00:00:00').lte('paid_at', end + 'T23:59:59'),
     ])
 
     if (aptRes.data) setAppointments(aptRes.data)
@@ -92,6 +97,7 @@ export default function AnalyticsPage() {
     if (revRes.data) setReviews(revRes.data)
     if (svcRes.data) setServices(svcRes.data)
     if (staffRes.data) setStaffMembers(staffRes.data)
+    if (invRes.data) setPaidInvoices(invRes.data)
     setLoading(false)
   }, [businessId, period])
 
@@ -167,8 +173,15 @@ export default function AnalyticsPage() {
   const prevCompleted = prevAppointments.filter(a => a.status === 'completed')
   const prevTotal = prevAppointments.length
 
-  const totalRevenue = completed.reduce((s, a) => s + (a.services?.price || 0), 0)
+  const appointmentRevenue = completed.reduce((s, a) => s + (a.services?.price || 0), 0)
   const prevRevenue = prevCompleted.reduce((s: number, a: any) => s + (a.services?.price || 0), 0)
+
+  // Fatura geliri: appointment_id'si olan faturalar zaten randevudan sayıldıysa tekrar sayma
+  const completedAptIds = new Set(completed.map((a: any) => a.id))
+  const invoiceOnlyRevenue = paidInvoices
+    .filter(inv => !inv.appointment_id || !completedAptIds.has(inv.appointment_id))
+    .reduce((s: number, inv: any) => s + (inv.total || 0), 0)
+  const totalRevenue = appointmentRevenue + invoiceOnlyRevenue
 
   const completionRate = total > 0 ? Math.round((completed.length / total) * 100) : 0
   const noShowRate = total > 0 ? Math.round((noShow.length / total) * 100) : 0
@@ -299,7 +312,7 @@ export default function AnalyticsPage() {
 
       {/* KPI Kartları (dönem karşılaştırmalı) */}
       <div className="mb-6 grid grid-cols-3 gap-4">
-        <KPICard icon={<DollarSign className="h-5 w-5" />} label="Gelir"
+        <KPICard icon={<DollarSign className="h-5 w-5" />} label={invoiceOnlyRevenue > 0 ? 'Toplam Gelir' : 'Gelir'}
           value={formatCurrency(totalRevenue)} trend={revenueTrend} color="green" currency />
         <KPICard icon={<Users className="h-5 w-5" />} label="Ort. Müşteri Değeri"
           value={formatCurrency(avgCLV)} color="purple" currency />
@@ -486,6 +499,11 @@ export default function AnalyticsPage() {
             <div className="card p-4 text-center">
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Toplam Gelir</p>
               <p className="text-xl font-bold text-green-600">{formatCurrency(totalRevenue)}</p>
+              {invoiceOnlyRevenue > 0 && (
+                <p className="text-[10px] text-gray-400 mt-1">
+                  Randevu: {formatCurrency(appointmentRevenue)} · Fatura: {formatCurrency(invoiceOnlyRevenue)}
+                </p>
+              )}
             </div>
             <div className="card p-4 text-center">
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Toplam Gider</p>
