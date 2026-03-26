@@ -475,8 +475,8 @@ export default function StaffPage() {
 
       {/* ── Personel Detay Popup (Ortada) ── */}
       {selectedStaff && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setSelectedStaff(null)}>
-          <div className="card w-full max-w-xl max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setSelectedStaff(null)}>
+          <div className="modal-content card w-full max-w-xl max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
             {/* Başlık */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
               <h3 className="font-semibold text-gray-900 dark:text-gray-100">Personel Detayı</h3>
@@ -583,8 +583,8 @@ export default function StaffPage() {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="card w-full max-w-md">
+        <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="modal-content card w-full max-w-md">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
               {editingStaff ? 'Personeli Düzenle' : 'Yeni Personel Ekle'}
             </h2>
@@ -624,8 +624,8 @@ export default function StaffPage() {
 
       {/* Yetki Popup Modal — Yeniden tasarlanmış */}
       {permPopupStaff && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setPermPopupStaff(null)}>
-          <div className="card w-full max-w-md max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setPermPopupStaff(null)}>
+          <div className="modal-content card w-full max-w-md max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{permPopupStaff.name}</h2>
@@ -712,8 +712,8 @@ export default function StaffPage() {
 
       {/* Davet Modal */}
       {showInviteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowInviteModal(false)}>
-          <div className="card w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowInviteModal(false)}>
+          <div className="modal-content card w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Personel Davet Et</h2>

@@ -132,6 +132,20 @@ export interface Expense {
   expense_date: string
   is_recurring: boolean
   recurring_period: string | null
+  custom_interval_days: number | null
+  created_at: string
+}
+
+export interface Income {
+  id: string
+  business_id: string
+  category: string
+  description: string | null
+  amount: number
+  income_date: string
+  is_recurring: boolean
+  recurring_period: string | null
+  custom_interval_days: number | null
   created_at: string
 }
 

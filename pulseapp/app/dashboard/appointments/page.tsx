@@ -663,6 +663,7 @@ export default function AppointmentsPage() {
 
           // Hesapla: her saat 60px yükseklik
           const hourHeight = 60
+          const topPad = 12 // Grid üst boşluğu — 08:00 çizgisi ile container kenarı arasında boşluk
           const toMinutes = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
 
           return (
@@ -694,13 +695,13 @@ export default function AppointmentsPage() {
                   </div>
 
                   {/* Saat grid'i */}
-                  <div className="relative grid grid-cols-[60px_repeat(7,1fr)]" style={{ height: hours.length * hourHeight }}>
+                  <div className="relative grid grid-cols-[60px_repeat(7,1fr)]" style={{ height: hours.length * hourHeight + topPad }}>
                     {/* Saat etiketleri */}
                     {hours.map((hour, i) => (
                       <div
                         key={`h-${hour}`}
                         className="absolute left-0 w-[60px] text-right pr-2 text-xs text-gray-400"
-                        style={{ top: i * hourHeight - 6 }}
+                        style={{ top: topPad + i * hourHeight - 6 }}
                       >
                         {String(hour).padStart(2, '0')}:00
                       </div>
@@ -711,7 +712,7 @@ export default function AppointmentsPage() {
                       <div
                         key={`line-${hour}`}
                         className="absolute left-[60px] right-0 border-t border-gray-100 dark:border-gray-800"
-                        style={{ top: i * hourHeight }}
+                        style={{ top: topPad + i * hourHeight }}
                       />
                     ))}
 
@@ -736,7 +737,7 @@ export default function AppointmentsPage() {
                           onClick={(e) => {
                             if (dayAppointments.length > 0) {
                               const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-                              const clickY = e.clientY - rect.top
+                              const clickY = e.clientY - rect.top - topPad
                               const clickHour = Math.floor((clickY / hourHeight) + 8)
                               const hourApts = dayAppointments.filter(a => {
                                 const aHour = parseInt(a.start_time.split(':')[0])
@@ -756,7 +757,7 @@ export default function AppointmentsPage() {
                           {computeOverlapLayout(dayAppointments).map(({ apt, column, totalColumns }) => {
                             const startMin = toMinutes(apt.start_time) - 8 * 60
                             const endMin = toMinutes(apt.end_time) - 8 * 60
-                            const top = (startMin / 60) * hourHeight
+                            const top = topPad + (startMin / 60) * hourHeight
                             const height = Math.max(((endMin - startMin) / 60) * hourHeight, 20)
                             const colorIdx = getStaffColorIndex(apt.staff_id)
                             const colWidth = 100 / totalColumns
@@ -788,7 +789,7 @@ export default function AppointmentsPage() {
                           {isDayToday && (() => {
                             const currentMin = nowMinutes - 8 * 60
                             if (currentMin < 0 || currentMin > 14 * 60) return null
-                            const top = (currentMin / 60) * hourHeight
+                            const top = topPad + (currentMin / 60) * hourHeight
                             return (
                               <div className="absolute left-0 right-0 z-10 pointer-events-none" style={{ top }}>
                                 <div className="flex items-center">
@@ -1082,8 +1083,8 @@ export default function AppointmentsPage() {
 
       {/* Yeni / Düzenleme Randevu Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="card w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="modal-content card w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 {editingAppointment ? 'Randevu Düzenle' : 'Yeni Randevu'}
@@ -1207,8 +1208,8 @@ export default function AppointmentsPage() {
 
       {/* Erteleme Modal */}
       {rescheduleAppointment && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="card w-full max-w-sm">
+        <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="modal-content card w-full max-w-sm">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Randevuyu Ertele</h2>
               <button onClick={() => setRescheduleAppointment(null)} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
@@ -1241,8 +1242,8 @@ export default function AppointmentsPage() {
 
       {/* İptal Onay Modal */}
       {cancelConfirmAppointment && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="card w-full max-w-sm">
+        <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="modal-content card w-full max-w-sm">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Randevuyu İptal Et</h2>
               <button onClick={() => setCancelConfirmAppointment(null)} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>

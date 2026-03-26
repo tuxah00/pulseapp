@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
-// GET: Gider listesi
+// GET: Gelir listesi
 export async function GET(req: NextRequest) {
   const supabase = createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -18,42 +18,42 @@ export async function GET(req: NextRequest) {
 
   const admin = createAdminClient()
   let query = admin
-    .from('expenses')
+    .from('income')
     .select('*')
     .eq('business_id', businessId)
-    .order('expense_date', { ascending: false })
+    .order('income_date', { ascending: false })
 
-  if (from) query = query.gte('expense_date', from)
-  if (to) query = query.lte('expense_date', to)
+  if (from) query = query.gte('income_date', from)
+  if (to) query = query.lte('income_date', to)
   if (category) query = query.eq('category', category)
 
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ expenses: data })
+  return NextResponse.json({ income: data })
 }
 
-// POST: Yeni gider ekle
+// POST: Yeni gelir ekle
 export async function POST(req: NextRequest) {
   const supabase = createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
 
   const body = await req.json()
-  const { business_id, category, description, amount, expense_date, is_recurring, recurring_period, custom_interval_days } = body
+  const { business_id, category, description, amount, income_date, is_recurring, recurring_period, custom_interval_days } = body
 
-  if (!business_id || !category || amount === undefined || !expense_date) {
-    return NextResponse.json({ error: 'business_id, category, amount, expense_date gerekli' }, { status: 400 })
+  if (!business_id || !category || amount === undefined || !income_date) {
+    return NextResponse.json({ error: 'business_id, category, amount, income_date gerekli' }, { status: 400 })
   }
 
   const admin = createAdminClient()
-  const { data: expense, error } = await admin
-    .from('expenses')
+  const { data: income, error } = await admin
+    .from('income')
     .insert({
       business_id,
       category,
       description: description || null,
       amount,
-      expense_date,
+      income_date,
       is_recurring: is_recurring || false,
       recurring_period: recurring_period || null,
       custom_interval_days: custom_interval_days || null,
@@ -62,43 +62,10 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ expense })
+  return NextResponse.json({ income })
 }
 
-// PATCH: Gider güncelle
-export async function PATCH(req: NextRequest) {
-  const supabase = createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
-
-  const { searchParams } = new URL(req.url)
-  const id = searchParams.get('id')
-  if (!id) return NextResponse.json({ error: 'id gerekli' }, { status: 400 })
-
-  const body = await req.json()
-  const updateObj: Record<string, unknown> = {}
-
-  if (body.category !== undefined) updateObj.category = body.category
-  if (body.description !== undefined) updateObj.description = body.description
-  if (body.amount !== undefined) updateObj.amount = body.amount
-  if (body.expense_date !== undefined) updateObj.expense_date = body.expense_date
-  if (body.is_recurring !== undefined) updateObj.is_recurring = body.is_recurring
-  if (body.recurring_period !== undefined) updateObj.recurring_period = body.recurring_period
-  if (body.custom_interval_days !== undefined) updateObj.custom_interval_days = body.custom_interval_days
-
-  const admin = createAdminClient()
-  const { data: expense, error } = await admin
-    .from('expenses')
-    .update(updateObj)
-    .eq('id', id)
-    .select()
-    .single()
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ expense })
-}
-
-// DELETE: Gider sil
+// DELETE: Gelir sil
 export async function DELETE(req: NextRequest) {
   const supabase = createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -109,7 +76,7 @@ export async function DELETE(req: NextRequest) {
   if (!id) return NextResponse.json({ error: 'id gerekli' }, { status: 400 })
 
   const admin = createAdminClient()
-  const { error } = await admin.from('expenses').delete().eq('id', id)
+  const { error } = await admin.from('income').delete().eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ success: true })
 }

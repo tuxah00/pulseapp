@@ -335,8 +335,8 @@ export default function ReviewsPage() {
 
       {/* Yorum Ekleme Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="card w-full max-w-md dark:bg-gray-900">
+        <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="modal-content card w-full max-w-md dark:bg-gray-900">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Yorum Ekle</h2>
             <form onSubmit={handleAddReview} className="space-y-4">
               <div>

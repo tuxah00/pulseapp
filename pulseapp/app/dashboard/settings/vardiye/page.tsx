@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { createClient } from '@/lib/supabase/client'
 import { logAudit } from '@/lib/utils/audit'
 import type { WorkingHours, ShiftDefinition } from '@/types'
 import { cn } from '@/lib/utils'
-import { ChevronLeft, ChevronRight, Plus, Trash2, Zap, Loader2, X, Save, Clock, CalendarDays } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Trash2, Zap, Loader2, X, Save, Clock, CalendarDays, Download, Share2, RotateCcw, ImageIcon } from 'lucide-react'
 
 const DAY_LABELS = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz']
 const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
@@ -43,6 +43,11 @@ function getMonday(date: Date): Date {
   d.setDate(diff)
   d.setHours(0, 0, 0, 0)
   return d
+}
+
+function toMinutes(t: string): number {
+  const [h, m] = t.split(':').map(Number)
+  return h * 60 + m
 }
 
 function addDays(date: Date, days: number): Date {
@@ -97,6 +102,13 @@ export default function VardiyePage() {
   // Mesai tanımları (shift definitions)
   const [shiftDefs, setShiftDefs] = useState<ShiftDefinition[]>([])
   const [shiftDefsSaving, setShiftDefsSaving] = useState(false)
+
+  // Reset table
+  const [resetConfirm, setResetConfirm] = useState(false)
+  const [resetting, setResetting] = useState(false)
+
+  // Table ref for image capture
+  const tableRef = useRef<HTMLDivElement>(null)
 
   // Otomatik dağıtım
   const [showAutoPanel, setShowAutoPanel] = useState(false)
@@ -245,6 +257,9 @@ export default function VardiyePage() {
         for (const member of staff) {
           if (getShift(member.id, dateStr)) continue
           const def = shiftDefs[defIndex % shiftDefs.length]
+          const durationMinutes = toMinutes(def.end) - toMinutes(def.start)
+          const isPartTime = durationMinutes > 0 && durationMinutes < 360 // Less than 6 hours
+          const shiftNotes = isPartTime ? `Yarı zamanlı · ${def.name}` : def.name
           tasks.push({
             member,
             dateStr,
@@ -258,7 +273,7 @@ export default function VardiyePage() {
                 startTime: def.start,
                 endTime: def.end,
                 shiftType: 'regular',
-                notes: def.name,
+                notes: shiftNotes,
               }),
             }),
           })
@@ -318,6 +333,50 @@ export default function VardiyePage() {
     } finally {
       setSaving(false)
     }
+  }
+
+  async function handleResetTable() {
+    setResetting(true)
+    try {
+      const weekShifts = shifts.filter(s => {
+        const d = new Date(s.shift_date + 'T00:00:00')
+        return d >= monday && d < addDays(monday, 7)
+      })
+      await Promise.allSettled(
+        weekShifts.map(s => fetch(`/api/shifts/${s.id}`, { method: 'DELETE' }))
+      )
+      await fetchData()
+    } finally {
+      setResetting(false)
+      setResetConfirm(false)
+    }
+  }
+
+  async function handleSaveImage() {
+    if (!tableRef.current) return
+    try {
+      const html2canvas = (await import('html2canvas')).default
+      const canvas = await html2canvas(tableRef.current, {
+        backgroundColor: document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff',
+        scale: 2,
+      })
+      const link = document.createElement('a')
+      link.download = `vardiya-${weekStart}-${formatDate(addDays(monday, 6))}.png`
+      link.href = canvas.toDataURL('image/png')
+      link.click()
+    } catch (err) {
+      console.error('Image save error:', err)
+      alert('Görsel oluşturulurken hata oluştu.')
+    }
+  }
+
+  async function handleWhatsAppShare() {
+    // İlk olarak resmi indir
+    await handleSaveImage()
+    // Sonra WhatsApp'ı aç
+    const weekEndDate = formatDate(addDays(monday, 6))
+    const text = encodeURIComponent(`Haftalık Vardiya Tablosu (${weekStart} — ${weekEndDate})`)
+    window.open(`https://wa.me/?text=${text}`, '_blank')
   }
 
   if (permissions && !permissions.shifts) {
@@ -564,6 +623,29 @@ export default function VardiyePage() {
             Bu Hafta
           </button>
         )}
+        <div className="flex items-center gap-1 ml-auto">
+          <button
+            onClick={() => setResetConfirm(true)}
+            className="p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+            title="Tabloyu Sıfırla"
+          >
+            <RotateCcw className="h-4 w-4" />
+          </button>
+          <button
+            onClick={handleSaveImage}
+            className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            title="Resim Olarak Kaydet"
+          >
+            <Download className="h-4 w-4" />
+          </button>
+          <button
+            onClick={handleWhatsAppShare}
+            className="p-2 rounded-lg text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
+            title="WhatsApp ile Paylaş"
+          >
+            <Share2 className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       {/* Izgarası */}
@@ -572,7 +654,7 @@ export default function VardiyePage() {
           <p className="text-sm">Henüz personel eklenmemiş. Önce personel ekleyin.</p>
         </div>
       ) : (
-        <div className="card overflow-auto">
+        <div ref={tableRef} className="card overflow-auto">
           <table className="w-full text-sm">
             <thead>
               <tr>
@@ -650,10 +732,28 @@ export default function VardiyePage() {
         </div>
       )}
 
+      {/* Reset Confirmation Modal */}
+      {resetConfirm && (
+        <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
+          <div className="modal-content bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
+            <h3 className="font-semibold text-gray-900 dark:text-gray-100">Tabloyu Sıfırla</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Bu haftanın tüm vardiyalarını silmek istediğinize emin misiniz? Bu işlem geri alınamaz.
+            </p>
+            <div className="flex gap-2">
+              <button onClick={() => setResetConfirm(false)} disabled={resetting} className="btn-secondary flex-1 text-sm">İptal</button>
+              <button onClick={handleResetTable} disabled={resetting} className="flex-1 text-sm px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors disabled:opacity-50">
+                {resetting ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : 'Evet, Sıfırla'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal */}
       {modal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
+        <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
+          <div className="modal-content bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="font-semibold text-gray-900 dark:text-gray-100">
                 {staff.find(s => s.id === modal.staffId)?.name} — {modal.date}

@@ -274,7 +274,7 @@ function RecordsPageInner() {
 
   // ── File upload helpers ────────────────────────────────────────────────────
 
-  const ACCEPTED_TYPES = '.pdf,.jpg,.jpeg,.png,.heic,.doc,.docx,.xls,.xlsx'
+  const ACCEPTED_TYPES = '.pdf,.jpg,.jpeg,.png,.heic,.doc,.docx,.xls,.xlsx,.dcm,.dicom,.tif,.tiff,.bmp,.webp,.gif,.svg'
 
   async function uploadFilesToStorage(recordId: string): Promise<string[]> {
     const urls: string[] = []
@@ -335,94 +335,97 @@ function RecordsPageInner() {
     setSaving(true)
     setFormError(null)
 
-    const { title, ...rest } = formData
-    const dataPayload: Record<string, any> = {}
-    Object.entries(rest).forEach(([k, v]) => {
-      if (typeof v === 'string' && v.trim()) dataPayload[k] = v.trim()
-    })
-    // Mevcut dosyaları koru — kullanıcı yeni dosya yüklemese bile
-    if (editingRecord?.data?.file_urls && Array.isArray(editingRecord.data.file_urls)) {
-      dataPayload.file_urls = editingRecord.data.file_urls
-    }
-
-    if (!title.trim()) {
-      setFormError('Başlık alanı zorunludur.')
-      setSaving(false)
-      return
-    }
-
-    if (editingRecord) {
-      const res = await fetch(`/api/records?id=${editingRecord.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: title.trim(), data: dataPayload, customer_id: selectedCustomerId || null }),
+    try {
+      const { title, ...rest } = formData
+      const dataPayload: Record<string, any> = {}
+      Object.entries(rest).forEach(([k, v]) => {
+        if (typeof v === 'string' && v.trim()) dataPayload[k] = v.trim()
       })
-      const json = await res.json()
-      if (!res.ok) { setFormError(json.error || 'Güncelleme hatası'); setSaving(false); return }
-
-      // Upload files if any
-      if (uploadFiles.length > 0) {
-        setUploading(true)
-        const fileUrls = await uploadFilesToStorage(editingRecord.id)
-        if (fileUrls.length > 0) {
-          await fetch(`/api/records?id=${editingRecord.id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ file_urls: fileUrls }),
-          })
-        }
-        setUploading(false)
+      // Mevcut dosyaları koru — kullanıcı yeni dosya yüklemese bile
+      if (editingRecord?.data?.file_urls && Array.isArray(editingRecord.data.file_urls)) {
+        dataPayload.file_urls = editingRecord.data.file_urls
       }
 
-      if (selectedRecord?.id === editingRecord.id) {
-        setSelectedRecord({ ...selectedRecord, title: title.trim(), data: dataPayload })
-      }
-    } else {
-      // Auto-fill title from customer name if not set
-      let finalTitle = title.trim()
-      if (!finalTitle && selectedCustomerId) {
-        const cust = customers.find(c => c.id === selectedCustomerId)
-        if (cust) finalTitle = cust.name
-      }
-      if (!finalTitle) {
+      if (!title.trim()) {
         setFormError('Başlık alanı zorunludur.')
-        setSaving(false)
         return
       }
 
-      const res = await fetch('/api/records', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          business_id: businessId,
-          type: recordType,
-          title: finalTitle,
-          data: dataPayload,
-          customer_id: selectedCustomerId || null,
-        }),
-      })
-      const json = await res.json()
-      if (!res.ok) { setFormError(json.error || 'Ekleme hatası'); setSaving(false); return }
+      if (editingRecord) {
+        const res = await fetch(`/api/records?id=${editingRecord.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: title.trim(), data: dataPayload, customer_id: selectedCustomerId || null }),
+        })
+        const json = await res.json()
+        if (!res.ok) { setFormError(json.error || 'Güncelleme hatası'); return }
 
-      // Upload files if any
-      if (uploadFiles.length > 0 && json.record?.id) {
-        setUploading(true)
-        const fileUrls = await uploadFilesToStorage(json.record.id)
-        if (fileUrls.length > 0) {
-          await fetch(`/api/records?id=${json.record.id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ file_urls: fileUrls }),
-          })
+        // Upload files if any
+        if (uploadFiles.length > 0) {
+          setUploading(true)
+          const fileUrls = await uploadFilesToStorage(editingRecord.id)
+          if (fileUrls.length > 0) {
+            await fetch(`/api/records?id=${editingRecord.id}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ file_urls: fileUrls }),
+            })
+          }
         }
-        setUploading(false)
-      }
-    }
 
-    setSaving(false)
-    setShowModal(false)
-    fetchRecords()
-    logAudit({ businessId: businessId!, staffId, staffName, action: editingRecord ? 'update' : 'create', resource: 'patient_record', resourceId: editingRecord?.id, details: { title: formData.title || '' } })
+        if (selectedRecord?.id === editingRecord.id) {
+          setSelectedRecord({ ...selectedRecord, title: title.trim(), data: dataPayload })
+        }
+      } else {
+        // Auto-fill title from customer name if not set
+        let finalTitle = title.trim()
+        if (!finalTitle && selectedCustomerId) {
+          const cust = customers.find(c => c.id === selectedCustomerId)
+          if (cust) finalTitle = cust.name
+        }
+        if (!finalTitle) {
+          setFormError('Başlık alanı zorunludur.')
+          return
+        }
+
+        const res = await fetch('/api/records', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            business_id: businessId,
+            type: recordType,
+            title: finalTitle,
+            data: dataPayload,
+            customer_id: selectedCustomerId || null,
+          }),
+        })
+        const json = await res.json()
+        if (!res.ok) { setFormError(json.error || 'Ekleme hatası'); return }
+
+        // Upload files if any
+        if (uploadFiles.length > 0 && json.record?.id) {
+          setUploading(true)
+          const fileUrls = await uploadFilesToStorage(json.record.id)
+          if (fileUrls.length > 0) {
+            await fetch(`/api/records?id=${json.record.id}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ file_urls: fileUrls }),
+            })
+          }
+        }
+      }
+
+      setShowModal(false)
+      fetchRecords()
+      logAudit({ businessId: businessId!, staffId, staffName, action: editingRecord ? 'update' : 'create', resource: 'patient_record', resourceId: editingRecord?.id, details: { title: formData.title || '' } })
+    } catch (err) {
+      setFormError('Bir hata oluştu. Lütfen tekrar deneyin.')
+      console.error('Record save error:', err)
+    } finally {
+      setSaving(false)
+      setUploading(false)
+    }
   }
 
   // ── Delete ────────────────────────────────────────────────────────────────
@@ -603,9 +606,9 @@ function RecordsPageInner() {
             className="fixed inset-0 z-40 bg-black/30 dark:bg-black/50"
             onClick={() => setSelectedRecord(null)}
           />
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setSelectedRecord(null)}>
+          <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setSelectedRecord(null)}>
             <div
-              className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
+              className="modal-content bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
@@ -707,8 +710,8 @@ function RecordsPageInner() {
 
       {/* ── Create / Edit Modal ── */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="card w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="modal-content card w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 {editingRecord ? 'Kaydı Düzenle' : config.addLabel}
@@ -797,7 +800,7 @@ function RecordsPageInner() {
                   <label htmlFor="file-upload" className="cursor-pointer">
                     <Upload className="h-6 w-6 text-gray-400 mx-auto mb-2" />
                     <p className="text-sm text-gray-500">Dosya seçmek için tıklayın</p>
-                    <p className="text-xs text-gray-400 mt-1">PDF, JPG, PNG, HEIC, DOC, DOCX, XLS, XLSX</p>
+                    <p className="text-xs text-gray-400 mt-1">PDF, JPG, PNG, HEIC, DICOM, TIFF, DOC, DOCX, XLS, XLSX</p>
                   </label>
                 </div>
                 {uploadFiles.length > 0 && (

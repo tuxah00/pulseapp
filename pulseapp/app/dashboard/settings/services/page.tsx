@@ -262,8 +262,8 @@ export default function ServicesPage() {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="card w-full max-w-md">
+        <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="modal-content card w-full max-w-md">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
               {editingService ? 'Hizmeti Düzenle' : 'Yeni Hizmet Ekle'}
             </h2>

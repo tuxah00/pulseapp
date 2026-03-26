@@ -109,7 +109,11 @@ ALTER TABLE messages ADD COLUMN IF NOT EXISTS staff_id UUID REFERENCES staff_mem
 ALTER TABLE messages ADD COLUMN IF NOT EXISTS staff_name TEXT;
 CREATE INDEX IF NOT EXISTS idx_messages_staff_id ON messages(staff_id);
 ```
-8. **Sektör enum genişletme** (yoga_pilates, spa_massage vb. için):
+8. **Gelir tablosu + Gider özel tekrar:**
+```sql
+-- supabase/migrations/015_create_income.sql dosyasını çalıştırın
+```
+9. **Sektör enum genişletme** (yoga_pilates, spa_massage vb. için):
 ```sql
 ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'spa_massage';
 ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'yoga_pilates';
@@ -179,7 +183,7 @@ ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'tutoring';
 - `useViewMode` hook: `'list' | 'box' | 'week'` destekler
 - CSS Grid: 08:00-21:00 saat dilimleri × 7 gün (Pazartesi-Pazar)
 - Personel renk kodu ile randevu blokları
-- Bugün sütunu vurgulanır + kırmızı saat çizgisi
+- Bugün sütunu vurgulanır + kırmızı saat çizgisi (topPad=12px ile 08:00 satırından boşluk)
 - **Çakışma tespiti:** `computeOverlapLayout()` fonksiyonu → aynı saatte birden fazla randevu varsa yan yana kolon olarak gösterilir (greedy column assignment algoritması)
 - **Saat dilimi popup:** Randevusu olan saate tıklanınca floating popup açılır → o saatteki tüm randevuları listeler; `slotPopup` state ile yönetilir
 
@@ -196,7 +200,7 @@ ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'tutoring';
 - **Upload API:** `POST /api/records/upload` — `multipart/form-data` (file, businessId, recordId)
 - **Admin client:** `createAdminClient()` ile bucket oluşturma + dosya yükleme (RLS bypass)
 - **Yol yapısı:** `{businessId}/{recordId}/{timestamp}_{uniqueId}.{ext}`
-- **Desteklenen:** PDF, JPG, PNG, HEIC, DOC, DOCX, XLS, XLSX (maks 50MB)
+- **Desteklenen:** PDF, JPG, PNG, HEIC, DOC, DOCX, XLS, XLSX, DICOM (.dcm), TIFF, BMP, WebP, GIF, SVG (maks 50MB)
 - **API PATCH:** `file_urls` gönderildiğinde mevcut dosyalara merge edilir (veri bozulmaz)
 - **Detay paneli:** Yüklenen resimler thumbnail, dokümanlar ikon+isim olarak gösterilir
 - **data tipi:** `Record<string, any>` — `file_urls` string array olarak data içinde saklanır
@@ -219,14 +223,21 @@ ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'tutoring';
 - `businesses.settings` JSONB'de `shift_definitions` anahtarı: `ShiftDefinition[]`
 - `ShiftDefinition`: `{ name: string; start: string; end: string }` (ör: Sabahçı 08:00-14:00, Öğlenci 14:00-20:00)
 - Vardiye sayfası "Otomatik Dağıt" panelinde tanım oluşturma/kaydetme
-- Otomatik dağıtım: Round-robin — personellere mesai tanımları sırayla atanır
+- Otomatik dağıtım: Round-robin — personellere mesai tanımları sırayla atanır; 6 saatten kısa mesailer otomatik "Yarı zamanlı" etiketi alır
 - Tekil vardiya modalında "Hızlı Seçim" butonlarıyla tanımlı mesailer seçilebilir
+- **Tabloyu Sıfırla:** Haftalık tüm vardiyaları toplu silme (onay dialog'lu)
+- **Resim Kaydet:** html2canvas ile tabloyu PNG olarak indirme
+- **WhatsApp Paylaş:** Tablo görselini indirip WhatsApp Web linki açma
 - `types/index.ts` → `ShiftDefinition` interface, `BusinessSettings.shift_definitions`
 
-## Fatura-Analytics Entegrasyonu
-- Analytics geliri: `appointmentRevenue + invoiceOnlyRevenue` (çift sayma önlenir)
+## Gelir-Gider Sistemi
+- Analytics geliri: `appointmentRevenue + invoiceOnlyRevenue + manualIncome` (çift sayma önlenir)
 - `appointment_id`'si olan faturalar, zaten tamamlanan randevulardan sayılıyorsa tekrar sayılmaz
-- Giderler tabında gelir ayrıntısı: Randevu ve Fatura geliri ayrı gösterilir
+- "Gelir-Gider" tabında hem gelir hem gider ekleme/silme
+- **Manuel Gelir:** `/api/income` endpoint, `income` tablosu — Hizmet Geliri, Ürün Satışı, Komisyon, Kira Geliri, Paket/Üyelik, Diğer kategorileri
+- **Özel Tekrar Periyodu:** Haftalık, 2 Haftada Bir, Aylık, 3 Ayda Bir, Yıllık + Özel (her X günde bir) — hem gelir hem gider için
+- `custom_interval_days` INTEGER sütunu `expenses` ve `income` tablolarında
+- **Gelir Trendi:** Grafik hem randevu + fatura + manuel geliri gösterir; 7 gün/30 gün/1 yıl
 - **Fatura → Stok otomatik düşürme:** Fatura ödendiğinde (`status: 'paid'`), `product_id` olan kalemler stoktan düşer + `stock_movements` kaydı oluşur
 - `InvoiceItem` type'ında `product_id?: string` ve `type?: 'service' | 'product'` alanları mevcut
 

@@ -12,7 +12,7 @@ import {
 import { formatCurrency, cn } from '@/lib/utils'
 import { SEGMENT_LABELS } from '@/types'
 import { exportToCSV } from '@/lib/utils/export'
-import type { Expense } from '@/types'
+import type { Expense, Income } from '@/types'
 
 function getPeriodDates(period: 'week' | 'month' | 'year', offset = 0): { start: string; end: string } {
   const now = new Date()
@@ -68,6 +68,22 @@ export default function AnalyticsPage() {
   const [expRecurringPeriod, setExpRecurringPeriod] = useState('monthly')
   const [savingExpense, setSavingExpense] = useState(false)
 
+  // Income state
+  const [incomes, setIncomes] = useState<Income[]>([])
+  const [incomesLoading, setIncomesLoading] = useState(false)
+  const [showIncomeForm, setShowIncomeForm] = useState(false)
+  const [incCategory, setIncCategory] = useState('')
+  const [incDescription, setIncDescription] = useState('')
+  const [incAmount, setIncAmount] = useState('')
+  const [incDate, setIncDate] = useState(() => new Date().toISOString().split('T')[0])
+  const [incIsRecurring, setIncIsRecurring] = useState(false)
+  const [incRecurringPeriod, setIncRecurringPeriod] = useState('monthly')
+  const [incCustomDays, setIncCustomDays] = useState('7')
+  const [savingIncome, setSavingIncome] = useState(false)
+
+  // Custom interval for expenses too
+  const [expCustomDays, setExpCustomDays] = useState('7')
+
   const supabase = createClient()
 
   const fetchData = useCallback(async () => {
@@ -112,9 +128,22 @@ export default function AnalyticsPage() {
     setExpensesLoading(false)
   }, [businessId, period])
 
+  const fetchIncome = useCallback(async () => {
+    if (!businessId) return
+    setIncomesLoading(true)
+    const { start, end } = getPeriodDates(period, 0)
+    const res = await fetch(`/api/income?businessId=${businessId}&from=${start}&to=${end}`)
+    const json = await res.json()
+    setIncomes(json.income || [])
+    setIncomesLoading(false)
+  }, [businessId, period])
+
   useEffect(() => {
-    if (activeTab === 'expenses' && businessId) fetchExpenses()
-  }, [activeTab, fetchExpenses, businessId])
+    if (activeTab === 'expenses' && businessId) {
+      fetchExpenses()
+      fetchIncome()
+    }
+  }, [activeTab, fetchExpenses, fetchIncome, businessId])
 
   async function handleAddExpense(e: React.FormEvent) {
     e.preventDefault()
@@ -131,6 +160,7 @@ export default function AnalyticsPage() {
         expense_date: expDate,
         is_recurring: expIsRecurring,
         recurring_period: expIsRecurring ? expRecurringPeriod : null,
+        custom_interval_days: expIsRecurring && expRecurringPeriod === 'custom' ? parseInt(expCustomDays) || null : null,
       }),
     })
     setSavingExpense(false)
@@ -148,6 +178,41 @@ export default function AnalyticsPage() {
     await fetch(`/api/expenses?id=${id}`, { method: 'DELETE' })
     logAudit({ businessId: businessId!, staffId: staffId || null, staffName: staffName || null, action: 'delete', resource: 'expense', details: { category: expense?.category || null, amount: expense?.amount || null } })
     fetchExpenses()
+  }
+
+  async function handleAddIncome(e: React.FormEvent) {
+    e.preventDefault()
+    if (!incCategory || !incAmount || !incDate) return
+    setSavingIncome(true)
+    await fetch('/api/income', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        business_id: businessId,
+        category: incCategory,
+        description: incDescription || null,
+        amount: parseFloat(incAmount),
+        income_date: incDate,
+        is_recurring: incIsRecurring,
+        recurring_period: incIsRecurring ? incRecurringPeriod : null,
+        custom_interval_days: incIsRecurring && incRecurringPeriod === 'custom' ? parseInt(incCustomDays) || null : null,
+      }),
+    })
+    setSavingIncome(false)
+    setShowIncomeForm(false)
+    logAudit({ businessId: businessId!, staffId: staffId || null, staffName: staffName || null, action: 'create', resource: 'income', details: { category: incCategory, amount: parseFloat(incAmount), description: incDescription || null } })
+    setIncCategory(''); setIncDescription(''); setIncAmount('')
+    setIncDate(new Date().toISOString().split('T')[0])
+    setIncIsRecurring(false)
+    fetchIncome()
+  }
+
+  async function handleDeleteIncome(id: string) {
+    if (!confirm('Bu geliri silmek istediğinize emin misiniz?')) return
+    const income = incomes.find(i => i.id === id)
+    await fetch(`/api/income?id=${id}`, { method: 'DELETE' })
+    logAudit({ businessId: businessId!, staffId: staffId || null, staffName: staffName || null, action: 'delete', resource: 'income', details: { category: income?.category || null, amount: income?.amount || null } })
+    fetchIncome()
   }
 
   useEffect(() => { if (!ctxLoading) fetchData() }, [fetchData, ctxLoading])
@@ -185,7 +250,8 @@ export default function AnalyticsPage() {
   const invoiceOnlyRevenue = paidInvoices
     .filter(inv => !inv.appointment_id || !completedAptIds.has(inv.appointment_id))
     .reduce((s: number, inv: any) => s + (inv.total || 0), 0)
-  const totalRevenue = appointmentRevenue + invoiceOnlyRevenue
+  const manualIncome = incomes.reduce((s, i) => s + i.amount, 0)
+  const totalRevenue = appointmentRevenue + invoiceOnlyRevenue + manualIncome
 
   const completionRate = total > 0 ? Math.round((completed.length / total) * 100) : 0
   const noShowRate = total > 0 ? Math.round((noShow.length / total) * 100) : 0
@@ -265,7 +331,8 @@ export default function AnalyticsPage() {
         const label = d.toLocaleDateString('tr-TR', { month: 'short' })
         const ym = d.toISOString().slice(0, 7)
         const rev = completed.filter(a => a.appointment_date?.startsWith(ym)).reduce((s: number, a: any) => s + (a.services?.price || 0), 0)
-        return { label, revenue: rev }
+        const invRev = paidInvoices.filter(inv => inv.paid_at?.startsWith(ym)).reduce((s: number, inv: any) => s + (inv.total || 0), 0)
+        return { label, revenue: rev + invRev }
       })
     : Array.from({ length: dayCount }, (_, i) => {
         const d = new Date(startDate); d.setDate(d.getDate() + i)
@@ -274,7 +341,8 @@ export default function AnalyticsPage() {
           ? ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'][d.getDay() === 0 ? 6 : d.getDay() - 1]
           : String(d.getDate())
         const rev = completed.filter(a => a.appointment_date === dateStr).reduce((s: number, a: any) => s + (a.services?.price || 0), 0)
-        return { label, revenue: rev }
+        const invRev = paidInvoices.filter(inv => inv.paid_at?.split('T')[0] === dateStr).reduce((s: number, inv: any) => s + (inv.total || 0), 0)
+        return { label, revenue: rev + invRev }
       })
   const maxRevenue = Math.max(...trendRevenue.map(d => d.revenue), 1)
 
@@ -331,7 +399,7 @@ export default function AnalyticsPage() {
           ['staff', 'Personel', <Users key="s" className="h-3.5 w-3.5" />],
           ['customers', 'Müşteriler', <UserCheck key="c" className="h-3.5 w-3.5" />],
           ['sources', 'Kaynak', <PieChart key="sr" className="h-3.5 w-3.5" />],
-          ['expenses', 'Giderler', <Wallet key="e" className="h-3.5 w-3.5" />],
+          ['expenses', 'Gelir-Gider', <Wallet key="e" className="h-3.5 w-3.5" />],
         ] as const).map(([key, label, icon]) => (
           <button key={key} onClick={() => setActiveTab(key as any)}
             className={cn('flex-shrink-0 flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors',
@@ -367,13 +435,14 @@ export default function AnalyticsPage() {
                 <div className="ml-10 overflow-x-auto overflow-y-visible pt-8">
                   <div className={cn(
                     'flex items-end gap-1 h-44 pb-1',
-                    period === 'month' ? 'min-w-[600px]' : ''
+                    period === 'month' ? 'min-w-[600px]' : '',
+                    period === 'week' && 'justify-center gap-3'
                   )}>
                     {trendRevenue.map(({ label, revenue }, i) => {
                       const pct = (revenue / maxRevenue) * 100
                       const opacity = pct > 70 ? '' : pct > 40 ? 'opacity-80' : 'opacity-60'
                       return (
-                        <div key={i} className="flex-1 min-w-[18px] flex flex-col items-center h-full group relative">
+                        <div key={i} className={cn('flex-1 min-w-[18px] flex flex-col items-center h-full group relative', period === 'week' && 'max-w-[40px]')}>
                           {/* Hover tooltip */}
                           {revenue > 0 && (
                             <div className="absolute -top-8 left-1/2 -translate-x-1/2 hidden group-hover:block bg-gray-900 text-white text-[10px] px-2 py-1 rounded shadow-lg whitespace-nowrap z-10">
@@ -508,6 +577,11 @@ export default function AnalyticsPage() {
                   Randevu: {formatCurrency(appointmentRevenue)} · Fatura: {formatCurrency(invoiceOnlyRevenue)}
                 </p>
               )}
+              {manualIncome > 0 && (
+                <p className="text-[10px] text-gray-400 mt-0.5">
+                  Manuel Gelir: {formatCurrency(manualIncome)}
+                </p>
+              )}
             </div>
             <div className="card p-4 text-center">
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Toplam Gider</p>
@@ -550,6 +624,9 @@ export default function AnalyticsPage() {
                   <Download className="h-3.5 w-3.5" />Dışa Aktar
                 </button>
               )}
+              <button onClick={() => setShowIncomeForm(v => !v)} className="text-sm px-3 py-2 rounded-lg bg-green-500 text-white hover:bg-green-600 transition-colors font-medium flex items-center">
+                <Plus className="mr-1.5 h-4 w-4" />Gelir Ekle
+              </button>
               <button onClick={() => setShowExpenseForm(v => !v)} className="btn-primary text-sm">
                 <Plus className="mr-1.5 h-4 w-4" />Gider Ekle
               </button>
@@ -594,17 +671,95 @@ export default function AnalyticsPage() {
                   <input type="checkbox" id="isRecurring" checked={expIsRecurring} onChange={(e) => setExpIsRecurring(e.target.checked)} className="rounded" />
                   <label htmlFor="isRecurring" className="text-sm text-gray-700 dark:text-gray-300">Tekrarlayan gider</label>
                   {expIsRecurring && (
-                    <select value={expRecurringPeriod} onChange={(e) => setExpRecurringPeriod(e.target.value)} className="input ml-2 w-auto text-sm py-1">
-                      <option value="weekly">Haftalık</option>
-                      <option value="monthly">Aylık</option>
-                      <option value="yearly">Yıllık</option>
-                    </select>
+                    <div className="flex items-center gap-2 ml-2">
+                      <select value={expRecurringPeriod} onChange={(e) => setExpRecurringPeriod(e.target.value)} className="input w-auto text-sm py-1">
+                        <option value="weekly">Haftalık</option>
+                        <option value="biweekly">2 Haftada Bir</option>
+                        <option value="monthly">Aylık</option>
+                        <option value="quarterly">3 Ayda Bir</option>
+                        <option value="yearly">Yıllık</option>
+                        <option value="custom">Özel</option>
+                      </select>
+                      {expRecurringPeriod === 'custom' && (
+                        <div className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400">
+                          <span>Her</span>
+                          <input type="number" min="1" value={expCustomDays} onChange={(e) => setExpCustomDays(e.target.value)} className="input w-16 text-sm py-1 text-center" />
+                          <span>günde bir</span>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
                 <div className="flex gap-2 pt-1">
                   <button type="button" onClick={() => setShowExpenseForm(false)} className="btn-secondary text-sm flex-1">İptal</button>
                   <button type="submit" disabled={savingExpense} className="btn-primary text-sm flex-1">
                     {savingExpense && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
+                    Kaydet
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* Gelir Ekleme Formu */}
+          {showIncomeForm && (
+            <div className="card p-4 border-l-4 border-l-green-500">
+              <form onSubmit={handleAddIncome} className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="label">Kategori</label>
+                    <select value={incCategory} onChange={(e) => setIncCategory(e.target.value)} className="input" required>
+                      <option value="">— Seçin —</option>
+                      <option value="Hizmet Geliri">Hizmet Geliri</option>
+                      <option value="Ürün Satışı">Ürün Satışı</option>
+                      <option value="Komisyon">Komisyon</option>
+                      <option value="Kira Geliri">Kira Geliri</option>
+                      <option value="Paket/Üyelik">Paket / Üyelik</option>
+                      <option value="Diğer">Diğer</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label">Tutar (TL)</label>
+                    <input type="number" value={incAmount} onChange={(e) => setIncAmount(e.target.value)} className="input" placeholder="0.00" min="0" step="0.01" required />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="label">Açıklama (opsiyonel)</label>
+                    <input type="text" value={incDescription} onChange={(e) => setIncDescription(e.target.value)} className="input" placeholder="Hizmet ödemesi" />
+                  </div>
+                  <div>
+                    <label className="label">Tarih</label>
+                    <input type="date" value={incDate} onChange={(e) => setIncDate(e.target.value)} className="input" required />
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input type="checkbox" id="incIsRecurring" checked={incIsRecurring} onChange={(e) => setIncIsRecurring(e.target.checked)} className="rounded" />
+                  <label htmlFor="incIsRecurring" className="text-sm text-gray-700 dark:text-gray-300">Tekrarlayan gelir</label>
+                  {incIsRecurring && (
+                    <div className="flex items-center gap-2 ml-2">
+                      <select value={incRecurringPeriod} onChange={(e) => setIncRecurringPeriod(e.target.value)} className="input w-auto text-sm py-1">
+                        <option value="weekly">Haftalık</option>
+                        <option value="biweekly">2 Haftada Bir</option>
+                        <option value="monthly">Aylık</option>
+                        <option value="quarterly">3 Ayda Bir</option>
+                        <option value="yearly">Yıllık</option>
+                        <option value="custom">Özel</option>
+                      </select>
+                      {incRecurringPeriod === 'custom' && (
+                        <div className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400">
+                          <span>Her</span>
+                          <input type="number" min="1" value={incCustomDays} onChange={(e) => setIncCustomDays(e.target.value)} className="input w-16 text-sm py-1 text-center" />
+                          <span>günde bir</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <button type="button" onClick={() => setShowIncomeForm(false)} className="btn-secondary text-sm flex-1">İptal</button>
+                  <button type="submit" disabled={savingIncome} className="flex-1 text-sm px-4 py-2 rounded-lg bg-green-500 text-white hover:bg-green-600 transition-colors font-medium disabled:opacity-50">
+                    {savingIncome && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin inline" />}
                     Kaydet
                   </button>
                 </div>
@@ -660,6 +815,53 @@ export default function AnalyticsPage() {
                   </tr>
                 </tfoot>
               </table>
+            </div>
+          )}
+
+          {/* Gelir Listesi */}
+          {incomes.length > 0 && (
+            <div>
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">{periodLabel} Gelirleri</h3>
+              <div className="card p-0 overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 dark:bg-gray-700/50">
+                    <tr>
+                      <th className="px-4 py-3 text-left font-medium text-gray-500">Tarih</th>
+                      <th className="px-4 py-3 text-left font-medium text-gray-500">Kategori</th>
+                      <th className="px-4 py-3 text-left font-medium text-gray-500">Açıklama</th>
+                      <th className="px-4 py-3 text-right font-medium text-gray-500">Tutar</th>
+                      <th className="px-4 py-3 w-10"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                    {incomes.map(income => (
+                      <tr key={income.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                        <td className="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                          {new Date(income.income_date).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' })}
+                        </td>
+                        <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
+                          {income.category}
+                          {income.is_recurring && <span className="ml-1.5 badge bg-green-100 text-green-700 text-[10px]">Tekrar</span>}
+                        </td>
+                        <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{income.description || '—'}</td>
+                        <td className="px-4 py-3 text-right font-medium text-green-600">{formatCurrency(income.amount)}</td>
+                        <td className="px-4 py-3">
+                          <button onClick={() => handleDeleteIncome(income.id)} className="text-gray-400 hover:text-red-500 transition-colors">
+                            <X className="h-4 w-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot className="bg-gray-50 dark:bg-gray-700/50">
+                    <tr>
+                      <td colSpan={3} className="px-4 py-3 font-semibold text-gray-700 dark:text-gray-300 text-right">Toplam Gelir (Manuel)</td>
+                      <td className="px-4 py-3 text-right font-bold text-green-600">{formatCurrency(incomes.reduce((s, i) => s + i.amount, 0))}</td>
+                      <td></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
             </div>
           )}
         </div>
