@@ -149,27 +149,30 @@ export default function AnalyticsPage() {
     e.preventDefault()
     if (!expCategory || !expAmount || !expDate) return
     setSavingExpense(true)
-    await fetch('/api/expenses', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        business_id: businessId,
-        category: expCategory,
-        description: expDescription || null,
-        amount: parseFloat(expAmount),
-        expense_date: expDate,
-        is_recurring: expIsRecurring,
-        recurring_period: expIsRecurring ? expRecurringPeriod : null,
-        custom_interval_days: expIsRecurring && expRecurringPeriod === 'custom' ? parseInt(expCustomDays) || null : null,
-      }),
-    })
-    setSavingExpense(false)
-    setShowExpenseForm(false)
-    logAudit({ businessId: businessId!, staffId: staffId || null, staffName: staffName || null, action: 'create', resource: 'expense', details: { category: expCategory, amount: parseFloat(expAmount), description: expDescription || null } })
-    setExpCategory(''); setExpDescription(''); setExpAmount('')
-    setExpDate(new Date().toISOString().split('T')[0])
-    setExpIsRecurring(false)
-    fetchExpenses()
+    try {
+      await fetch('/api/expenses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          business_id: businessId,
+          category: expCategory,
+          description: expDescription || null,
+          amount: parseFloat(expAmount),
+          expense_date: expDate,
+          is_recurring: expIsRecurring,
+          recurring_period: expIsRecurring ? expRecurringPeriod : null,
+          custom_interval_days: expIsRecurring && expRecurringPeriod === 'custom' ? parseInt(expCustomDays) || null : null,
+        }),
+      })
+      setShowExpenseForm(false)
+      logAudit({ businessId: businessId!, staffId: staffId || null, staffName: staffName || null, action: 'create', resource: 'expense', details: { category: expCategory, amount: parseFloat(expAmount), description: expDescription || null } })
+      setExpCategory(''); setExpDescription(''); setExpAmount('')
+      setExpDate(new Date().toISOString().split('T')[0])
+      setExpIsRecurring(false); setExpRecurringPeriod('monthly'); setExpCustomDays('7')
+      fetchExpenses()
+    } finally {
+      setSavingExpense(false)
+    }
   }
 
   async function handleDeleteExpense(id: string) {
@@ -184,27 +187,30 @@ export default function AnalyticsPage() {
     e.preventDefault()
     if (!incCategory || !incAmount || !incDate) return
     setSavingIncome(true)
-    await fetch('/api/income', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        business_id: businessId,
-        category: incCategory,
-        description: incDescription || null,
-        amount: parseFloat(incAmount),
-        income_date: incDate,
-        is_recurring: incIsRecurring,
-        recurring_period: incIsRecurring ? incRecurringPeriod : null,
-        custom_interval_days: incIsRecurring && incRecurringPeriod === 'custom' ? parseInt(incCustomDays) || null : null,
-      }),
-    })
-    setSavingIncome(false)
-    setShowIncomeForm(false)
-    logAudit({ businessId: businessId!, staffId: staffId || null, staffName: staffName || null, action: 'create', resource: 'income', details: { category: incCategory, amount: parseFloat(incAmount), description: incDescription || null } })
-    setIncCategory(''); setIncDescription(''); setIncAmount('')
-    setIncDate(new Date().toISOString().split('T')[0])
-    setIncIsRecurring(false)
-    fetchIncome()
+    try {
+      await fetch('/api/income', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          business_id: businessId,
+          category: incCategory,
+          description: incDescription || null,
+          amount: parseFloat(incAmount),
+          income_date: incDate,
+          is_recurring: incIsRecurring,
+          recurring_period: incIsRecurring ? incRecurringPeriod : null,
+          custom_interval_days: incIsRecurring && incRecurringPeriod === 'custom' ? parseInt(incCustomDays) || null : null,
+        }),
+      })
+      setShowIncomeForm(false)
+      logAudit({ businessId: businessId!, staffId: staffId || null, staffName: staffName || null, action: 'create', resource: 'income', details: { category: incCategory, amount: parseFloat(incAmount), description: incDescription || null } })
+      setIncCategory(''); setIncDescription(''); setIncAmount('')
+      setIncDate(new Date().toISOString().split('T')[0])
+      setIncIsRecurring(false); setIncRecurringPeriod('monthly'); setIncCustomDays('7')
+      fetchIncome()
+    } finally {
+      setSavingIncome(false)
+    }
   }
 
   async function handleDeleteIncome(id: string) {
@@ -251,6 +257,7 @@ export default function AnalyticsPage() {
     .filter(inv => !inv.appointment_id || !completedAptIds.has(inv.appointment_id))
     .reduce((s: number, inv: any) => s + (inv.total || 0), 0)
   const manualIncome = incomes.reduce((s, i) => s + i.amount, 0)
+  const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0)
   const totalRevenue = appointmentRevenue + invoiceOnlyRevenue + manualIncome
 
   const completionRate = total > 0 ? Math.round((completed.length / total) * 100) : 0
@@ -585,12 +592,12 @@ export default function AnalyticsPage() {
             </div>
             <div className="card p-4 text-center">
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Toplam Gider</p>
-              <p className="text-xl font-bold text-red-600">{formatCurrency(expenses.reduce((s, e) => s + e.amount, 0))}</p>
+              <p className="text-xl font-bold text-red-600">{formatCurrency(totalExpenses)}</p>
             </div>
             <div className="card p-4 text-center">
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Net Kâr</p>
               {(() => {
-                const net = totalRevenue - expenses.reduce((s, e) => s + e.amount, 0)
+                const net = totalRevenue - totalExpenses
                 return <p className={cn('text-xl font-bold', net >= 0 ? 'text-pulse-600 dark:text-pulse-400' : 'text-red-600')}>{formatCurrency(net)}</p>
               })()}
             </div>
@@ -810,7 +817,7 @@ export default function AnalyticsPage() {
                 <tfoot className="bg-gray-50 dark:bg-gray-700/50">
                   <tr>
                     <td colSpan={3} className="px-4 py-3 font-semibold text-gray-700 dark:text-gray-300 text-right">Toplam Gider</td>
-                    <td className="px-4 py-3 text-right font-bold text-red-600">{formatCurrency(expenses.reduce((s, e) => s + e.amount, 0))}</td>
+                    <td className="px-4 py-3 text-right font-bold text-red-600">{formatCurrency(totalExpenses)}</td>
                     <td></td>
                   </tr>
                 </tfoot>
@@ -819,7 +826,9 @@ export default function AnalyticsPage() {
           )}
 
           {/* Gelir Listesi */}
-          {incomes.length > 0 && (
+          {incomesLoading ? (
+            <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-pulse-500" /></div>
+          ) : incomes.length > 0 && (
             <div>
               <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">{periodLabel} Gelirleri</h3>
               <div className="card p-0 overflow-hidden">
@@ -856,7 +865,7 @@ export default function AnalyticsPage() {
                   <tfoot className="bg-gray-50 dark:bg-gray-700/50">
                     <tr>
                       <td colSpan={3} className="px-4 py-3 font-semibold text-gray-700 dark:text-gray-300 text-right">Toplam Gelir (Manuel)</td>
-                      <td className="px-4 py-3 text-right font-bold text-green-600">{formatCurrency(incomes.reduce((s, i) => s + i.amount, 0))}</td>
+                      <td className="px-4 py-3 text-right font-bold text-green-600">{formatCurrency(manualIncome)}</td>
                       <td></td>
                     </tr>
                   </tfoot>
