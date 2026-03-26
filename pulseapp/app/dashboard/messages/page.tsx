@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
+import { useDebounce } from '@/lib/hooks/use-debounce'
 import {
   MessageSquare, Search, Send, Loader2, Phone,
   Bot, User, ChevronLeft, Clock, ArrowDownCircle,
@@ -55,6 +56,7 @@ export default function MessagesPage() {
   const [messagesLoading, setMessagesLoading] = useState(false)
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
   const [search, setSearch] = useState('')
+  const debouncedSearch = useDebounce(search, 300)
   const [newMessage, setNewMessage] = useState('')
   const [sending, setSending] = useState(false)
   const [filterClassification, setFilterClassification] = useState<AiClassification | 'all'>('all')
@@ -268,10 +270,10 @@ export default function MessagesPage() {
   }
 
   // Arama filtresi
-  const filteredConversations = search.trim()
+  const filteredConversations = debouncedSearch.trim()
     ? conversations.filter(c =>
-        c.customer.name.toLowerCase().includes(search.toLowerCase()) ||
-        c.customer.phone.includes(search)
+        c.customer.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        c.customer.phone.includes(debouncedSearch)
       )
     : conversations
 
@@ -581,6 +583,11 @@ export default function MessagesPage() {
 
                               {/* Mesaj içeriği */}
                               <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
+
+                              {/* Gönderen personel (outbound) */}
+                              {msg.direction === 'outbound' && (msg as any).staff_name && (
+                                <p className="text-[10px] text-white/60 mt-0.5">{(msg as any).staff_name}</p>
+                              )}
 
                               {/* Zaman */}
                               <div className={cn(

@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { createClient } from '@/lib/supabase/client'
+import { logAudit } from '@/lib/utils/audit'
 import {
   Image,
   Plus,
@@ -41,7 +42,7 @@ const INITIAL_FORM: UploadForm = {
 }
 
 export default function PortfolioPage() {
-  const { businessId, permissions } = useBusinessContext()
+  const { businessId, staffId, staffName, permissions } = useBusinessContext()
   const [items, setItems] = useState<PortfolioItem[]>([])
   const [loading, setLoading] = useState(true)
   const [activeCategory, setActiveCategory] = useState('all')
@@ -171,6 +172,7 @@ export default function PortfolioPage() {
 
       closeModal()
       fetchItems()
+      logAudit({ businessId: businessId!, staffId: staffId || null, staffName: staffName || null, action: 'create', resource: 'portfolio', details: { title: form.title.trim() } })
     } catch (err) {
       setUploadError('Beklenmeyen hata oluştu.')
     } finally {
@@ -192,10 +194,12 @@ export default function PortfolioPage() {
   }
 
   async function handleDelete(id: string) {
+    const item = items.find(i => i.id === id)
     const res = await fetch(`/api/portfolio?id=${id}`, { method: 'DELETE' })
     if (res.ok) {
       setItems((prev) => prev.filter((i) => i.id !== id))
       setDeleteConfirm(null)
+      logAudit({ businessId: businessId!, staffId: staffId || null, staffName: staffName || null, action: 'delete', resource: 'portfolio', details: { title: item?.title || null } })
     }
   }
 
@@ -215,7 +219,7 @@ export default function PortfolioPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Portfolyo Galerisi</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Portfolyo Galerisi</h1>
           <p className="text-sm text-gray-500 mt-1">Çalışmalarınızı sergileyin</p>
         </div>
         <button
@@ -237,7 +241,7 @@ export default function PortfolioPage() {
             className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
               activeCategory === cat
                 ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
             }`}
           >
             {cat === 'all' ? 'Tümü' : cat}
@@ -249,12 +253,12 @@ export default function PortfolioPage() {
       {loading ? (
         <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="aspect-square bg-gray-100 rounded-xl animate-pulse" />
+            <div key={i} className="aspect-square bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />
           ))}
         </div>
       ) : items.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+          <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
             <Image className="w-8 h-8 text-gray-400" />
           </div>
           <p className="text-gray-500 text-lg font-medium">Henüz portfolyo görseli eklenmedi.</p>
@@ -272,10 +276,10 @@ export default function PortfolioPage() {
           {items.map((item) => (
             <div
               key={item.id}
-              className="relative group bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
+              className="relative group bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow"
             >
               {/* Image or placeholder */}
-              <div className="aspect-square bg-gray-100 relative overflow-hidden">
+              <div className="aspect-square bg-gray-100 dark:bg-gray-700 relative overflow-hidden">
                 {item.image_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -320,7 +324,7 @@ export default function PortfolioPage() {
 
               {/* Card body */}
               <div className="p-3">
-                <p className="text-sm font-semibold text-gray-800 truncate">{item.title}</p>
+                <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">{item.title}</p>
                 {item.category && (
                   <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full">
                     <Tag className="w-3 h-3" />
@@ -335,11 +339,11 @@ export default function PortfolioPage() {
 
       {/* Upload Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
-            <div className="flex items-center justify-between px-6 py-4 border-b">
-              <h2 className="text-lg font-semibold text-gray-900">Yeni Görsel Ekle</h2>
-              <button onClick={closeModal} className="text-gray-400 hover:text-gray-600">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 modal-overlay">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-md modal-content">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Yeni Görsel Ekle</h2>
+              <button onClick={closeModal} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -352,7 +356,7 @@ export default function PortfolioPage() {
                 onDrop={onDrop}
                 onClick={() => fileInputRef.current?.click()}
                 className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer transition-colors ${
-                  isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
+                  isDragging ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800'
                 }`}
               >
                 <input
@@ -383,7 +387,7 @@ export default function PortfolioPage() {
 
               {/* Title */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Başlık <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -391,31 +395,31 @@ export default function PortfolioPage() {
                   value={form.title}
                   onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
                   placeholder="Çalışma başlığı"
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
               {/* Category */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Kategori</label>
                 <input
                   type="text"
                   value={form.category}
                   onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
                   placeholder="ör. Portre, Dövme, Düğün..."
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
               {/* Description */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Açıklama</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Açıklama</label>
                 <textarea
                   value={form.description}
                   onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
                   placeholder="İsteğe bağlı açıklama..."
                   rows={3}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                 />
               </div>
 
@@ -423,13 +427,13 @@ export default function PortfolioPage() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Star className={`w-4 h-4 ${form.is_featured ? 'fill-yellow-400 text-yellow-400' : 'text-gray-400'}`} />
-                  <span className="text-sm font-medium text-gray-700">Öne Çıkar</span>
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Öne Çıkar</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setForm((f) => ({ ...f, is_featured: !f.is_featured }))}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    form.is_featured ? 'bg-yellow-400' : 'bg-gray-200'
+                    form.is_featured ? 'bg-yellow-400' : 'bg-gray-200 dark:bg-gray-600'
                   }`}
                 >
                   <span
@@ -445,10 +449,10 @@ export default function PortfolioPage() {
               )}
             </div>
 
-            <div className="flex gap-3 px-6 py-4 border-t">
+            <div className="flex gap-3 px-6 py-4 border-t border-gray-200 dark:border-gray-700">
               <button
                 onClick={closeModal}
-                className="flex-1 border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+                className="flex-1 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
               >
                 İptal
               </button>
@@ -479,21 +483,21 @@ export default function PortfolioPage() {
 
       {/* Delete confirm dialog */}
       {deleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 modal-overlay">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-sm p-6 modal-content">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                <Trash2 className="w-5 h-5 text-red-600" />
+              <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+                <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />
               </div>
               <div>
-                <h3 className="text-base font-semibold text-gray-900">Görseli Sil</h3>
-                <p className="text-sm text-gray-500">Bu işlem geri alınamaz.</p>
+                <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Görseli Sil</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Bu işlem geri alınamaz.</p>
               </div>
             </div>
             <div className="flex gap-3">
               <button
                 onClick={() => setDeleteConfirm(null)}
-                className="flex-1 border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+                className="flex-1 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
               >
                 İptal
               </button>

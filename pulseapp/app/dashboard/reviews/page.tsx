@@ -159,8 +159,8 @@ export default function ReviewsPage() {
       {/* Başlık */}
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Yorumlar</h1>
-          <p className="mt-1 text-sm text-gray-500">{totalReviews} yorum · Ortalama {avgRating} ★</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Yorumlar</h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{totalReviews} yorum · Ortalama {avgRating} ★</p>
         </div>
         <button onClick={() => setShowAddModal(true)} className="btn-primary">
           <Star className="mr-2 h-4 w-4" />Yorum Ekle
@@ -170,21 +170,21 @@ export default function ReviewsPage() {
       {/* İstatistik Kartları */}
       <div className="mb-6 grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="card p-4 text-center">
-          <p className="text-3xl font-bold text-gray-900">{avgRating}</p>
+          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{avgRating}</p>
           <div className="flex justify-center mt-1">{renderStars(Math.round(Number(avgRating)))}</div>
-          <p className="text-xs text-gray-500 mt-1">Ortalama Puan</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Ortalama Puan</p>
         </div>
         <div className="card p-4 text-center">
-          <p className="text-3xl font-bold text-gray-900">{totalReviews}</p>
-          <p className="text-xs text-gray-500 mt-1">Toplam Yorum</p>
+          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{totalReviews}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Toplam Yorum</p>
         </div>
         <div className="card p-4 text-center">
           <p className={cn('text-3xl font-bold', pendingCount > 0 ? 'text-amber-600' : 'text-green-600')}>{pendingCount}</p>
-          <p className="text-xs text-gray-500 mt-1">Yanıt Bekleyen</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Yanıt Bekleyen</p>
         </div>
         <div className="card p-4 text-center">
           <p className={cn('text-3xl font-bold', lowCount > 0 ? 'text-red-600' : 'text-green-600')}>{lowCount}</p>
-          <p className="text-xs text-gray-500 mt-1">Düşük Puan (≤3)</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Düşük Puan (≤3)</p>
         </div>
       </div>
 
@@ -242,7 +242,7 @@ export default function ReviewsPage() {
                 {/* İçerik */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="font-medium text-gray-900">{review.customers?.name || 'Anonim'}</span>
+                    <span className="font-medium text-gray-900 dark:text-gray-100">{review.customers?.name || 'Anonim'}</span>
                     {renderStars(review.rating)}
                     {review.rating <= 3 && review.status !== 'responded' && (
                       <span className="badge bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"><AlertTriangle className="h-3 w-3 mr-1" />Dikkat</span>
@@ -336,8 +336,8 @@ export default function ReviewsPage() {
       {/* Yorum Ekleme Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="card w-full max-w-md">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Yorum Ekle</h2>
+          <div className="card w-full max-w-md dark:bg-gray-900">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Yorum Ekle</h2>
             <form onSubmit={handleAddReview} className="space-y-4">
               <div>
                 <label className="label">Müşteri (opsiyonel)</label>

@@ -52,8 +52,9 @@ const { businessId, userId, staffId, staffName, staffRole, permissions, sector, 
 - Helper: `lib/utils/audit.ts` → `logAudit(params)`
 - API: `/api/audit` — GET (list, owner only), POST (log action)
 - IP adresi otomatik olarak `x-forwarded-for` header'dan alınır
-- Loglanan eylemler: create/update/delete/status_change
-- Loglanan kaynaklar: appointment, customer, staff, permissions, service, settings
+- Loglanan eylemler: `create | update | delete | status_change | send | pay | cancel`
+- Loglanan kaynaklar: `appointment, customer, staff, permissions, service, settings, expense, invoice, stock_movement, patient_record, message, portfolio, membership, shift, inventory`
+- logAudit çağrıları şu sayfalarda mevcut: appointments, customers, analytics (gider), portfolio, invoices, stoklar, records, settings/services, settings/staff, settings/vardiye, settings/business, messages
 
 ## Güvenlik
 - Randevular SOFT DELETE kullanır: `deleted_at` sütunu — hard delete yok
@@ -76,6 +77,24 @@ const { businessId, userId, staffId, staffName, staffRole, permissions, sector, 
 | `orders` | Siparişler (restoran/kafe sektörü) |
 | `table_reservations` | Masa rezervasyonları |
 
+## Dark Mode Stratejisi
+- `globals.css`'te `.dark .bg-white`, `.dark .text-gray-900`, `.dark .bg-gray-100` vb. agresif global `!important` override'lar mevcut
+- Colored badge'ler için semi-transparent dark variants: `.dark .bg-blue-100 { background-color: rgba(59,130,246,0.15) !important }` vb.
+- Custom input alanları (`.input` class kullanmayanlar) explicit `dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600` almalı
+- Modal/dialog arka planları: `dark:bg-gray-900`
+- **Tema toggle:** `components/dashboard/top-bar.tsx`'te Sun/Moon butonu (notification bell'in solunda)
+- Settings sayfasından tema toggle kaldırıldı
+
+## Modal Animasyonları & ESC
+- `globals.css` → `.modal-overlay` (fadeIn 0.15s), `.modal-content` (scaleIn 0.2s), `.slide-panel` (slideInRight 0.2s)
+- Modal backdrop div'e `modal-overlay`, içerik kartına `modal-content` class ekle
+- ESC ile kapatma: `useEffect(() => { if (!show) return; const h = (e) => { if (e.key === 'Escape') setShow(false) }; document.addEventListener('keydown', h); return () => document.removeEventListener('keydown', h) }, [show])`
+
+## Ortak Bileşenler & Hook'lar
+- **EmptyState:** `components/ui/empty-state.tsx` — icon, title, description, action props
+- **useDebounce:** `lib/hooks/use-debounce.ts` — arama input'larında 300ms debounce (customers, stoklar, messages, records, memberships, invoices sayfalarında kullanılıyor)
+- **Required field:** `.label-required::after { content: ' *'; color: #ef4444; }` — zorunlu alan etiketi
+
 ## SQL Migration Gereksinimleri
 Supabase'de çalıştırılmış olması gereken SQL'ler:
 1. `ALTER TABLE appointments ADD COLUMN IF NOT EXISTS deleted_at timestamptz;`
@@ -84,7 +103,13 @@ Supabase'de çalıştırılmış olması gereken SQL'ler:
 4. `ALTER TABLE business_records ADD COLUMN IF NOT EXISTS file_urls jsonb DEFAULT '[]';`
 5. `ALTER TABLE appointments ADD COLUMN IF NOT EXISTS recurrence_group_id uuid;`
 6. `ALTER TABLE appointments ADD COLUMN IF NOT EXISTS recurrence_pattern jsonb;`
-7. **Sektör enum genişletme** (yoga_pilates, spa_massage vb. için):
+7. **Mesajlarda personel takibi:**
+```sql
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS staff_id UUID REFERENCES staff_members(id);
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS staff_name TEXT;
+CREATE INDEX IF NOT EXISTS idx_messages_staff_id ON messages(staff_id);
+```
+8. **Sektör enum genişletme** (yoga_pilates, spa_massage vb. için):
 ```sql
 ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'spa_massage';
 ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'yoga_pilates';
@@ -94,6 +119,7 @@ ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'medical_aesthetic';
 ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'car_wash';
 ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'photo_studio';
 ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'dietitian';
+ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'tutoring';
 ```
 
 ## Sayfa Yapısı
@@ -154,6 +180,8 @@ ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'dietitian';
 - CSS Grid: 08:00-21:00 saat dilimleri × 7 gün (Pazartesi-Pazar)
 - Personel renk kodu ile randevu blokları
 - Bugün sütunu vurgulanır + kırmızı saat çizgisi
+- **Çakışma tespiti:** `computeOverlapLayout()` fonksiyonu → aynı saatte birden fazla randevu varsa yan yana kolon olarak gösterilir (greedy column assignment algoritması)
+- **Saat dilimi popup:** Randevusu olan saate tıklanınca floating popup açılır → o saatteki tüm randevuları listeler; `slotPopup` state ile yönetilir
 
 ## Box Görünüm Kartları — Standart Bileşen
 - **Paylaşımlı bileşen:** `components/ui/compact-box-card.tsx` → `CompactBoxCard`
@@ -179,6 +207,8 @@ ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'dietitian';
 - `lg:left-64` = ana sidebar genişliği (256px)
 - `top-14` = TopBar yüksekliği (56px)
 - Dark mode: sidebar, chat header, mesaj balonları, input area, tarih ayırıcıları
+- **Personel takibi:** Gönderilen mesajlarda `staff_name` gösterilir (outbound balonda küçük yazı)
+- **SQL migration gerekli:** `ALTER TABLE messages ADD COLUMN IF NOT EXISTS staff_id UUID REFERENCES staff_members(id); ALTER TABLE messages ADD COLUMN IF NOT EXISTS staff_name TEXT;`
 
 ## Kayıt Detay Modalı
 - Records sayfasında kayıt detayı **merkezi modal** olarak açılır (slide-over değil)

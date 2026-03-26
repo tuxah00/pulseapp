@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
+import { useDebounce } from '@/lib/hooks/use-debounce'
 import {
   CreditCard, Users, Calendar, Plus, Search, X,
   Edit2, Trash2, Pause, Play, CheckCircle, Loader2,
@@ -70,6 +71,7 @@ export default function MembershipsPage() {
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [search, setSearch] = useState('')
+  const debouncedSearch = useDebounce(search, 300)
   const [showModal, setShowModal] = useState(false)
   const [editingMembership, setEditingMembership] = useState<Membership | null>(null)
   const [saving, setSaving] = useState(false)
@@ -93,7 +95,7 @@ export default function MembershipsPage() {
     try {
       const params = new URLSearchParams({ businessId })
       if (statusFilter !== 'all') params.set('status', statusFilter)
-      if (search.trim()) params.set('search', search.trim())
+      if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim())
 
       const res = await fetch(`/api/memberships?${params}`)
       const json = await res.json()
@@ -111,11 +113,18 @@ export default function MembershipsPage() {
       setDbError('Sunucuya bağlanılamadı.')
     }
     setLoading(false)
-  }, [businessId, statusFilter, search])
+  }, [businessId, statusFilter, debouncedSearch])
 
   useEffect(() => {
     if (!ctxLoading) fetchMemberships()
   }, [fetchMemberships, ctxLoading])
+
+  useEffect(() => {
+    if (!showModal) return
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowModal(false) }
+    document.addEventListener('keydown', h)
+    return () => document.removeEventListener('keydown', h)
+  }, [showModal])
 
   function openNewModal() {
     setEditingMembership(null)
@@ -426,8 +435,8 @@ export default function MembershipsPage() {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="card w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="modal-content card w-full max-w-lg max-h-[90vh] overflow-y-auto dark:bg-gray-900">
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 {editingMembership ? 'Üyeliği Düzenle' : 'Yeni Üyelik Ekle'}

@@ -21,6 +21,9 @@ const ACTION_LABELS: Record<string, string> = {
   delete: 'Sildi',
   login: 'Giriş Yaptı',
   status_change: 'Durum Değiştirdi',
+  send: 'Gönderdi',
+  pay: 'Ödeme Aldı',
+  cancel: 'İptal Etti',
 }
 
 const RESOURCE_LABELS: Record<string, string> = {
@@ -32,6 +35,13 @@ const RESOURCE_LABELS: Record<string, string> = {
   permissions: 'Yetki',
   inventory: 'Stok',
   shift: 'Vardiya',
+  expense: 'Gider',
+  invoice: 'Fatura',
+  stock_movement: 'Stok Hareketi',
+  patient_record: 'Hasta Dosyası',
+  message: 'Mesaj',
+  portfolio: 'Portfolyo',
+  membership: 'Üyelik',
 }
 
 const STATUS_LABELS_TR: Record<string, string> = {
@@ -86,6 +96,56 @@ function formatAuditDetail(log: AuditLog): string {
     return d.service_name ? String(d.service_name) : ''
   }
 
+  // Fatura
+  if (log.resource === 'invoice') {
+    const parts: string[] = []
+    if (d.invoice_number) parts.push(String(d.invoice_number))
+    if (d.customer_name) parts.push(String(d.customer_name))
+    if (d.total !== undefined) parts.push(`₺${d.total}`)
+    return parts.join(' · ')
+  }
+
+  // Gider
+  if (log.resource === 'expense') {
+    const parts: string[] = []
+    if (d.category) parts.push(String(d.category))
+    if (d.amount !== undefined) parts.push(`₺${d.amount}`)
+    if (d.description) parts.push(String(d.description))
+    return parts.join(' · ')
+  }
+
+  // Stok hareketi
+  if (log.resource === 'stock_movement') {
+    const parts: string[] = []
+    if (d.product_name) parts.push(String(d.product_name))
+    if (d.quantity !== undefined && d.quantity !== null) parts.push(`${Number(d.quantity) > 0 ? '+' : ''}${d.quantity}`)
+    if (d.type) parts.push(String(d.type))
+    return parts.join(' · ')
+  }
+
+  // Hasta / müşteri dosyası
+  if (log.resource === 'patient_record') {
+    return d.customer_name ? String(d.customer_name) : (d.title ? String(d.title) : '')
+  }
+
+  // Mesaj
+  if (log.resource === 'message') {
+    const parts: string[] = []
+    if (d.customer_name) parts.push(String(d.customer_name))
+    if (d.channel) parts.push(String(d.channel))
+    return parts.join(' · ')
+  }
+
+  // Portfolyo
+  if (log.resource === 'portfolio') {
+    return d.title ? String(d.title) : ''
+  }
+
+  // Üyelik
+  if (log.resource === 'membership') {
+    return d.customer_name ? String(d.customer_name) : (d.name ? String(d.name) : '')
+  }
+
   // Müşteri
   if (d.name) return String(d.name)
 
@@ -106,6 +166,9 @@ const ACTION_COLORS: Record<string, string> = {
   delete: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
   login: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
   status_change: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300',
+  send: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
+  pay: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
+  cancel: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
 }
 
 export default function AuditPage() {

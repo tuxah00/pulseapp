@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { createClient } from '@/lib/supabase/client'
+import { logAudit } from '@/lib/utils/audit'
 import type { WorkingHours, ShiftDefinition } from '@/types'
 import { cn } from '@/lib/utils'
 import { ChevronLeft, ChevronRight, Plus, Trash2, Zap, Loader2, X, Save, Clock, CalendarDays } from 'lucide-react'
@@ -70,7 +71,7 @@ interface Shift {
 }
 
 export default function VardiyePage() {
-  const { businessId, loading: ctxLoading, permissions } = useBusinessContext()
+  const { businessId, staffId: currentStaffId, staffName: currentStaffName, loading: ctxLoading, permissions } = useBusinessContext()
   const supabase = createClient()
 
   const [weekOffset, setWeekOffset] = useState(0)
@@ -186,6 +187,7 @@ export default function VardiyePage() {
       }
       setModal(null)
       await fetchData()
+      logAudit({ businessId: businessId!, staffId: currentStaffId, staffName: currentStaffName, action: 'create', resource: 'shift', details: { staff_id: modal.staffId, date: modal.date, type: modalType } })
     } catch (err) {
       setSaveError('Bağlantı hatası. Lütfen tekrar deneyin.')
     } finally {
@@ -202,6 +204,7 @@ export default function VardiyePage() {
         return
       }
       await fetchData()
+      logAudit({ businessId: businessId!, staffId: currentStaffId, staffName: currentStaffName, action: 'delete', resource: 'shift', resourceId: shiftId, details: {} })
     } catch {
       alert('Bağlantı hatası. Lütfen tekrar deneyin.')
     }

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
+import { useDebounce } from '@/lib/hooks/use-debounce'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
 import {
   Plus, Search, Loader2, Phone, Mail, Calendar,
@@ -23,6 +24,7 @@ export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const debouncedSearch = useDebounce(search, 300)
   const [filterSegment, setFilterSegment] = useState<CustomerSegment | 'all'>('all')
   const [showModal, setShowModal] = useState(false)
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null)
@@ -54,13 +56,13 @@ export default function CustomersPage() {
       .order('created_at', { ascending: false })
 
     if (filterSegment !== 'all') query = query.eq('segment', filterSegment)
-    if (search.trim()) query = query.or(`name.ilike.%${search}%,phone.ilike.%${search}%`)
+    if (debouncedSearch.trim()) query = query.or(`name.ilike.%${debouncedSearch}%,phone.ilike.%${debouncedSearch}%`)
 
     const { data, error } = await query
     if (data) setCustomers(data)
     if (error) console.error('Müşteri çekme hatası:', error)
     setLoading(false)
-  }, [businessId, filterSegment, search])
+  }, [businessId, filterSegment, debouncedSearch])
 
   useEffect(() => { if (!ctxLoading) fetchCustomers() }, [fetchCustomers, ctxLoading])
 
@@ -219,6 +221,13 @@ export default function CustomersPage() {
     setPanelTab('info')
     setTimeline([])
   }, [selectedCustomer?.id])
+
+  useEffect(() => {
+    if (!showModal) return
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowModal(false) }
+    document.addEventListener('keydown', h)
+    return () => document.removeEventListener('keydown', h)
+  }, [showModal])
 
   function getStatusIcon(status: string) {
     switch (status) {
@@ -546,8 +555,8 @@ export default function CustomersPage() {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="card w-full max-w-md">
+        <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="modal-content card w-full max-w-md dark:bg-gray-900">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
               {editingCustomer ? 'Müşteriyi Düzenle' : 'Yeni Müşteri Ekle'}
             </h2>

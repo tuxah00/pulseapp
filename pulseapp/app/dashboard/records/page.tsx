@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
+import { useDebounce } from '@/lib/hooks/use-debounce'
 import {
   Plus, Loader2, X, Pencil, Trash2, Search, AlertTriangle,
   ClipboardList, UserCheck, Briefcase, PawPrint, Car, BookOpen,
@@ -11,6 +12,7 @@ import {
 import { cn } from '@/lib/utils'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
 import { createClient } from '@/lib/supabase/client'
+import { logAudit } from '@/lib/utils/audit'
 import type { Customer } from '@/types'
 import CompactBoxCard from '@/components/ui/compact-box-card'
 
@@ -192,7 +194,7 @@ function RecordsPageInner() {
   const rawType = searchParams.get('type')
   const recordType: RecordType = isValidType(rawType) ? rawType : DEFAULT_TYPE
 
-  const { businessId, loading: ctxLoading, permissions } = useBusinessContext()
+  const { businessId, staffId, staffName, loading: ctxLoading, permissions } = useBusinessContext()
   const config = TYPE_CONFIG[recordType]
   const supabase = createClient()
 
@@ -201,6 +203,7 @@ function RecordsPageInner() {
   const [loading, setLoading] = useState(true)
   const [dbError, setDbError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+  const debouncedSearch = useDebounce(search, 300)
   const [showModal, setShowModal] = useState(false)
   const [editingRecord, setEditingRecord] = useState<BusinessRecord | null>(null)
   const [selectedRecord, setSelectedRecord] = useState<BusinessRecord | null>(null)
@@ -227,7 +230,7 @@ function RecordsPageInner() {
     setLoading(true)
 
     const params = new URLSearchParams({ businessId, type: recordType })
-    if (search.trim()) params.set('search', search.trim())
+    if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim())
 
     const res = await fetch(`/api/records?${params.toString()}`)
     const json = await res.json()
@@ -243,7 +246,7 @@ function RecordsPageInner() {
       setDbError(null)
     }
     setLoading(false)
-  }, [businessId, recordType, search])
+  }, [businessId, recordType, debouncedSearch])
 
   const fetchCustomers = useCallback(async () => {
     if (!businessId) return
@@ -419,6 +422,7 @@ function RecordsPageInner() {
     setSaving(false)
     setShowModal(false)
     fetchRecords()
+    logAudit({ businessId: businessId!, staffId, staffName, action: editingRecord ? 'update' : 'create', resource: 'patient_record', resourceId: editingRecord?.id, details: { title: formData.title || '' } })
   }
 
   // ── Delete ────────────────────────────────────────────────────────────────
@@ -429,6 +433,7 @@ function RecordsPageInner() {
     if (!res.ok) { alert('Silme hatası'); return }
     if (selectedRecord?.id === record.id) setSelectedRecord(null)
     fetchRecords()
+    logAudit({ businessId: businessId!, staffId, staffName, action: 'delete', resource: 'patient_record', resourceId: record.id, details: { title: record.title } })
   }
 
   // ── Render helpers ────────────────────────────────────────────────────────

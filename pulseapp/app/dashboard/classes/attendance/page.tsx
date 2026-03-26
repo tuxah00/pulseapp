@@ -186,7 +186,7 @@ function AttendancePage() {
       </div>
 
       {/* Date & Class selectors */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4 mb-6 space-y-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 mb-6 space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Date */}
           <div>
@@ -213,7 +213,7 @@ function AttendancePage() {
               <select
                 value={selectedClassId}
                 onChange={e => setSelectedClassId(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 <option value="">Sınıf seçin...</option>
                 {classesForDay.length === 0 ? (
@@ -251,9 +251,9 @@ function AttendancePage() {
 
       {/* Attendance section */}
       {selectedClassId && (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
           {/* Summary bar */}
-          <div className="flex items-center gap-6 px-4 py-3 border-b border-gray-100 bg-gray-50">
+          <div className="flex items-center gap-6 px-4 py-3 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40">
             <div className="flex items-center gap-1.5">
               <CheckCircle className="h-4 w-4 text-green-500" />
               <span className="text-sm font-medium text-green-700">Geldi: {presentCount}</span>

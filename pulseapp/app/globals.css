@@ -128,6 +128,27 @@
   .dark .bg-blue-50     { background-color: #030d1a !important; }
   .dark .bg-purple-50   { background-color: #120820 !important; }
   .dark .bg-pulse-50    { background-color: #0a1628 !important; }
+
+  /* ── Dark mod: renkli badge arka planları ── */
+  .dark .bg-blue-100    { background-color: rgba(59, 130, 246, 0.15) !important; }
+  .dark .bg-green-100   { background-color: rgba(34, 197, 94, 0.15) !important; }
+  .dark .bg-red-100     { background-color: rgba(239, 68, 68, 0.15) !important; }
+  .dark .bg-yellow-100  { background-color: rgba(234, 179, 8, 0.15) !important; }
+  .dark .bg-purple-100  { background-color: rgba(168, 85, 247, 0.15) !important; }
+  .dark .bg-orange-100  { background-color: rgba(249, 115, 22, 0.15) !important; }
+  .dark .bg-amber-100   { background-color: rgba(245, 158, 11, 0.15) !important; }
+
+  /* ── Dark mod: renkli badge metin renkleri ── */
+  .dark .text-blue-700    { color: #93c5fd !important; }
+  .dark .text-green-700   { color: #86efac !important; }
+  .dark .text-red-700     { color: #fca5a5 !important; }
+  .dark .text-yellow-700  { color: #fde047 !important; }
+  .dark .text-purple-700  { color: #d8b4fe !important; }
+  .dark .text-orange-700  { color: #fdba74 !important; }
+  .dark .text-amber-700   { color: #fcd34d !important; }
+
+  /* ── Dark mod: divider border ── */
+  .dark .divide-gray-200 > * + * { border-color: #374151 !important; }
 }
 
 /* ── Booking page: dark mode override (müşteri tarafı light kalmalı) ── */
@@ -155,6 +176,29 @@
 .booking-page .text-gray-400 { color: #9ca3af !important; }
 .booking-page .border-gray-100 { border-color: #f3f4f6 !important; }
 .booking-page .border-gray-200 { border-color: #e5e7eb !important; }
+
+/* Modal / Slide-over animasyonları */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes scaleIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+.modal-overlay { animation: fadeIn 0.15s ease-out; }
+.modal-content { animation: scaleIn 0.2s ease-out; }
+.slide-panel { animation: slideInRight 0.2s ease-out; }
+
+/* Form zorunlu alan göstergesi */
+.label-required::after {
+  content: ' *';
+  color: #ef4444;
+}
 
 /* Toast animasyonları */
 @keyframes toast-slide-in {

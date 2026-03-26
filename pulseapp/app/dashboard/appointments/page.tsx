@@ -41,6 +41,7 @@ export default function AppointmentsPage() {
   const [rescheduleAppointment, setRescheduleAppointment] = useState<any | null>(null)
   const [cancelConfirmAppointment, setCancelConfirmAppointment] = useState<any | null>(null)
   const [cancelNotifyCustomer, setCancelNotifyCustomer] = useState(true)
+  const [slotPopup, setSlotPopup] = useState<{ day: string; hour: number; apts: any[]; x: number; y: number } | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [rescheduleDate, setRescheduleDate] = useState('')
@@ -132,6 +133,13 @@ export default function AppointmentsPage() {
 
   useEffect(() => { if (!ctxLoading) fetchAppointments() }, [fetchAppointments, ctxLoading])
   useEffect(() => { if (!ctxLoading) fetchFormData() }, [fetchFormData, ctxLoading])
+
+  useEffect(() => {
+    if (!showModal) return
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowModal(false) }
+    document.addEventListener('keydown', h)
+    return () => document.removeEventListener('keydown', h)
+  }, [showModal])
 
   function changeDate(days: number) {
     const d = new Date(selectedDate + 'T12:00:00')
@@ -624,6 +632,35 @@ export default function AppointmentsPage() {
             return idx >= 0 ? idx % staffColors.length : 0
           }
 
+          // Çakışan randevuları yan yana kolon olarak düzenle
+          function computeOverlapLayout(dayApts: typeof appointments) {
+            if (dayApts.length === 0) return []
+            const sorted = [...dayApts].sort((a, b) => a.start_time.localeCompare(b.start_time))
+            const columns: { endTime: string }[] = []
+            const assignments: { apt: typeof dayApts[0]; column: number }[] = []
+            for (const apt of sorted) {
+              let placed = false
+              for (let col = 0; col < columns.length; col++) {
+                if (apt.start_time >= columns[col].endTime) {
+                  columns[col].endTime = apt.end_time
+                  assignments.push({ apt, column: col })
+                  placed = true; break
+                }
+              }
+              if (!placed) {
+                assignments.push({ apt, column: columns.length })
+                columns.push({ endTime: apt.end_time })
+              }
+            }
+            return assignments.map(assignment => {
+              const overlapping = assignments.filter(other =>
+                other.apt.start_time < assignment.apt.end_time &&
+                other.apt.end_time > assignment.apt.start_time
+              )
+              return { apt: assignment.apt, column: assignment.column, totalColumns: Math.max(...overlapping.map(o => o.column)) + 1 }
+            })
+          }
+
           // Hesapla: her saat 60px yükseklik
           const hourHeight = 60
           const toMinutes = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
@@ -696,29 +733,43 @@ export default function AppointmentsPage() {
                             top: 0,
                             height: '100%',
                           }}
-                          onClick={() => {
+                          onClick={(e) => {
+                            if (dayAppointments.length > 0) {
+                              const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                              const clickY = e.clientY - rect.top
+                              const clickHour = Math.floor((clickY / hourHeight) + 8)
+                              const hourApts = dayAppointments.filter(a => {
+                                const aHour = parseInt(a.start_time.split(':')[0])
+                                return aHour === clickHour
+                              })
+                              if (hourApts.length > 0) {
+                                setSlotPopup({ day, hour: clickHour, apts: hourApts, x: e.clientX, y: e.clientY })
+                                return
+                              }
+                            }
                             setDate(day)
                             setStartTime('09:00')
                             openNewModal()
-                            setDate(day)
                           }}
                         >
-                          {/* Randevu blokları */}
-                          {dayAppointments.map(apt => {
-                            const startMin = toMinutes(apt.start_time) - 8 * 60 // 08:00'dan itibaren
+                          {/* Randevu blokları — çakışma tespiti ile yan yana kolon */}
+                          {computeOverlapLayout(dayAppointments).map(({ apt, column, totalColumns }) => {
+                            const startMin = toMinutes(apt.start_time) - 8 * 60
                             const endMin = toMinutes(apt.end_time) - 8 * 60
                             const top = (startMin / 60) * hourHeight
                             const height = Math.max(((endMin - startMin) / 60) * hourHeight, 20)
                             const colorIdx = getStaffColorIndex(apt.staff_id)
+                            const colWidth = 100 / totalColumns
+                            const colLeft = column * colWidth
 
                             return (
                               <div
                                 key={apt.id}
                                 className={cn(
-                                  'absolute left-0.5 right-0.5 rounded-md px-1.5 py-0.5 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity border border-white/20',
+                                  'absolute rounded-md px-1.5 py-0.5 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity border border-white/20',
                                   staffColors[colorIdx]
                                 )}
-                                style={{ top, height }}
+                                style={{ top, height, left: `${colLeft}%`, width: `${colWidth - 1}%` }}
                                 onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
                               >
                                 <p className={cn('text-[10px] font-semibold truncate', staffTextColors[colorIdx])}>
@@ -757,6 +808,53 @@ export default function AppointmentsPage() {
           )
         })()
       ) : appointments.length === 0 ? (
+        <div className="card flex flex-col items-center justify-center py-16">
+          <Calendar className="mb-4 h-12 w-12 text-gray-300" />
+          <p className="mb-4 text-gray-500">Bu tarihte randevu yok</p>
+          <button onClick={openNewModal} className="btn-primary">
+            <Plus className="mr-2 h-4 w-4" />Randevu Ekle
+          </button>
+        </div>
+      ) : null}
+
+      {/* Saat dilimi popup (çakışan randevular) */}
+      {slotPopup && (
+        <div className="fixed inset-0 z-40" onClick={() => setSlotPopup(null)}>
+          <div
+            className="absolute z-50 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 p-3 w-72 modal-content"
+            style={{
+              top: typeof window !== 'undefined' ? Math.min(slotPopup.y - 10, window.innerHeight - 300) : slotPopup.y - 10,
+              left: typeof window !== 'undefined' ? Math.min(slotPopup.x - 10, window.innerWidth - 300) : slotPopup.x - 10,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                {String(slotPopup.hour).padStart(2, '0')}:00 · {slotPopup.apts.length} randevu
+              </h4>
+              <button onClick={() => setSlotPopup(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="space-y-1.5 max-h-60 overflow-y-auto">
+              {slotPopup.apts.map(apt => (
+                <div
+                  key={apt.id}
+                  onClick={() => { setSelectedAppointment(apt); setSlotPopup(null) }}
+                  className="p-2 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer transition-colors"
+                >
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{apt.customers?.name || 'İsimsiz'}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {apt.services?.name} · {formatTime(apt.start_time)}–{formatTime(apt.end_time)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!loading && viewMode !== 'week' ? (appointments.length === 0 ? (
         <div className="card flex flex-col items-center justify-center py-16">
           <Calendar className="mb-4 h-12 w-12 text-gray-300" />
           <p className="mb-4 text-gray-500">Bu tarihte randevu yok</p>
@@ -854,7 +952,7 @@ export default function AppointmentsPage() {
             )
           })}
         </div>
-      )}
+      )) : null}
 
       {/* ── Detay Slide-Over Paneli ── */}
       {selectedAppointment && (

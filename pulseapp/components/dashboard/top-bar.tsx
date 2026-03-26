@@ -2,10 +2,11 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ChevronRight, Home, Bell } from 'lucide-react'
+import { ChevronRight, Home, Bell, Sun, Moon } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
+import { useTheme } from '@/components/theme-provider'
 
 const ROUTE_LABELS: Record<string, string> = {
   dashboard: 'Genel Bakış',
@@ -40,6 +41,7 @@ interface TopBarProps {
 export default function TopBar({ businessName, userName }: TopBarProps) {
   const pathname = usePathname()
   const { businessId } = useBusinessContext()
+  const { theme, toggleTheme } = useTheme()
   const [unreadCount, setUnreadCount] = useState(0)
 
   useEffect(() => {
@@ -118,6 +120,13 @@ export default function TopBar({ businessName, userName }: TopBarProps) {
       </nav>
 
       <div className="ml-auto flex items-center gap-3">
+        <button
+          onClick={toggleTheme}
+          className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+          title={theme === 'dark' ? 'Aydınlık Mod' : 'Karanlık Mod'}
+        >
+          {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+        </button>
         <Link href="/dashboard/notifications" className="relative p-1 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors" title="Bildirimler">
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (

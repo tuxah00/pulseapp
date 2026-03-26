@@ -34,6 +34,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Müşteri bulunamadı' }, { status: 404 })
     }
 
+    // Gönderen personel bilgisini çek
+    const { data: staffMember } = await admin
+      .from('staff_members')
+      .select('id, name')
+      .eq('user_id', user.id)
+      .eq('business_id', businessId)
+      .maybeSingle()
+
     // SMS göndermeyi dene
     if (customer.phone) {
       const result = await sendSMS({
@@ -45,7 +53,7 @@ export async function POST(request: NextRequest) {
       })
 
       if (result.success) {
-        return NextResponse.json({ success: true, channel: 'sms', messageSid: result.messageSid })
+        return NextResponse.json({ success: true, channel: 'sms', messageSid: result.messageSid, staffName: staffMember?.name })
       }
     }
 
@@ -57,6 +65,8 @@ export async function POST(request: NextRequest) {
       channel: 'web',
       message_type: messageType,
       content,
+      staff_id: staffMember?.id || null,
+      staff_name: staffMember?.name || null,
     })
 
     if (dbError) {

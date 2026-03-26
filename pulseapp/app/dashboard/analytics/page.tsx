@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
+import { logAudit } from '@/lib/utils/audit'
 import {
   Loader2, TrendingUp, TrendingDown, Users, Calendar,
   DollarSign, AlertTriangle, Clock, Star, UserCheck, Minus,
@@ -42,7 +43,7 @@ function getPeriodDates(period: 'week' | 'month' | 'year', offset = 0): { start:
 }
 
 export default function AnalyticsPage() {
-  const { businessId, loading: ctxLoading, permissions } = useBusinessContext()
+  const { businessId, staffId, staffName, loading: ctxLoading, permissions } = useBusinessContext()
   const [loading, setLoading] = useState(true)
   const [period, setPeriod] = useState<'week' | 'month' | 'year'>('month')
   const [activeTab, setActiveTab] = useState<'overview' | 'staff' | 'customers' | 'sources' | 'expenses'>('overview')
@@ -134,6 +135,7 @@ export default function AnalyticsPage() {
     })
     setSavingExpense(false)
     setShowExpenseForm(false)
+    logAudit({ businessId: businessId!, staffId: staffId || null, staffName: staffName || null, action: 'create', resource: 'expense', details: { category: expCategory, amount: parseFloat(expAmount), description: expDescription || null } })
     setExpCategory(''); setExpDescription(''); setExpAmount('')
     setExpDate(new Date().toISOString().split('T')[0])
     setExpIsRecurring(false)
@@ -142,7 +144,9 @@ export default function AnalyticsPage() {
 
   async function handleDeleteExpense(id: string) {
     if (!confirm('Bu gideri silmek istediğinize emin misiniz?')) return
+    const expense = expenses.find(e => e.id === id)
     await fetch(`/api/expenses?id=${id}`, { method: 'DELETE' })
+    logAudit({ businessId: businessId!, staffId: staffId || null, staffName: staffName || null, action: 'delete', resource: 'expense', details: { category: expense?.category || null, amount: expense?.amount || null } })
     fetchExpenses()
   }
 

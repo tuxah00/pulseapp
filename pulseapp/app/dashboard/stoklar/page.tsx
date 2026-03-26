@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
+import { useDebounce } from '@/lib/hooks/use-debounce'
 import {
   Plus, Package, Loader2, X, Pencil, Trash2,
   AlertTriangle, LayoutList, LayoutGrid, Search,
@@ -11,6 +12,7 @@ import {
 } from 'lucide-react'
 import { formatCurrency, cn } from '@/lib/utils'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
+import { logAudit } from '@/lib/utils/audit'
 import CompactBoxCard from '@/components/ui/compact-box-card'
 import { exportToCSV } from '@/lib/utils/export'
 import type { StockMovement, Supplier } from '@/types'
@@ -34,7 +36,7 @@ type DetailTab = 'info' | 'movements'
 type PageTab = 'products' | 'suppliers'
 
 export default function StoklarPage() {
-  const { businessId, staffId, loading: ctxLoading, permissions } = useBusinessContext()
+  const { businessId, staffId, staffName, loading: ctxLoading, permissions } = useBusinessContext()
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [dbError, setDbError] = useState<string | null>(null)
@@ -44,6 +46,7 @@ export default function StoklarPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+  const debouncedSearch = useDebounce(search, 300)
   const [viewMode, setViewMode] = useViewMode('stoklar', 'list')
   const [pageTab, setPageTab] = useState<PageTab>('products')
   const [detailTab, setDetailTab] = useState<DetailTab>('info')
@@ -85,8 +88,8 @@ export default function StoklarPage() {
       .eq('is_active', true)
       .order('name')
 
-    if (search.trim()) {
-      query = query.ilike('name', `%${search}%`)
+    if (debouncedSearch.trim()) {
+      query = query.ilike('name', `%${debouncedSearch}%`)
     }
 
     const { data, error } = await query
@@ -102,7 +105,7 @@ export default function StoklarPage() {
       setDbError(null)
     }
     setLoading(false)
-  }, [businessId, search])
+  }, [businessId, debouncedSearch])
 
   const fetchSuppliers = useCallback(async () => {
     if (!businessId) return
@@ -122,6 +125,13 @@ export default function StoklarPage() {
       fetchSuppliers()
     }
   }, [fetchProducts, fetchSuppliers, ctxLoading])
+
+  useEffect(() => {
+    if (!showModal) return
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowModal(false) }
+    document.addEventListener('keydown', h)
+    return () => document.removeEventListener('keydown', h)
+  }, [showModal])
 
   const fetchMovements = useCallback(async (productId: string) => {
     setMovementsLoading(true)
@@ -184,6 +194,7 @@ export default function StoklarPage() {
     }
 
     setSaving(false); setShowModal(false); fetchProducts()
+    logAudit({ businessId: businessId!, staffId, staffName, action: editingProduct ? 'update' : 'create', resource: 'inventory', resourceId: editingProduct?.id, details: { name } })
   }
 
   async function handleDelete(product: Product) {
@@ -195,6 +206,7 @@ export default function StoklarPage() {
     if (err) { alert('Silme hatası: ' + err.message); return }
     if (selectedProduct?.id === product.id) setSelectedProduct(null)
     fetchProducts()
+    logAudit({ businessId: businessId!, staffId, staffName, action: 'delete', resource: 'inventory', resourceId: product.id, details: { name: product.name } })
   }
 
   async function updateStock(product: Product, delta: number) {
@@ -665,8 +677,8 @@ export default function StoklarPage() {
 
       {/* Ürün Ekle / Düzenleme Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="card w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="modal-content card w-full max-w-md max-h-[90vh] overflow-y-auto dark:bg-gray-900">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 {editingProduct ? 'Ürünü Düzenle' : 'Yeni Ürün Ekle'}

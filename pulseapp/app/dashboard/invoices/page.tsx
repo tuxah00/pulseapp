@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
+import { useDebounce } from '@/lib/hooks/use-debounce'
 import {
   Plus, Receipt, Loader2, X, Pencil, Trash2,
   CheckCircle, Clock, AlertCircle, XCircle, Download,
@@ -10,6 +11,7 @@ import {
 } from 'lucide-react'
 import { formatCurrency, cn } from '@/lib/utils'
 import { exportToCSV, printInvoicePDF } from '@/lib/utils/export'
+import { logAudit } from '@/lib/utils/audit'
 import type { Invoice, InvoiceItem, InvoiceStatus, PaymentMethod } from '@/types'
 
 interface SimpleCustomer {
@@ -34,12 +36,13 @@ const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
 ]
 
 export default function InvoicesPage() {
-  const { businessId, loading: ctxLoading, permissions } = useBusinessContext()
+  const { businessId, staffId, staffName, loading: ctxLoading, permissions } = useBusinessContext()
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [customers, setCustomers] = useState<SimpleCustomer[]>([])
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [search, setSearch] = useState('')
+  const debouncedSearch = useDebounce(search, 300)
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -83,6 +86,13 @@ export default function InvoicesPage() {
       fetchCustomers()
     }
   }, [fetchInvoices, fetchCustomers, ctxLoading])
+
+  useEffect(() => {
+    if (!showCreateModal) return
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowCreateModal(false) }
+    document.addEventListener('keydown', h)
+    return () => document.removeEventListener('keydown', h)
+  }, [showCreateModal])
 
   function addItem() {
     setFormItems(prev => [...prev, { service_name: '', quantity: 1, unit_price: 0, total: 0 }])
@@ -133,6 +143,7 @@ export default function InvoicesPage() {
     resetForm()
     fetchInvoices()
     setSelectedInvoice(json.invoice)
+    logAudit({ businessId: businessId!, staffId, staffName, action: 'create', resource: 'invoice', resourceId: json.invoice?.id, details: { customer_id: formCustomerId || null, total: json.invoice?.total ?? null } })
   }
 
   function resetForm() {
@@ -150,6 +161,7 @@ export default function InvoicesPage() {
     if (res.ok) {
       setSelectedInvoice(json.invoice)
       fetchInvoices()
+      logAudit({ businessId: businessId!, staffId, staffName, action: 'pay', resource: 'invoice', resourceId: invoice.id, details: { amount: invoice.total ?? null, payment_method: paymentMethod } })
     }
   }
 
@@ -172,6 +184,7 @@ export default function InvoicesPage() {
     await fetch(`/api/invoices?id=${invoice.id}`, { method: 'DELETE' })
     setSelectedInvoice(null)
     fetchInvoices()
+    logAudit({ businessId: businessId!, staffId, staffName, action: 'delete', resource: 'invoice', resourceId: invoice.id, details: { invoice_number: invoice.invoice_number } })
   }
 
   function handleExport() {
@@ -227,8 +240,8 @@ export default function InvoicesPage() {
   }
 
   const filteredInvoices = invoices.filter(inv => {
-    if (!search.trim()) return true
-    const q = search.toLowerCase()
+    if (!debouncedSearch.trim()) return true
+    const q = debouncedSearch.toLowerCase()
     return (
       inv.invoice_number.toLowerCase().includes(q) ||
       (inv.customers?.name.toLowerCase().includes(q) ?? false)
@@ -502,8 +515,8 @@ export default function InvoicesPage() {
 
       {/* Fatura Oluştur Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="card w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="modal-content card w-full max-w-lg max-h-[90vh] overflow-y-auto dark:bg-gray-900">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Yeni Fatura Oluştur</h2>
               <button onClick={() => setShowCreateModal(false)} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
