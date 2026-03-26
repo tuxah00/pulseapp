@@ -87,11 +87,21 @@ const { businessId, userId, staffId, staffName, staffRole, permissions, sector, 
 
 ## Modal Animasyonları & ESC
 - `globals.css` → `.modal-overlay` (fadeIn 0.15s), `.modal-content` (scaleIn 0.2s), `.slide-panel` (slideInRight 0.2s)
+- **Kapanma animasyonu:** `.modal-overlay.closing` (fadeOut 0.15s), `.modal-content.closing` (scaleOut 0.15s), `.slide-panel.closing` (slideOutRight 0.2s)
 - Modal backdrop div'e `modal-overlay`, içerik kartına `modal-content` class ekle
+- Kapanma pattern: `closing` state → `.closing` CSS class ekle → `onAnimationEnd` ile unmount
 - ESC ile kapatma: `useEffect(() => { if (!show) return; const h = (e) => { if (e.key === 'Escape') setShow(false) }; document.addEventListener('keydown', h); return () => document.removeEventListener('keydown', h) }, [show])`
+
+## Onay Dialog Sistemi (ConfirmDialog)
+- **Provider:** `lib/hooks/use-confirm.tsx` → `ConfirmProvider` (layout.tsx'te wrap edilmiş)
+- **Hook:** `useConfirm()` → `confirm({ title, message, confirmText?, cancelText?, variant? }): Promise<boolean>`
+- **Bileşen:** `components/ui/confirm-dialog.tsx` — animasyonlu, danger/warning variant'lı
+- **Kullanım:** Tüm silme/iptal işlemlerinde browser `confirm()` yerine `await confirm({...})` kullanılır
+- **Variant:** `'danger'` (kırmızı, Trash2 icon) | `'warning'` (sarı, AlertTriangle icon)
 
 ## Ortak Bileşenler & Hook'lar
 - **EmptyState:** `components/ui/empty-state.tsx` — icon, title, description, action props
+- **ConfirmDialog:** `components/ui/confirm-dialog.tsx` — onay popup bileşeni
 - **useDebounce:** `lib/hooks/use-debounce.ts` — arama input'larında 300ms debounce (customers, stoklar, messages, records, memberships, invoices sayfalarında kullanılıyor)
 - **Required field:** `.label-required::after { content: ' *'; color: #ef4444; }` — zorunlu alan etiketi
 
@@ -129,7 +139,7 @@ ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'tutoring';
 ## Sayfa Yapısı
 - `/dashboard` → Genel Bakış (server component, bugünkü durum + PerformanceStats)
 - `/dashboard/appointments` → Randevular (liste/kutu/haftalık takvim görünüm, soft delete, tekrarlayan randevu desteği)
-- `/dashboard/analytics` → Gelir-Gider Tablosu (randevu + fatura geliri, gider takibi, kâr-zarar)
+- `/dashboard/analytics` → Gelir-Gider Tablosu (randevu + fatura + manuel gelir, gider takibi, kâr-zarar)
 - `/dashboard/customers` → Müşteriler (slide-over panelde Bilgiler + Geçmiş tabları, timeline)
 - `/dashboard/settings/audit` → Denetim Kaydı (sadece owner)
 - `/invite/[token]` → Personel davet kabul sayfası (public)

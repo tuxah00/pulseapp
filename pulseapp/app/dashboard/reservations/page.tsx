@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
+import { useConfirm } from '@/lib/hooks/use-confirm'
 import {
   Plus,
   Loader2,
@@ -75,6 +76,7 @@ export default function ReservationsPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [viewMode, setViewMode] = useViewMode('reservations', 'list')
+  const { confirm } = useConfirm()
 
   // Form state
   const [formCustomerName, setFormCustomerName] = useState('')
@@ -207,7 +209,8 @@ export default function ReservationsPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('Bu rezervasyonu silmek istediğinize emin misiniz?')) return
+    const ok = await confirm({ title: 'Onay', message: 'Bu rezervasyonu silmek istediğinize emin misiniz?' })
+    if (!ok) return
     try {
       await fetch(`/api/reservations?id=${id}`, { method: 'DELETE' })
       fetchReservations()

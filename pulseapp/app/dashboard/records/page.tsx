@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
 import { createClient } from '@/lib/supabase/client'
 import { logAudit } from '@/lib/utils/audit'
+import { useConfirm } from '@/lib/hooks/use-confirm'
 import type { Customer } from '@/types'
 import CompactBoxCard from '@/components/ui/compact-box-card'
 
@@ -195,6 +196,7 @@ function RecordsPageInner() {
   const recordType: RecordType = isValidType(rawType) ? rawType : DEFAULT_TYPE
 
   const { businessId, staffId, staffName, loading: ctxLoading, permissions } = useBusinessContext()
+  const { confirm } = useConfirm()
   const config = TYPE_CONFIG[recordType]
   const supabase = createClient()
 
@@ -428,10 +430,55 @@ function RecordsPageInner() {
     }
   }
 
+  // ── Delete single file ──────────────────────────────────────────────────
+
+  async function handleDeleteFile(recordId: string, fileUrl: string) {
+    const ok = await confirm({ title: 'Onay', message: 'Bu dosyayı silmek istediğinize emin misiniz?' })
+    if (!ok) return
+
+    const record = records.find((r) => r.id === recordId)
+    if (!record) return
+
+    const currentUrls: string[] = record.data.file_urls || []
+    const updatedUrls = currentUrls.filter((u: string) => u !== fileUrl)
+
+    // Update the record via PATCH using data field (not file_urls to avoid merge)
+    const res = await fetch(`/api/records?id=${recordId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: { ...record.data, file_urls: updatedUrls } }),
+    })
+    if (!res.ok) { alert('Dosya silme hatası'); return }
+
+    // Try to delete from Supabase storage
+    try {
+      const supabase = createClient()
+      const urlObj = new URL(fileUrl)
+      const pathMatch = urlObj.pathname.match(/\/storage\/v1\/object\/public\/records\/(.+)/)
+      if (pathMatch) {
+        await supabase.storage.from('records').remove([decodeURIComponent(pathMatch[1])])
+      }
+    } catch (err) {
+      console.error('Storage delete error (non-critical):', err)
+    }
+
+    // Update selectedRecord state to reflect removal
+    if (selectedRecord?.id === recordId) {
+      setSelectedRecord({
+        ...selectedRecord,
+        data: { ...selectedRecord.data, file_urls: updatedUrls },
+      })
+    }
+
+    fetchRecords()
+    logAudit({ businessId: businessId!, staffId, staffName, action: 'delete', resource: 'patient_record_file', resourceId: recordId, details: { deletedFileUrl: fileUrl } })
+  }
+
   // ── Delete ────────────────────────────────────────────────────────────────
 
   async function handleDelete(record: BusinessRecord) {
-    if (!confirm(`"${record.title}" kaydını silmek istediğinize emin misiniz?`)) return
+    const ok = await confirm({ title: 'Onay', message: `"${record.title}" kaydını silmek istediğinize emin misiniz?` })
+    if (!ok) return
     const res = await fetch(`/api/records?id=${record.id}`, { method: 'DELETE' })
     if (!res.ok) { alert('Silme hatası'); return }
     if (selectedRecord?.id === record.id) setSelectedRecord(null)
@@ -670,17 +717,27 @@ function RecordsPageInner() {
                     <div className="grid grid-cols-4 gap-3">
                       {selectedRecord.data.file_urls.map((url: string, i: number) => {
                         const isImage = /\.(jpg|jpeg|png|heic|webp)$/i.test(url)
-                        return isImage ? (
-                          <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="block rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 hover:opacity-80 transition-opacity aspect-square">
-                            <img src={url} alt="" className="h-full w-full object-cover" />
-                          </a>
-                        ) : (
-                          <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors aspect-square">
-                            <FileText className="h-8 w-8 text-gray-400 mb-1.5" />
-                            <span className="text-xs text-gray-500 truncate w-full text-center">
-                              {decodeURIComponent(url.split('/').pop() || 'Dosya').slice(0, 20)}
-                            </span>
-                          </a>
+                        return (
+                          <div key={i} className="relative group">
+                            <button
+                              onClick={() => handleDeleteFile(selectedRecord.id, url)}
+                              className="absolute top-1 right-1 p-1 rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-red-600 z-10"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                            {isImage ? (
+                              <a href={url} target="_blank" rel="noopener noreferrer" className="block rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 hover:opacity-80 transition-opacity aspect-square">
+                                <img src={url} alt="" className="h-full w-full object-cover" />
+                              </a>
+                            ) : (
+                              <a href={url} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors aspect-square">
+                                <FileText className="h-8 w-8 text-gray-400 mb-1.5" />
+                                <span className="text-xs text-gray-500 truncate w-full text-center">
+                                  {decodeURIComponent(url.split('/').pop() || 'Dosya').slice(0, 20)}
+                                </span>
+                              </a>
+                            )}
+                          </div>
                         )
                       })}
                     </div>

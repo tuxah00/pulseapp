@@ -27,9 +27,11 @@ import {
 import { formatTime, formatDate, getStatusColor, formatCurrency, cn } from '@/lib/utils'
 import { STATUS_LABELS, type AppointmentStatus, type Customer, type Service, type StaffMember } from '@/types'
 import { logAudit } from '@/lib/utils/audit'
+import { useConfirm } from '@/lib/hooks/use-confirm'
 
 export default function AppointmentsPage() {
   const { businessId, staffId: currentStaffId, staffName: currentStaffName, loading: ctxLoading } = useBusinessContext()
+  const { confirm } = useConfirm()
   const [appointments, setAppointments] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
@@ -386,7 +388,8 @@ export default function AppointmentsPage() {
 
   async function handleDeleteAppointment(appointmentId: string, e?: React.MouseEvent) {
     e?.stopPropagation()
-    if (!confirm('Bu randevuyu kalıcı olarak silmek istediğinizden emin misiniz?')) return
+    const ok = await confirm({ title: 'Onay', message: 'Bu randevuyu kalıcı olarak silmek istediğinizden emin misiniz?' })
+    if (!ok) return
     const { error } = await supabase
       .from('appointments')
       .update({ deleted_at: new Date().toISOString() })
@@ -671,7 +674,7 @@ export default function AppointmentsPage() {
               <div className="overflow-x-auto">
                 <div className="min-w-[800px]">
                   {/* Gün başlıkları */}
-                  <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-gray-200 dark:border-gray-700">
+                  <div className="grid grid-cols-[60px_repeat(7,1fr)]">
                     <div className="p-2" />
                     {weekDays.map((day, i) => {
                       const [dy, dm, dd] = day.split('-').map(Number)
@@ -808,14 +811,6 @@ export default function AppointmentsPage() {
             </div>
           )
         })()
-      ) : appointments.length === 0 ? (
-        <div className="card flex flex-col items-center justify-center py-16">
-          <Calendar className="mb-4 h-12 w-12 text-gray-300" />
-          <p className="mb-4 text-gray-500">Bu tarihte randevu yok</p>
-          <button onClick={openNewModal} className="btn-primary">
-            <Plus className="mr-2 h-4 w-4" />Randevu Ekle
-          </button>
-        </div>
       ) : null}
 
       {/* Saat dilimi popup (çakışan randevular) */}
@@ -1058,7 +1053,8 @@ export default function AppointmentsPage() {
                 {selectedAppointment.recurrence_group_id && (
                   <button
                     onClick={async () => {
-                      if (!confirm('Bu serinin gelecekteki tüm randevularını iptal etmek istediğinize emin misiniz?')) return
+                      const ok = await confirm({ title: 'Onay', message: 'Bu serinin gelecekteki tüm randevularını iptal etmek istediğinize emin misiniz?' })
+                      if (!ok) return
                       const today = new Date().toISOString().split('T')[0]
                       const { error } = await supabase
                         .from('appointments')

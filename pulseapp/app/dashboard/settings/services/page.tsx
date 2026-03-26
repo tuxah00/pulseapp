@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
+import { useConfirm } from '@/lib/hooks/use-confirm'
 import { Plus, Pencil, Trash2, Loader2, Banknote, LayoutList, LayoutGrid } from 'lucide-react'
 import { formatCurrency, cn } from '@/lib/utils'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
@@ -18,6 +19,7 @@ export default function ServicesPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [viewMode, setViewMode] = useViewMode('services', 'list')
+  const { confirm } = useConfirm()
 
   // Form state
   const [name, setName] = useState('')
@@ -128,7 +130,8 @@ export default function ServicesPage() {
   }
 
   async function handleDelete(service: Service) {
-    if (!confirm(`"${service.name}" hizmetini silmek istediğinize emin misiniz?`)) return
+    const ok = await confirm({ title: 'Onay', message: `"${service.name}" hizmetini silmek istediğinize emin misiniz?` })
+    if (!ok) return
 
     const { error } = await supabase
       .from('services')

@@ -17,9 +17,11 @@ import CompactBoxCard from '@/components/ui/compact-box-card'
 import { exportToCSV } from '@/lib/utils/export'
 
 import { getCustomerLabel } from '@/lib/config/sector-modules'
+import { useConfirm } from '@/lib/hooks/use-confirm'
 
 export default function CustomersPage() {
   const { businessId, staffId, staffName, loading: ctxLoading, sector } = useBusinessContext()
+  const { confirm } = useConfirm()
   const customerLabel = sector ? getCustomerLabel(sector) : 'Müşteriler'
   const [customers, setCustomers] = useState<Customer[]>([])
   const [loading, setLoading] = useState(true)
@@ -111,7 +113,8 @@ export default function CustomersPage() {
   }
 
   async function handleDelete(customer: Customer) {
-    if (!confirm(`"${customer.name}" müşterisini silmek istediğinize emin misiniz?`)) return
+    const ok = await confirm({ title: 'Onay', message: `"${customer.name}" müşterisini silmek istediğinize emin misiniz?` })
+    if (!ok) return
     await supabase.from('customers').update({ is_active: false }).eq('id', customer.id)
     if (selectedCustomer?.id === customer.id) setSelectedCustomer(null)
     await fetchCustomers()

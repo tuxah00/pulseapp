@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
+import { useConfirm } from '@/lib/hooks/use-confirm'
 import { createClient } from '@/lib/supabase/client'
 import {
   Plus, Loader2, X, Trash2, ChefHat, Clock, CheckCircle,
@@ -63,6 +64,7 @@ const FILTER_OPTIONS = [
 
 export default function OrdersPage() {
   const { businessId, loading: ctxLoading, permissions } = useBusinessContext()
+  const { confirm } = useConfirm()
   const supabase = createClient()
 
   const [orders, setOrders] = useState<Order[]>([])
@@ -177,7 +179,8 @@ export default function OrdersPage() {
   }
 
   async function deleteOrder(orderId: string) {
-    if (!confirm('Bu siparişi silmek istediğinize emin misiniz?')) return
+    const ok = await confirm({ title: 'Onay', message: 'Bu siparişi silmek istediğinize emin misiniz?' })
+    if (!ok) return
     await fetch(`/api/orders?id=${orderId}`, { method: 'DELETE' })
     fetchOrders()
   }

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
+import { useConfirm } from '@/lib/hooks/use-confirm'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
 import { Plus, Pencil, Trash2, Loader2, UserPlus, X, Mail, Phone, Settings, LayoutList, LayoutGrid, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -76,6 +77,7 @@ export default function StaffPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [viewMode, setViewMode] = useViewMode('staff', 'list')
+  const { confirm } = useConfirm()
 
   const [name, setName] = useState('')
   const [role, setRole] = useState<StaffRole>('staff')
@@ -176,7 +178,8 @@ export default function StaffPage() {
   }
 
   async function handleDeactivate(member: StaffMember) {
-    if (!confirm(`"${member.name}" personelini listeden kaldırmak istediğinize emin misiniz? Randevularda artık seçilemez.`)) return
+    const ok = await confirm({ title: 'Onay', message: `"${member.name}" personelini listeden kaldırmak istediğinize emin misiniz? Randevularda artık seçilemez.` })
+    if (!ok) return
     const { error: err } = await supabase.from('staff_members').update({ is_active: false }).eq('id', member.id)
     if (err) { alert('İşlem hatası: ' + err.message); return }
     if (selectedStaff?.id === member.id) setSelectedStaff(null)

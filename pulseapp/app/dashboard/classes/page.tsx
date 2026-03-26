@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
+import { useConfirm } from '@/lib/hooks/use-confirm'
 import {
   CalendarDays,
   Plus,
@@ -65,6 +66,7 @@ function formatDateISO(date: Date): string {
 
 export default function ClassesPage() {
   const { businessId, permissions } = useBusinessContext()
+  const { confirm } = useConfirm()
   const router = useRouter()
   const [classes, setClasses] = useState<ClassItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -167,7 +169,8 @@ export default function ClassesPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('Bu sınıfı silmek istediğinizden emin misiniz?')) return
+    const ok = await confirm({ title: 'Onay', message: 'Bu sınıfı silmek istediğinizden emin misiniz?' })
+    if (!ok) return
     await fetch(`/api/classes?id=${id}`, { method: 'DELETE' })
     fetchClasses()
   }

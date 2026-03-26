@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useDebounce } from '@/lib/hooks/use-debounce'
+import { useConfirm } from '@/lib/hooks/use-confirm'
 import {
   Plus, Receipt, Loader2, X, Pencil, Trash2,
   CheckCircle, Clock, AlertCircle, XCircle, Download,
@@ -55,6 +56,7 @@ export default function InvoicesPage() {
   const [formNotes, setFormNotes] = useState('')
   const [formDueDate, setFormDueDate] = useState('')
 
+  const { confirm } = useConfirm()
   const supabase = createClient()
 
   const fetchInvoices = useCallback(async () => {
@@ -166,7 +168,8 @@ export default function InvoicesPage() {
   }
 
   async function cancelInvoice(invoice: Invoice) {
-    if (!confirm('Bu faturayı iptal etmek istediğinize emin misiniz?')) return
+    const ok = await confirm({ title: 'Onay', message: 'Bu faturayı iptal etmek istediğinize emin misiniz?' })
+    if (!ok) return
     const res = await fetch(`/api/invoices?id=${invoice.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -180,7 +183,8 @@ export default function InvoicesPage() {
   }
 
   async function deleteInvoice(invoice: Invoice) {
-    if (!confirm(`"${invoice.invoice_number}" faturasını silmek istediğinize emin misiniz?`)) return
+    const ok = await confirm({ title: 'Onay', message: `"${invoice.invoice_number}" faturasını silmek istediğinize emin misiniz?` })
+    if (!ok) return
     await fetch(`/api/invoices?id=${invoice.id}`, { method: 'DELETE' })
     setSelectedInvoice(null)
     fetchInvoices()

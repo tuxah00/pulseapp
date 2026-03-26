@@ -10,6 +10,7 @@ import {
   BarChart3, PieChart, Activity, Plus, X, Wallet, Download,
 } from 'lucide-react'
 import { formatCurrency, cn } from '@/lib/utils'
+import { useConfirm } from '@/lib/hooks/use-confirm'
 import { SEGMENT_LABELS } from '@/types'
 import { exportToCSV } from '@/lib/utils/export'
 import type { Expense, Income } from '@/types'
@@ -44,6 +45,7 @@ function getPeriodDates(period: 'week' | 'month' | 'year', offset = 0): { start:
 
 export default function AnalyticsPage() {
   const { businessId, staffId, staffName, loading: ctxLoading, permissions } = useBusinessContext()
+  const { confirm } = useConfirm()
   const [loading, setLoading] = useState(true)
   const [period, setPeriod] = useState<'week' | 'month' | 'year'>('month')
   const [activeTab, setActiveTab] = useState<'overview' | 'staff' | 'customers' | 'sources' | 'expenses'>('overview')
@@ -176,7 +178,8 @@ export default function AnalyticsPage() {
   }
 
   async function handleDeleteExpense(id: string) {
-    if (!confirm('Bu gideri silmek istediğinize emin misiniz?')) return
+    const ok = await confirm({ title: 'Onay', message: 'Bu gideri silmek istediğinize emin misiniz?' })
+    if (!ok) return
     const expense = expenses.find(e => e.id === id)
     await fetch(`/api/expenses?id=${id}`, { method: 'DELETE' })
     logAudit({ businessId: businessId!, staffId: staffId || null, staffName: staffName || null, action: 'delete', resource: 'expense', details: { category: expense?.category || null, amount: expense?.amount || null } })
@@ -214,7 +217,8 @@ export default function AnalyticsPage() {
   }
 
   async function handleDeleteIncome(id: string) {
-    if (!confirm('Bu geliri silmek istediğinize emin misiniz?')) return
+    const ok = await confirm({ title: 'Onay', message: 'Bu geliri silmek istediğinize emin misiniz?' })
+    if (!ok) return
     const income = incomes.find(i => i.id === id)
     await fetch(`/api/income?id=${id}`, { method: 'DELETE' })
     logAudit({ businessId: businessId!, staffId: staffId || null, staffName: staffName || null, action: 'delete', resource: 'income', details: { category: income?.category || null, amount: income?.amount || null } })
@@ -631,7 +635,7 @@ export default function AnalyticsPage() {
                   <Download className="h-3.5 w-3.5" />Dışa Aktar
                 </button>
               )}
-              <button onClick={() => setShowIncomeForm(v => !v)} className="text-sm px-3 py-2 rounded-lg bg-green-500 text-white hover:bg-green-600 transition-colors font-medium flex items-center">
+              <button onClick={() => setShowIncomeForm(v => !v)} className="btn-primary text-sm bg-green-500 hover:bg-green-600">
                 <Plus className="mr-1.5 h-4 w-4" />Gelir Ekle
               </button>
               <button onClick={() => setShowExpenseForm(v => !v)} className="btn-primary text-sm">

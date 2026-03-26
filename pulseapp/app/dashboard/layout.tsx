@@ -6,6 +6,7 @@ import OnboardingForm from '@/components/dashboard/onboarding-form'
 import { BusinessProvider } from '@/lib/hooks/business-context-provider'
 import { ThemeProvider } from '@/components/theme-provider'
 import ToastContainer from '@/components/ui/toast'
+import { ConfirmProvider } from '@/lib/hooks/use-confirm'
 import { getEffectivePermissions, type StaffRole } from '@/types'
 
 export default async function DashboardLayout({
@@ -69,7 +70,9 @@ export default async function DashboardLayout({
               staffRole,
               permissions,
             }}>
-              {children}
+              <ConfirmProvider>
+                {children}
+              </ConfirmProvider>
             </BusinessProvider>
             <ToastContainer />
           </div>

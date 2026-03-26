@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
+import { useConfirm } from '@/lib/hooks/use-confirm'
 import { useDebounce } from '@/lib/hooks/use-debounce'
 import {
   Plus, Package, Loader2, X, Pencil, Trash2,
@@ -48,6 +49,7 @@ export default function StoklarPage() {
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounce(search, 300)
   const [viewMode, setViewMode] = useViewMode('stoklar', 'list')
+  const { confirm } = useConfirm()
   const [pageTab, setPageTab] = useState<PageTab>('products')
   const [detailTab, setDetailTab] = useState<DetailTab>('info')
 
@@ -198,7 +200,8 @@ export default function StoklarPage() {
   }
 
   async function handleDelete(product: Product) {
-    if (!confirm(`"${product.name}" ürününü silmek istediğinize emin misiniz?`)) return
+    const ok = await confirm({ title: 'Onay', message: `"${product.name}" ürününü silmek istediğinize emin misiniz?` })
+    if (!ok) return
     const { error: err } = await supabase
       .from('products')
       .update({ is_active: false })
@@ -269,7 +272,8 @@ export default function StoklarPage() {
   }
 
   async function handleDeleteSupplier(supplier: Supplier) {
-    if (!confirm(`"${supplier.name}" tedarikçisini silmek istediğinize emin misiniz?`)) return
+    const ok = await confirm({ title: 'Onay', message: `"${supplier.name}" tedarikçisini silmek istediğinize emin misiniz?` })
+    if (!ok) return
     await supabase.from('suppliers').delete().eq('id', supplier.id)
     fetchSuppliers()
   }

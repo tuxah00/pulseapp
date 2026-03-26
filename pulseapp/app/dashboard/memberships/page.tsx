@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useDebounce } from '@/lib/hooks/use-debounce'
+import { useConfirm } from '@/lib/hooks/use-confirm'
 import {
   CreditCard, Users, Calendar, Plus, Search, X,
   Edit2, Trash2, Pause, Play, CheckCircle, Loader2,
@@ -78,6 +79,7 @@ export default function MembershipsPage() {
   const [error, setError] = useState<string | null>(null)
   const [dbError, setDbError] = useState<string | null>(null)
   const [viewMode, setViewMode] = useViewMode('memberships', 'list')
+  const { confirm } = useConfirm()
 
   // Form state
   const [customerName, setCustomerName] = useState('')
@@ -205,7 +207,8 @@ export default function MembershipsPage() {
   }
 
   async function handleDelete(m: Membership) {
-    if (!confirm(`"${m.customer_name}" üyeliğini silmek istediğinize emin misiniz?`)) return
+    const ok = await confirm({ title: 'Onay', message: `"${m.customer_name}" üyeliğini silmek istediğinize emin misiniz?` })
+    if (!ok) return
     const res = await fetch(`/api/memberships?id=${m.id}`, { method: 'DELETE' })
     if (!res.ok) {
       const json = await res.json()
