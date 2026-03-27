@@ -201,7 +201,7 @@ export default function ReviewsPage() {
               )}
             >
               <span className="text-sm font-medium w-8">{rating} ★</span>
-              <div className="flex-1 h-4 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+              <div className="flex-1 h-4 bg-gray-200 dark:bg-white/15 rounded-full overflow-hidden">
                 <div
                   className={cn('h-full rounded-full transition-all',
                     rating >= 4 ? 'bg-green-500 dark:bg-green-400' : rating === 3 ? 'bg-amber-500 dark:bg-amber-400' : 'bg-red-500 dark:bg-red-400'
