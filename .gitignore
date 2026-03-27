@@ -1,3 +1,12 @@
 
-# Verdent/Claude internal
-.claude/
+# Verdent/Claude internal — personal settings ignored, shared commands tracked
+.claude/settings.json
+.claude/settings.local.json
+.claude/cache/
+.claude/sessions/
+.claude/debug/
+.claude/history.jsonl
+.claude/shell-snapshots/
+.claude/telemetry/
+.claude/plans/
+.claude/worktrees/

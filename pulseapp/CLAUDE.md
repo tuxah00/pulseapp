@@ -8,6 +8,26 @@ PulseApp, çok sektörlü SaaS işletme yönetim platformu. Next.js 14, Supabase
 - **Vercel:** main branch'e her push'ta otomatik deploy
 - **Kural:** Her değişiklik sonrası build kontrol et → commit → push (kullanıcıya sormadan)
 
+## Git Commit Formatı
+```
+<type>: <Türkçe açıklama>
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+```
+**type değerleri:** `feat` (yeni özellik) | `fix` (hata düzeltme) | `refactor` (yapısal değişiklik) | `chore` (config/bağımlılık) | `docs` (dokümantasyon)
+
+Örnekler:
+- `feat: randevu tekrarlama özelliği eklendi`
+- `fix: haftalık takvimde 08:00 çizgisi çakışması giderildi`
+- `refactor: confirm() çağrıları useConfirm() ile değiştirildi`
+
+## Türkçe UI Kuralı
+- **Tüm kullanıcıya görünen metinler Türkçe olmalı:** buton etiketleri, placeholder'lar, hata mesajları, boş durum mesajları, tooltip'ler
+- Kod içi değişken/fonksiyon isimleri İngilizce kalır
+- API response key'leri İngilizce kalır
+- Tarih formatı: `tr-TR` locale kullan (`toLocaleDateString('tr-TR', ...)`)
+- Para birimi: Türk Lirası (₺), `formatCurrency()` helper kullan (`lib/utils.ts`)
+
 ## Teknik Stack
 - **Frontend:** Next.js 14 (App Router), React, Tailwind CSS, TypeScript
 - **Backend:** Supabase (PostgreSQL + RLS + Realtime)
@@ -56,11 +76,15 @@ const { businessId, userId, staffId, staffName, staffRole, permissions, sector, 
 - Loglanan kaynaklar: `appointment, customer, staff, permissions, service, settings, expense, invoice, stock_movement, patient_record, message, portfolio, membership, shift, inventory`
 - logAudit çağrıları şu sayfalarda mevcut: appointments, customers, analytics (gider), portfolio, invoices, stoklar, records, settings/services, settings/staff, settings/vardiye, settings/business, messages
 
-## Güvenlik
-- Randevular SOFT DELETE kullanır: `deleted_at` sütunu — hard delete yok
-- Tüm appointment sorguları `.is('deleted_at', null)` filtresi içermeli
-- RLS tüm tablolarda aktif (business_id bazlı izolasyon)
-- `staff_invitations` tablosu ile davet linki sistemi (7 gün geçerli)
+## Güvenlik Kuralları
+- **SOFT DELETE:** Randevular `deleted_at` sütunu ile silinir — hard delete YOK. Tüm appointment sorguları `.is('deleted_at', null)` filtresi içermeli
+- **RLS:** Tüm tablolarda Row Level Security aktif — `business_id` bazlı izolasyon
+- **Kimlik doğrulama:** Her API endpoint'te `supabase.auth.getUser()` ile kullanıcı kontrolü yap; yoksa 401 dön
+- **Admin client:** `createAdminClient()` sadece RLS bypass gerektiğinde kullanılır (webhook, davet, storage upload). Normal CRUD işlemleri için KULLANMA
+- **SECURITY DEFINER:** Supabase fonksiyonlarında `SECURITY DEFINER` kullanıyorsan `SET search_path = public` ekle (injection riski)
+- **Input validation:** API route'larında zorunlu alanları kontrol et, eksikse 400 dön
+- **XSS:** Kullanıcı girdisini doğrudan `dangerouslySetInnerHTML` ile render ETME
+- **`staff_invitations`** tablosu ile davet linki sistemi (7 gün geçerli, tek kullanımlık token)
 
 ## Önemli Tablolar
 | Tablo | Açıklama |
