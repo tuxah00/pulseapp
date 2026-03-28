@@ -733,7 +733,7 @@ export default function AppointmentsPage() {
                           key={`col-${day}`}
                           className={cn(
                             'absolute border-l border-gray-200 dark:border-gray-700',
-                            isDayToday && 'bg-pulse-50/30 dark:bg-pulse-900/10'
+                            isDayToday && 'bg-pulse-50/30 dark:bg-pulse-900/30'
                           )}
                           style={{
                             left: `calc(60px + ${dayIdx} * ((100% - 60px) / 7))`,
