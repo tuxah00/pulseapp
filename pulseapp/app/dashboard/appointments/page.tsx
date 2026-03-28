@@ -186,10 +186,10 @@ export default function AppointmentsPage() {
     return `${sd} ${months[sm - 1]} – ${ed} ${months[em - 1]} ${ey}`
   }
 
-  function openNewModal() {
+  function openNewModal(overrideDate?: string, overrideTime?: string) {
     setEditingAppointment(null)
     setCustomerId(''); setServiceId(''); setStaffId('')
-    setDate(selectedDate); setStartTime('09:00'); setNotes('')
+    setDate(overrideDate || selectedDate); setStartTime(overrideTime || '09:00'); setNotes('')
     setIsRecurring(false); setRecurrenceFrequency('weekly'); setRecurrenceCount(4)
     setError(null); setShowModal(true)
   }
@@ -540,7 +540,7 @@ export default function AppointmentsPage() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Randevular</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{totalCount} randevu</p>
         </div>
-        <button onClick={openNewModal} className="btn-primary">
+        <button onClick={() => openNewModal()} className="btn-primary">
           <Plus className="mr-2 h-4 w-4" />Yeni Randevu
         </button>
       </div>
@@ -705,7 +705,7 @@ export default function AppointmentsPage() {
                   <div className="relative select-none" style={{ height: hours.length * hourHeight + topPad }}>
 
                     {/* ── Katman 1: Sütun arka planları (CSS Grid — header ile garantili hizalama) ── */}
-                    <div className="absolute inset-y-0 left-[60px] right-0 grid grid-cols-7">
+                    <div className="absolute top-0 -bottom-1 left-[60px] right-0 grid grid-cols-7">
                       {weekDays.map((day) => {
                         const isDayToday = day === todayStr
                         return (
@@ -756,10 +756,12 @@ export default function AppointmentsPage() {
                             height: `calc(100% - ${topPad}px)`,
                           }}
                           onClick={(e) => {
+                            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                            const clickY = e.clientY - rect.top
+                            const clickHour = Math.max(8, Math.min(21, Math.floor((clickY / hourHeight) + 8)))
+                            const timeStr = `${String(clickHour).padStart(2, '0')}:00`
+
                             if (dayAppointments.length > 0) {
-                              const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-                              const clickY = e.clientY - rect.top
-                              const clickHour = Math.floor((clickY / hourHeight) + 8)
                               const hourApts = dayAppointments.filter(a => {
                                 const aHour = parseInt(a.start_time.split(':')[0])
                                 return aHour === clickHour
@@ -769,9 +771,7 @@ export default function AppointmentsPage() {
                                 return
                               }
                             }
-                            setDate(day)
-                            setStartTime('09:00')
-                            openNewModal()
+                            openNewModal(day, timeStr)
                           }}
                         >
                           {/* Randevu blokları — çakışma tespiti ile yan yana kolon */}
@@ -872,7 +872,7 @@ export default function AppointmentsPage() {
         <div className="card flex flex-col items-center justify-center py-16">
           <Calendar className="mb-4 h-12 w-12 text-gray-300" />
           <p className="mb-4 text-gray-500">Bu tarihte randevu yok</p>
-          <button onClick={openNewModal} className="btn-primary">
+          <button onClick={() => openNewModal()} className="btn-primary">
             <Plus className="mr-2 h-4 w-4" />Randevu Ekle
           </button>
         </div>
