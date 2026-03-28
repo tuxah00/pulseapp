@@ -198,9 +198,9 @@
 @keyframes scaleOut { from { transform: scale(1); opacity: 1; } to { transform: scale(0.95); opacity: 0; } }
 @keyframes slideOutRight { from { transform: translateX(0); } to { transform: translateX(100%); } }
 
-.modal-overlay.closing { animation: fadeOut 0.15s ease-in forwards; }
-.modal-content.closing { animation: scaleOut 0.15s ease-in forwards; }
-.slide-panel.closing { animation: slideOutRight 0.2s ease-in forwards; }
+.modal-overlay.closing { animation: fadeOut 0.25s ease-in forwards; }
+.modal-content.closing { animation: scaleOut 0.25s ease-in forwards; }
+.slide-panel.closing { animation: slideOutRight 0.25s ease-in forwards; }
 
 /* Form zorunlu alan göstergesi */
 .label-required::after {

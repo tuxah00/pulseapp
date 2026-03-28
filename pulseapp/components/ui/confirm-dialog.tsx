@@ -42,7 +42,7 @@ export default function ConfirmDialog({
     // Small delay so animation plays before confirm action
     setTimeout(() => {
       onConfirm()
-    }, 150)
+    }, 250)
   }, [onConfirm])
 
   if (!open) return null

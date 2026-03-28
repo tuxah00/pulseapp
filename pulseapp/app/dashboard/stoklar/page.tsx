@@ -44,6 +44,8 @@ export default function StoklarPage() {
   const [showModal, setShowModal] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
+  const [panelClosing, setPanelClosing] = useState(false)
+  const closePanelAnimated = useCallback(() => setPanelClosing(true), [])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
@@ -550,11 +552,14 @@ export default function StoklarPage() {
       {/* ── Ürün Detay Slide-Over Paneli ── */}
       {selectedProduct && (
         <>
-          <div className="fixed inset-0 z-40 bg-black/30 dark:bg-black/50" onClick={() => setSelectedProduct(null)} />
-          <div className="slide-panel border-l border-gray-200 dark:border-gray-700">
+          <div className="fixed inset-0 z-40 bg-black/30 dark:bg-black/50" onClick={closePanelAnimated} />
+          <div
+            className={`slide-panel border-l border-gray-200 dark:border-gray-700 ${panelClosing ? 'closing' : ''}`}
+            onAnimationEnd={() => { if (panelClosing) { setSelectedProduct(null); setPanelClosing(false) } }}
+          >
             <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-5 py-4">
               <h3 className="font-semibold text-gray-900 dark:text-gray-100">Ürün Detayı</h3>
-              <button onClick={() => setSelectedProduct(null)} className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600">
+              <button onClick={closePanelAnimated} className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600">
                 <X className="h-4 w-4" />
               </button>
             </div>

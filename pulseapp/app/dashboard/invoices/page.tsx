@@ -45,6 +45,8 @@ export default function InvoicesPage() {
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounce(search, 300)
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
+  const [panelClosing, setPanelClosing] = useState(false)
+  const closePanelAnimated = useCallback(() => setPanelClosing(true), [])
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -380,8 +382,11 @@ export default function InvoicesPage() {
       {/* ── Fatura Detay Slide-Over ── */}
       {selectedInvoice && (
         <>
-          <div className="fixed inset-0 z-40 bg-black/30 dark:bg-black/50" onClick={() => setSelectedInvoice(null)} />
-          <div className="slide-panel border-l border-gray-200 dark:border-gray-700">
+          <div className="fixed inset-0 z-40 bg-black/30 dark:bg-black/50" onClick={closePanelAnimated} />
+          <div
+            className={`slide-panel border-l border-gray-200 dark:border-gray-700 ${panelClosing ? 'closing' : ''}`}
+            onAnimationEnd={() => { if (panelClosing) { setSelectedInvoice(null); setPanelClosing(false) } }}
+          >
             <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-5 py-4">
               <div>
                 <h3 className="font-semibold text-gray-900 dark:text-gray-100">{selectedInvoice.invoice_number}</h3>
@@ -391,7 +396,7 @@ export default function InvoicesPage() {
                 <button onClick={() => handlePrintInvoice(selectedInvoice)} title="PDF Yazdır" className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 transition-colors">
                   <Printer className="h-4 w-4" />
                 </button>
-                <button onClick={() => setSelectedInvoice(null)} className="flex h-8 w-8 items-center justify-center rounded-lg p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600">
+                <button onClick={closePanelAnimated} className="flex h-8 w-8 items-center justify-center rounded-lg p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600">
                   <X className="h-4 w-4" />
                 </button>
               </div>

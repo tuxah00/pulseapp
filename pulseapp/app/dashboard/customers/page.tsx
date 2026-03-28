@@ -31,6 +31,8 @@ export default function CustomersPage() {
   const [showModal, setShowModal] = useState(false)
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null)
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
+  const [panelClosing, setPanelClosing] = useState(false)
+  const closePanelAnimated = useCallback(() => setPanelClosing(true), [])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [viewMode, setViewMode] = useViewMode('customers', 'list')
@@ -418,11 +420,14 @@ export default function CustomersPage() {
       {/* ── Müşteri Detay Slide-Over Paneli ── */}
       {selectedCustomer && (
         <>
-          <div className="fixed inset-0 z-40 bg-black/30 dark:bg-black/50" onClick={() => setSelectedCustomer(null)} />
-          <div className="slide-panel border-l border-gray-200 dark:border-gray-700">
+          <div className="fixed inset-0 z-40 bg-black/30 dark:bg-black/50" onClick={closePanelAnimated} />
+          <div
+            className={`slide-panel border-l border-gray-200 dark:border-gray-700 ${panelClosing ? 'closing' : ''}`}
+            onAnimationEnd={() => { if (panelClosing) { setSelectedCustomer(null); setPanelClosing(false) } }}
+          >
             <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-5 py-4">
               <h3 className="font-semibold text-gray-900 dark:text-gray-100">Müşteri Detayı</h3>
-              <button onClick={() => setSelectedCustomer(null)} className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600">
+              <button onClick={closePanelAnimated} className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600">
                 <X className="h-4 w-4" />
               </button>
             </div>
