@@ -295,7 +295,7 @@ export default function CustomersPage() {
               {'★'.repeat(rev.rating)}{'☆'.repeat(5 - rev.rating)} Yorum
             </p>
             {rev.comment && (
-              <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 line-clamp-2">"{rev.comment}"</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 line-clamp-2">&ldquo;{rev.comment}&rdquo;</p>
             )}
             <p className="text-xs text-gray-400 mt-0.5">{formatDate(rev.created_at)}</p>
           </div>
