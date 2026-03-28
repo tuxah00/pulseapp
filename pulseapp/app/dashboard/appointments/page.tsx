@@ -688,7 +688,7 @@ export default function AppointmentsPage() {
                           key={day}
                           className={cn(
                             'p-2 text-center border-l border-gray-200 dark:border-gray-700',
-                            isDayToday && 'bg-pulse-50 dark:bg-pulse-900/20'
+                            isDayToday && 'bg-pulse-50 dark:bg-pulse-400/15'
                           )}
                         >
                           <p className="text-xs text-gray-500 dark:text-gray-400">{dayNames[i]}</p>
@@ -702,8 +702,25 @@ export default function AppointmentsPage() {
                   </div>
 
                   {/* Saat grid'i */}
-                  <div className="relative grid grid-cols-[60px_repeat(7,1fr)] select-none" style={{ height: hours.length * hourHeight + topPad }}>
-                    {/* Saat etiketleri */}
+                  <div className="relative select-none" style={{ height: hours.length * hourHeight + topPad }}>
+
+                    {/* ── Katman 1: Sütun arka planları (CSS Grid — header ile garantili hizalama) ── */}
+                    <div className="absolute inset-y-0 left-[60px] right-0 grid grid-cols-7">
+                      {weekDays.map((day) => {
+                        const isDayToday = day === todayStr
+                        return (
+                          <div
+                            key={`bg-${day}`}
+                            className={cn(
+                              'border-l border-gray-200 dark:border-gray-700',
+                              isDayToday && 'bg-pulse-50/40 dark:bg-pulse-400/10'
+                            )}
+                          />
+                        )
+                      })}
+                    </div>
+
+                    {/* ── Katman 2: Saat etiketleri ── */}
                     {hours.map((hour, i) => (
                       <div
                         key={`h-${hour}`}
@@ -714,7 +731,7 @@ export default function AppointmentsPage() {
                       </div>
                     ))}
 
-                    {/* Yatay çizgiler */}
+                    {/* ── Katman 3: Yatay çizgiler ── */}
                     {hours.map((hour, i) => (
                       <div
                         key={`line-${hour}`}
@@ -723,7 +740,7 @@ export default function AppointmentsPage() {
                       />
                     ))}
 
-                    {/* Gün sütunları (dikey çizgiler + randevu blokları) */}
+                    {/* ── Katman 4: Tıklama alanı + randevu blokları (arka plan yok — sadece etkileşim) ── */}
                     {weekDays.map((day, dayIdx) => {
                       const dayAppointments = appointments.filter(a => a.appointment_date === day)
                       const isDayToday = day === todayStr
@@ -731,10 +748,7 @@ export default function AppointmentsPage() {
                       return (
                         <div
                           key={`col-${day}`}
-                          className={cn(
-                            'absolute border-l border-gray-200 dark:border-gray-700',
-                            isDayToday && 'bg-pulse-50/30 dark:bg-pulse-900/30'
-                          )}
+                          className="absolute"
                           style={{
                             left: `calc(60px + ${dayIdx} * ((100% - 60px) / 7))`,
                             width: `calc((100% - 60px) / 7)`,
