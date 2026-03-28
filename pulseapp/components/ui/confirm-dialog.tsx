@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { AlertTriangle, Trash2, X } from 'lucide-react'
 
 interface ConfirmDialogProps {
@@ -25,25 +25,29 @@ export default function ConfirmDialog({
   variant = 'danger',
 }: ConfirmDialogProps) {
   const [closing, setClosing] = useState(false)
+  const confirmedRef = useRef(false)
 
   const handleClose = useCallback(() => {
+    confirmedRef.current = false
     setClosing(true)
   }, [])
 
-  const handleAnimationEnd = useCallback(() => {
-    if (closing) {
-      setClosing(false)
+  const handleAnimationEnd = useCallback((e: React.AnimationEvent) => {
+    // Only fire on the overlay itself, not bubbled events from inner modal-content
+    if (!closing || e.target !== e.currentTarget) return
+    setClosing(false)
+    if (confirmedRef.current) {
+      confirmedRef.current = false
+      onConfirm()
+    } else {
       onClose()
     }
-  }, [closing, onClose])
+  }, [closing, onConfirm, onClose])
 
   const handleConfirm = useCallback(() => {
+    confirmedRef.current = true
     setClosing(true)
-    // Small delay so animation plays before confirm action
-    setTimeout(() => {
-      onConfirm()
-    }, 250)
-  }, [onConfirm])
+  }, [])
 
   if (!open) return null
 
