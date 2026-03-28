@@ -688,7 +688,7 @@ export default function AppointmentsPage() {
                           key={day}
                           className={cn(
                             'p-2 text-center border-l border-gray-200 dark:border-gray-700',
-                            isDayToday && 'bg-pulse-50 dark:bg-pulse-400/25'
+                            isDayToday && 'bg-pulse-50 dark:bg-pulse-900/20'
                           )}
                         >
                           <p className="text-xs text-gray-500 dark:text-gray-400">{dayNames[i]}</p>
@@ -705,7 +705,10 @@ export default function AppointmentsPage() {
                   <div className="relative select-none" style={{ height: hours.length * hourHeight + topPad }}>
 
                     {/* ── Katman 1: Sütun arka planları (CSS Grid — header ile garantili hizalama) ── */}
-                    <div className="absolute inset-y-0 left-[60px] right-0 grid grid-cols-7">
+                    <div
+                      className="absolute left-[60px] right-0 bottom-0 grid grid-cols-7"
+                      style={{ top: topPad }}
+                    >
                       {weekDays.map((day) => {
                         const isDayToday = day === todayStr
                         return (
@@ -713,7 +716,7 @@ export default function AppointmentsPage() {
                             key={`bg-${day}`}
                             className={cn(
                               'border-l border-gray-200 dark:border-gray-700',
-                              isDayToday && 'bg-pulse-50/50 dark:bg-pulse-400/20'
+                              isDayToday && 'bg-pulse-50/30 dark:bg-pulse-900/20'
                             )}
                           />
                         )
