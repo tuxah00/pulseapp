@@ -676,9 +676,27 @@ export default function AppointmentsPage() {
           return (
             <div className="card overflow-hidden !p-0">
               <div className="overflow-x-auto">
-                <div className="min-w-[800px]">
-                  {/* Gün başlıkları */}
-                  <div className="grid grid-cols-[60px_repeat(7,1fr)]">
+                <div className="min-w-[800px] relative">
+
+                  {/* ── TEK arka plan grid — header + body ikisini birden kapsar ── */}
+                  <div className="absolute inset-0 grid grid-cols-[60px_repeat(7,1fr)] pointer-events-none">
+                    <div /> {/* saat etiketi alanı */}
+                    {weekDays.map((day) => {
+                      const isDayToday = day === todayStr
+                      return (
+                        <div
+                          key={`bg-${day}`}
+                          className={cn(
+                            'border-l border-gray-200 dark:border-gray-700',
+                            isDayToday && 'bg-pulse-50/40 dark:bg-pulse-900/20'
+                          )}
+                        />
+                      )
+                    })}
+                  </div>
+
+                  {/* Gün başlıkları — border-l yok (bg grid halleder), sadece border-b */}
+                  <div className="grid grid-cols-[60px_repeat(7,1fr)] relative border-b border-gray-200 dark:border-gray-700">
                     <div className="p-2" />
                     {weekDays.map((day, i) => {
                       const [dy, dm, dd] = day.split('-').map(Number)
@@ -686,10 +704,7 @@ export default function AppointmentsPage() {
                       return (
                         <div
                           key={day}
-                          className={cn(
-                            'p-2 text-center border-l border-gray-200 dark:border-gray-700',
-                            isDayToday && 'bg-pulse-50 dark:bg-pulse-900/20'
-                          )}
+                          className="p-2 text-center"
                         >
                           <p className="text-xs text-gray-500 dark:text-gray-400">{dayNames[i]}</p>
                           <p className={cn(
@@ -704,22 +719,7 @@ export default function AppointmentsPage() {
                   {/* Saat grid'i */}
                   <div className="relative select-none" style={{ height: hours.length * hourHeight + topPad }}>
 
-                    {/* ── Katman 1: Sütun arka planları (header ile birebir aynı grid-cols template) ── */}
-                    <div className="absolute top-0 -bottom-1 left-0 right-0 grid grid-cols-[60px_repeat(7,1fr)]">
-                      <div /> {/* saat etiketi alanı — boş */}
-                      {weekDays.map((day) => {
-                        const isDayToday = day === todayStr
-                        return (
-                          <div
-                            key={`bg-${day}`}
-                            className={cn(
-                              'border-l border-gray-200 dark:border-gray-700',
-                              isDayToday && 'bg-pulse-50/30 dark:bg-pulse-900/20'
-                            )}
-                          />
-                        )
-                      })}
-                    </div>
+                    {/* Katman 1 KALDIRILDI — tek bg grid min-w-[800px] seviyesinde hallediyor */}
 
                     {/* ── Katman 2: Saat etiketleri ── */}
                     {hours.map((hour, i) => (
