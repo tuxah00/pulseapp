@@ -702,7 +702,7 @@ export default function AppointmentsPage() {
                   </div>
 
                   {/* Saat grid'i */}
-                  <div className="relative grid grid-cols-[60px_repeat(7,1fr)]" style={{ height: hours.length * hourHeight + topPad }}>
+                  <div className="relative grid grid-cols-[60px_repeat(7,1fr)] select-none" style={{ height: hours.length * hourHeight + topPad }}>
                     {/* Saat etiketleri */}
                     {hours.map((hour, i) => (
                       <div
@@ -738,13 +738,13 @@ export default function AppointmentsPage() {
                           style={{
                             left: `calc(60px + ${dayIdx} * ((100% - 60px) / 7))`,
                             width: `calc((100% - 60px) / 7)`,
-                            top: 0,
-                            height: '100%',
+                            top: topPad,
+                            height: `calc(100% - ${topPad}px)`,
                           }}
                           onClick={(e) => {
                             if (dayAppointments.length > 0) {
                               const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-                              const clickY = e.clientY - rect.top - topPad
+                              const clickY = e.clientY - rect.top
                               const clickHour = Math.floor((clickY / hourHeight) + 8)
                               const hourApts = dayAppointments.filter(a => {
                                 const aHour = parseInt(a.start_time.split(':')[0])
@@ -764,7 +764,7 @@ export default function AppointmentsPage() {
                           {computeOverlapLayout(dayAppointments).map(({ apt, column, totalColumns }) => {
                             const startMin = toMinutes(apt.start_time) - 8 * 60
                             const endMin = toMinutes(apt.end_time) - 8 * 60
-                            const top = topPad + (startMin / 60) * hourHeight
+                            const top = (startMin / 60) * hourHeight
                             const height = Math.max(((endMin - startMin) / 60) * hourHeight, 20)
                             const colorIdx = getStaffColorIndex(apt.staff_id)
                             const colWidth = 100 / totalColumns
@@ -796,7 +796,7 @@ export default function AppointmentsPage() {
                           {isDayToday && (() => {
                             const currentMin = nowMinutes - 8 * 60
                             if (currentMin < 0 || currentMin > 14 * 60) return null
-                            const top = topPad + (currentMin / 60) * hourHeight
+                            const top = (currentMin / 60) * hourHeight
                             return (
                               <div className="absolute left-0 right-0 z-10 pointer-events-none" style={{ top }}>
                                 <div className="flex items-center">
