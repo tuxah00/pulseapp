@@ -154,9 +154,10 @@ export default function AppointmentsPage() {
 
   function goToday() { setSelectedDate(new Date().toISOString().split('T')[0]) }
 
-  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  const effectiveNow = now ?? new Date()
+  const todayStr = `${effectiveNow.getFullYear()}-${String(effectiveNow.getMonth() + 1).padStart(2, '0')}-${String(effectiveNow.getDate()).padStart(2, '0')}`
   const isToday = selectedDate === todayStr
-  const nowMinutes = now.getHours() * 60 + now.getMinutes()
+  const nowMinutes = now ? now.getHours() * 60 + now.getMinutes() : -1
 
   function getTimeState(apt: any): 'past' | 'current' | 'future' {
     if (selectedDate < todayStr) return 'past'
@@ -673,7 +674,7 @@ export default function AppointmentsPage() {
           const toMinutes = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
 
           return (
-            <div className="card overflow-hidden">
+            <div className="card overflow-hidden !p-0">
               <div className="overflow-x-auto">
                 <div className="min-w-[800px]">
                   {/* Gün başlıkları */}
