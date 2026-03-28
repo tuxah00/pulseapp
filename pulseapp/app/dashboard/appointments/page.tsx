@@ -670,7 +670,7 @@ export default function AppointmentsPage() {
 
           // Hesapla: her saat 60px yükseklik
           const hourHeight = 60
-          const topPad = 12 // Grid üst boşluğu — 08:00 çizgisi ile container kenarı arasında boşluk
+          const topPad = 0 // header border-b çizgisi separator görevi görüyor
           const toMinutes = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
 
           return (
@@ -721,23 +721,23 @@ export default function AppointmentsPage() {
 
                     {/* Katman 1 KALDIRILDI — tek bg grid min-w-[800px] seviyesinde hallediyor */}
 
-                    {/* ── Katman 2: Saat etiketleri ── */}
-                    {hours.map((hour, i) => (
+                    {/* ── Katman 2: Saat etiketleri — 08:00 atlanır (header border-b separator) ── */}
+                    {hours.slice(1).map((hour, i) => (
                       <div
                         key={`h-${hour}`}
                         className="absolute left-0 w-[60px] text-right pr-2 text-xs text-gray-400"
-                        style={{ top: topPad + i * hourHeight - 6 }}
+                        style={{ top: (i + 1) * hourHeight - 6 }}
                       >
                         {String(hour).padStart(2, '0')}:00
                       </div>
                     ))}
 
-                    {/* ── Katman 3: Yatay çizgiler ── */}
-                    {hours.map((hour, i) => (
+                    {/* ── Katman 3: Yatay çizgiler — 08:00 atlanır (header border-b separator) ── */}
+                    {hours.slice(1).map((hour, i) => (
                       <div
                         key={`line-${hour}`}
                         className="absolute left-[60px] right-0 border-t border-gray-100 dark:border-gray-800"
-                        style={{ top: topPad + i * hourHeight }}
+                        style={{ top: (i + 1) * hourHeight }}
                       />
                     ))}
 
