@@ -688,7 +688,7 @@ export default function AppointmentsPage() {
                           key={day}
                           className={cn(
                             'p-2 text-center border-l border-gray-200 dark:border-gray-700',
-                            isDayToday && 'bg-pulse-50 dark:bg-pulse-400/15'
+                            isDayToday && 'bg-pulse-50 dark:bg-pulse-400/25'
                           )}
                         >
                           <p className="text-xs text-gray-500 dark:text-gray-400">{dayNames[i]}</p>
@@ -713,7 +713,7 @@ export default function AppointmentsPage() {
                             key={`bg-${day}`}
                             className={cn(
                               'border-l border-gray-200 dark:border-gray-700',
-                              isDayToday && 'bg-pulse-50/40 dark:bg-pulse-400/10'
+                              isDayToday && 'bg-pulse-50/50 dark:bg-pulse-400/20'
                             )}
                           />
                         )
