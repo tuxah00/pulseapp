@@ -708,8 +708,8 @@ export default function AppointmentsPage() {
                     })}
                   </div>
 
-                  {/* Gün başlıkları — border-l yok (bg grid halleder), sadece border-b */}
-                  <div className="grid grid-cols-[60px_repeat(7,1fr)] relative border-b border-gray-200 dark:border-gray-700">
+                  {/* Gün başlıkları */}
+                  <div className="grid grid-cols-[60px_repeat(7,1fr)] relative">
                     <div className="p-2" />
                     {weekDays.map((day, i) => {
                       const [dy, dm, dd] = day.split('-').map(Number)
@@ -717,7 +717,10 @@ export default function AppointmentsPage() {
                       return (
                         <div
                           key={day}
-                          className="p-2 text-center"
+                          className={cn(
+                            'p-2 text-center',
+                            isDayToday && 'bg-blue-50 dark:bg-blue-900/50'
+                          )}
                         >
                           <p className="text-xs text-gray-500 dark:text-gray-400">{dayNames[i]}</p>
                           <p className={cn(
@@ -734,23 +737,23 @@ export default function AppointmentsPage() {
 
                     {/* Katman 1 KALDIRILDI — tek bg grid min-w-[800px] seviyesinde hallediyor */}
 
-                    {/* ── Katman 2: Saat etiketleri — 08:00 atlanır (header border-b separator) ── */}
-                    {hours.slice(1).map((hour, i) => (
+                    {/* ── Katman 2: Saat etiketleri — startHour y=2'de gösterilir ── */}
+                    {hours.map((hour, i) => (
                       <div
                         key={`h-${hour}`}
                         className="absolute left-0 w-[60px] text-right pr-2 text-xs text-gray-400"
-                        style={{ top: (i + 1) * hourHeight - 6 }}
+                        style={{ top: i === 0 ? 2 : i * hourHeight - 6 }}
                       >
                         {String(hour).padStart(2, '0')}:00
                       </div>
                     ))}
 
-                    {/* ── Katman 3: Yatay çizgiler — 08:00 atlanır (header border-b separator) ── */}
-                    {hours.slice(1).map((hour, i) => (
+                    {/* ── Katman 3: Yatay çizgiler — y=0'daki çizgi header/body ayracı ── */}
+                    {hours.map((hour, i) => (
                       <div
                         key={`line-${hour}`}
                         className="absolute left-[60px] right-0 border-t border-gray-100 dark:border-gray-800"
-                        style={{ top: (i + 1) * hourHeight }}
+                        style={{ top: i * hourHeight }}
                       />
                     ))}
 
