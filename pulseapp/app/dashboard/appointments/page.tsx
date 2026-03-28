@@ -35,7 +35,7 @@ export default function AppointmentsPage() {
   const [appointments, setAppointments] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
-  const [now, setNow] = useState(new Date())
+  const [now, setNow] = useState<Date | null>(null)
   const [viewMode, setViewMode] = useViewMode('appointments', 'list')
   const [selectedAppointment, setSelectedAppointment] = useState<any | null>(null)
   const [panelClosing, setPanelClosing] = useState(false)
@@ -131,6 +131,7 @@ export default function AppointmentsPage() {
   }, [businessId])
 
   useEffect(() => {
+    setNow(new Date())
     const id = setInterval(() => setNow(new Date()), 1_000)
     return () => clearInterval(id)
   }, [])
@@ -574,7 +575,7 @@ export default function AppointmentsPage() {
         <div className="inline-flex items-center rounded-2xl bg-gray-200/90 dark:bg-gray-700/90 px-8 py-4 text-3xl font-bold text-gray-800 dark:text-gray-100 shadow-sm">
           Şu an:{' '}
           <span className="ml-1 tabular-nums">
-            {now.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+            {now ? now.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '--:--:--'}
           </span>
         </div>
       </div>
