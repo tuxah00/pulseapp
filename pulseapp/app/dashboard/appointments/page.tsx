@@ -704,8 +704,9 @@ export default function AppointmentsPage() {
                   {/* Saat grid'i */}
                   <div className="relative select-none" style={{ height: hours.length * hourHeight + topPad }}>
 
-                    {/* ── Katman 1: Sütun arka planları (CSS Grid — header ile garantili hizalama) ── */}
-                    <div className="absolute top-0 -bottom-1 left-[60px] right-0 grid grid-cols-7">
+                    {/* ── Katman 1: Sütun arka planları (header ile birebir aynı grid-cols template) ── */}
+                    <div className="absolute top-0 -bottom-1 left-0 right-0 grid grid-cols-[60px_repeat(7,1fr)]">
+                      <div /> {/* saat etiketi alanı — boş */}
                       {weekDays.map((day) => {
                         const isDayToday = day === todayStr
                         return (
