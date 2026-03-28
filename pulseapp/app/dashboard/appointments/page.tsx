@@ -705,10 +705,7 @@ export default function AppointmentsPage() {
                   <div className="relative select-none" style={{ height: hours.length * hourHeight + topPad }}>
 
                     {/* ── Katman 1: Sütun arka planları (CSS Grid — header ile garantili hizalama) ── */}
-                    <div
-                      className="absolute left-[60px] right-0 bottom-0 grid grid-cols-7"
-                      style={{ top: topPad }}
-                    >
+                    <div className="absolute inset-y-0 left-[60px] right-0 grid grid-cols-7">
                       {weekDays.map((day) => {
                         const isDayToday = day === todayStr
                         return (
