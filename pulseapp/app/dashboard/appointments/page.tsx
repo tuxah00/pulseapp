@@ -54,6 +54,7 @@ export default function AppointmentsPage() {
   const [customers, setCustomers] = useState<Customer[]>([])
   const [services, setServices] = useState<Service[]>([])
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>([])
+  const [workingHours, setWorkingHours] = useState<Record<string, { open: string; close: string } | null> | null>(null)
 
   const [customerId, setCustomerId] = useState('')
   const [serviceId, setServiceId] = useState('')
@@ -120,14 +121,16 @@ export default function AppointmentsPage() {
 
   const fetchFormData = useCallback(async () => {
     if (!businessId) return
-    const [custRes, svcRes, staffRes] = await Promise.all([
+    const [custRes, svcRes, staffRes, bizRes] = await Promise.all([
       supabase.from('customers').select('*').eq('business_id', businessId).eq('is_active', true).order('name'),
       supabase.from('services').select('*').eq('business_id', businessId).eq('is_active', true).order('sort_order'),
       supabase.from('staff_members').select('*').eq('business_id', businessId).eq('is_active', true).order('name'),
+      supabase.from('businesses').select('working_hours').eq('id', businessId).single(),
     ])
     if (custRes.data) setCustomers(custRes.data)
     if (svcRes.data) setServices(svcRes.data)
     if (staffRes.data) setStaffMembers(staffRes.data)
+    if (bizRes.data?.working_hours) setWorkingHours(bizRes.data.working_hours)
   }, [businessId])
 
   useEffect(() => {
@@ -629,7 +632,17 @@ export default function AppointmentsPage() {
         (() => {
           const weekDays = getWeekDays(selectedDate)
           const dayNames = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz']
-          const hours = Array.from({ length: 14 }, (_, i) => i + 8) // 08:00 - 21:00
+          // Çalışma saatlerini working_hours'tan hesapla
+          const dayKeyMap = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
+          let startHour = 8
+          let endHour = 21
+          if (workingHours) {
+            const openHours = dayKeyMap.map(k => workingHours[k]?.open).filter(Boolean).map(t => parseInt(t!.split(':')[0]))
+            const closeHours = dayKeyMap.map(k => workingHours[k]?.close).filter(Boolean).map(t => parseInt(t!.split(':')[0]))
+            if (openHours.length > 0) startHour = Math.min(...openHours)
+            if (closeHours.length > 0) endHour = Math.max(...closeHours)
+          }
+          const hours = Array.from({ length: endHour - startHour + 1 }, (_, i) => i + startHour)
           const staffColors = ['bg-blue-200 dark:bg-blue-800', 'bg-green-200 dark:bg-green-800', 'bg-purple-200 dark:bg-purple-800', 'bg-amber-200 dark:bg-amber-800', 'bg-pink-200 dark:bg-pink-800', 'bg-cyan-200 dark:bg-cyan-800', 'bg-orange-200 dark:bg-orange-800', 'bg-rose-200 dark:bg-rose-800']
           const staffTextColors = ['text-blue-800 dark:text-blue-200', 'text-green-800 dark:text-green-200', 'text-purple-800 dark:text-purple-200', 'text-amber-800 dark:text-amber-200', 'text-pink-800 dark:text-pink-200', 'text-cyan-800 dark:text-cyan-200', 'text-orange-800 dark:text-orange-200', 'text-rose-800 dark:text-rose-200']
 
@@ -759,7 +772,7 @@ export default function AppointmentsPage() {
                           onClick={(e) => {
                             const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
                             const clickY = e.clientY - rect.top
-                            const clickHour = Math.max(8, Math.min(21, Math.floor((clickY / hourHeight) + 8)))
+                            const clickHour = Math.max(startHour, Math.min(endHour, Math.floor((clickY / hourHeight) + startHour)))
                             const timeStr = `${String(clickHour).padStart(2, '0')}:00`
 
                             if (dayAppointments.length > 0) {
@@ -777,8 +790,8 @@ export default function AppointmentsPage() {
                         >
                           {/* Randevu blokları — çakışma tespiti ile yan yana kolon */}
                           {computeOverlapLayout(dayAppointments).map(({ apt, column, totalColumns }) => {
-                            const startMin = toMinutes(apt.start_time) - 8 * 60
-                            const endMin = toMinutes(apt.end_time) - 8 * 60
+                            const startMin = toMinutes(apt.start_time) - startHour * 60
+                            const endMin = toMinutes(apt.end_time) - startHour * 60
                             const top = (startMin / 60) * hourHeight
                             const height = Math.max(((endMin - startMin) / 60) * hourHeight, 20)
                             const colorIdx = getStaffColorIndex(apt.staff_id)
@@ -809,8 +822,8 @@ export default function AppointmentsPage() {
 
                           {/* Şu anki saat çizgisi (sadece bugün) */}
                           {isDayToday && (() => {
-                            const currentMin = nowMinutes - 8 * 60
-                            if (currentMin < 0 || currentMin > 14 * 60) return null
+                            const currentMin = nowMinutes - startHour * 60
+                            if (currentMin < 0 || currentMin > (endHour - startHour + 1) * 60) return null
                             const top = (currentMin / 60) * hourHeight
                             return (
                               <div className="absolute left-0 right-0 z-10 pointer-events-none" style={{ top }}>
