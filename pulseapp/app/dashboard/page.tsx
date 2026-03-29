@@ -8,6 +8,7 @@ import {
   Clock,
   Bell,
 } from 'lucide-react'
+import { addDays, format } from 'date-fns'
 import { formatCurrency } from '@/lib/utils'
 import { SEGMENT_LABELS } from '@/types'
 import TodayAppointments from './_components/today-appointments'
@@ -112,32 +113,9 @@ export default async function DashboardPage() {
     notifications = results[3].data || []
     riskCustomers = results[4].data || []
 
-    // Sparkline trend hesaplama
-    const toDailyCounts = (dates: string[]): number[] => {
-      const counts: Record<string, number> = {}
-      dates.forEach(d => { counts[d] = (counts[d] || 0) + 1 })
-      return Array.from({ length: 7 }, (_, i) => {
-        const dt = new Date(d7); dt.setDate(d7.getDate() + i)
-        return counts[dt.toISOString().split('T')[0]] || 0
-      })
-    }
-
-    aptTrend = toDailyCounts((results[5].data || []).map((r: any) => r.appointment_date))
-    custTrend = toDailyCounts((results[6].data || []).map((r: any) => r.created_at?.split('T')[0]))
-
-    // Rating: günlük ortalama
-    const ratingRows = results[7].data || []
-    const ratingByDay: Record<string, number[]> = {}
-    ratingRows.forEach((r: any) => {
-      const day = r.created_at?.split('T')[0]
-      if (day) { ratingByDay[day] = ratingByDay[day] || []; ratingByDay[day].push(r.rating) }
-    })
-    ratingTrend = Array.from({ length: 7 }, (_, i) => {
-      const dt = new Date(d7); dt.setDate(d7.getDate() + i)
-      const day = dt.toISOString().split('T')[0]
-      const ratings = ratingByDay[day]
-      return ratings ? ratings.reduce((a, b) => a + b, 0) / ratings.length : 0
-    })
+    aptTrend = dailyCounts((results[5].data || []).map((r: any) => r.appointment_date), d7)
+    custTrend = dailyCounts((results[6].data || []).map((r: any) => r.created_at?.split('T')[0]), d7)
+    ratingTrend = dailyAverages((results[7].data || []).map((r: any) => ({ day: r.created_at?.split('T')[0], value: r.rating })), d7)
   } catch (err) {
     console.error('Dashboard veri çekme hatası:', err)
   }
@@ -339,4 +317,25 @@ function StatCard({
       {sparkline && <div className="mt-3 -mx-2">{sparkline}</div>}
     </div>
   )
+}
+
+function dayKeys(start: Date, days = 7): string[] {
+  return Array.from({ length: days }, (_, i) => format(addDays(start, i), 'yyyy-MM-dd'))
+}
+
+function dailyCounts(dates: (string | undefined)[], start: Date): number[] {
+  const counts: Record<string, number> = {}
+  dates.forEach(d => { if (d) counts[d] = (counts[d] || 0) + 1 })
+  return dayKeys(start).map(k => counts[k] || 0)
+}
+
+function dailyAverages(items: { day: string | undefined; value: number }[], start: Date): number[] {
+  const grouped: Record<string, number[]> = {}
+  items.forEach(({ day, value }) => {
+    if (day) { grouped[day] = grouped[day] || []; grouped[day].push(value) }
+  })
+  return dayKeys(start).map(k => {
+    const vals = grouped[k]
+    return vals ? vals.reduce((a, b) => a + b, 0) / vals.length : 0
+  })
 }
