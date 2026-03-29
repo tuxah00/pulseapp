@@ -276,7 +276,7 @@ export default function PortfolioPage() {
           {items.map((item) => (
             <div
               key={item.id}
-              className="relative group bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-md dark:hover:border-gray-500 transition-all"
+              className="relative group bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-md dark:hover:border-blue-500/40 transition-all"
             >
               {/* Image or placeholder */}
               <div className="aspect-square bg-gray-100 dark:bg-gray-700 relative overflow-hidden">
