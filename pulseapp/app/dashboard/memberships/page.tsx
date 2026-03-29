@@ -12,6 +12,7 @@ import {
 import { cn } from '@/lib/utils'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
 import CompactBoxCard from '@/components/ui/compact-box-card'
+import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 
 interface Membership {
   id: string
@@ -401,9 +402,9 @@ export default function MembershipsPage() {
       ) : !dbError ? (
         <>
           {viewMode === 'list' && (
-            <div className="space-y-3">
+            <AnimatedList className="space-y-3">
               {memberships.map(m => (
-                <div key={m.id} onClick={() => openEditModal(m)} className="card flex items-center gap-4 p-4 cursor-pointer hover:shadow-md transition-all">
+                <AnimatedItem key={m.id} onClick={() => openEditModal(m)} className="card flex items-center gap-4 p-4 cursor-pointer hover:shadow-md transition-all">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium text-gray-900 dark:text-gray-100">{m.customer_name}</span>
@@ -417,9 +418,9 @@ export default function MembershipsPage() {
                       {m.sessions_used}/{m.sessions_total} seans
                     </div>
                   )}
-                </div>
+                </AnimatedItem>
               ))}
-            </div>
+            </AnimatedList>
           )}
           {viewMode === 'box' && (
         <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 gap-2">

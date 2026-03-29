@@ -15,6 +15,7 @@ import { formatCurrency, cn } from '@/lib/utils'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
 import { logAudit } from '@/lib/utils/audit'
 import CompactBoxCard from '@/components/ui/compact-box-card'
+import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import { exportToCSV } from '@/lib/utils/export'
 import type { StockMovement, Supplier } from '@/types'
 
@@ -458,9 +459,9 @@ export default function StoklarPage() {
               )}
             </div>
           ) : viewMode === 'list' ? (
-            <div className="space-y-3">
+            <AnimatedList className="space-y-3">
               {products.map((product) => (
-                <div
+                <AnimatedItem
                   key={product.id}
                   onClick={() => { setSelectedProduct(product); setDetailTab('info') }}
                   className={cn('card flex items-center gap-4 p-4 cursor-pointer transition-all hover:shadow-md', selectedProduct?.id === product.id && 'ring-2 ring-pulse-500')}
@@ -488,9 +489,9 @@ export default function StoklarPage() {
                     <button onClick={() => openEditModal(product)} className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 transition-colors"><Pencil className="h-4 w-4" /></button>
                     <button onClick={() => handleDelete(product)} className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 transition-colors"><Trash2 className="h-4 w-4" /></button>
                   </div>
-                </div>
+                </AnimatedItem>
               ))}
-            </div>
+            </AnimatedList>
           ) : (
             <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 gap-2">
               {products.map((product) => (

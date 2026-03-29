@@ -13,6 +13,7 @@ import { SEGMENT_LABELS } from '@/types'
 import TodayAppointments from './_components/today-appointments'
 import WeeklyInsights from './_components/weekly-insights'
 import PerformanceStats from './_components/performance-stats'
+import { Sparkline } from '@/components/ui/sparkline'
 
 export default async function DashboardPage() {
   const supabase = createServerSupabaseClient()
@@ -31,12 +32,18 @@ export default async function DashboardPage() {
 
   // Paralel sorgular
   const today = new Date().toISOString().split('T')[0]
+  const d7 = new Date(); d7.setDate(d7.getDate() - 6)
+  const sevenAgo = d7.toISOString().split('T')[0]
+  const sevenAgoISO = d7.toISOString()
 
   let todayAppointments: any[] = []
   let stats: any = null
   let recentReviews: any[] = []
   let notifications: any[] = []
   let riskCustomers: any[] = []
+  let aptTrend: number[] = []
+  let custTrend: number[] = []
+  let ratingTrend: number[] = []
 
   try {
     const results = await Promise.all([
@@ -75,6 +82,28 @@ export default async function DashboardPage() {
         .in('segment', ['risk', 'lost'])
         .order('last_visit_at', { ascending: true })
         .limit(5),
+
+      // Sparkline: son 7 gün randevu
+      supabase
+        .from('appointments')
+        .select('appointment_date')
+        .eq('business_id', businessId)
+        .gte('appointment_date', sevenAgo)
+        .lte('appointment_date', today),
+
+      // Sparkline: son 7 gün yeni müşteri
+      supabase
+        .from('customers')
+        .select('created_at')
+        .eq('business_id', businessId)
+        .gte('created_at', sevenAgoISO),
+
+      // Sparkline: son 7 gün yorum puanları
+      supabase
+        .from('reviews')
+        .select('rating, created_at')
+        .eq('business_id', businessId)
+        .gte('created_at', sevenAgoISO),
     ])
 
     todayAppointments = results[0].data || []
@@ -82,6 +111,33 @@ export default async function DashboardPage() {
     recentReviews = results[2].data || []
     notifications = results[3].data || []
     riskCustomers = results[4].data || []
+
+    // Sparkline trend hesaplama
+    const toDailyCounts = (dates: string[]): number[] => {
+      const counts: Record<string, number> = {}
+      dates.forEach(d => { counts[d] = (counts[d] || 0) + 1 })
+      return Array.from({ length: 7 }, (_, i) => {
+        const dt = new Date(d7); dt.setDate(d7.getDate() + i)
+        return counts[dt.toISOString().split('T')[0]] || 0
+      })
+    }
+
+    aptTrend = toDailyCounts((results[5].data || []).map((r: any) => r.appointment_date))
+    custTrend = toDailyCounts((results[6].data || []).map((r: any) => r.created_at?.split('T')[0]))
+
+    // Rating: günlük ortalama
+    const ratingRows = results[7].data || []
+    const ratingByDay: Record<string, number[]> = {}
+    ratingRows.forEach((r: any) => {
+      const day = r.created_at?.split('T')[0]
+      if (day) { ratingByDay[day] = ratingByDay[day] || []; ratingByDay[day].push(r.rating) }
+    })
+    ratingTrend = Array.from({ length: 7 }, (_, i) => {
+      const dt = new Date(d7); dt.setDate(d7.getDate() + i)
+      const day = dt.toISOString().split('T')[0]
+      const ratings = ratingByDay[day]
+      return ratings ? ratings.reduce((a, b) => a + b, 0) / ratings.length : 0
+    })
   } catch (err) {
     console.error('Dashboard veri çekme hatası:', err)
   }
@@ -116,12 +172,14 @@ export default async function DashboardPage() {
           subtitle={`${s.today_completed} tamamlandı`}
           icon={<Calendar className="h-5 w-5" />}
           color="blue"
+          sparkline={<Sparkline data={aptTrend} color="#3b82f6" />}
         />
         <StatCard
           title="Toplam Müşteri"
           value={s.total_customers}
           icon={<Users className="h-5 w-5" />}
           color="green"
+          sparkline={<Sparkline data={custTrend} color="#10b981" />}
         />
         <StatCard
           title="Ortalama Puan"
@@ -129,6 +187,7 @@ export default async function DashboardPage() {
           subtitle={`${s.total_reviews} yorum`}
           icon={<Star className="h-5 w-5" />}
           color="amber"
+          sparkline={<Sparkline data={ratingTrend} color="#f59e0b" />}
         />
         <StatCard
           title="Bildirimler"
@@ -248,12 +307,14 @@ function StatCard({
   subtitle,
   icon,
   color,
+  sparkline,
 }: {
   title: string
   value: string | number
   subtitle?: string
   icon: React.ReactNode
   color: 'blue' | 'green' | 'amber' | 'red' | 'gray'
+  sparkline?: React.ReactNode
 }) {
   const colorMap = {
     blue: 'bg-blue-50 text-blue-600',
@@ -264,15 +325,18 @@ function StatCard({
   }
 
   return (
-    <div className="card flex items-start gap-4">
-      <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${colorMap[color]}`}>
-        {icon}
+    <div className="card">
+      <div className="flex items-start gap-4">
+        <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${colorMap[color]}`}>
+          {icon}
+        </div>
+        <div>
+          <p className="text-sm text-gray-500">{title}</p>
+          <p className="text-2xl font-bold text-gray-900">{value}</p>
+          {subtitle && <p className="text-xs text-gray-400 mt-0.5">{subtitle}</p>}
+        </div>
       </div>
-      <div>
-        <p className="text-sm text-gray-500">{title}</p>
-        <p className="text-2xl font-bold text-gray-900">{value}</p>
-        {subtitle && <p className="text-xs text-gray-400 mt-0.5">{subtitle}</p>}
-      </div>
+      {sparkline && <div className="mt-3 -mx-2">{sparkline}</div>}
     </div>
   )
 }

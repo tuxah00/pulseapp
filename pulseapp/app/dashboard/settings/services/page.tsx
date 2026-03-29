@@ -9,6 +9,7 @@ import { formatCurrency, cn } from '@/lib/utils'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
 import type { Service } from '@/types'
 import { logAudit } from '@/lib/utils/audit'
+import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 
 export default function ServicesPage() {
   const { businessId, staffId: currentStaffId, staffName: currentStaffName, loading: ctxLoading, permissions } = useBusinessContext()
@@ -209,9 +210,9 @@ export default function ServicesPage() {
           </button>
         </div>
       ) : viewMode === 'list' ? (
-        <div className="space-y-3">
+        <AnimatedList className="space-y-3">
           {services.map((service) => (
-            <div
+            <AnimatedItem
               key={service.id}
               className="card flex items-center gap-4 p-4 hover:shadow-md transition-shadow"
             >
@@ -234,13 +235,13 @@ export default function ServicesPage() {
                 <button onClick={() => openEditModal(service)} className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"><Pencil className="h-4 w-4" /></button>
                 <button onClick={() => handleDelete(service)} className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-600 transition-colors"><Trash2 className="h-4 w-4" /></button>
               </div>
-            </div>
+            </AnimatedItem>
           ))}
-        </div>
+        </AnimatedList>
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+        <AnimatedList className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
           {services.map((service) => (
-            <div key={service.id} className="card flex aspect-square flex-col justify-between p-4 hover:shadow-md transition-shadow">
+            <AnimatedItem key={service.id} className="card flex aspect-square flex-col justify-between p-4 hover:shadow-md transition-shadow">
               <div className="flex flex-col items-center gap-1 text-center">
                 <h3 className="text-lg font-semibold text-gray-900 truncate w-full">{service.name}</h3>
                 {service.description && <p className="text-xs text-gray-500 truncate w-full">{service.description}</p>}
@@ -258,9 +259,9 @@ export default function ServicesPage() {
                 <button onClick={() => openEditModal(service)} className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600"><Pencil className="h-3.5 w-3.5" /></button>
                 <button onClick={() => handleDelete(service)} className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-600"><Trash2 className="h-3.5 w-3.5" /></button>
               </div>
-            </div>
+            </AnimatedItem>
           ))}
-        </div>
+        </AnimatedList>
       )}
 
       {/* Modal */}

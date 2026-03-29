@@ -11,6 +11,7 @@ import CompactBoxCard from '@/components/ui/compact-box-card'
 import type { StaffMember, StaffRole, StaffPermissions } from '@/types'
 import { logAudit } from '@/lib/utils/audit'
 import { DEFAULT_PERMISSIONS, getEffectivePermissions } from '@/types'
+import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 
 const ROLE_LABELS: Record<StaffRole, string> = {
   owner: 'İşletme Sahibi',
@@ -364,7 +365,7 @@ export default function StaffPage() {
     }
 
     return (
-      <div
+      <AnimatedItem
         key={member.id}
         onClick={() => setSelectedStaff(member)}
         className={cn(
@@ -413,7 +414,7 @@ export default function StaffPage() {
               </div>
             )}
           </div>
-      </div>
+      </AnimatedItem>
     )
   }
 
@@ -467,9 +468,9 @@ export default function StaffPage() {
                   {group.members.map(renderStaffCard)}
                 </div>
               ) : (
-                <div className="space-y-3">
+                <AnimatedList className="space-y-3">
                   {group.members.map(renderStaffCard)}
-                </div>
+                </AnimatedList>
               )}
             </div>
           ))}

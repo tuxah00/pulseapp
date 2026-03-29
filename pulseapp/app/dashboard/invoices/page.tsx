@@ -14,6 +14,7 @@ import { formatCurrency, cn } from '@/lib/utils'
 import { exportToCSV, printInvoicePDF } from '@/lib/utils/export'
 import { logAudit } from '@/lib/utils/audit'
 import type { Invoice, InvoiceItem, InvoiceStatus, PaymentMethod } from '@/types'
+import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 
 interface SimpleCustomer {
   id: string
@@ -344,12 +345,12 @@ export default function InvoicesPage() {
           )}
         </div>
       ) : (
-        <div className="space-y-2">
+        <AnimatedList className="space-y-2">
           {filteredInvoices.map((invoice) => {
             const cfg = STATUS_CONFIG[invoice.status]
             const Icon = cfg.icon
             return (
-              <div
+              <AnimatedItem
                 key={invoice.id}
                 onClick={() => setSelectedInvoice(invoice)}
                 className={cn('card flex items-center gap-4 p-4 cursor-pointer transition-all hover:shadow-md', selectedInvoice?.id === invoice.id && 'ring-2 ring-pulse-500')}
@@ -373,10 +374,10 @@ export default function InvoicesPage() {
                   <p className="font-bold text-gray-900 dark:text-gray-100">{formatCurrency(invoice.total)}</p>
                   {invoice.tax_rate > 0 && <p className="text-xs text-gray-400">KDV %{invoice.tax_rate}</p>}
                 </div>
-              </div>
+              </AnimatedItem>
             )
           })}
-        </div>
+        </AnimatedList>
       )}
 
       {/* ── Fatura Detay Slide-Over ── */}

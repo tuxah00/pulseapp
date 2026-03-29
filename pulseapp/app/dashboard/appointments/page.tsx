@@ -28,6 +28,7 @@ import { formatTime, formatDate, getStatusColor, formatCurrency, cn } from '@/li
 import { STATUS_LABELS, type AppointmentStatus, type Customer, type Service, type StaffMember } from '@/types'
 import { logAudit } from '@/lib/utils/audit'
 import { useConfirm } from '@/lib/hooks/use-confirm'
+import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 
 export default function AppointmentsPage() {
   const { businessId, staffId: currentStaffId, staffName: currentStaffName, loading: ctxLoading } = useBusinessContext()
@@ -894,11 +895,11 @@ export default function AppointmentsPage() {
           </button>
         </div>
       ) : viewMode === 'list' ? (
-        <div className="space-y-3">
+        <AnimatedList className="space-y-3">
           {appointments.map((apt) => {
             const timeState = getTimeState(apt)
             return (
-              <div
+              <AnimatedItem
                 key={apt.id}
                 onClick={() => setSelectedAppointment(apt)}
                 className={cn(
@@ -930,16 +931,16 @@ export default function AppointmentsPage() {
                     <ActionButtons apt={apt} size="md" />
                   </div>
                 </div>
-              </div>
+              </AnimatedItem>
             )
           })}
-        </div>
+        </AnimatedList>
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+        <AnimatedList className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
           {appointments.map((apt) => {
             const timeState = getTimeState(apt)
             return (
-              <div
+              <AnimatedItem
                 key={apt.id}
                 onClick={() => setSelectedAppointment(apt)}
                 className={cn(
@@ -979,10 +980,10 @@ export default function AppointmentsPage() {
                 <div className="mt-4 flex items-center justify-end" onClick={(e) => e.stopPropagation()}>
                   <ActionButtons apt={apt} size="sm" />
                 </div>
-              </div>
+              </AnimatedItem>
             )
           })}
-        </div>
+        </AnimatedList>
       )) : null}
 
       {/* ── Detay Slide-Over Paneli ── */}

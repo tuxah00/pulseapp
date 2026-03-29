@@ -14,6 +14,7 @@ import { formatPhone, formatDate, formatTime, formatCurrency, getSegmentColor, c
 import { SEGMENT_LABELS, STATUS_LABELS, type Customer, type CustomerSegment } from '@/types'
 import { logAudit } from '@/lib/utils/audit'
 import CompactBoxCard from '@/components/ui/compact-box-card'
+import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import { exportToCSV } from '@/lib/utils/export'
 
 import { getCustomerLabel } from '@/lib/config/sector-modules'
@@ -383,9 +384,9 @@ export default function CustomersPage() {
           {!search && <button onClick={openNewModal} className="btn-primary"><Plus className="mr-2 h-4 w-4" />İlk Müşteriyi Ekle</button>}
         </div>
       ) : viewMode === 'list' ? (
-        <div className="space-y-2">
+        <AnimatedList className="space-y-2">
           {customers.map((customer) => (
-            <div key={customer.id} onClick={() => setSelectedCustomer(customer)} className={cn('card flex items-center gap-4 p-4 cursor-pointer transition-all hover:shadow-md', selectedCustomer?.id === customer.id && 'ring-2 ring-pulse-500')}>
+            <AnimatedItem key={customer.id} onClick={() => setSelectedCustomer(customer)} className={cn('card flex items-center gap-4 p-4 cursor-pointer transition-all hover:shadow-md', selectedCustomer?.id === customer.id && 'ring-2 ring-pulse-500')}>
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-pulse-100 text-pulse-700 font-semibold text-sm flex-shrink-0">
                 {customer.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
               </div>
@@ -400,9 +401,9 @@ export default function CustomersPage() {
                 <p className="text-gray-900 dark:text-gray-100 font-medium">{customer.total_visits} ziyaret</p>
                 <p className="text-gray-400">{customer.last_visit_at ? formatDate(customer.last_visit_at) : 'Henüz yok'}</p>
               </div>
-            </div>
+            </AnimatedItem>
           ))}
-        </div>
+        </AnimatedList>
       ) : (
         <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 gap-2">
           {customers.map((customer) => (

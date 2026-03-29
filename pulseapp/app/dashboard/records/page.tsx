@@ -16,6 +16,7 @@ import { logAudit } from '@/lib/utils/audit'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import type { Customer } from '@/types'
 import CompactBoxCard from '@/components/ui/compact-box-card'
+import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -586,9 +587,9 @@ function RecordsPageInner() {
       {!dbError && records.length > 0 && (
         <>
           {viewMode === 'list' && (
-            <div className="space-y-3">
+            <AnimatedList className="space-y-3">
               {records.map((record) => (
-                <div
+                <AnimatedItem
                   key={record.id}
                   onClick={() => setSelectedRecord(record)}
                   className={cn(
@@ -627,9 +628,9 @@ function RecordsPageInner() {
                     </button>
                   </div>
                   <ChevronRight className="h-4 w-4 text-gray-300 dark:text-gray-600 flex-shrink-0" />
-                </div>
+                </AnimatedItem>
               ))}
-            </div>
+            </AnimatedList>
           )}
           {viewMode === 'box' && (
             <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 gap-2">
