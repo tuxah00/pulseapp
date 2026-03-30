@@ -295,18 +295,18 @@ export default function InvoicesPage() {
 
       {/* Özet Kartlar */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
-        <div className="card p-4">
+        <button onClick={() => setStatusFilter(statusFilter === 'paid' ? 'all' : 'paid')} className={cn('card p-4 text-left transition-all hover:shadow-md', statusFilter === 'paid' && 'ring-2 ring-green-500')}>
           <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Tahsil Edilen</p>
           <p className="text-xl font-bold text-green-600">{formatCurrency(totalRevenue)}</p>
-        </div>
-        <div className="card p-4">
+        </button>
+        <button onClick={() => setStatusFilter(statusFilter === 'pending' ? 'all' : 'pending')} className={cn('card p-4 text-left transition-all hover:shadow-md', statusFilter === 'pending' && 'ring-2 ring-amber-500')}>
           <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Bekleyen</p>
           <p className="text-xl font-bold text-amber-600">{formatCurrency(pendingTotal)}</p>
-        </div>
-        <div className="card p-4">
+        </button>
+        <button onClick={() => setStatusFilter(statusFilter === 'overdue' ? 'all' : 'overdue')} className={cn('card p-4 text-left transition-all hover:shadow-md', statusFilter === 'overdue' && 'ring-2 ring-red-500')}>
           <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Vadesi Geçmiş</p>
           <p className={cn('text-xl font-bold', overdueCount > 0 ? 'text-red-600' : 'text-gray-900 dark:text-gray-100')}>{overdueCount} fatura</p>
-        </div>
+        </button>
       </div>
 
       {/* Filtreler + Arama */}
