@@ -8,11 +8,13 @@ import { useDebounce } from '@/lib/hooks/use-debounce'
 import {
   Plus, Package, Loader2, X, Pencil, Trash2, Search,
   ChevronRight, Clock, CheckCircle, XCircle, AlertTriangle,
-  Users, Tag, Minus,
+  Users, Tag, Minus, LayoutList, LayoutGrid,
 } from 'lucide-react'
 import { formatCurrency, formatDate, cn } from '@/lib/utils'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import { logAudit } from '@/lib/utils/audit'
+import { useViewMode } from '@/lib/hooks/use-view-mode'
+import CompactBoxCard from '@/components/ui/compact-box-card'
 import type { ServicePackage, CustomerPackage, Service, PackageStatus } from '@/types'
 
 type PageTab = 'templates' | 'customer'
@@ -29,6 +31,7 @@ export default function PaketlerPage() {
   const { businessId, staffId, staffName, loading: ctxLoading, permissions } = useBusinessContext()
   const { confirm } = useConfirm()
   const supabase = createClient()
+  const [viewMode, setViewMode] = useViewMode('paketler', 'list')
 
   const [pageTab, setPageTab] = useState<PageTab>('templates')
 
@@ -285,7 +288,13 @@ export default function PaketlerPage() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Paket & Seans Yönetimi</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Paket şablonları oluştur, müşterilere sat ve seans düşümü yap</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          {pageTab === 'customer' && (
+            <div className="flex items-center gap-1">
+              <button onClick={() => setViewMode('list')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'list' ? 'bg-gray-200 dark:bg-gray-600 text-gray-900 dark:text-gray-100' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700')} title="Liste"><LayoutList className="h-4 w-4" /></button>
+              <button onClick={() => setViewMode('box')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'box' ? 'bg-gray-200 dark:bg-gray-600 text-gray-900 dark:text-gray-100' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700')} title="Kutular"><LayoutGrid className="h-4 w-4" /></button>
+            </div>
+          )}
           {pageTab === 'templates' && permissions?.packages && (
             <button onClick={openNewTemplate} className="btn-primary flex items-center gap-2">
               <Plus className="h-4 w-4" /> Yeni Paket Şablonu
@@ -438,7 +447,7 @@ export default function PaketlerPage() {
               </div>
             </div>
 
-            {/* List */}
+            {/* List / Box */}
             {cpLoading ? (
               <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-pulse-500" /></div>
             ) : customerPackages.length === 0 ? (
@@ -448,6 +457,24 @@ export default function PaketlerPage() {
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                   {templates.length === 0 ? 'Önce paket şablonu oluşturun' : 'Paket satmak için "Paket Sat" butonunu kullanın'}
                 </p>
+              </div>
+            ) : viewMode === 'box' ? (
+              <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 gap-2">
+                {customerPackages.map(cp => {
+                  const cfg = STATUS_CONFIG[cp.status]
+                  return (
+                    <CompactBoxCard
+                      key={cp.id}
+                      initials={cp.customer_name.slice(0, 2).toUpperCase()}
+                      title={cp.customer_name}
+                      colorClass="bg-pulse-100 text-pulse-700 dark:bg-pulse-900/30 dark:text-pulse-400"
+                      badge={<span className={cn('text-[10px] px-1.5 py-0.5 rounded-full font-medium', cfg.color)}>{cfg.label}</span>}
+                      meta={`${cp.sessions_used}/${cp.sessions_total} seans`}
+                      selected={selectedCp?.id === cp.id}
+                      onClick={() => setSelectedCp(selectedCp?.id === cp.id ? null : cp)}
+                    />
+                  )
+                })}
               </div>
             ) : (
               <AnimatedList className="space-y-2">

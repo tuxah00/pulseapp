@@ -28,8 +28,14 @@ const ROUTE_LABELS: Record<string, string> = {
   settings: 'Ayarlar',
   business: 'İşletme',
   vardiye: 'Vardiya',
+  vardiya: 'Vardiya',
   services: 'Hizmetler',
+  hizmetler: 'Hizmetler',
   staff: 'Personeller',
+  personeller: 'Personeller',
+  denetim: 'Denetim Kaydı',
+  invoices: 'Faturalar',
+  paketler: 'Paket & Seans',
   new: 'Yeni',
 }
 

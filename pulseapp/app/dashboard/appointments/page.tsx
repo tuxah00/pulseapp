@@ -23,6 +23,7 @@ import {
   Trash2,
   Repeat,
   CalendarDays,
+  Search,
 } from 'lucide-react'
 import { formatTime, formatDate, getStatusColor, formatCurrency, cn } from '@/lib/utils'
 import { STATUS_LABELS, type AppointmentStatus, type Customer, type Service, type StaffMember } from '@/types'
@@ -51,6 +52,7 @@ export default function AppointmentsPage() {
   const [error, setError] = useState<string | null>(null)
   const [rescheduleDate, setRescheduleDate] = useState('')
   const [rescheduleTime, setRescheduleTime] = useState('09:00')
+  const [search, setSearch] = useState('')
 
   const [customers, setCustomers] = useState<Customer[]>([])
   const [services, setServices] = useState<Service[]>([])
@@ -491,6 +493,18 @@ export default function AppointmentsPage() {
     return slots
   }
 
+  const filteredAppointments = search.trim()
+    ? appointments.filter(a => {
+        const q = search.toLowerCase()
+        return (
+          a.customers?.name?.toLowerCase().includes(q) ||
+          a.services?.name?.toLowerCase().includes(q) ||
+          a.staff_members?.name?.toLowerCase().includes(q) ||
+          a.notes?.toLowerCase().includes(q)
+        )
+      })
+    : appointments
+
   const totalCount = appointments.length
   const confirmedCount = appointments.filter(a => a.status === 'confirmed').length
   const completedCount = appointments.filter(a => a.status === 'completed').length
@@ -649,6 +663,14 @@ export default function AppointmentsPage() {
           </div>
         </div>
       </div>
+
+      {/* Arama (liste/kutu modunda) */}
+      {viewMode !== 'week' && (
+        <div className="mb-4 relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <input type="text" value={search} onChange={e => setSearch(e.target.value)} className="input pl-10" placeholder="Müşteri, hizmet veya personel ara..." />
+        </div>
+      )}
 
       {/* Randevu Listesi / Takvim */}
       {loading ? (
@@ -913,17 +935,15 @@ export default function AppointmentsPage() {
         </div>
       )}
 
-      {!loading && viewMode !== 'week' ? (appointments.length === 0 ? (
+      {!loading && viewMode !== 'week' ? (filteredAppointments.length === 0 ? (
         <div className="card flex flex-col items-center justify-center py-16">
           <Calendar className="mb-4 h-12 w-12 text-gray-300" />
-          <p className="mb-4 text-gray-500">Bu tarihte randevu yok</p>
-          <button onClick={() => openNewModal()} className="btn-primary">
-            <Plus className="mr-2 h-4 w-4" />Randevu Ekle
-          </button>
+          <p className="mb-4 text-gray-500">{search ? 'Aramanızla eşleşen randevu bulunamadı' : 'Bu tarihte randevu yok'}</p>
+          {!search && <button onClick={() => openNewModal()} className="btn-primary"><Plus className="mr-2 h-4 w-4" />Randevu Ekle</button>}
         </div>
       ) : viewMode === 'list' ? (
         <AnimatedList className="space-y-3">
-          {appointments.map((apt) => {
+          {filteredAppointments.map((apt) => {
             const timeState = getTimeState(apt)
             return (
               <AnimatedItem
@@ -964,7 +984,7 @@ export default function AppointmentsPage() {
         </AnimatedList>
       ) : (
         <AnimatedList className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
-          {appointments.map((apt) => {
+          {filteredAppointments.map((apt) => {
             const timeState = getTimeState(apt)
             return (
               <AnimatedItem

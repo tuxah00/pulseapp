@@ -21,13 +21,13 @@ const BASE_ITEMS: SidebarItem[] = [
 
 // Management items shown for every sector
 const MANAGEMENT_ITEMS: SidebarItem[] = [
-  { key: 'services', name: 'Hizmetler', href: '/dashboard/settings/services', iconName: 'Scissors' },
-  { key: 'staff', name: 'Personeller', href: '/dashboard/settings/staff', iconName: 'UserPlus' },
+  { key: 'services', name: 'Hizmetler', href: '/dashboard/hizmetler', iconName: 'Scissors' },
+  { key: 'staff', name: 'Personeller', href: '/dashboard/personeller', iconName: 'UserPlus' },
   { key: 'messages', name: 'Mesajlar', href: '/dashboard/messages', iconName: 'MessageSquare' },
   { key: 'analytics', name: 'Gelir-Gider', href: '/dashboard/analytics', iconName: 'TrendingUp' },
   { key: 'invoices', name: 'Faturalar', href: '/dashboard/invoices', iconName: 'Receipt' },
-  { key: 'shifts', name: 'Vardiya', href: '/dashboard/settings/vardiye', iconName: 'CalendarDays' },
-  { key: 'audit', name: 'Denetim', href: '/dashboard/settings/audit', iconName: 'Shield' },
+  { key: 'shifts', name: 'Vardiya', href: '/dashboard/vardiya', iconName: 'CalendarDays' },
+  { key: 'audit', name: 'Denetim', href: '/dashboard/denetim', iconName: 'Shield' },
 ]
 
 // Sector-specific items

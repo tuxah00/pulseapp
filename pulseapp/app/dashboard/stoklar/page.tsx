@@ -80,6 +80,8 @@ export default function StoklarPage() {
   const [minStockLevel, setMinStockLevel] = useState('5')
   const [unit, setUnit] = useState('adet')
   const [supplierId, setSupplierId] = useState('')
+  const [addAsExpense, setAddAsExpense] = useState(false)
+  const [expenseCost, setExpenseCost] = useState('')
 
   const supabase = createClient()
 
@@ -154,6 +156,7 @@ export default function StoklarPage() {
     setEditingProduct(null)
     setName(''); setDescription(''); setCategory('')
     setPrice(''); setStockCount('0'); setMinStockLevel('5'); setUnit('adet'); setSupplierId('')
+    setAddAsExpense(false); setExpenseCost('')
     setError(null); setShowModal(true)
   }
 
@@ -167,6 +170,7 @@ export default function StoklarPage() {
     setMinStockLevel(String(product.min_stock_level))
     setUnit(product.unit)
     setSupplierId(product.supplier_id || '')
+    setAddAsExpense(false); setExpenseCost('')
     setError(null); setShowModal(true)
   }
 
@@ -196,6 +200,21 @@ export default function StoklarPage() {
         .from('products')
         .insert({ ...payload, business_id: businessId, is_active: true })
       if (err) { setError('Ekleme hatası: ' + err.message); setSaving(false); return }
+
+      if (addAsExpense && expenseCost) {
+        await fetch('/api/expenses', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            business_id: businessId,
+            category: 'Stok',
+            description: `Stok alımı: ${name}`,
+            amount: parseFloat(expenseCost),
+            expense_date: new Date().toISOString().split('T')[0],
+            is_recurring: false,
+          }),
+        })
+      }
     }
 
     setSaving(false); setShowModal(false); fetchProducts()
@@ -752,6 +771,34 @@ export default function StoklarPage() {
                 <label className="label">Açıklama (opsiyonel)</label>
                 <textarea value={description} onChange={(e) => setDescription(e.target.value)} className="input" rows={2} placeholder="Ürün hakkında ek bilgi..." />
               </div>
+
+              {!editingProduct && (
+                <div className="space-y-3">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={addAsExpense}
+                      onChange={(e) => setAddAsExpense(e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 text-pulse-600 focus:ring-pulse-500"
+                    />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Gider olarak ekle</span>
+                  </label>
+                  {addAsExpense && (
+                    <div>
+                      <label className="label">Gider maliyeti (₺)</label>
+                      <input
+                        type="number"
+                        value={expenseCost}
+                        onChange={(e) => setExpenseCost(e.target.value)}
+                        className="input"
+                        placeholder="0.00"
+                        min="0"
+                        step="0.01"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
 
               {error && <div className="rounded-lg bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-400">{error}</div>}
 
