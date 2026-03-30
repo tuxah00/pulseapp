@@ -452,6 +452,33 @@ export default function AppointmentsPage() {
         service_name: statusApt?.services?.name || null,
       },
     })
+    // Randevu tamamlandığında müşterinin aktif paketinden seans düş
+    if (newStatus === 'completed' && statusApt?.customer_id) {
+      const { data: activePkgs } = await supabase
+        .from('customer_packages')
+        .select('id, sessions_used, sessions_total')
+        .eq('business_id', businessId!)
+        .eq('customer_id', statusApt.customer_id)
+        .eq('status', 'active')
+        .order('purchase_date', { ascending: true })
+        .limit(1)
+      if (activePkgs && activePkgs.length > 0) {
+        const pkg = activePkgs[0]
+        const newUsed = pkg.sessions_used + 1
+        const newPkgStatus = newUsed >= pkg.sessions_total ? 'completed' : 'active'
+        await supabase
+          .from('customer_packages')
+          .update({ sessions_used: newUsed, status: newPkgStatus })
+          .eq('id', pkg.id)
+        await supabase.from('package_usages').insert({
+          business_id: businessId,
+          customer_package_id: pkg.id,
+          appointment_id: appointmentId,
+          staff_id: currentStaffId || null,
+          notes: 'Randevu tamamlandı — otomatik seans düşümü',
+        })
+      }
+    }
     fetchAppointments()
   }
 

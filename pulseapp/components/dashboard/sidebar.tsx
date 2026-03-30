@@ -35,6 +35,7 @@ import {
   BookOpen,
   Image,
   Receipt,
+  Layers,
   type LucideIcon,
 } from 'lucide-react'
 import type { SectorType, PlanType, StaffPermissions } from '@/types'
@@ -67,6 +68,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   BookOpen,
   Image,
   Receipt,
+  Layers,
 }
 
 const bottomNav = [
@@ -90,6 +92,7 @@ const PERMISSION_MAP: Record<string, keyof StaffPermissions> = {
   '/dashboard/settings/vardiye': 'shifts',
   '/dashboard/orders': 'orders',
   '/dashboard/invoices': 'invoices',
+  '/dashboard/paketler': 'packages',
   '/dashboard/settings/audit': 'settings',
 }
 

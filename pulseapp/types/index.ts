@@ -35,6 +35,7 @@ export interface StaffPermissions {
   reservations?: boolean
   classes?: boolean
   memberships?: boolean
+  packages?: boolean
   records?: boolean
   portfolio?: boolean
   inventory?: boolean
@@ -47,13 +48,13 @@ export const DEFAULT_PERMISSIONS: Record<StaffRole, StaffPermissions> = {
     dashboard: true, appointments: true, customers: true, analytics: true,
     messages: true, reviews: true, services: true, staff: true, shifts: true,
     settings: true, reservations: true, classes: true, memberships: true,
-    records: true, portfolio: true, inventory: true, orders: true, invoices: true,
+    packages: true, records: true, portfolio: true, inventory: true, orders: true, invoices: true,
   },
   manager: {
     dashboard: true, appointments: true, customers: true, analytics: true,
     messages: true, reviews: true, services: true, staff: false, shifts: true,
     settings: false, reservations: true, classes: true, memberships: true,
-    records: true, portfolio: true, inventory: true, orders: true, invoices: true,
+    packages: true, records: true, portfolio: true, inventory: true, orders: true, invoices: true,
   },
   staff: {
     dashboard: true, appointments: true, customers: true, analytics: false,
@@ -420,6 +421,62 @@ export interface WaitlistEntry {
   // JOIN
   customer?: Customer
   service?: Service
+}
+
+// ── Paket / Seans Sistemi ──
+
+export type PackageStatus = 'active' | 'completed' | 'cancelled' | 'expired'
+
+export interface ServicePackage {
+  id: string
+  business_id: string
+  name: string
+  description: string | null
+  service_id: string | null
+  sessions_total: number
+  price: number
+  validity_days: number | null
+  is_active: boolean
+  sort_order: number
+  created_at: string
+  updated_at: string
+  // JOIN
+  service?: Service
+}
+
+export interface CustomerPackage {
+  id: string
+  business_id: string
+  package_id: string | null
+  customer_id: string | null
+  customer_name: string
+  customer_phone: string | null
+  package_name: string
+  service_id: string | null
+  sessions_total: number
+  sessions_used: number
+  price_paid: number
+  status: PackageStatus
+  purchase_date: string
+  expiry_date: string | null
+  notes: string | null
+  staff_id: string | null
+  invoice_id: string | null
+  created_at: string
+  updated_at: string
+  // JOINs
+  customer?: Customer
+  service?: Service
+}
+
+export interface PackageUsage {
+  id: string
+  business_id: string
+  customer_package_id: string
+  appointment_id: string | null
+  used_at: string
+  notes: string | null
+  staff_id: string | null
 }
 
 export type ShiftType = 'regular' | 'off'

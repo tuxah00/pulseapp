@@ -33,75 +33,92 @@ const MANAGEMENT_ITEMS: SidebarItem[] = [
 // Sector-specific items
 const SECTOR_ITEMS: Partial<Record<SectorType, SidebarItem[]>> = {
   hair_salon: [
+    { key: 'packages', name: 'Paket & Seans', href: '/dashboard/paketler', iconName: 'Layers' },
     { key: 'inventory', name: 'Stoklar', href: '/dashboard/stoklar', iconName: 'Package' },
     { key: 'reviews', name: 'Yorumlar', href: '/dashboard/reviews', iconName: 'Star' },
   ],
   barber: [
+    { key: 'packages', name: 'Paket & Seans', href: '/dashboard/paketler', iconName: 'Layers' },
     { key: 'inventory', name: 'Stoklar', href: '/dashboard/stoklar', iconName: 'Package' },
     { key: 'reviews', name: 'Yorumlar', href: '/dashboard/reviews', iconName: 'Star' },
   ],
   beauty_salon: [
+    { key: 'packages', name: 'Paket & Seans', href: '/dashboard/paketler', iconName: 'Layers' },
     { key: 'inventory', name: 'Stoklar', href: '/dashboard/stoklar', iconName: 'Package' },
     { key: 'reviews', name: 'Yorumlar', href: '/dashboard/reviews', iconName: 'Star' },
   ],
   dental_clinic: [
+    { key: 'packages', name: 'Paket & Seans', href: '/dashboard/paketler', iconName: 'Layers' },
     { key: 'records', name: 'Hasta Dosyaları', href: '/dashboard/records?type=patient_file', iconName: 'FolderOpen' },
     { key: 'reviews', name: 'Yorumlar', href: '/dashboard/reviews', iconName: 'Star' },
   ],
   medical_aesthetic: [
+    { key: 'packages', name: 'Paket & Seans', href: '/dashboard/paketler', iconName: 'Layers' },
     { key: 'records', name: 'Hasta Dosyaları', href: '/dashboard/records?type=patient_file', iconName: 'FolderOpen' },
     { key: 'reviews', name: 'Yorumlar', href: '/dashboard/reviews', iconName: 'Star' },
   ],
   physiotherapy: [
+    { key: 'packages', name: 'Paket & Seans', href: '/dashboard/paketler', iconName: 'Layers' },
     { key: 'records', name: 'Hasta Dosyaları', href: '/dashboard/records?type=patient_file', iconName: 'FolderOpen' },
     { key: 'reviews', name: 'Yorumlar', href: '/dashboard/reviews', iconName: 'Star' },
   ],
   psychologist: [
+    { key: 'packages', name: 'Paket & Seans', href: '/dashboard/paketler', iconName: 'Layers' },
     { key: 'records', name: 'Danışan Dosyaları', href: '/dashboard/records?type=client_file', iconName: 'FolderOpen' },
   ],
   lawyer: [
     { key: 'records', name: 'Müvekkil Dosyaları', href: '/dashboard/records?type=case_file', iconName: 'Briefcase' },
   ],
   auto_service: [
+    { key: 'packages', name: 'Paket & Seans', href: '/dashboard/paketler', iconName: 'Layers' },
     { key: 'vehicles', name: 'Araç Kayıtları', href: '/dashboard/records?type=vehicle', iconName: 'Car' },
     { key: 'inventory', name: 'Stoklar', href: '/dashboard/stoklar', iconName: 'Package' },
     { key: 'reviews', name: 'Yorumlar', href: '/dashboard/reviews', iconName: 'Star' },
   ],
   car_wash: [
+    { key: 'packages', name: 'Paket & Seans', href: '/dashboard/paketler', iconName: 'Layers' },
     { key: 'vehicles', name: 'Araç Kayıtları', href: '/dashboard/records?type=vehicle', iconName: 'Car' },
     { key: 'reviews', name: 'Yorumlar', href: '/dashboard/reviews', iconName: 'Star' },
   ],
   veterinary: [
+    { key: 'packages', name: 'Paket & Seans', href: '/dashboard/paketler', iconName: 'Layers' },
     { key: 'records', name: 'Hasta Dosyaları', href: '/dashboard/records?type=pet', iconName: 'PawPrint' },
     { key: 'reviews', name: 'Yorumlar', href: '/dashboard/reviews', iconName: 'Star' },
   ],
   dietitian: [
+    { key: 'packages', name: 'Paket & Seans', href: '/dashboard/paketler', iconName: 'Layers' },
     { key: 'records', name: 'Diyet Programları', href: '/dashboard/records?type=diet_plan', iconName: 'ClipboardList' },
   ],
   fitness: [
+    { key: 'packages', name: 'Paket & Seans', href: '/dashboard/paketler', iconName: 'Layers' },
     { key: 'memberships', name: 'Üyelikler', href: '/dashboard/memberships', iconName: 'CreditCard' },
     { key: 'classes', name: 'Sınıf Programı', href: '/dashboard/classes', iconName: 'CalendarDays' },
     { key: 'attendance', name: 'Devam Takibi', href: '/dashboard/classes/attendance', iconName: 'CheckSquare' },
     { key: 'reviews', name: 'Yorumlar', href: '/dashboard/reviews', iconName: 'Star' },
   ],
   yoga_pilates: [
+    { key: 'packages', name: 'Paket & Seans', href: '/dashboard/paketler', iconName: 'Layers' },
     { key: 'memberships', name: 'Üyelikler', href: '/dashboard/memberships', iconName: 'CreditCard' },
     { key: 'classes', name: 'Sınıf Programı', href: '/dashboard/classes', iconName: 'CalendarDays' },
     { key: 'attendance', name: 'Devam Takibi', href: '/dashboard/classes/attendance', iconName: 'CheckSquare' },
     { key: 'reviews', name: 'Yorumlar', href: '/dashboard/reviews', iconName: 'Star' },
   ],
   spa_massage: [
-    { key: 'memberships', name: 'Üyelikler & Paketler', href: '/dashboard/memberships', iconName: 'CreditCard' },
+    { key: 'packages', name: 'Paket & Seans', href: '/dashboard/paketler', iconName: 'Layers' },
+    { key: 'memberships', name: 'Üyelikler', href: '/dashboard/memberships', iconName: 'CreditCard' },
     { key: 'reviews', name: 'Yorumlar', href: '/dashboard/reviews', iconName: 'Star' },
   ],
   tutoring: [
+    { key: 'packages', name: 'Paket & Seans', href: '/dashboard/paketler', iconName: 'Layers' },
     { key: 'records', name: 'Öğrenci Bilgileri', href: '/dashboard/records?type=student', iconName: 'BookOpen' },
   ],
   photo_studio: [
+    { key: 'packages', name: 'Paket & Seans', href: '/dashboard/paketler', iconName: 'Layers' },
     { key: 'portfolio', name: 'Portfolyo', href: '/dashboard/portfolio', iconName: 'Image' },
     { key: 'reviews', name: 'Yorumlar', href: '/dashboard/reviews', iconName: 'Star' },
   ],
   tattoo_piercing: [
+    { key: 'packages', name: 'Paket & Seans', href: '/dashboard/paketler', iconName: 'Layers' },
     { key: 'portfolio', name: 'Portfolyo', href: '/dashboard/portfolio', iconName: 'Image' },
     { key: 'reviews', name: 'Yorumlar', href: '/dashboard/reviews', iconName: 'Star' },
   ],
@@ -116,6 +133,7 @@ const SECTOR_ITEMS: Partial<Record<SectorType, SidebarItem[]>> = {
     { key: 'reviews', name: 'Yorumlar', href: '/dashboard/reviews', iconName: 'Star' },
   ],
   other: [
+    { key: 'packages', name: 'Paket & Seans', href: '/dashboard/paketler', iconName: 'Layers' },
     { key: 'inventory', name: 'Stoklar', href: '/dashboard/stoklar', iconName: 'Package' },
     { key: 'reviews', name: 'Yorumlar', href: '/dashboard/reviews', iconName: 'Star' },
   ],

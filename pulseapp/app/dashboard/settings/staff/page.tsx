@@ -45,6 +45,7 @@ const PERMISSION_LABELS: Record<keyof StaffPermissions, string> = {
   reservations: 'Rezervasyonlar',
   classes: 'Sınıflar',
   memberships: 'Üyelikler',
+  packages: 'Paket & Seans',
   records: 'Dosyalar',
   portfolio: 'Portfolyo',
   inventory: 'Stoklar',
@@ -54,7 +55,7 @@ const PERMISSION_LABELS: Record<keyof StaffPermissions, string> = {
 
 const PERMISSION_CATEGORIES: { label: string; keys: (keyof StaffPermissions)[] }[] = [
   { label: 'Ana', keys: ['dashboard', 'appointments', 'customers'] },
-  { label: 'İçerik', keys: ['records', 'portfolio', 'classes', 'memberships', 'reservations', 'orders'] },
+  { label: 'İçerik', keys: ['records', 'portfolio', 'classes', 'memberships', 'packages', 'reservations', 'orders'] },
   { label: 'Yönetim', keys: ['services', 'staff', 'shifts', 'messages', 'analytics', 'reviews', 'inventory', 'invoices', 'settings'] },
 ]
 
