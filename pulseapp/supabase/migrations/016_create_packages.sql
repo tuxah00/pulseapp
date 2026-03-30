@@ -81,52 +81,63 @@ CREATE TRIGGER customer_packages_updated_at
 -- RLS: service_packages
 ALTER TABLE public.service_packages ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY IF NOT EXISTS "Staff can view service_packages"
+DROP POLICY IF EXISTS "Staff can view service_packages" ON public.service_packages;
+CREATE POLICY "Staff can view service_packages"
   ON public.service_packages FOR SELECT TO authenticated
   USING (business_id IN (SELECT business_id FROM public.staff_members WHERE user_id = auth.uid() AND is_active = true));
 
-CREATE POLICY IF NOT EXISTS "Staff can insert service_packages"
+DROP POLICY IF EXISTS "Staff can insert service_packages" ON public.service_packages;
+CREATE POLICY "Staff can insert service_packages"
   ON public.service_packages FOR INSERT TO authenticated
   WITH CHECK (business_id IN (SELECT business_id FROM public.staff_members WHERE user_id = auth.uid() AND is_active = true));
 
-CREATE POLICY IF NOT EXISTS "Staff can update service_packages"
+DROP POLICY IF EXISTS "Staff can update service_packages" ON public.service_packages;
+CREATE POLICY "Staff can update service_packages"
   ON public.service_packages FOR UPDATE TO authenticated
   USING (business_id IN (SELECT business_id FROM public.staff_members WHERE user_id = auth.uid() AND is_active = true));
 
-CREATE POLICY IF NOT EXISTS "Staff can delete service_packages"
+DROP POLICY IF EXISTS "Staff can delete service_packages" ON public.service_packages;
+CREATE POLICY "Staff can delete service_packages"
   ON public.service_packages FOR DELETE TO authenticated
   USING (business_id IN (SELECT business_id FROM public.staff_members WHERE user_id = auth.uid() AND is_active = true));
 
 -- RLS: customer_packages
 ALTER TABLE public.customer_packages ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY IF NOT EXISTS "Staff can view customer_packages"
+DROP POLICY IF EXISTS "Staff can view customer_packages" ON public.customer_packages;
+CREATE POLICY "Staff can view customer_packages"
   ON public.customer_packages FOR SELECT TO authenticated
   USING (business_id IN (SELECT business_id FROM public.staff_members WHERE user_id = auth.uid() AND is_active = true));
 
-CREATE POLICY IF NOT EXISTS "Staff can insert customer_packages"
+DROP POLICY IF EXISTS "Staff can insert customer_packages" ON public.customer_packages;
+CREATE POLICY "Staff can insert customer_packages"
   ON public.customer_packages FOR INSERT TO authenticated
   WITH CHECK (business_id IN (SELECT business_id FROM public.staff_members WHERE user_id = auth.uid() AND is_active = true));
 
-CREATE POLICY IF NOT EXISTS "Staff can update customer_packages"
+DROP POLICY IF EXISTS "Staff can update customer_packages" ON public.customer_packages;
+CREATE POLICY "Staff can update customer_packages"
   ON public.customer_packages FOR UPDATE TO authenticated
   USING (business_id IN (SELECT business_id FROM public.staff_members WHERE user_id = auth.uid() AND is_active = true));
 
-CREATE POLICY IF NOT EXISTS "Staff can delete customer_packages"
+DROP POLICY IF EXISTS "Staff can delete customer_packages" ON public.customer_packages;
+CREATE POLICY "Staff can delete customer_packages"
   ON public.customer_packages FOR DELETE TO authenticated
   USING (business_id IN (SELECT business_id FROM public.staff_members WHERE user_id = auth.uid() AND is_active = true));
 
 -- RLS: package_usages
 ALTER TABLE public.package_usages ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY IF NOT EXISTS "Staff can view package_usages"
+DROP POLICY IF EXISTS "Staff can view package_usages" ON public.package_usages;
+CREATE POLICY "Staff can view package_usages"
   ON public.package_usages FOR SELECT TO authenticated
   USING (business_id IN (SELECT business_id FROM public.staff_members WHERE user_id = auth.uid() AND is_active = true));
 
-CREATE POLICY IF NOT EXISTS "Staff can insert package_usages"
+DROP POLICY IF EXISTS "Staff can insert package_usages" ON public.package_usages;
+CREATE POLICY "Staff can insert package_usages"
   ON public.package_usages FOR INSERT TO authenticated
   WITH CHECK (business_id IN (SELECT business_id FROM public.staff_members WHERE user_id = auth.uid() AND is_active = true));
 
-CREATE POLICY IF NOT EXISTS "Staff can delete package_usages"
+DROP POLICY IF EXISTS "Staff can delete package_usages" ON public.package_usages;
+CREATE POLICY "Staff can delete package_usages"
   ON public.package_usages FOR DELETE TO authenticated
   USING (business_id IN (SELECT business_id FROM public.staff_members WHERE user_id = auth.uid() AND is_active = true));

@@ -8,7 +8,7 @@ import { useDebounce } from '@/lib/hooks/use-debounce'
 import {
   Plus, Package, Loader2, X, Pencil, Trash2, Search,
   ChevronRight, Clock, CheckCircle, XCircle, AlertTriangle,
-  Users, Tag, Calendar, Minus, MoreVertical,
+  Users, Tag, Minus,
 } from 'lucide-react'
 import { formatCurrency, formatDate, cn } from '@/lib/utils'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
@@ -56,7 +56,6 @@ export default function PaketlerPage() {
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounce(search, 300)
   const [selectedCp, setSelectedCp] = useState<CustomerPackage | null>(null)
-  const [panelClosing, setPanelClosing] = useState(false)
 
   // Sell package form
   const [showSellModal, setShowSellModal] = useState(false)
@@ -178,8 +177,8 @@ export default function PaketlerPage() {
   }
 
   // ── Sell package ──
-  function openSellModal() {
-    setSTemplateId(templates[0]?.id || '')
+  function openSellModal(templateId?: string) {
+    setSTemplateId(templateId ?? templates[0]?.id ?? '')
     setSCustomerName(''); setSCustomerPhone(''); setSPricePaid('')
     setSNotes(''); setSPurchaseDate(new Date().toISOString().split('T')[0]); setSExpiryDate('')
     setSellError(null); setShowSellModal(true)
@@ -264,9 +263,8 @@ export default function PaketlerPage() {
     fetchCustomerPackages()
   }
 
-  function closePanelAnimated() {
-    setPanelClosing(true)
-    setTimeout(() => { setPanelClosing(false); setSelectedCp(null) }, 250)
+  function closePanel() {
+    setSelectedCp(null)
   }
 
   if (ctxLoading) {
@@ -294,7 +292,7 @@ export default function PaketlerPage() {
             </button>
           )}
           {pageTab === 'customer' && permissions?.packages && templates.length > 0 && (
-            <button onClick={openSellModal} className="btn-primary flex items-center gap-2">
+            <button onClick={() => openSellModal()} className="btn-primary flex items-center gap-2">
               <Plus className="h-4 w-4" /> Paket Sat
             </button>
           )}
@@ -302,8 +300,8 @@ export default function PaketlerPage() {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200 dark:border-gray-700">
-        <nav className="flex gap-1">
+      <div className="border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
+        <nav className="flex gap-1 whitespace-nowrap -mb-px">
           {([
             { key: 'templates', label: 'Paket Şablonları', count: templates.length },
             { key: 'customer', label: 'Müşteri Paketleri' },
@@ -393,7 +391,7 @@ export default function PaketlerPage() {
                     </div>
 
                     <button
-                      onClick={() => { setSTemplateId(t.id); openSellModal() }}
+                      onClick={() => openSellModal(t.id)}
                       className="mt-3 w-full text-xs text-center py-1.5 rounded-lg border border-pulse-200 dark:border-pulse-800 text-pulse-600 dark:text-pulse-400 hover:bg-pulse-50 dark:hover:bg-pulse-900/20 transition-colors"
                     >
                       Bu Paketi Sat
@@ -467,9 +465,7 @@ export default function PaketlerPage() {
                           'card cursor-pointer hover:shadow-md transition-all',
                           isSelected && 'ring-2 ring-pulse-500'
                         )}
-                        onClick={() => {
-                          if (isSelected) { closePanelAnimated() } else { setSelectedCp(cp) }
-                        }}
+                        onClick={() => setSelectedCp(isSelected ? null : cp)}
                       >
                         <div className="flex items-center gap-3">
                           {/* Avatar */}
@@ -525,14 +521,13 @@ export default function PaketlerPage() {
           </div>
 
           {/* ── Detail Panel ── */}
-          {selectedCp && (
-            <div className={cn(
-              'w-80 flex-shrink-0 card space-y-4 transition-all duration-250',
-              panelClosing ? 'opacity-0 translate-x-4' : 'opacity-100 translate-x-0'
-            )}>
+          {selectedCp && (() => {
+            const detailPct = Math.round((selectedCp.sessions_used / selectedCp.sessions_total) * 100)
+            return (
+            <div className="w-80 flex-shrink-0 card space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">{selectedCp.customer_name}</h3>
-                <button onClick={closePanelAnimated} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400">
+                <button onClick={closePanel} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400">
                   <X className="h-4 w-4" />
                 </button>
               </div>
@@ -583,12 +578,12 @@ export default function PaketlerPage() {
               <div>
                 <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
                   <span>İlerleme</span>
-                  <span>{Math.round((selectedCp.sessions_used / selectedCp.sessions_total) * 100)}%</span>
+                  <span>{detailPct}%</span>
                 </div>
                 <div className="bg-gray-100 dark:bg-gray-800 rounded-full h-2">
                   <div
                     className={cn('h-2 rounded-full transition-all', selectedCp.status === 'completed' ? 'bg-blue-500' : 'bg-pulse-500')}
-                    style={{ width: `${Math.round((selectedCp.sessions_used / selectedCp.sessions_total) * 100)}%` }}
+                    style={{ width: `${detailPct}%` }}
                   />
                 </div>
                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
@@ -621,7 +616,8 @@ export default function PaketlerPage() {
                 </button>
               )}
             </div>
-          )}
+          )
+          })()}
         </div>
       )}
 
