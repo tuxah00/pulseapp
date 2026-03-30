@@ -15,7 +15,7 @@ import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import { logAudit } from '@/lib/utils/audit'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
 import CompactBoxCard from '@/components/ui/compact-box-card'
-import type { ServicePackage, CustomerPackage, Service, PackageStatus } from '@/types'
+import type { ServicePackage, CustomerPackage, Service, PackageStatus, Customer, StaffMember } from '@/types'
 
 type PageTab = 'templates' | 'customer'
 type StatusFilter = PackageStatus | 'all'
@@ -84,9 +84,9 @@ export default function PaketlerPage() {
   const [aptNotes, setAptNotes] = useState('')
   const [savingApt, setSavingApt] = useState(false)
   const [aptError, setAptError] = useState<string | null>(null)
-  const [aptCustomers, setAptCustomers] = useState<{id:string;name:string}[]>([])
+  const [aptCustomers, setAptCustomers] = useState<Pick<Customer, 'id' | 'name'>[]>([])
   const [aptCustomerId, setAptCustomerId] = useState('')
-  const [aptStaffMembers, setAptStaffMembers] = useState<{id:string;name:string}[]>([])
+  const [aptStaffMembers, setAptStaffMembers] = useState<Pick<StaffMember, 'id' | 'name'>[]>([])
   const [aptStaffId, setAptStaffId] = useState('')
 
   // ── Fetch templates ──
@@ -293,7 +293,7 @@ export default function PaketlerPage() {
     setAptCustomers(custRes.data || [])
     setAptStaffMembers(staffRes.data || [])
     // Pre-select customer if found by name
-    const matchedCust = (custRes.data || []).find((c: {id:string;name:string}) => c.name.toLowerCase() === cp.customer_name.toLowerCase())
+    const matchedCust = (custRes.data || []).find((c: Pick<Customer, 'id' | 'name'>) => c.name.toLowerCase() === cp.customer_name.toLowerCase())
     setAptCustomerId(matchedCust?.id || '')
     setAptStaffId('')
     setSelectedCp(cp)

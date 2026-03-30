@@ -939,8 +939,8 @@ export default function AppointmentsPage() {
       {!loading && viewMode !== 'week' ? (filteredAppointments.length === 0 ? (
         <div className="card flex flex-col items-center justify-center py-16">
           <Calendar className="mb-4 h-12 w-12 text-gray-300" />
-          <p className="mb-4 text-gray-500">{search ? 'Aramanızla eşleşen randevu bulunamadı' : 'Bu tarihte randevu yok'}</p>
-          {!search && <button onClick={() => openNewModal()} className="btn-primary"><Plus className="mr-2 h-4 w-4" />Randevu Ekle</button>}
+          <p className="mb-4 text-gray-500">{search || statusFilter ? 'Filtreye uygun randevu bulunamadı' : 'Bu tarihte randevu yok'}</p>
+          {!search && !statusFilter && <button onClick={() => openNewModal()} className="btn-primary"><Plus className="mr-2 h-4 w-4" />Randevu Ekle</button>}
         </div>
       ) : viewMode === 'list' ? (
         <AnimatedList className="space-y-3">

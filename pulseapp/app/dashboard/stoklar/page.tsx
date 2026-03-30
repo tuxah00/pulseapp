@@ -779,7 +779,7 @@ export default function StoklarPage() {
                       type="checkbox"
                       checked={addAsExpense}
                       onChange={(e) => setAddAsExpense(e.target.checked)}
-                      className="h-4 w-4 rounded border-gray-300 text-pulse-600 focus:ring-pulse-500"
+                      className="h-4 w-4 accent-pulse-600"
                     />
                     <span className="text-sm text-gray-700 dark:text-gray-300">Gider olarak ekle</span>
                   </label>
