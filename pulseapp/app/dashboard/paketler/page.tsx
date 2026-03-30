@@ -8,7 +8,7 @@ import { useDebounce } from '@/lib/hooks/use-debounce'
 import {
   Plus, Package, Loader2, X, Pencil, Trash2, Search,
   ChevronRight, Clock, CheckCircle, XCircle, AlertTriangle,
-  Users, Tag, Minus, LayoutList, LayoutGrid,
+  Users, Tag, Minus, LayoutList, LayoutGrid, CalendarPlus,
 } from 'lucide-react'
 import { formatCurrency, formatDate, cn } from '@/lib/utils'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
@@ -76,6 +76,18 @@ export default function PaketlerPage() {
   const [showUseModal, setShowUseModal] = useState(false)
   const [useNotes, setUseNotes] = useState('')
   const [savingUse, setSavingUse] = useState(false)
+
+  // Create appointment from package modal
+  const [showAptModal, setShowAptModal] = useState(false)
+  const [aptDate, setAptDate] = useState('')
+  const [aptTime, setAptTime] = useState('09:00')
+  const [aptNotes, setAptNotes] = useState('')
+  const [savingApt, setSavingApt] = useState(false)
+  const [aptError, setAptError] = useState<string | null>(null)
+  const [aptCustomers, setAptCustomers] = useState<{id:string;name:string}[]>([])
+  const [aptCustomerId, setAptCustomerId] = useState('')
+  const [aptStaffMembers, setAptStaffMembers] = useState<{id:string;name:string}[]>([])
+  const [aptStaffId, setAptStaffId] = useState('')
 
   // ── Fetch templates ──
   const fetchTemplates = useCallback(async () => {
@@ -268,6 +280,46 @@ export default function PaketlerPage() {
 
   function closePanel() {
     setSelectedCp(null)
+  }
+
+  async function openAptModal(cp: CustomerPackage) {
+    setAptDate(new Date().toISOString().split('T')[0])
+    setAptTime('09:00'); setAptNotes(''); setAptError(null)
+    // Fetch customers and staff for dropdowns
+    const [custRes, staffRes] = await Promise.all([
+      supabase.from('customers').select('id, name').eq('business_id', businessId!).eq('is_active', true).order('name'),
+      supabase.from('staff_members').select('id, name').eq('business_id', businessId!).eq('is_active', true).order('name'),
+    ])
+    setAptCustomers(custRes.data || [])
+    setAptStaffMembers(staffRes.data || [])
+    // Pre-select customer if found by name
+    const matchedCust = (custRes.data || []).find((c: {id:string;name:string}) => c.name.toLowerCase() === cp.customer_name.toLowerCase())
+    setAptCustomerId(matchedCust?.id || '')
+    setAptStaffId('')
+    setSelectedCp(cp)
+    setShowAptModal(true)
+  }
+
+  async function handleCreateApt(e: React.FormEvent) {
+    e.preventDefault()
+    if (!selectedCp || !aptDate) return
+    setSavingApt(true); setAptError(null)
+
+    const { error } = await supabase.from('appointments').insert({
+      business_id: businessId,
+      customer_id: aptCustomerId || null,
+      service_id: selectedCp.service_id || null,
+      staff_id: aptStaffId || null,
+      appointment_date: aptDate,
+      start_time: aptTime,
+      status: 'confirmed',
+      notes: aptNotes.trim() || `Paket: ${selectedCp.package_name}`,
+    })
+
+    if (error) { setAptError(error.message); setSavingApt(false); return }
+
+    await logAudit({ businessId: businessId!, staffId, staffName, action: 'create', resource: 'appointment', details: { customer_name: selectedCp.customer_name, package_name: selectedCp.package_name } })
+    setSavingApt(false); setShowAptModal(false)
   }
 
   if (ctxLoading) {
@@ -628,6 +680,15 @@ export default function PaketlerPage() {
                 </button>
               )}
 
+              {selectedCp.status === 'active' && (
+                <button
+                  onClick={() => openAptModal(selectedCp)}
+                  className="w-full btn-secondary flex items-center justify-center gap-2 text-sm"
+                >
+                  <CalendarPlus className="h-4 w-4" /> Randevu Oluştur
+                </button>
+              )}
+
               {selectedCp.status === 'active' && permissions?.packages && (
                 <button
                   onClick={async () => {
@@ -908,6 +969,73 @@ export default function PaketlerPage() {
                 <button type="submit" disabled={savingUse} className="flex-1 btn-primary text-sm flex items-center justify-center gap-2">
                   {savingUse && <Loader2 className="h-4 w-4 animate-spin" />}
                   Seans Düş
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Randevu Oluştur Modal ── */}
+      {showAptModal && selectedCp && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="w-full max-w-sm card space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Randevu Oluştur</h2>
+              <button onClick={() => setShowAptModal(false)} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800 text-sm">
+              <p className="font-medium text-gray-900 dark:text-gray-100">{selectedCp.customer_name}</p>
+              <p className="text-gray-500 dark:text-gray-400">{selectedCp.package_name}</p>
+            </div>
+
+            <form onSubmit={handleCreateApt} className="space-y-3">
+              {aptCustomers.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Müşteri</label>
+                  <select value={aptCustomerId} onChange={e => setAptCustomerId(e.target.value)} className="input w-full text-sm">
+                    <option value="">— Seçin —</option>
+                    {aptCustomers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+              )}
+
+              {aptStaffMembers.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Personel (opsiyonel)</label>
+                  <select value={aptStaffId} onChange={e => setAptStaffId(e.target.value)} className="input w-full text-sm">
+                    <option value="">— Seçin —</option>
+                    {aptStaffMembers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tarih</label>
+                  <input type="date" value={aptDate} onChange={e => setAptDate(e.target.value)} className="input w-full text-sm" required />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Saat</label>
+                  <input type="time" value={aptTime} onChange={e => setAptTime(e.target.value)} className="input w-full text-sm" required />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Not (opsiyonel)</label>
+                <input type="text" value={aptNotes} onChange={e => setAptNotes(e.target.value)} placeholder="Randevu notu..." className="input w-full text-sm" />
+              </div>
+
+              {aptError && <p className="text-sm text-red-600">{aptError}</p>}
+
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setShowAptModal(false)} className="flex-1 btn-secondary text-sm">İptal</button>
+                <button type="submit" disabled={savingApt} className="flex-1 btn-primary text-sm flex items-center justify-center gap-2">
+                  {savingApt && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Randevu Oluştur
                 </button>
               </div>
             </form>

@@ -53,6 +53,7 @@ export default function AppointmentsPage() {
   const [rescheduleDate, setRescheduleDate] = useState('')
   const [rescheduleTime, setRescheduleTime] = useState('09:00')
   const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<string | null>(null)
 
   const [customers, setCustomers] = useState<Customer[]>([])
   const [services, setServices] = useState<Service[]>([])
@@ -493,17 +494,17 @@ export default function AppointmentsPage() {
     return slots
   }
 
-  const filteredAppointments = search.trim()
-    ? appointments.filter(a => {
-        const q = search.toLowerCase()
-        return (
-          a.customers?.name?.toLowerCase().includes(q) ||
-          a.services?.name?.toLowerCase().includes(q) ||
-          a.staff_members?.name?.toLowerCase().includes(q) ||
-          a.notes?.toLowerCase().includes(q)
-        )
-      })
-    : appointments
+  const filteredAppointments = appointments.filter(a => {
+    if (statusFilter && a.status !== statusFilter) return false
+    if (!search.trim()) return true
+    const q = search.toLowerCase()
+    return (
+      a.customers?.name?.toLowerCase().includes(q) ||
+      a.services?.name?.toLowerCase().includes(q) ||
+      a.staff_members?.name?.toLowerCase().includes(q) ||
+      a.notes?.toLowerCase().includes(q)
+    )
+  })
 
   const totalCount = appointments.length
   const confirmedCount = appointments.filter(a => a.status === 'confirmed').length
@@ -629,10 +630,10 @@ export default function AppointmentsPage() {
       {/* Mini İstatistik + Görünüm butonları */}
       <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="grid flex-1 grid-cols-4 gap-3">
-          <div className="card p-3 text-center"><p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{totalCount}</p><p className="text-xs text-gray-500">Toplam</p></div>
-          <div className="card p-3 text-center"><p className="text-2xl font-bold text-blue-600">{confirmedCount}</p><p className="text-xs text-gray-500">Onaylı</p></div>
-          <div className="card p-3 text-center"><p className="text-2xl font-bold text-green-600">{completedCount}</p><p className="text-xs text-gray-500">Tamamlandı</p></div>
-          <div className="card p-3 text-center"><p className="text-2xl font-bold text-red-600">{noShowCount}</p><p className="text-xs text-gray-500">Gelmedi</p></div>
+          <button onClick={() => setStatusFilter(null)} className={cn('card p-3 text-center transition-all hover:shadow-md', statusFilter === null && 'ring-2 ring-gray-400')}><p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{totalCount}</p><p className="text-xs text-gray-500">Toplam</p></button>
+          <button onClick={() => setStatusFilter(statusFilter === 'confirmed' ? null : 'confirmed')} className={cn('card p-3 text-center transition-all hover:shadow-md', statusFilter === 'confirmed' && 'ring-2 ring-blue-500')}><p className="text-2xl font-bold text-blue-600">{confirmedCount}</p><p className="text-xs text-gray-500">Onaylı</p></button>
+          <button onClick={() => setStatusFilter(statusFilter === 'completed' ? null : 'completed')} className={cn('card p-3 text-center transition-all hover:shadow-md', statusFilter === 'completed' && 'ring-2 ring-green-500')}><p className="text-2xl font-bold text-green-600">{completedCount}</p><p className="text-xs text-gray-500">Tamamlandı</p></button>
+          <button onClick={() => setStatusFilter(statusFilter === 'no_show' ? null : 'no_show')} className={cn('card p-3 text-center transition-all hover:shadow-md', statusFilter === 'no_show' && 'ring-2 ring-red-500')}><p className="text-2xl font-bold text-red-600">{noShowCount}</p><p className="text-xs text-gray-500">Gelmedi</p></button>
         </div>
         <div className="flex justify-end">
           <div className="inline-flex rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-0.5 shadow-sm">
