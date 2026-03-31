@@ -54,6 +54,8 @@ export default function AppointmentsPage() {
   const [rescheduleTime, setRescheduleTime] = useState('09:00')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<string | null>(null)
+  const [staffIdFilter, setStaffIdFilter] = useState('')
+  const [serviceIdFilter, setServiceIdFilter] = useState('')
 
   const [customers, setCustomers] = useState<Customer[]>([])
   const [services, setServices] = useState<Service[]>([])
@@ -496,6 +498,8 @@ export default function AppointmentsPage() {
 
   const filteredAppointments = appointments.filter(a => {
     if (statusFilter && a.status !== statusFilter) return false
+    if (staffIdFilter && a.staff_id !== staffIdFilter) return false
+    if (serviceIdFilter && a.service_id !== serviceIdFilter) return false
     if (!search.trim()) return true
     const q = search.toLowerCase()
     return (
@@ -636,40 +640,31 @@ export default function AppointmentsPage() {
           <button onClick={() => setStatusFilter(statusFilter === 'no_show' ? null : 'no_show')} className={cn('card p-3 text-center transition-all hover:shadow-md', statusFilter === 'no_show' && 'ring-2 ring-red-500')}><p className="text-2xl font-bold text-red-600">{noShowCount}</p><p className="text-xs text-gray-500">Gelmedi</p></button>
         </div>
         <div className="flex justify-end">
-          <div className="inline-flex rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-0.5 shadow-sm">
-            <button
-              type="button"
-              onClick={() => setViewMode('list')}
-              className={cn('inline-flex items-center rounded-full px-2.5 py-1 text-xs transition-colors', viewMode === 'list' ? 'bg-pulse-50 text-pulse-700 dark:bg-pulse-900/40 dark:text-pulse-300' : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700')}
-              title="Liste görünüm"
-            >
-              <LayoutList className="h-3.5 w-3.5" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('week')}
-              className={cn('inline-flex items-center rounded-full px-2.5 py-1 text-xs transition-colors', viewMode === 'week' ? 'bg-pulse-50 text-pulse-700 dark:bg-pulse-900/40 dark:text-pulse-300' : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700')}
-              title="Haftalık takvim"
-            >
-              <CalendarDays className="h-3.5 w-3.5" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('box')}
-              className={cn('inline-flex items-center rounded-full px-2.5 py-1 text-xs transition-colors', viewMode === 'box' ? 'bg-pulse-50 text-pulse-700 dark:bg-pulse-900/40 dark:text-pulse-300' : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700')}
-              title="Kutu görünüm"
-            >
-              <LayoutGrid className="h-3.5 w-3.5" />
-            </button>
+          <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+            <button type="button" onClick={() => setViewMode('list')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'list' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Liste görünüm"><LayoutList className="h-4 w-4" /></button>
+            <button type="button" onClick={() => setViewMode('week')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'week' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Haftalık takvim"><CalendarDays className="h-4 w-4" /></button>
+            <button type="button" onClick={() => setViewMode('box')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'box' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Kutu görünüm"><LayoutGrid className="h-4 w-4" /></button>
           </div>
         </div>
       </div>
 
-      {/* Arama (liste/kutu modunda) */}
+      {/* Arama + Filtreler (liste/kutu modunda) */}
       {viewMode !== 'week' && (
-        <div className="mb-4 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <input type="text" value={search} onChange={e => setSearch(e.target.value)} className="input pl-10" placeholder="Müşteri, hizmet veya personel ara..." />
+        <div className="mb-4 flex flex-col gap-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input type="text" value={search} onChange={e => setSearch(e.target.value)} className="input pl-10" placeholder="Müşteri, hizmet veya personel ara..." />
+          </div>
+          <div className="flex gap-2">
+            <select value={staffIdFilter} onChange={e => setStaffIdFilter(e.target.value)} className="input flex-1">
+              <option value="">Tüm Personel</option>
+              {staffMembers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+            <select value={serviceIdFilter} onChange={e => setServiceIdFilter(e.target.value)} className="input flex-1">
+              <option value="">Tüm Hizmetler</option>
+              {services.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+          </div>
         </div>
       )}
 

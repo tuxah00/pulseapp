@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
-import { Shield, Loader2, Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Shield, Loader2, Search, Filter, ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface AuditLog {
@@ -166,6 +167,18 @@ function formatAuditDetail(log: AuditLog): string {
     return parts.join(' · ')
   }
 
+  // Ayarlar
+  if (log.resource === 'settings') {
+    const parts: string[] = []
+    if (d.section) parts.push(String(d.section))
+    if (d.fields) parts.push(String(d.fields))
+    if (d.field) parts.push(String(d.field))
+    if (d.old_value !== undefined && d.new_value !== undefined) {
+      parts.push(`${d.old_value} → ${d.new_value}`)
+    }
+    return parts.join(' · ') || 'Ayarlar güncellendi'
+  }
+
   // Müşteri
   if (d.name) return String(d.name)
 
@@ -192,18 +205,37 @@ const ACTION_COLORS: Record<string, string> = {
 }
 
 export default function AuditPage() {
-  const { staffRole, loading: ctxLoading } = useBusinessContext()
+  const { staffRole, businessId, loading: ctxLoading } = useBusinessContext()
+  const supabase = createClient()
   const [logs, setLogs] = useState<AuditLog[]>([])
   const [loading, setLoading] = useState(true)
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(0)
   const [resourceFilter, setResourceFilter] = useState('')
+  const [actionFilter, setActionFilter] = useState('')
+  const [staffFilter, setStaffFilter] = useState('')
+  const [fromDate, setFromDate] = useState('')
+  const [toDate, setToDate] = useState('')
+  const [searchText, setSearchText] = useState('')
+  const [staffList, setStaffList] = useState<{id: string; name: string}[]>([])
   const limit = 20
+
+  // Personel listesi yükle
+  useEffect(() => {
+    if (!businessId) return
+    supabase.from('staff_members').select('id, name').eq('business_id', businessId).eq('is_active', true).order('name')
+      .then(({ data }) => setStaffList(data || []))
+  }, [businessId])
 
   const fetchLogs = useCallback(async () => {
     setLoading(true)
     const params = new URLSearchParams({ limit: String(limit), offset: String(page * limit) })
     if (resourceFilter) params.set('resource', resourceFilter)
+    if (actionFilter) params.set('action', actionFilter)
+    if (staffFilter) params.set('staff_id', staffFilter)
+    if (fromDate) params.set('from_date', fromDate)
+    if (toDate) params.set('to_date', toDate)
+    if (searchText.trim()) params.set('search', searchText.trim())
     const res = await fetch(`/api/audit?${params}`)
     if (res.ok) {
       const data = await res.json()
@@ -211,7 +243,7 @@ export default function AuditPage() {
       setTotal(data.total)
     }
     setLoading(false)
-  }, [page, resourceFilter])
+  }, [page, resourceFilter, actionFilter, staffFilter, fromDate, toDate, searchText])
 
   useEffect(() => {
     if (!ctxLoading) fetchLogs()
@@ -238,19 +270,67 @@ export default function AuditPage() {
       </div>
 
       {/* Filtreler */}
-      <div className="card mb-4 flex flex-wrap gap-3 items-center p-3">
-        <Filter className="h-4 w-4 text-gray-400" />
-        <select
-          value={resourceFilter}
-          onChange={(e) => { setResourceFilter(e.target.value); setPage(0) }}
-          className="input py-1.5 text-sm w-auto"
-        >
-          <option value="">Tüm Kaynaklar</option>
-          {Object.entries(RESOURCE_LABELS).map(([k, v]) => (
-            <option key={k} value={k}>{v}</option>
-          ))}
-        </select>
-        <span className="text-sm text-gray-500 ml-auto">Toplam {total} kayıt</span>
+      <div className="card mb-4 space-y-3 p-3">
+        <div className="flex flex-wrap gap-3 items-center">
+          <Filter className="h-4 w-4 text-gray-400 flex-shrink-0" />
+          <select
+            value={resourceFilter}
+            onChange={(e) => { setResourceFilter(e.target.value); setPage(0) }}
+            className="input py-1.5 text-sm w-auto"
+          >
+            <option value="">Tüm Kaynaklar</option>
+            {Object.entries(RESOURCE_LABELS).map(([k, v]) => (
+              <option key={k} value={k}>{v}</option>
+            ))}
+          </select>
+          <select
+            value={actionFilter}
+            onChange={(e) => { setActionFilter(e.target.value); setPage(0) }}
+            className="input py-1.5 text-sm w-auto"
+          >
+            <option value="">Tüm Eylemler</option>
+            {Object.entries(ACTION_LABELS).map(([k, v]) => (
+              <option key={k} value={k}>{v}</option>
+            ))}
+          </select>
+          <select
+            value={staffFilter}
+            onChange={(e) => { setStaffFilter(e.target.value); setPage(0) }}
+            className="input py-1.5 text-sm w-auto"
+          >
+            <option value="">Tüm Personel</option>
+            {staffList.map(s => (
+              <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
+          </select>
+          <span className="text-sm text-gray-500 ml-auto">Toplam {total} kayıt</span>
+        </div>
+        <div className="flex flex-wrap gap-3 items-center">
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <span>Tarih:</span>
+            <input type="date" value={fromDate} onChange={e => { setFromDate(e.target.value); setPage(0) }} className="input py-1 text-sm w-auto" />
+            <span>—</span>
+            <input type="date" value={toDate} onChange={e => { setToDate(e.target.value); setPage(0) }} className="input py-1 text-sm w-auto" />
+          </div>
+          <div className="relative flex-1 max-w-xs">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+            <input
+              type="text"
+              value={searchText}
+              onChange={e => { setSearchText(e.target.value); setPage(0) }}
+              placeholder="Personel ara..."
+              className="input py-1.5 pl-8 text-sm w-full"
+            />
+          </div>
+          {(resourceFilter || actionFilter || staffFilter || fromDate || toDate || searchText) && (
+            <button
+              onClick={() => { setResourceFilter(''); setActionFilter(''); setStaffFilter(''); setFromDate(''); setToDate(''); setSearchText(''); setPage(0) }}
+              className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+            >
+              <X className="h-3.5 w-3.5" /> Temizle
+            </button>
+          )}
+        </div>
       </div>
 
       {loading ? (

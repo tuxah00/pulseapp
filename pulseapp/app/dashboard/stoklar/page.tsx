@@ -395,9 +395,9 @@ export default function StoklarPage() {
                 <Download className="h-4 w-4" />
                 <span className="hidden sm:inline">Dışa Aktar</span>
               </button>
-              <div className="flex items-center gap-1">
-                <button onClick={() => setViewMode('list')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'list' ? 'bg-gray-200 dark:bg-gray-600 text-gray-900 dark:text-gray-100' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700')} title="Liste"><LayoutList className="h-4 w-4" /></button>
-                <button onClick={() => setViewMode('box')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'box' ? 'bg-gray-200 dark:bg-gray-600 text-gray-900 dark:text-gray-100' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700')} title="Kutular"><LayoutGrid className="h-4 w-4" /></button>
+              <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+                <button onClick={() => setViewMode('list')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'list' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Liste"><LayoutList className="h-4 w-4" /></button>
+                <button onClick={() => setViewMode('box')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'box' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Kutular"><LayoutGrid className="h-4 w-4" /></button>
               </div>
             </>
           )}
@@ -560,21 +560,22 @@ export default function StoklarPage() {
               ))}
             </AnimatedList>
           ) : (
-            <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 gap-2">
+            <AnimatedList className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 gap-2">
               {filteredProducts.map((product) => (
-                <CompactBoxCard
-                  key={product.id}
-                  initials={product.name.slice(0, 2).toUpperCase()}
-                  title={product.name}
-                  colorClass="bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"
-                  selected={selectedProduct?.id === product.id}
-                  onClick={() => { setSelectedProduct(product); setDetailTab('info') }}
-                >
-                  <button onClick={(e) => { e.stopPropagation(); updateStock(product, -1) }} className="flex h-5 w-5 items-center justify-center rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 font-bold text-xs">−</button>
-                  <button onClick={(e) => { e.stopPropagation(); updateStock(product, 1) }} className="flex h-5 w-5 items-center justify-center rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 font-bold text-xs">+</button>
-                </CompactBoxCard>
+                <AnimatedItem key={product.id}>
+                  <CompactBoxCard
+                    initials={product.name.slice(0, 2).toUpperCase()}
+                    title={product.name}
+                    colorClass="bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"
+                    selected={selectedProduct?.id === product.id}
+                    onClick={() => { setSelectedProduct(product); setDetailTab('info') }}
+                  >
+                    <button onClick={(e) => { e.stopPropagation(); updateStock(product, -1) }} className="flex h-5 w-5 items-center justify-center rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 font-bold text-xs">−</button>
+                    <button onClick={(e) => { e.stopPropagation(); updateStock(product, 1) }} className="flex h-5 w-5 items-center justify-center rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 font-bold text-xs">+</button>
+                  </CompactBoxCard>
+                </AnimatedItem>
               ))}
-            </div>
+            </AnimatedList>
           )}
         </>
       )}

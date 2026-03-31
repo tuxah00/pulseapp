@@ -6,7 +6,7 @@ import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useDebounce } from '@/lib/hooks/use-debounce'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
 import {
-  Plus, Search, Loader2, Phone, Mail, Calendar,
+  Plus, Search, Loader2, Phone, Mail, Calendar, Filter,
   X, Pencil, Trash2, User, LayoutList, LayoutGrid,
   Clock, Star, MessageSquare, CheckCircle, XCircle, AlertTriangle, Info, Download,
 } from 'lucide-react'
@@ -43,6 +43,13 @@ export default function CustomersPage() {
   const [email, setEmail] = useState('')
   const [birthday, setBirthday] = useState('')
   const [notes, setNotes] = useState('')
+  const [segment, setSegment] = useState<CustomerSegment>('new')
+
+  // Advanced filters
+  const [showAdvanced, setShowAdvanced] = useState(false)
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+  const [minVisits, setMinVisits] = useState('')
 
   // Timeline state
   const [panelTab, setPanelTab] = useState<'info' | 'history'>('info')
@@ -73,7 +80,7 @@ export default function CustomersPage() {
 
   function openNewModal() {
     setEditingCustomer(null)
-    setName(''); setPhone(''); setEmail(''); setBirthday(''); setNotes('')
+    setName(''); setPhone(''); setEmail(''); setBirthday(''); setNotes(''); setSegment('new')
     setError(null); setShowModal(true)
   }
 
@@ -81,7 +88,8 @@ export default function CustomersPage() {
     setEditingCustomer(customer)
     setName(customer.name); setPhone(customer.phone)
     setEmail(customer.email || ''); setBirthday(customer.birthday || '')
-    setNotes(customer.notes || ''); setError(null); setShowModal(true)
+    setNotes(customer.notes || ''); setSegment(customer.segment || 'new')
+    setError(null); setShowModal(true)
   }
 
   async function handleSave(e: React.FormEvent) {
@@ -89,15 +97,15 @@ export default function CustomersPage() {
     const customerData = {
       name, phone: phone.replace(/\s/g, ''),
       email: email || null, birthday: birthday || null, notes: notes || null,
-      business_id: businessId,
+      segment, business_id: businessId,
     }
     if (editingCustomer) {
       const { error } = await supabase.from('customers').update({
         name, phone: phone.replace(/\s/g, ''),
-        email: email || null, birthday: birthday || null, notes: notes || null,
+        email: email || null, birthday: birthday || null, notes: notes || null, segment,
       }).eq('id', editingCustomer.id)
       if (error) { setError(error.message.includes('idx_customers_business_phone') ? 'Bu telefon numarası zaten kayıtlı.' : error.message); setSaving(false); return }
-      setSelectedCustomer(prev => prev?.id === editingCustomer.id ? { ...prev, name, phone: phone.replace(/\s/g, ''), email: email || null, birthday: birthday || null, notes: notes || null } as Customer : prev)
+      setSelectedCustomer(prev => prev?.id === editingCustomer.id ? { ...prev, name, phone: phone.replace(/\s/g, ''), email: email || null, birthday: birthday || null, notes: notes || null, segment } as Customer : prev)
     } else {
       const { error } = await supabase.from('customers').insert(customerData)
       if (error) { setError(error.message.includes('idx_customers_business_phone') ? 'Bu telefon numarası zaten kayıtlı.' : error.message); setSaving(false); return }
@@ -313,6 +321,13 @@ export default function CustomersPage() {
     return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-pulse-500" /></div>
   }
 
+  const filteredCustomers = customers.filter(c => {
+    if (dateFrom && c.created_at && c.created_at < dateFrom) return false
+    if (dateTo && c.created_at && c.created_at > dateTo + 'T23:59:59') return false
+    if (minVisits && (c.total_visits || 0) < parseInt(minVisits)) return false
+    return true
+  })
+
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
@@ -370,22 +385,46 @@ export default function CustomersPage() {
               {SEGMENT_LABELS[seg]}
             </button>
           ))}
+          <button onClick={() => setShowAdvanced(v => !v)} className={cn('badge px-3 py-1.5 cursor-pointer transition-colors', showAdvanced ? 'bg-pulse-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600')}>
+            <Filter className="h-3 w-3 mr-1 inline" />Filtreler
+          </button>
         </div>
-        <div className="flex items-center gap-1">
-          <button onClick={() => setViewMode('list')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'list' ? 'bg-gray-200 dark:bg-gray-600 text-gray-900 dark:text-gray-100' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700')} title="Liste"><LayoutList className="h-4 w-4" /></button>
-          <button onClick={() => setViewMode('box')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'box' ? 'bg-gray-200 dark:bg-gray-600 text-gray-900 dark:text-gray-100' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700')} title="Kutular"><LayoutGrid className="h-4 w-4" /></button>
+        <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+          <button onClick={() => setViewMode('list')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'list' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Liste"><LayoutList className="h-4 w-4" /></button>
+          <button onClick={() => setViewMode('box')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'box' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Kutular"><LayoutGrid className="h-4 w-4" /></button>
         </div>
       </div>
 
-      {customers.length === 0 ? (
+      {/* Gelişmiş filtreler */}
+      {showAdvanced && (
+        <div className="flex flex-wrap gap-3 items-center mb-4 p-3 card">
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <span>Kayıt tarihi:</span>
+            <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="input py-1 text-sm w-auto" />
+            <span>—</span>
+            <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="input py-1 text-sm w-auto" />
+          </div>
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <span>Min ziyaret:</span>
+            <input type="number" min={0} value={minVisits} onChange={e => setMinVisits(e.target.value)} className="input py-1 text-sm w-20" placeholder="0" />
+          </div>
+          {(dateFrom || dateTo || minVisits) && (
+            <button onClick={() => { setDateFrom(''); setDateTo(''); setMinVisits('') }} className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 flex items-center gap-1">
+              <X className="h-3.5 w-3.5" /> Temizle
+            </button>
+          )}
+        </div>
+      )}
+
+      {filteredCustomers.length === 0 ? (
         <div className="card flex flex-col items-center justify-center py-16">
           <User className="mb-4 h-12 w-12 text-gray-300" />
-          <p className="text-gray-500 mb-4">{search ? 'Aramanızla eşleşen müşteri bulunamadı' : 'Henüz müşteri eklenmemiş'}</p>
-          {!search && <button onClick={openNewModal} className="btn-primary"><Plus className="mr-2 h-4 w-4" />İlk Müşteriyi Ekle</button>}
+          <p className="text-gray-500 mb-4">{search || dateFrom || dateTo || minVisits ? 'Filtreye uygun müşteri bulunamadı' : 'Henüz müşteri eklenmemiş'}</p>
+          {!search && !dateFrom && !dateTo && !minVisits && <button onClick={openNewModal} className="btn-primary"><Plus className="mr-2 h-4 w-4" />İlk Müşteriyi Ekle</button>}
         </div>
       ) : viewMode === 'list' ? (
         <AnimatedList className="space-y-2">
-          {customers.map((customer) => (
+          {filteredCustomers.map((customer) => (
             <AnimatedItem key={customer.id} onClick={() => setSelectedCustomer(customer)} className={cn('card flex items-center gap-4 p-4 cursor-pointer transition-all hover:shadow-md', selectedCustomer?.id === customer.id && 'ring-2 ring-pulse-500')}>
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-pulse-100 text-pulse-700 font-semibold text-sm flex-shrink-0">
                 {customer.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
@@ -405,17 +444,18 @@ export default function CustomersPage() {
           ))}
         </AnimatedList>
       ) : (
-        <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 gap-2">
-          {customers.map((customer) => (
-            <CompactBoxCard
-              key={customer.id}
-              initials={customer.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-              title={customer.name}
-              selected={selectedCustomer?.id === customer.id}
-              onClick={() => setSelectedCustomer(customer)}
-            />
+        <AnimatedList className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 gap-2">
+          {filteredCustomers.map((customer) => (
+            <AnimatedItem key={customer.id}>
+              <CompactBoxCard
+                initials={customer.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                title={customer.name}
+                selected={selectedCustomer?.id === customer.id}
+                onClick={() => setSelectedCustomer(customer)}
+              />
+            </AnimatedItem>
           ))}
-        </div>
+        </AnimatedList>
       )}
 
       {/* ── Müşteri Detay Slide-Over Paneli ── */}
@@ -575,6 +615,14 @@ export default function CustomersPage() {
               <div><label htmlFor="custEmail" className="label">E-posta (opsiyonel)</label><input id="custEmail" type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="input" placeholder="ayse@email.com" /></div>
               <div><label htmlFor="custBday" className="label">Doğum Tarihi (opsiyonel)</label><input id="custBday" type="date" value={birthday} onChange={(e) => setBirthday(e.target.value)} className="input" /></div>
               <div><label htmlFor="custNotes" className="label">Notlar (opsiyonel)</label><textarea id="custNotes" value={notes} onChange={(e) => setNotes(e.target.value)} className="input" rows={3} placeholder="Tercihler, alerjiler, vb." /></div>
+              <div>
+                <label htmlFor="custSegment" className="label">Segment</label>
+                <select id="custSegment" value={segment} onChange={e => setSegment(e.target.value as CustomerSegment)} className="input">
+                  {(['new', 'regular', 'vip', 'risk', 'lost'] as CustomerSegment[]).map(seg => (
+                    <option key={seg} value={seg}>{SEGMENT_LABELS[seg]}</option>
+                  ))}
+                </select>
+              </div>
               {error && <div className="rounded-lg bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-400">{error}</div>}
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowModal(false)} className="btn-secondary flex-1">İptal</button>
