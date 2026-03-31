@@ -181,7 +181,7 @@ export default function BusinessSettingsPage() {
       setTimeout(() => setSaveSuccess(false), 3000)
       fetchBusiness()
       router.refresh()
-      logAudit({ businessId: businessId!, staffId: currentStaffId, staffName: currentStaffName, action: 'update', resource: 'settings', resourceId: businessId!, details: {} })
+      logAudit({ businessId: businessId!, staffId: currentStaffId, staffName: currentStaffName, action: 'update', resource: 'settings', resourceId: businessId!, details: { section: 'İşletme Bilgileri', fields: Object.keys(updates).join(', ') } })
     }
     setSaving(false)
   }

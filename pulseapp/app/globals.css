@@ -101,10 +101,17 @@
   }
 
   /* Karanlık modda hover gölgesi: koyu arka planlarda açık gölgeler görünmez,
-     bunun yerine hafif mavi border + koyu gölge kullan (gri halka yerine) */
+     bunun yerine hafif mavi border + koyu gölge kullan (gri halka yerine).
+     --tw-ring-shadow korunarak ring-2 sınıflarıyla çakışma önlenir. */
   .dark .card:hover {
     border-color: rgba(59, 130, 246, 0.35); /* mavi tint — gri halkayı önler */
-    box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.55), 0 2px 6px -2px rgba(0, 0, 0, 0.4);
+    --tw-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.55), 0 2px 6px -2px rgba(0, 0, 0, 0.4);
+    box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+  }
+
+  /* Aktif ring'li kartlarda (seçili stat kutuları vb.) hover mavi border'ı gizle */
+  .dark .card:hover:where([class*="ring-"]) {
+    border-color: transparent;
   }
 
   .dark .input {

@@ -73,6 +73,7 @@ export default function PaketlerPage() {
   const [sellError, setSellError] = useState<string | null>(null)
   const [sellCustomers, setSellCustomers] = useState<{id:string;name:string;phone:string|null}[]>([])
   const [sCustomerId, setSCustomerId] = useState('')
+  const [sCreateCustomer, setSCreateCustomer] = useState(true)
 
   // Use session modal
   const [showUseModal, setShowUseModal] = useState(false)
@@ -199,7 +200,7 @@ export default function PaketlerPage() {
     setSTemplateId(templateId ?? templates[0]?.id ?? '')
     setSCustomerName(''); setSCustomerPhone(''); setSPricePaid('')
     setSNotes(''); setSPurchaseDate(new Date().toISOString().split('T')[0]); setSExpiryDate('')
-    setSellError(null); setSCustomerId(''); setSellCustomers([])
+    setSellError(null); setSCustomerId(''); setSellCustomers([]); setSCreateCustomer(true)
     // Fetch customers for dropdown
     const { data } = await supabase
       .from('customers')
@@ -251,6 +252,17 @@ export default function PaketlerPage() {
 
     const { error } = await supabase.from('customer_packages').insert(payload)
     if (error) { setSellError(error.message); setSavingSell(false); return }
+
+    // Yeni müşteri olarak kaydet (dropdown'dan seçilmediyse ve checkbox aktifse)
+    if (sCreateCustomer && !sCustomerId && sCustomerName.trim()) {
+      await supabase.from('customers').insert({
+        business_id: businessId,
+        name: sCustomerName.trim(),
+        phone: sCustomerPhone.trim().replace(/\s/g, '') || null,
+        segment: 'new',
+        is_active: true,
+      })
+    }
 
     await logAudit({ businessId: businessId!, staffId, staffName, action: 'create', resource: 'customer_packages', details: { customer_name: payload.customer_name, package_name: payload.package_name } })
     setSavingSell(false); setShowSellModal(false); setPageTab('customer'); fetchCustomerPackages()
@@ -329,12 +341,21 @@ export default function PaketlerPage() {
     setShowAptModal(true)
   }
 
+  function calculateEndTime(start: string, durationMin: number): string {
+    const [h, m] = start.split(':').map(Number)
+    const t = h * 60 + m + durationMin
+    return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`
+  }
+
   async function handleCreateApt(e: React.FormEvent) {
     e.preventDefault()
     if (!aptDate) return
     setSavingApt(true); setAptError(null)
 
     const notesFallback = selectedCp ? `Paket: ${selectedCp.package_name}` : (aptTemplateName ? `Şablon: ${aptTemplateName}` : '')
+    const linkedService = services.find(s => s.id === (selectedCp?.service_id || null))
+    const duration = linkedService?.duration_minutes || 30
+    const endTime = calculateEndTime(aptTime, duration)
 
     const { error } = await supabase.from('appointments').insert({
       business_id: businessId,
@@ -343,6 +364,7 @@ export default function PaketlerPage() {
       staff_id: aptStaffId || null,
       appointment_date: aptDate,
       start_time: aptTime,
+      end_time: endTime,
       status: 'confirmed',
       notes: aptNotes.trim() || notesFallback || null,
     })
@@ -364,7 +386,7 @@ export default function PaketlerPage() {
   const activeTemplate = templates.find(t => t.id === sTemplateId)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -374,8 +396,8 @@ export default function PaketlerPage() {
         <div className="flex items-center gap-2">
           {pageTab === 'customer' && (
             <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
-              <button onClick={() => setViewMode('list')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'list' ? 'bg-gray-200 dark:bg-gray-600 text-gray-900 dark:text-gray-100' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700')} title="Liste"><LayoutList className="h-4 w-4" /></button>
-              <button onClick={() => setViewMode('box')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'box' ? 'bg-gray-200 dark:bg-gray-600 text-gray-900 dark:text-gray-100' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700')} title="Kutular"><LayoutGrid className="h-4 w-4" /></button>
+              <button onClick={() => setViewMode('list')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'list' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Liste"><LayoutList className="h-4 w-4" /></button>
+              <button onClick={() => setViewMode('box')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'box' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Kutular"><LayoutGrid className="h-4 w-4" /></button>
             </div>
           )}
           {pageTab === 'templates' && permissions?.packages && (
@@ -548,23 +570,24 @@ export default function PaketlerPage() {
                 </p>
               </div>
             ) : viewMode === 'box' ? (
-              <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 gap-2">
+              <AnimatedList className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 gap-2">
                 {customerPackages.map(cp => {
                   const cfg = STATUS_CONFIG[cp.status]
                   return (
-                    <CompactBoxCard
-                      key={cp.id}
-                      initials={cp.customer_name.slice(0, 2).toUpperCase()}
-                      title={cp.customer_name}
-                      colorClass="bg-pulse-100 text-pulse-700 dark:bg-pulse-900/30 dark:text-pulse-400"
-                      badge={<span className={cn('text-[10px] px-1.5 py-0.5 rounded-full font-medium', cfg.color)}>{cfg.label}</span>}
-                      meta={`${cp.sessions_used}/${cp.sessions_total} seans`}
-                      selected={selectedCp?.id === cp.id}
-                      onClick={() => setSelectedCp(selectedCp?.id === cp.id ? null : cp)}
-                    />
+                    <AnimatedItem key={cp.id}>
+                      <CompactBoxCard
+                        initials={cp.customer_name.slice(0, 2).toUpperCase()}
+                        title={cp.customer_name}
+                        colorClass="bg-pulse-100 text-pulse-700 dark:bg-pulse-900/30 dark:text-pulse-400"
+                        badge={<span className={cn('text-[10px] px-1.5 py-0.5 rounded-full font-medium', cfg.color)}>{cfg.label}</span>}
+                        meta={`${cp.sessions_used}/${cp.sessions_total} seans`}
+                        selected={selectedCp?.id === cp.id}
+                        onClick={() => setSelectedCp(selectedCp?.id === cp.id ? null : cp)}
+                      />
+                    </AnimatedItem>
                   )
                 })}
-              </div>
+              </AnimatedList>
             ) : (
               <AnimatedList className="space-y-2">
                 {customerPackages.map(cp => {
@@ -975,6 +998,18 @@ export default function PaketlerPage() {
                   placeholder="Opsiyonel notlar..."
                 />
               </div>
+
+              {!sCustomerId && (
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={sCreateCustomer}
+                    onChange={e => setSCreateCustomer(e.target.checked)}
+                    className="h-4 w-4 accent-pulse-600"
+                  />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Yeni müşteri olarak ekle</span>
+                </label>
+              )}
 
               {sellError && (
                 <p className="text-sm text-red-500 bg-red-50 dark:bg-red-900/20 rounded-lg p-2">{sellError}</p>
