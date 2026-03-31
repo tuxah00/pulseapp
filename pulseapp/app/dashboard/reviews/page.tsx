@@ -16,6 +16,7 @@ export default function ReviewsPage() {
   const [loading, setLoading] = useState(true)
   const [filterRating, setFilterRating] = useState<number | null>(null)
   const [search, setSearch] = useState('')
+  const [statFilter, setStatFilter] = useState<'pending' | 'low' | null>(null)
   const [respondingTo, setRespondingTo] = useState<string | null>(null)
   const [responseText, setResponseText] = useState('')
   const [saving, setSaving] = useState(false)
@@ -141,6 +142,8 @@ export default function ReviewsPage() {
   }
 
   const filteredReviews = reviews.filter(r => {
+    if (statFilter === 'pending' && r.status === 'responded') return false
+    if (statFilter === 'low' && r.rating > 3) return false
     if (!search.trim()) return true
     const q = search.toLowerCase()
     return (
@@ -184,18 +187,18 @@ export default function ReviewsPage() {
           <div className="flex justify-center mt-1">{renderStars(Math.round(Number(avgRating)))}</div>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Ortalama Puan</p>
         </div>
-        <div className="card p-4 text-center">
+        <button onClick={() => setStatFilter(null)} className={cn('card p-4 text-center transition-all hover:shadow-md', statFilter === null && 'ring-2 ring-gray-400')}>
           <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{totalReviews}</p>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Toplam Yorum</p>
-        </div>
-        <div className="card p-4 text-center">
+        </button>
+        <button onClick={() => setStatFilter(statFilter === 'pending' ? null : 'pending')} className={cn('card p-4 text-center transition-all hover:shadow-md', statFilter === 'pending' && 'ring-2 ring-amber-500')}>
           <p className={cn('text-3xl font-bold', pendingCount > 0 ? 'text-amber-600' : 'text-green-600')}>{pendingCount}</p>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Yanıt Bekleyen</p>
-        </div>
-        <div className="card p-4 text-center">
+        </button>
+        <button onClick={() => setStatFilter(statFilter === 'low' ? null : 'low')} className={cn('card p-4 text-center transition-all hover:shadow-md', statFilter === 'low' && 'ring-2 ring-red-500')}>
           <p className={cn('text-3xl font-bold', lowCount > 0 ? 'text-red-600' : 'text-green-600')}>{lowCount}</p>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Düşük Puan (≤3)</p>
-        </div>
+        </button>
       </div>
 
       {/* Arama */}
@@ -240,7 +243,7 @@ export default function ReviewsPage() {
       {filteredReviews.length === 0 ? (
         <div className="card flex flex-col items-center justify-center py-16">
           <Star className="mb-4 h-12 w-12 text-gray-300" />
-          <p className="text-gray-500 mb-4">{search ? 'Aramanızla eşleşen yorum bulunamadı' : filterRating ? `${filterRating} yıldız yorum bulunamadı` : 'Henüz yorum yok'}</p>
+          <p className="text-gray-500 mb-4">{search ? 'Aramanızla eşleşen yorum bulunamadı' : statFilter === 'pending' ? 'Yanıt bekleyen yorum yok' : statFilter === 'low' ? 'Düşük puanlı yorum yok' : filterRating ? `${filterRating} yıldız yorum bulunamadı` : 'Henüz yorum yok'}</p>
         </div>
       ) : (
         <div className="space-y-3">

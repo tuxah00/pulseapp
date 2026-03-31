@@ -39,9 +39,12 @@ const RESOURCE_LABELS: Record<string, string> = {
   invoice: 'Fatura',
   stock_movement: 'Stok Hareketi',
   patient_record: 'Hasta Dosyası',
+  patient_record_file: 'Hasta Dosyası',
   message: 'Mesaj',
   portfolio: 'Portfolyo',
   membership: 'Üyelik',
+  service_packages: 'Paket Şablonu',
+  customer_packages: 'Müşteri Paketi',
 }
 
 const STATUS_LABELS_TR: Record<string, string> = {
@@ -144,6 +147,23 @@ function formatAuditDetail(log: AuditLog): string {
   // Üyelik
   if (log.resource === 'membership') {
     return d.customer_name ? String(d.customer_name) : (d.name ? String(d.name) : '')
+  }
+
+  // Paket şablonu
+  if (log.resource === 'service_packages') {
+    const parts: string[] = []
+    if (d.name) parts.push(String(d.name))
+    if (d.sessions_total !== undefined) parts.push(`${d.sessions_total} seans`)
+    return parts.join(' · ')
+  }
+
+  // Müşteri paketi
+  if (log.resource === 'customer_packages') {
+    const parts: string[] = []
+    if (d.customer_name) parts.push(String(d.customer_name))
+    if (d.package_name) parts.push(String(d.package_name))
+    if (d.action) parts.push(String(d.action) === 'use_session' ? 'seans düşüldü' : String(d.action))
+    return parts.join(' · ')
   }
 
   // Müşteri
