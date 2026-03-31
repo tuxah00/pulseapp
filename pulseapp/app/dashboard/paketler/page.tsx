@@ -71,6 +71,8 @@ export default function PaketlerPage() {
   const [sExpiryDate, setSExpiryDate] = useState('')
   const [savingSell, setSavingSell] = useState(false)
   const [sellError, setSellError] = useState<string | null>(null)
+  const [sellCustomers, setSellCustomers] = useState<{id:string;name:string;phone:string|null}[]>([])
+  const [sCustomerId, setSCustomerId] = useState('')
 
   // Use session modal
   const [showUseModal, setShowUseModal] = useState(false)
@@ -88,6 +90,7 @@ export default function PaketlerPage() {
   const [aptCustomerId, setAptCustomerId] = useState('')
   const [aptStaffMembers, setAptStaffMembers] = useState<Pick<StaffMember, 'id' | 'name'>[]>([])
   const [aptStaffId, setAptStaffId] = useState('')
+  const [aptTemplateName, setAptTemplateName] = useState('')
 
   // ── Fetch templates ──
   const fetchTemplates = useCallback(async () => {
@@ -192,11 +195,20 @@ export default function PaketlerPage() {
   }
 
   // ── Sell package ──
-  function openSellModal(templateId?: string) {
+  async function openSellModal(templateId?: string) {
     setSTemplateId(templateId ?? templates[0]?.id ?? '')
     setSCustomerName(''); setSCustomerPhone(''); setSPricePaid('')
     setSNotes(''); setSPurchaseDate(new Date().toISOString().split('T')[0]); setSExpiryDate('')
-    setSellError(null); setShowSellModal(true)
+    setSellError(null); setSCustomerId(''); setSellCustomers([])
+    // Fetch customers for dropdown
+    const { data } = await supabase
+      .from('customers')
+      .select('id, name, phone')
+      .eq('business_id', businessId!)
+      .eq('is_active', true)
+      .order('name')
+    setSellCustomers((data || []) as {id:string;name:string;phone:string|null}[])
+    setShowSellModal(true)
   }
 
   useEffect(() => {
@@ -284,7 +296,7 @@ export default function PaketlerPage() {
 
   async function openAptModal(cp: CustomerPackage) {
     setAptDate(new Date().toISOString().split('T')[0])
-    setAptTime('09:00'); setAptNotes(''); setAptError(null)
+    setAptTime('09:00'); setAptNotes(''); setAptError(null); setAptTemplateName('')
     // Fetch customers and staff for dropdowns
     const [custRes, staffRes] = await Promise.all([
       supabase.from('customers').select('id, name').eq('business_id', businessId!).eq('is_active', true).order('name'),
@@ -300,25 +312,44 @@ export default function PaketlerPage() {
     setShowAptModal(true)
   }
 
+  async function openAptModalFromTemplate(t: ServicePackage) {
+    setAptDate(new Date().toISOString().split('T')[0])
+    setAptTime('09:00'); setAptNotes(''); setAptError(null)
+    setAptTemplateName(t.name)
+    // Fetch customers and staff for dropdowns
+    const [custRes, staffRes] = await Promise.all([
+      supabase.from('customers').select('id, name').eq('business_id', businessId!).eq('is_active', true).order('name'),
+      supabase.from('staff_members').select('id, name').eq('business_id', businessId!).eq('is_active', true).order('name'),
+    ])
+    setAptCustomers(custRes.data || [])
+    setAptStaffMembers(staffRes.data || [])
+    setAptCustomerId('')
+    setAptStaffId('')
+    setSelectedCp(null)
+    setShowAptModal(true)
+  }
+
   async function handleCreateApt(e: React.FormEvent) {
     e.preventDefault()
-    if (!selectedCp || !aptDate) return
+    if (!aptDate) return
     setSavingApt(true); setAptError(null)
+
+    const notesFallback = selectedCp ? `Paket: ${selectedCp.package_name}` : (aptTemplateName ? `Şablon: ${aptTemplateName}` : '')
 
     const { error } = await supabase.from('appointments').insert({
       business_id: businessId,
       customer_id: aptCustomerId || null,
-      service_id: selectedCp.service_id || null,
+      service_id: selectedCp?.service_id || null,
       staff_id: aptStaffId || null,
       appointment_date: aptDate,
       start_time: aptTime,
       status: 'confirmed',
-      notes: aptNotes.trim() || `Paket: ${selectedCp.package_name}`,
+      notes: aptNotes.trim() || notesFallback || null,
     })
 
     if (error) { setAptError(error.message); setSavingApt(false); return }
 
-    await logAudit({ businessId: businessId!, staffId, staffName, action: 'create', resource: 'appointment', details: { customer_name: selectedCp.customer_name, package_name: selectedCp.package_name } })
+    await logAudit({ businessId: businessId!, staffId, staffName, action: 'create', resource: 'appointment', details: { package_name: selectedCp?.package_name || aptTemplateName } })
     setSavingApt(false); setShowAptModal(false)
   }
 
@@ -342,7 +373,7 @@ export default function PaketlerPage() {
         </div>
         <div className="flex items-center gap-2">
           {pageTab === 'customer' && (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
               <button onClick={() => setViewMode('list')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'list' ? 'bg-gray-200 dark:bg-gray-600 text-gray-900 dark:text-gray-100' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700')} title="Liste"><LayoutList className="h-4 w-4" /></button>
               <button onClick={() => setViewMode('box')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'box' ? 'bg-gray-200 dark:bg-gray-600 text-gray-900 dark:text-gray-100' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700')} title="Kutular"><LayoutGrid className="h-4 w-4" /></button>
             </div>
@@ -456,6 +487,12 @@ export default function PaketlerPage() {
                       className="mt-3 w-full text-xs text-center py-1.5 rounded-lg border border-pulse-200 dark:border-pulse-800 text-pulse-600 dark:text-pulse-400 hover:bg-pulse-50 dark:hover:bg-pulse-900/20 transition-colors"
                     >
                       Bu Paketi Sat
+                    </button>
+                    <button
+                      onClick={() => openAptModalFromTemplate(t)}
+                      className="mt-2 w-full text-xs text-center py-1.5 rounded-lg border border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors flex items-center justify-center gap-1"
+                    >
+                      <CalendarPlus className="h-3.5 w-3.5" /> Randevu Oluştur
                     </button>
                   </div>
                 </AnimatedItem>
@@ -846,11 +883,38 @@ export default function PaketlerPage() {
               )}
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Müşteri Adı *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Müşteri Seç</label>
+                <select
+                  value={sCustomerId}
+                  onChange={e => {
+                    const id = e.target.value
+                    setSCustomerId(id)
+                    if (id) {
+                      const found = sellCustomers.find(c => c.id === id)
+                      if (found) {
+                        setSCustomerName(found.name)
+                        setSCustomerPhone(found.phone || '')
+                      }
+                    } else {
+                      setSCustomerName('')
+                      setSCustomerPhone('')
+                    }
+                  }}
+                  className="input w-full text-sm"
+                >
+                  <option value="">— Müşteri Seç —</option>
+                  {sellCustomers.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}{c.phone ? ` — ${c.phone}` : ''}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">veya Ad Soyad yazın *</label>
                 <input
                   type="text"
                   value={sCustomerName}
-                  onChange={e => setSCustomerName(e.target.value)}
+                  onChange={e => { setSCustomerId(''); setSCustomerName(e.target.value) }}
                   placeholder="Ad Soyad"
                   className="input w-full text-sm"
                   required
@@ -977,20 +1041,28 @@ export default function PaketlerPage() {
       )}
 
       {/* ── Randevu Oluştur Modal ── */}
-      {showAptModal && selectedCp && (
+      {showAptModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
           <div className="w-full max-w-sm card space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Randevu Oluştur</h2>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                {selectedCp
+                  ? `${selectedCp.customer_name} — Randevu Oluştur`
+                  : aptTemplateName
+                    ? `${aptTemplateName} için Randevu Oluştur`
+                    : 'Randevu Oluştur'}
+              </h2>
               <button onClick={() => setShowAptModal(false)} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400">
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800 text-sm">
-              <p className="font-medium text-gray-900 dark:text-gray-100">{selectedCp.customer_name}</p>
-              <p className="text-gray-500 dark:text-gray-400">{selectedCp.package_name}</p>
-            </div>
+            {selectedCp && (
+              <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800 text-sm">
+                <p className="font-medium text-gray-900 dark:text-gray-100">{selectedCp.customer_name}</p>
+                <p className="text-gray-500 dark:text-gray-400">{selectedCp.package_name}</p>
+              </div>
+            )}
 
             <form onSubmit={handleCreateApt} className="space-y-3">
               {aptCustomers.length > 0 && (
