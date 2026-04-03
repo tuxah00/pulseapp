@@ -8,6 +8,14 @@ PulseApp, çok sektörlü SaaS işletme yönetim platformu. Next.js 14, Supabase
 - **Vercel:** main branch'e her push'ta otomatik deploy
 - **Kural:** Her değişiklik sonrası build kontrol et → commit → push (kullanıcıya sormadan)
 
+## Supabase Migration Kuralı
+- **Migration dosyası oluşturduktan sonra Supabase Management API ile otomatik olarak çalıştır**
+- Endpoint: `POST https://api.supabase.com/v1/projects/dtahmvtmwtqodgypvopn/database/query`
+- Auth: `Bearer sbp_4d4f274fcd822f54235d5e733a5f67641c5506fa`
+- Node.js ile her SQL statement'ı ayrı ayrı gönder (tek request'te birden fazla statement hata verebilir)
+- Başarılı response: HTTP 201, body `[]`
+- Migration çalıştırıldıktan sonra `CLAUDE.md` SQL Migration Gereksinimleri bölümüne ekle
+
 ## Git Commit Formatı
 ```
 <type>: <Türkçe açıklama>
@@ -147,7 +155,17 @@ CREATE INDEX IF NOT EXISTS idx_messages_staff_id ON messages(staff_id);
 ```sql
 -- supabase/migrations/015_create_income.sql dosyasını çalıştırın
 ```
-9. **Sektör enum genişletme** (yoga_pilates, spa_massage vb. için):
+9. **Birthday automation index** (`017_birthday_automation.sql`): ✅ Uygulandı (2026-04-04)
+```sql
+CREATE INDEX IF NOT EXISTS idx_customers_birthday ON customers (birthday) WHERE birthday IS NOT NULL;
+```
+
+10. **POS / Kasa modülü** (`018_create_pos.sql`): ✅ Uygulandı (2026-04-04)
+```sql
+-- pos_transactions ve pos_sessions tabloları, RLS policy'leri ve index'ler
+```
+
+11. **Sektör enum genişletme** (yoga_pilates, spa_massage vb. için):
 ```sql
 ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'spa_massage';
 ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'yoga_pilates';
