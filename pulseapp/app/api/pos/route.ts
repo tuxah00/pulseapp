@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import type { POSItem, InvoiceItem } from '@/types'
+import type { POSItem, InvoiceItem, POSPaymentStatus } from '@/types'
 
 // GET: İşlem listesi
 export async function GET(req: NextRequest) {
@@ -51,7 +51,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'payments gerekli' }, { status: 400 })
   }
 
-  // Hesapla
   const subtotal = items.reduce((sum: number, item: POSItem) => sum + item.total, 0)
 
   let discountCalc = 0
@@ -65,9 +64,8 @@ export async function POST(req: NextRequest) {
   const tax_amount = Math.round(afterDiscount * (tax_rate / 100) * 100) / 100
   const total = afterDiscount + tax_amount
 
-  // Ödeme durumunu belirle
   const paidAmount = payments.reduce((sum: number, p: { amount: number }) => sum + p.amount, 0)
-  let payment_status: string = 'pending'
+  let payment_status: POSPaymentStatus = 'pending'
   if (paidAmount >= total) payment_status = 'paid'
   else if (paidAmount > 0) payment_status = 'partial'
 
@@ -81,7 +79,6 @@ export async function POST(req: NextRequest) {
 
   const receipt_number = `RCP-${year}-${String((count || 0) + 1).padStart(4, '0')}`
 
-  // Fatura oluştur (paid ise)
   let invoice_id: string | null = null
   if (payment_status === 'paid') {
     const invoiceItems: InvoiceItem[] = items.map((item: POSItem) => ({
@@ -124,7 +121,6 @@ export async function POST(req: NextRequest) {
     if (invoice) {
       invoice_id = invoice.id
 
-      // Stok düşme (ürün kalemleri)
       for (const item of items as POSItem[]) {
         if (item.product_id && item.type === 'product') {
           const { data: product } = await admin
@@ -204,10 +200,21 @@ export async function PATCH(req: NextRequest) {
   }
 
   const admin = createAdminClient()
+
+  // Kullanıcının business_id'sini al ve işlemin sahipliğini doğrula
+  const { data: staff } = await supabase
+    .from('staff_members')
+    .select('business_id')
+    .eq('user_id', user.id)
+    .single()
+
+  if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
+
   const { data, error } = await admin
     .from('pos_transactions')
     .update(updateObj)
     .eq('id', id)
+    .eq('business_id', staff.business_id)
     .select('*, customers(name, phone), staff_members(name)')
     .single()
 

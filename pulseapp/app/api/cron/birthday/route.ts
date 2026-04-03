@@ -6,7 +6,7 @@ export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization')
   const cronSecret = process.env.CRON_SECRET
 
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
   }
 
@@ -14,8 +14,8 @@ export async function GET(request: NextRequest) {
   const now = new Date()
 
   // Türkiye saat dilimi (UTC+3)
-  const trHour = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Istanbul' })).getHours()
   const trDate = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Istanbul' }))
+  const trHour = trDate.getHours()
   const todayMonth = trDate.getMonth() + 1
   const todayDay = trDate.getDate()
   const todayStart = new Date(trDate.getFullYear(), trDate.getMonth(), trDate.getDate()).toISOString()
@@ -50,42 +50,43 @@ export async function GET(request: NextRequest) {
 
     if (!customers || customers.length === 0) continue
 
-    for (const customer of customers) {
-      if (!customer.birthday || !customer.phone) continue
-
-      // Birthday string'ini parse et (YYYY-MM-DD format)
+    // Bugün doğum günü olanları filtrele
+    const birthdayCustomers = customers.filter(c => {
+      if (!c.birthday || !c.phone) return false
       try {
-        const parts = customer.birthday.split('-')
-        const bMonth = parseInt(parts[1], 10)
-        const bDay = parseInt(parts[2], 10)
-
-        if (bMonth !== todayMonth || bDay !== todayDay) continue
+        const parts = c.birthday.split('-')
+        return parseInt(parts[1], 10) === todayMonth && parseInt(parts[2], 10) === todayDay
       } catch {
-        continue
+        return false
       }
+    })
 
-      // Bugün zaten gönderilmiş mi kontrol et
-      const { data: existing } = await supabase
-        .from('messages')
-        .select('id')
-        .eq('business_id', business.id)
-        .eq('customer_id', customer.id)
-        .eq('message_type', 'system')
-        .eq('direction', 'outbound')
-        .gte('created_at', todayStart)
-        .ilike('content', '%doğum gün%')
-        .limit(1)
+    if (birthdayCustomers.length === 0) continue
 
-      if (existing && existing.length > 0) {
+    // Bugün zaten gönderilmiş olanları tek sorguda çek
+    const birthdayIds = birthdayCustomers.map(c => c.id)
+    const { data: sentToday } = await supabase
+      .from('messages')
+      .select('customer_id')
+      .eq('business_id', business.id)
+      .eq('message_type', 'system')
+      .eq('direction', 'outbound')
+      .gte('created_at', todayStart)
+      .ilike('content', '%doğum gün%')
+      .in('customer_id', birthdayIds)
+
+    const sentIds = new Set((sentToday || []).map(m => m.customer_id))
+
+    const template = settings.birthday_sms_template ||
+      'Doğum gününüz kutlu olsun {name}! 🎂 Size özel sürprizimiz var, bizi ziyaret edin!'
+
+    for (const customer of birthdayCustomers) {
+      if (sentIds.has(customer.id)) {
         report.skipped++
         continue
       }
 
-      // Şablondan mesaj oluştur
-      const template = settings.birthday_sms_template ||
-        'Doğum gününüz kutlu olsun {name}! 🎂 Size özel sürprizimiz var, bizi ziyaret edin!'
       const message = template.replace(/\{name\}/g, customer.name)
-
       const result = await sendSMS({
         to: customer.phone,
         body: message,
