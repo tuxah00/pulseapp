@@ -21,6 +21,7 @@ const BASE_ITEMS: SidebarItem[] = [
 
 // Management items shown for every sector
 const MANAGEMENT_ITEMS: SidebarItem[] = [
+  { key: 'pos', name: 'Kasa', href: '/dashboard/kasa', iconName: 'Wallet' },
   { key: 'services', name: 'Hizmetler', href: '/dashboard/hizmetler', iconName: 'Scissors' },
   { key: 'staff', name: 'Personeller', href: '/dashboard/personeller', iconName: 'UserPlus' },
   { key: 'messages', name: 'Mesajlar', href: '/dashboard/messages', iconName: 'MessageSquare' },
@@ -177,7 +178,7 @@ export function getSidebarSections(sector: SectorType, _plan: PlanType): Sidebar
 export const SECTOR_GROUPS: { label: string; sectors: SectorType[] }[] = [
   {
     label: 'Güzellik & Bakım',
-    sectors: ['hair_salon', 'barber', 'beauty_salon', 'spa_massage', 'tattoo_piercing'],
+    sectors: ['hair_salon', 'barber', 'beauty_salon', 'spa_massage'],
   },
   {
     label: 'Sağlık & Klinik',
@@ -185,11 +186,7 @@ export const SECTOR_GROUPS: { label: string; sectors: SectorType[] }[] = [
   },
   {
     label: 'Hizmet & Ticaret',
-    sectors: ['lawyer', 'auto_service', 'car_wash', 'tutoring', 'photo_studio'],
-  },
-  {
-    label: 'Yeme & İçme',
-    sectors: ['restaurant', 'cafe'],
+    sectors: ['auto_service', 'car_wash', 'tutoring'],
   },
   {
     label: 'Spor & Yaşam',

@@ -36,6 +36,7 @@ import {
   Image,
   Receipt,
   Layers,
+  Wallet,
   type LucideIcon,
 } from 'lucide-react'
 import type { SectorType, PlanType, StaffPermissions } from '@/types'
@@ -69,6 +70,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Image,
   Receipt,
   Layers,
+  Wallet,
 }
 
 const bottomNav = [
@@ -93,6 +95,7 @@ const PERMISSION_MAP: Record<string, keyof StaffPermissions> = {
   '/dashboard/orders': 'orders',
   '/dashboard/invoices': 'invoices',
   '/dashboard/paketler': 'packages',
+  '/dashboard/kasa': 'pos',
   '/dashboard/denetim': 'settings',
   // Legacy redirects (kept for active-link matching)
   '/dashboard/settings/services': 'services',
