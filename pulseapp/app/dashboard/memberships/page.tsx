@@ -7,10 +7,11 @@ import { useConfirm } from '@/lib/hooks/use-confirm'
 import {
   CreditCard, Users, Calendar, Plus, Search, X,
   Edit2, Trash2, Pause, Play, CheckCircle, Loader2,
-  LayoutList, LayoutGrid,
+  LayoutList, LayoutGrid, Filter, ArrowUpDown,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
+import { ToolbarPopover, SortPopoverContent } from '@/components/ui/toolbar-popover'
 import CompactBoxCard from '@/components/ui/compact-box-card'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 
@@ -80,6 +81,8 @@ export default function MembershipsPage() {
   const [error, setError] = useState<string | null>(null)
   const [dbError, setDbError] = useState<string | null>(null)
   const [viewMode, setViewMode] = useViewMode('memberships', 'list')
+  const [sortField, setSortField] = useState<string | null>(null)
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const { confirm } = useConfirm()
 
   // Form state
@@ -267,6 +270,25 @@ export default function MembershipsPage() {
   }).length
   const totalCount = memberships.length
 
+  const hasActiveFilters = statusFilter !== 'all'
+
+  const SORT_OPTIONS = [
+    { value: 'customer_name', label: 'Müşteri adı' },
+    { value: 'plan_name', label: 'Plan adı' },
+    { value: 'end_date', label: 'Bitiş tarihi' },
+  ]
+
+  const sortedMemberships = sortField
+    ? [...memberships].sort((a, b) => {
+        const va = (a as any)[sortField]
+        const vb = (b as any)[sortField]
+        if (va == null && vb == null) return 0
+        if (va == null) return 1; if (vb == null) return -1
+        const cmp = typeof va === 'string' ? va.localeCompare(vb, 'tr') : (va as number) - (vb as number)
+        return sortDir === 'asc' ? cmp : -cmp
+      })
+    : memberships
+
   if (permissions && !permissions.memberships) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
@@ -297,7 +319,35 @@ export default function MembershipsPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+          <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 shrink-0">
+            <ToolbarPopover icon={<Filter className="h-4 w-4" />} label="Filtre" active={hasActiveFilters}>
+              <div className="p-3 space-y-2">
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Durum</p>
+                {FILTER_TABS.map(tab => (
+                  <button
+                    key={tab.key}
+                    onClick={() => setStatusFilter(tab.key)}
+                    className={cn(
+                      'w-full text-left px-3 py-2 rounded-lg text-sm transition-colors',
+                      statusFilter === tab.key
+                        ? 'bg-pulse-50 text-pulse-600 dark:bg-pulse-900/40 dark:text-pulse-300 font-medium'
+                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                    )}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+                {hasActiveFilters && (
+                  <button onClick={() => setStatusFilter('all')} className="w-full text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 pt-1">
+                    Temizle
+                  </button>
+                )}
+              </div>
+            </ToolbarPopover>
+            <ToolbarPopover icon={<ArrowUpDown className="h-4 w-4" />} label="Sırala" active={sortField !== null}>
+              <SortPopoverContent options={SORT_OPTIONS} sortField={sortField} sortDir={sortDir} onSortField={setSortField} onSortDir={setSortDir} />
+            </ToolbarPopover>
+            <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-0.5" />
             <button onClick={() => setViewMode('list')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'list' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Liste"><LayoutList className="h-4 w-4" /></button>
             <button onClick={() => setViewMode('box')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'box' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Kutu"><LayoutGrid className="h-4 w-4" /></button>
           </div>
@@ -347,26 +397,6 @@ export default function MembershipsPage() {
         </div>
       )}
 
-      {/* Filter Tabs */}
-      {!dbError && (
-        <div className="mb-4 flex gap-1 overflow-x-auto border-b border-gray-200 dark:border-gray-700 pb-px">
-          {FILTER_TABS.map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => setStatusFilter(tab.key)}
-              className={[
-                'px-4 py-2 text-sm font-medium whitespace-nowrap rounded-t-lg transition-colors',
-                statusFilter === tab.key
-                  ? 'border-b-2 border-pulse-500 text-pulse-600 dark:text-pulse-400'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300',
-              ].join(' ')}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      )}
-
       {/* Search */}
       {!dbError && (
         <div className="mb-6 relative">
@@ -403,7 +433,7 @@ export default function MembershipsPage() {
         <>
           {viewMode === 'list' && (
             <AnimatedList className="space-y-3">
-              {memberships.map(m => (
+              {sortedMemberships.map(m => (
                 <AnimatedItem key={m.id} onClick={() => openEditModal(m)} className="card flex items-center gap-4 p-4 cursor-pointer hover:shadow-md transition-all">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -424,7 +454,7 @@ export default function MembershipsPage() {
           )}
           {viewMode === 'box' && (
         <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 gap-2">
-          {memberships.map(m => (
+          {sortedMemberships.map(m => (
             <CompactBoxCard
               key={m.id}
               initials={m.customer_name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}

@@ -4,12 +4,13 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useConfirm } from '@/lib/hooks/use-confirm'
-import { Plus, Pencil, Trash2, Loader2, Banknote, LayoutList, LayoutGrid } from 'lucide-react'
+import { Plus, Pencil, Trash2, Loader2, Banknote, LayoutList, LayoutGrid, ArrowUpDown } from 'lucide-react'
 import { formatCurrency, cn } from '@/lib/utils'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
 import type { Service } from '@/types'
 import { logAudit } from '@/lib/utils/audit'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
+import { ToolbarPopover, SortPopoverContent } from '@/components/ui/toolbar-popover'
 
 export default function ServicesPage() {
   const { businessId, staffId: currentStaffId, staffName: currentStaffName, loading: ctxLoading, permissions } = useBusinessContext()
@@ -21,6 +22,8 @@ export default function ServicesPage() {
   const [error, setError] = useState<string | null>(null)
   const [viewMode, setViewMode] = useViewMode('services', 'list')
   const { confirm } = useConfirm()
+  const [sortField, setSortField] = useState<string | null>(null)
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
 
   // Form state
   const [name, setName] = useState('')
@@ -175,6 +178,18 @@ export default function ServicesPage() {
     )
   }
 
+  const sortedServices = sortField
+    ? [...services].sort((a, b) => {
+        const va = (a as any)[sortField]
+        const vb = (b as any)[sortField]
+        if (va == null && vb == null) return 0
+        if (va == null) return 1
+        if (vb == null) return -1
+        const cmp = typeof va === 'string' ? va.localeCompare(vb, 'tr') : (va as number) - (vb as number)
+        return sortDir === 'asc' ? cmp : -cmp
+      })
+    : services
+
   return (
     <div>
       {/* Başlık */}
@@ -187,6 +202,10 @@ export default function ServicesPage() {
         </div>
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+            <ToolbarPopover icon={<ArrowUpDown className="h-4 w-4" />} label="Sırala" active={sortField !== null}>
+              <SortPopoverContent options={[{ value: 'name', label: 'İsim' }, { value: 'price', label: 'Fiyat' }, { value: 'duration_minutes', label: 'Süre' }]} sortField={sortField} sortDir={sortDir} onSortField={setSortField} onSortDir={setSortDir} />
+            </ToolbarPopover>
+            <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-0.5" />
             <button onClick={() => setViewMode('list')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'list' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Liste"><LayoutList className="h-4 w-4" /></button>
             <button onClick={() => setViewMode('box')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'box' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Kutular"><LayoutGrid className="h-4 w-4" /></button>
           </div>
@@ -211,7 +230,7 @@ export default function ServicesPage() {
         </div>
       ) : viewMode === 'list' ? (
         <AnimatedList className="space-y-3">
-          {services.map((service) => (
+          {sortedServices.map((service) => (
             <AnimatedItem
               key={service.id}
               className="card flex items-center gap-4 p-4 hover:shadow-md transition-shadow"
@@ -240,7 +259,7 @@ export default function ServicesPage() {
         </AnimatedList>
       ) : (
         <AnimatedList className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
-          {services.map((service) => (
+          {sortedServices.map((service) => (
             <AnimatedItem key={service.id} className="card flex aspect-square flex-col justify-between p-4 hover:shadow-md transition-shadow">
               <div className="flex flex-col items-center gap-1 text-center">
                 <h3 className="text-lg font-semibold text-gray-900 truncate w-full">{service.name}</h3>
