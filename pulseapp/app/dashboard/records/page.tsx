@@ -7,10 +7,11 @@ import { useDebounce } from '@/lib/hooks/use-debounce'
 import {
   Plus, Loader2, X, Pencil, Trash2, Search, AlertTriangle,
   ClipboardList, UserCheck, Briefcase, PawPrint, Car, BookOpen,
-  ChevronRight, LayoutList, LayoutGrid, Upload, FileText, Image as ImageIcon,
+  ChevronRight, LayoutList, LayoutGrid, Upload, FileText, Image as ImageIcon, ArrowUpDown,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
+import { ToolbarPopover, SortPopoverContent } from '@/components/ui/toolbar-popover'
 import { createClient } from '@/lib/supabase/client'
 import { logAudit } from '@/lib/utils/audit'
 import { useConfirm } from '@/lib/hooks/use-confirm'
@@ -213,6 +214,8 @@ function RecordsPageInner() {
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [viewMode, setViewMode] = useViewMode('records', 'list')
+  const [sortField, setSortField] = useState<string | null>(null)
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('')
   const [uploadFiles, setUploadFiles] = useState<File[]>([])
   const [uploading, setUploading] = useState(false)
@@ -516,6 +519,22 @@ function RecordsPageInner() {
     )
   }
 
+  const SORT_OPTIONS = [
+    { value: 'title', label: 'İsim' },
+    { value: 'created_at', label: 'Tarih' },
+  ]
+
+  const sortedRecords = sortField
+    ? [...records].sort((a, b) => {
+        const va = (a as any)[sortField]
+        const vb = (b as any)[sortField]
+        if (va == null && vb == null) return 0
+        if (va == null) return 1; if (vb == null) return -1
+        const cmp = typeof va === 'string' ? va.localeCompare(vb, 'tr') : (va as number) - (vb as number)
+        return sortDir === 'asc' ? cmp : -cmp
+      })
+    : records
+
   return (
     <div>
       {/* ── Header ── */}
@@ -527,9 +546,13 @@ function RecordsPageInner() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <button onClick={() => setViewMode('list')} className={cn('p-1.5 rounded', viewMode === 'list' ? 'bg-gray-200 dark:bg-gray-700' : 'hover:bg-gray-100 dark:hover:bg-gray-800')} title="Liste"><LayoutList className="h-4 w-4" /></button>
-            <button onClick={() => setViewMode('box')} className={cn('p-1.5 rounded', viewMode === 'box' ? 'bg-gray-200 dark:bg-gray-700' : 'hover:bg-gray-100 dark:hover:bg-gray-800')} title="Kutu"><LayoutGrid className="h-4 w-4" /></button>
+          <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 shrink-0">
+            <ToolbarPopover icon={<ArrowUpDown className="h-4 w-4" />} label="Sırala" active={sortField !== null}>
+              <SortPopoverContent options={SORT_OPTIONS} sortField={sortField} sortDir={sortDir} onSortField={setSortField} onSortDir={setSortDir} />
+            </ToolbarPopover>
+            <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-0.5" />
+            <button onClick={() => setViewMode('list')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'list' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Liste"><LayoutList className="h-4 w-4" /></button>
+            <button onClick={() => setViewMode('box')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'box' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Kutu"><LayoutGrid className="h-4 w-4" /></button>
           </div>
           <button onClick={openNewModal} className="btn-primary">
             <Plus className="mr-2 h-4 w-4" />{config.addLabel}
@@ -588,7 +611,7 @@ function RecordsPageInner() {
         <>
           {viewMode === 'list' && (
             <AnimatedList className="space-y-3">
-              {records.map((record) => (
+              {sortedRecords.map((record) => (
                 <AnimatedItem
                   key={record.id}
                   onClick={() => setSelectedRecord(record)}
@@ -634,7 +657,7 @@ function RecordsPageInner() {
           )}
           {viewMode === 'box' && (
             <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 gap-2">
-              {records.map((record) => (
+              {sortedRecords.map((record) => (
                 <CompactBoxCard
                   key={record.id}
                   initials={record.title?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || 'D'}

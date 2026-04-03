@@ -227,7 +227,7 @@ ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'tutoring';
 - **Tüm sayfalar birebir aynı:** sadece initials (yuvarlak) + isim. Badge/meta kullanılmaz (kompakt görünüm).
 - Stoklar sayfasında children (+/- butonları) hariç — stok yönetimi için işlevsel
 - Grid: `grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 gap-2` (tüm sayfalar aynı)
-- Uygulanan sayfalar: customers, records, reservations, memberships, stoklar, staff
+- Uygulanan sayfalar: customers, records, reservations, memberships, stoklar, staff, paketler (müşteri paketleri sekmesi)
 
 ## Records Dosya Yükleme
 - **Storage bucket:** `records-files` (Supabase Storage, public) — ilk yüklemede otomatik oluşturulur

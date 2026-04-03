@@ -9,13 +9,14 @@ import {
   Plus, Package, Loader2, X, Pencil, Trash2,
   AlertTriangle, LayoutList, LayoutGrid, Search,
   History, Truck, Download, TrendingDown, TrendingUp,
-  ChevronRight,
+  ChevronRight, Filter, ArrowUpDown,
 } from 'lucide-react'
 import { formatCurrency, cn } from '@/lib/utils'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
 import { logAudit } from '@/lib/utils/audit'
 import CompactBoxCard from '@/components/ui/compact-box-card'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
+import { ToolbarPopover, SortPopoverContent } from '@/components/ui/toolbar-popover'
 import { exportToCSV } from '@/lib/utils/export'
 import type { StockMovement, Supplier } from '@/types'
 
@@ -55,6 +56,10 @@ export default function StoklarPage() {
   const { confirm } = useConfirm()
   const [pageTab, setPageTab] = useState<PageTab>('products')
   const [detailTab, setDetailTab] = useState<DetailTab>('info')
+  const [stockFilter, setStockFilter] = useState<'low' | 'out' | null>(null)
+  const [categoryFilter, setCategoryFilter] = useState<string>('')
+  const [sortField, setSortField] = useState<string | null>(null)
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
 
   // Movement history
   const [movements, setMovements] = useState<StockMovement[]>([])
@@ -80,22 +85,20 @@ export default function StoklarPage() {
   const [minStockLevel, setMinStockLevel] = useState('5')
   const [unit, setUnit] = useState('adet')
   const [supplierId, setSupplierId] = useState('')
+  const [addAsExpense, setAddAsExpense] = useState(false)
+  const [expenseCost, setExpenseCost] = useState('')
 
   const supabase = createClient()
 
   const fetchProducts = useCallback(async () => {
     if (!businessId) return
     setLoading(true)
-    let query = supabase
+    const query = supabase
       .from('products')
       .select('*')
       .eq('business_id', businessId)
       .eq('is_active', true)
       .order('name')
-
-    if (debouncedSearch.trim()) {
-      query = query.ilike('name', `%${debouncedSearch}%`)
-    }
 
     const { data, error } = await query
     if (error) {
@@ -110,7 +113,7 @@ export default function StoklarPage() {
       setDbError(null)
     }
     setLoading(false)
-  }, [businessId, debouncedSearch])
+  }, [businessId])
 
   const fetchSuppliers = useCallback(async () => {
     if (!businessId) return
@@ -154,6 +157,7 @@ export default function StoklarPage() {
     setEditingProduct(null)
     setName(''); setDescription(''); setCategory('')
     setPrice(''); setStockCount('0'); setMinStockLevel('5'); setUnit('adet'); setSupplierId('')
+    setAddAsExpense(false); setExpenseCost('')
     setError(null); setShowModal(true)
   }
 
@@ -167,6 +171,7 @@ export default function StoklarPage() {
     setMinStockLevel(String(product.min_stock_level))
     setUnit(product.unit)
     setSupplierId(product.supplier_id || '')
+    setAddAsExpense(false); setExpenseCost('')
     setError(null); setShowModal(true)
   }
 
@@ -196,6 +201,21 @@ export default function StoklarPage() {
         .from('products')
         .insert({ ...payload, business_id: businessId, is_active: true })
       if (err) { setError('Ekleme hatası: ' + err.message); setSaving(false); return }
+
+      if (addAsExpense && expenseCost) {
+        await fetch('/api/expenses', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            business_id: businessId,
+            category: 'Stok',
+            description: `Stok alımı: ${name}`,
+            amount: parseFloat(expenseCost),
+            expense_date: new Date().toISOString().split('T')[0],
+            is_recurring: false,
+          }),
+        })
+      }
     }
 
     setSaving(false); setShowModal(false); fetchProducts()
@@ -281,10 +301,47 @@ export default function StoklarPage() {
     fetchSuppliers()
   }
 
-  // Summary stats
+  // Summary stats (always from full products list, not filtered)
   const totalValue = products.reduce((sum, p) => sum + (p.stock_count * (p.price || 0)), 0)
   const lowStockCount = products.filter(p => p.stock_count > 0 && p.stock_count <= p.min_stock_level).length
   const outOfStockCount = products.filter(p => p.stock_count === 0).length
+
+  // Unique categories derived from all products
+  const categories = [...new Set(products.filter(p => p.category).map(p => p.category!))].sort()
+
+  const hasActiveFilters = !!(stockFilter || categoryFilter)
+  const SORT_OPTIONS = [
+    { value: 'name', label: 'İsim' },
+    { value: 'stock_count', label: 'Stok adedi' },
+    { value: 'price', label: 'Fiyat' },
+    { value: 'category', label: 'Kategori' },
+  ]
+
+  // Client-side filtered list
+  const filteredProducts = (() => {
+    let list = products.filter(p => {
+      if (stockFilter === 'low' && !(p.stock_count <= p.min_stock_level && p.stock_count > 0)) return false
+      if (stockFilter === 'out' && p.stock_count !== 0) return false
+      if (categoryFilter && p.category !== categoryFilter) return false
+      if (debouncedSearch.trim()) {
+        const q = debouncedSearch.toLowerCase()
+        if (!p.name.toLowerCase().includes(q) && !(p.category?.toLowerCase().includes(q))) return false
+      }
+      return true
+    })
+    if (sortField) {
+      list = [...list].sort((a, b) => {
+        const va = (a as any)[sortField]
+        const vb = (b as any)[sortField]
+        if (va == null && vb == null) return 0
+        if (va == null) return 1
+        if (vb == null) return -1
+        const cmp = typeof va === 'string' ? va.localeCompare(vb, 'tr') : (va as number) - (vb as number)
+        return sortDir === 'asc' ? cmp : -cmp
+      })
+    }
+    return list
+  })()
 
   function stockBadge(product: Product) {
     if (product.stock_count === 0)
@@ -363,9 +420,41 @@ export default function StoklarPage() {
                 <Download className="h-4 w-4" />
                 <span className="hidden sm:inline">Dışa Aktar</span>
               </button>
-              <div className="flex items-center gap-1">
-                <button onClick={() => setViewMode('list')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'list' ? 'bg-gray-200 dark:bg-gray-600 text-gray-900 dark:text-gray-100' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700')} title="Liste"><LayoutList className="h-4 w-4" /></button>
-                <button onClick={() => setViewMode('box')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'box' ? 'bg-gray-200 dark:bg-gray-600 text-gray-900 dark:text-gray-100' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700')} title="Kutular"><LayoutGrid className="h-4 w-4" /></button>
+              <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+                <ToolbarPopover icon={<Filter className="h-4 w-4" />} label="Filtre" active={hasActiveFilters}>
+                  <div className="p-3 w-56 space-y-3">
+                    <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Stok Durumu</p>
+                    {([['low', 'Az Stok'], ['out', 'Stok Yok']] as ['low'|'out', string][]).map(([val, lbl]) => (
+                      <button key={val} onClick={() => setStockFilter(stockFilter === val ? null : val)}
+                        className={cn('w-full text-left px-3 py-2 rounded-lg text-sm transition-colors', stockFilter === val ? 'bg-pulse-50 text-pulse-700 dark:bg-pulse-900/30 dark:text-pulse-300 font-medium' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700')}>
+                        {lbl}
+                      </button>
+                    ))}
+                    {categories.length > 0 && (
+                      <>
+                        <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider pt-1 border-t dark:border-gray-700">Kategori</p>
+                        {categories.map(cat => (
+                          <button key={cat} onClick={() => setCategoryFilter(categoryFilter === cat ? '' : cat)}
+                            className={cn('w-full text-left px-3 py-2 rounded-lg text-sm transition-colors', categoryFilter === cat ? 'bg-pulse-50 text-pulse-700 dark:bg-pulse-900/30 dark:text-pulse-300 font-medium' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700')}>
+                            {cat}
+                          </button>
+                        ))}
+                      </>
+                    )}
+                    {hasActiveFilters && (
+                      <button onClick={() => { setStockFilter(null); setCategoryFilter('') }}
+                        className="w-full text-xs text-center py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-center gap-1 mt-1">
+                        <X className="h-3 w-3" /> Temizle
+                      </button>
+                    )}
+                  </div>
+                </ToolbarPopover>
+                <ToolbarPopover icon={<ArrowUpDown className="h-4 w-4" />} label="Sırala" active={sortField !== null}>
+                  <SortPopoverContent options={SORT_OPTIONS} sortField={sortField} sortDir={sortDir} onSortField={setSortField} onSortDir={setSortDir} />
+                </ToolbarPopover>
+                <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-0.5" />
+                <button onClick={() => setViewMode('list')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'list' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Liste"><LayoutList className="h-4 w-4" /></button>
+                <button onClick={() => setViewMode('box')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'box' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Kutular"><LayoutGrid className="h-4 w-4" /></button>
               </div>
             </>
           )}
@@ -414,32 +503,41 @@ export default function StoklarPage() {
         <>
           {/* Özet Kartlar */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-            <div className="card p-4">
+            <button
+              onClick={() => { setStockFilter(null); setCategoryFilter('') }}
+              className="card p-4 text-left transition-all hover:shadow-md"
+            >
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Toplam Ürün</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{products.length}</p>
-            </div>
+            </button>
             <div className="card p-4">
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Stok Değeri</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{formatCurrency(totalValue)}</p>
             </div>
-            <div className="card p-4">
+            <button
+              onClick={() => setStockFilter(stockFilter === 'low' ? null : 'low')}
+              className={cn('card p-4 text-left transition-all hover:shadow-md', stockFilter === 'low' && 'ring-2 ring-amber-500')}
+            >
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Az Stok</p>
               <div className="flex items-center gap-2">
                 <p className={cn('text-2xl font-bold', lowStockCount > 0 ? 'text-amber-600' : 'text-gray-900 dark:text-gray-100')}>{lowStockCount}</p>
                 {lowStockCount > 0 && <TrendingDown className="h-5 w-5 text-amber-600" />}
               </div>
-            </div>
-            <div className="card p-4">
+            </button>
+            <button
+              onClick={() => setStockFilter(stockFilter === 'out' ? null : 'out')}
+              className={cn('card p-4 text-left transition-all hover:shadow-md', stockFilter === 'out' && 'ring-2 ring-red-500')}
+            >
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Stok Yok</p>
               <div className="flex items-center gap-2">
                 <p className={cn('text-2xl font-bold', outOfStockCount > 0 ? 'text-red-600' : 'text-gray-900 dark:text-gray-100')}>{outOfStockCount}</p>
                 {outOfStockCount > 0 && <AlertTriangle className="h-4 w-4 text-red-500" />}
               </div>
-            </div>
+            </button>
           </div>
 
           {/* Arama */}
-          <div className="mb-6 relative">
+          <div className="mb-4 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} className="input pl-10" placeholder="Ürün ara..." />
           </div>
@@ -448,19 +546,24 @@ export default function StoklarPage() {
           {products.length === 0 ? (
             <div className="card flex flex-col items-center justify-center py-24 text-center">
               <Package className="mb-4 h-16 w-16 text-gray-200 dark:text-gray-600" />
-              <h3 className="text-base font-semibold text-gray-700 dark:text-gray-300">
-                {search ? 'Aramanızla eşleşen ürün bulunamadı' : 'Henüz ürün eklenmemiş'}
-              </h3>
-              {!search && (
-                <>
-                  <p className="mt-1 mb-4 text-sm text-gray-400">Sağ üstteki butonu kullanarak ilk ürününüzü ekleyin.</p>
-                  <button onClick={openNewModal} className="btn-primary"><Plus className="mr-2 h-4 w-4" />İlk Ürünü Ekle</button>
-                </>
-              )}
+              <h3 className="text-base font-semibold text-gray-700 dark:text-gray-300">Henüz ürün eklenmemiş</h3>
+              <p className="mt-1 mb-4 text-sm text-gray-400">Sağ üstteki butonu kullanarak ilk ürününüzü ekleyin.</p>
+              <button onClick={openNewModal} className="btn-primary"><Plus className="mr-2 h-4 w-4" />İlk Ürünü Ekle</button>
+            </div>
+          ) : filteredProducts.length === 0 ? (
+            <div className="card flex flex-col items-center justify-center py-16 text-center">
+              <Package className="mb-4 h-12 w-12 text-gray-300" />
+              <p className="text-gray-500">Filtreye uyan ürün bulunamadı</p>
+              <button
+                onClick={() => { setStockFilter(null); setCategoryFilter(''); setSearch('') }}
+                className="mt-3 btn-secondary text-sm"
+              >
+                Filtreleri Temizle
+              </button>
             </div>
           ) : viewMode === 'list' ? (
             <AnimatedList className="space-y-3">
-              {products.map((product) => (
+              {filteredProducts.map((product) => (
                 <AnimatedItem
                   key={product.id}
                   onClick={() => { setSelectedProduct(product); setDetailTab('info') }}
@@ -493,21 +596,22 @@ export default function StoklarPage() {
               ))}
             </AnimatedList>
           ) : (
-            <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 gap-2">
-              {products.map((product) => (
-                <CompactBoxCard
-                  key={product.id}
-                  initials={product.name.slice(0, 2).toUpperCase()}
-                  title={product.name}
-                  colorClass="bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"
-                  selected={selectedProduct?.id === product.id}
-                  onClick={() => { setSelectedProduct(product); setDetailTab('info') }}
-                >
-                  <button onClick={(e) => { e.stopPropagation(); updateStock(product, -1) }} className="flex h-5 w-5 items-center justify-center rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 font-bold text-xs">−</button>
-                  <button onClick={(e) => { e.stopPropagation(); updateStock(product, 1) }} className="flex h-5 w-5 items-center justify-center rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 font-bold text-xs">+</button>
-                </CompactBoxCard>
+            <AnimatedList className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 gap-2">
+              {filteredProducts.map((product) => (
+                <AnimatedItem key={product.id}>
+                  <CompactBoxCard
+                    initials={product.name.slice(0, 2).toUpperCase()}
+                    title={product.name}
+                    colorClass="bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"
+                    selected={selectedProduct?.id === product.id}
+                    onClick={() => { setSelectedProduct(product); setDetailTab('info') }}
+                  >
+                    <button onClick={(e) => { e.stopPropagation(); updateStock(product, -1) }} className="flex h-5 w-5 items-center justify-center rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 font-bold text-xs">−</button>
+                    <button onClick={(e) => { e.stopPropagation(); updateStock(product, 1) }} className="flex h-5 w-5 items-center justify-center rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 font-bold text-xs">+</button>
+                  </CompactBoxCard>
+                </AnimatedItem>
               ))}
-            </div>
+            </AnimatedList>
           )}
         </>
       )}
@@ -752,6 +856,34 @@ export default function StoklarPage() {
                 <label className="label">Açıklama (opsiyonel)</label>
                 <textarea value={description} onChange={(e) => setDescription(e.target.value)} className="input" rows={2} placeholder="Ürün hakkında ek bilgi..." />
               </div>
+
+              {!editingProduct && (
+                <div className="space-y-3">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={addAsExpense}
+                      onChange={(e) => setAddAsExpense(e.target.checked)}
+                      className="h-4 w-4 accent-pulse-600"
+                    />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Gider olarak ekle</span>
+                  </label>
+                  {addAsExpense && (
+                    <div>
+                      <label className="label">Gider maliyeti (₺)</label>
+                      <input
+                        type="number"
+                        value={expenseCost}
+                        onChange={(e) => setExpenseCost(e.target.value)}
+                        className="input"
+                        placeholder="0.00"
+                        min="0"
+                        step="0.01"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
 
               {error && <div className="rounded-lg bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-400">{error}</div>}
 

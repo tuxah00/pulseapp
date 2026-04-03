@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import {
   Star, Loader2, MessageSquare, AlertTriangle,
-  ExternalLink, Send, Filter, TrendingUp, Sparkles,
+  ExternalLink, Send, Filter, TrendingUp, Sparkles, Search,
 } from 'lucide-react'
 import { formatDate, cn } from '@/lib/utils'
 import type { Review } from '@/types'
@@ -15,6 +15,8 @@ export default function ReviewsPage() {
   const [reviews, setReviews] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [filterRating, setFilterRating] = useState<number | null>(null)
+  const [search, setSearch] = useState('')
+  const [statFilter, setStatFilter] = useState<'pending' | 'low' | null>(null)
   const [respondingTo, setRespondingTo] = useState<string | null>(null)
   const [responseText, setResponseText] = useState('')
   const [saving, setSaving] = useState(false)
@@ -139,6 +141,17 @@ export default function ReviewsPage() {
     )
   }
 
+  const filteredReviews = reviews.filter(r => {
+    if (statFilter === 'pending' && r.status === 'responded') return false
+    if (statFilter === 'low' && r.rating > 3) return false
+    if (!search.trim()) return true
+    const q = search.toLowerCase()
+    return (
+      r.customers?.name?.toLowerCase().includes(q) ||
+      r.comment?.toLowerCase().includes(q)
+    )
+  })
+
   if (permissions && !permissions.reviews) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
@@ -174,18 +187,24 @@ export default function ReviewsPage() {
           <div className="flex justify-center mt-1">{renderStars(Math.round(Number(avgRating)))}</div>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Ortalama Puan</p>
         </div>
-        <div className="card p-4 text-center">
+        <button onClick={() => setStatFilter(null)} className={cn('card p-4 text-center transition-all hover:shadow-md', statFilter === null && 'ring-2 ring-gray-400')}>
           <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{totalReviews}</p>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Toplam Yorum</p>
-        </div>
-        <div className="card p-4 text-center">
+        </button>
+        <button onClick={() => setStatFilter(statFilter === 'pending' ? null : 'pending')} className={cn('card p-4 text-center transition-all hover:shadow-md', statFilter === 'pending' && 'ring-2 ring-amber-500')}>
           <p className={cn('text-3xl font-bold', pendingCount > 0 ? 'text-amber-600' : 'text-green-600')}>{pendingCount}</p>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Yanıt Bekleyen</p>
-        </div>
-        <div className="card p-4 text-center">
+        </button>
+        <button onClick={() => setStatFilter(statFilter === 'low' ? null : 'low')} className={cn('card p-4 text-center transition-all hover:shadow-md', statFilter === 'low' && 'ring-2 ring-red-500')}>
           <p className={cn('text-3xl font-bold', lowCount > 0 ? 'text-red-600' : 'text-green-600')}>{lowCount}</p>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Düşük Puan (≤3)</p>
-        </div>
+        </button>
+      </div>
+
+      {/* Arama */}
+      <div className="mb-4 relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <input type="text" value={search} onChange={e => setSearch(e.target.value)} className="input pl-10" placeholder="Müşteri adı veya yorum ara..." />
       </div>
 
       {/* Puan Dağılımı */}
@@ -221,14 +240,14 @@ export default function ReviewsPage() {
       </div>
 
       {/* Yorum Listesi */}
-      {reviews.length === 0 ? (
+      {filteredReviews.length === 0 ? (
         <div className="card flex flex-col items-center justify-center py-16">
           <Star className="mb-4 h-12 w-12 text-gray-300" />
-          <p className="text-gray-500 mb-4">{filterRating ? `${filterRating} yıldız yorum bulunamadı` : 'Henüz yorum yok'}</p>
+          <p className="text-gray-500 mb-4">{search ? 'Aramanızla eşleşen yorum bulunamadı' : statFilter === 'pending' ? 'Yanıt bekleyen yorum yok' : statFilter === 'low' ? 'Düşük puanlı yorum yok' : filterRating ? `${filterRating} yıldız yorum bulunamadı` : 'Henüz yorum yok'}</p>
         </div>
       ) : (
         <div className="space-y-3">
-          {reviews.map((review) => (
+          {filteredReviews.map((review) => (
             <div key={review.id} className={cn('card p-4', review.rating <= 3 && review.status !== 'responded' && 'border-red-200 dark:border-red-800 bg-red-50/30 dark:bg-red-900/20')}>
               <div className="flex items-start gap-4">
                 {/* Avatar */}

@@ -16,9 +16,11 @@ import {
   Phone,
   LayoutList,
   LayoutGrid,
+  ArrowUpDown,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
+import { ToolbarPopover, SortPopoverContent } from '@/components/ui/toolbar-popover'
 import CompactBoxCard from '@/components/ui/compact-box-card'
 
 type ReservationStatus = 'pending' | 'confirmed' | 'seated' | 'completed' | 'cancelled' | 'no_show'
@@ -76,6 +78,8 @@ export default function ReservationsPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [viewMode, setViewMode] = useViewMode('reservations', 'list')
+  const [sortField, setSortField] = useState<string | null>(null)
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const { confirm } = useConfirm()
 
   // Form state
@@ -227,6 +231,23 @@ export default function ReservationsPage() {
 
   const isToday = selectedDate === new Date().toISOString().split('T')[0]
 
+  const SORT_OPTIONS = [
+    { value: 'reservation_time', label: 'Saat' },
+    { value: 'customer_name', label: 'Müşteri adı' },
+    { value: 'party_size', label: 'Misafir sayısı' },
+  ]
+
+  const sortedReservations = sortField
+    ? [...reservations].sort((a, b) => {
+        const va = (a as any)[sortField]
+        const vb = (b as any)[sortField]
+        if (va == null && vb == null) return 0
+        if (va == null) return 1; if (vb == null) return -1
+        const cmp = typeof va === 'string' ? va.localeCompare(vb, 'tr') : (va as number) - (vb as number)
+        return sortDir === 'asc' ? cmp : -cmp
+      })
+    : reservations
+
   if (permissions && !permissions.reservations) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
@@ -247,9 +268,13 @@ export default function ReservationsPage() {
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Masa rezervasyonlarını yönetin</p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <button onClick={() => setViewMode('list')} className={cn('p-1.5 rounded', viewMode === 'list' ? 'bg-gray-200 dark:bg-gray-700' : 'hover:bg-gray-100 dark:hover:bg-gray-800')} title="Liste"><LayoutList className="h-4 w-4" /></button>
-            <button onClick={() => setViewMode('box')} className={cn('p-1.5 rounded', viewMode === 'box' ? 'bg-gray-200 dark:bg-gray-700' : 'hover:bg-gray-100 dark:hover:bg-gray-800')} title="Kutu"><LayoutGrid className="h-4 w-4" /></button>
+          <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 shrink-0">
+            <ToolbarPopover icon={<ArrowUpDown className="h-4 w-4" />} label="Sırala" active={sortField !== null}>
+              <SortPopoverContent options={SORT_OPTIONS} sortField={sortField} sortDir={sortDir} onSortField={setSortField} onSortDir={setSortDir} />
+            </ToolbarPopover>
+            <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-0.5" />
+            <button onClick={() => setViewMode('list')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'list' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Liste"><LayoutList className="h-4 w-4" /></button>
+            <button onClick={() => setViewMode('box')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'box' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Kutu"><LayoutGrid className="h-4 w-4" /></button>
           </div>
           <button
             onClick={openNewModal}
@@ -333,7 +358,7 @@ export default function ReservationsPage() {
           {viewMode === 'list' && (
             <div className="rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 overflow-hidden">
               <ul className="divide-y divide-gray-100 dark:divide-gray-700">
-                {reservations.map((r) => (
+                {sortedReservations.map((r) => (
                   <li key={r.id} className="p-4">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex items-start gap-3 min-w-0">
@@ -431,7 +456,7 @@ export default function ReservationsPage() {
           )}
           {viewMode === 'box' && (
             <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 gap-2">
-              {reservations.map((r) => (
+              {sortedReservations.map((r) => (
                 <CompactBoxCard
                   key={r.id}
                   initials={r.customer_name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}

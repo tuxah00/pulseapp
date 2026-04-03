@@ -23,6 +23,10 @@ export async function GET(req: NextRequest) {
   const offset = parseInt(req.nextUrl.searchParams.get('offset') ?? '0')
   const resource = req.nextUrl.searchParams.get('resource')
   const staffFilter = req.nextUrl.searchParams.get('staff_id')
+  const action = req.nextUrl.searchParams.get('action')
+  const fromDate = req.nextUrl.searchParams.get('from_date')
+  const toDate = req.nextUrl.searchParams.get('to_date')
+  const searchText = req.nextUrl.searchParams.get('search')
 
   let query = admin
     .from('audit_logs')
@@ -33,6 +37,10 @@ export async function GET(req: NextRequest) {
 
   if (resource) query = query.eq('resource', resource)
   if (staffFilter) query = query.eq('staff_id', staffFilter)
+  if (action) query = query.eq('action', action)
+  if (fromDate) query = query.gte('created_at', `${fromDate}T00:00:00`)
+  if (toDate) query = query.lte('created_at', `${toDate}T23:59:59`)
+  if (searchText) query = query.ilike('staff_name', `%${searchText}%`)
 
   const { data, count, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

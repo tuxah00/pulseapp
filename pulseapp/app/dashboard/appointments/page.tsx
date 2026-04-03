@@ -23,12 +23,14 @@ import {
   Trash2,
   Repeat,
   CalendarDays,
+  Search, Filter, ArrowUpDown,
 } from 'lucide-react'
 import { formatTime, formatDate, getStatusColor, formatCurrency, cn } from '@/lib/utils'
 import { STATUS_LABELS, type AppointmentStatus, type Customer, type Service, type StaffMember } from '@/types'
 import { logAudit } from '@/lib/utils/audit'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
+import { ToolbarPopover, SortPopoverContent } from '@/components/ui/toolbar-popover'
 
 export default function AppointmentsPage() {
   const { businessId, staffId: currentStaffId, staffName: currentStaffName, loading: ctxLoading } = useBusinessContext()
@@ -51,6 +53,12 @@ export default function AppointmentsPage() {
   const [error, setError] = useState<string | null>(null)
   const [rescheduleDate, setRescheduleDate] = useState('')
   const [rescheduleTime, setRescheduleTime] = useState('09:00')
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<string | null>(null)
+  const [staffIdFilter, setStaffIdFilter] = useState('')
+  const [serviceIdFilter, setServiceIdFilter] = useState('')
+  const [sortField, setSortField] = useState<string | null>(null)
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
 
   const [customers, setCustomers] = useState<Customer[]>([])
   const [services, setServices] = useState<Service[]>([])
@@ -491,6 +499,37 @@ export default function AppointmentsPage() {
     return slots
   }
 
+  const hasActiveFilters = !!(staffIdFilter || serviceIdFilter)
+  const filteredAppointments = (() => {
+    let list = appointments.filter(a => {
+      if (statusFilter && a.status !== statusFilter) return false
+      if (staffIdFilter && a.staff_id !== staffIdFilter) return false
+      if (serviceIdFilter && a.service_id !== serviceIdFilter) return false
+      if (!search.trim()) return true
+      const q = search.toLowerCase()
+      return (
+        a.customers?.name?.toLowerCase().includes(q) ||
+        a.services?.name?.toLowerCase().includes(q) ||
+        a.staff_members?.name?.toLowerCase().includes(q) ||
+        a.notes?.toLowerCase().includes(q)
+      )
+    })
+    if (sortField) {
+      list = [...list].sort((a, b) => {
+        let va: any, vb: any
+        if (sortField === 'customer_name') { va = a.customers?.name; vb = b.customers?.name }
+        else if (sortField === 'service_name') { va = a.services?.name; vb = b.services?.name }
+        else { va = (a as any)[sortField]; vb = (b as any)[sortField] }
+        if (va == null && vb == null) return 0
+        if (va == null) return 1
+        if (vb == null) return -1
+        const cmp = typeof va === 'string' ? va.localeCompare(vb, 'tr') : (va as number) - (vb as number)
+        return sortDir === 'asc' ? cmp : -cmp
+      })
+    }
+    return list
+  })()
+
   const totalCount = appointments.length
   const confirmedCount = appointments.filter(a => a.status === 'confirmed').length
   const completedCount = appointments.filter(a => a.status === 'completed').length
@@ -615,40 +654,58 @@ export default function AppointmentsPage() {
       {/* Mini İstatistik + Görünüm butonları */}
       <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="grid flex-1 grid-cols-4 gap-3">
-          <div className="card p-3 text-center"><p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{totalCount}</p><p className="text-xs text-gray-500">Toplam</p></div>
-          <div className="card p-3 text-center"><p className="text-2xl font-bold text-blue-600">{confirmedCount}</p><p className="text-xs text-gray-500">Onaylı</p></div>
-          <div className="card p-3 text-center"><p className="text-2xl font-bold text-green-600">{completedCount}</p><p className="text-xs text-gray-500">Tamamlandı</p></div>
-          <div className="card p-3 text-center"><p className="text-2xl font-bold text-red-600">{noShowCount}</p><p className="text-xs text-gray-500">Gelmedi</p></div>
+          <button onClick={() => setStatusFilter(null)} className={cn('card p-3 text-center transition-all hover:shadow-md', statusFilter === null && 'ring-2 ring-gray-400')}><p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{totalCount}</p><p className="text-xs text-gray-500">Toplam</p></button>
+          <button onClick={() => setStatusFilter(statusFilter === 'confirmed' ? null : 'confirmed')} className={cn('card p-3 text-center transition-all hover:shadow-md', statusFilter === 'confirmed' && 'ring-2 ring-blue-500')}><p className="text-2xl font-bold text-blue-600">{confirmedCount}</p><p className="text-xs text-gray-500">Onaylı</p></button>
+          <button onClick={() => setStatusFilter(statusFilter === 'completed' ? null : 'completed')} className={cn('card p-3 text-center transition-all hover:shadow-md', statusFilter === 'completed' && 'ring-2 ring-green-500')}><p className="text-2xl font-bold text-green-600">{completedCount}</p><p className="text-xs text-gray-500">Tamamlandı</p></button>
+          <button onClick={() => setStatusFilter(statusFilter === 'no_show' ? null : 'no_show')} className={cn('card p-3 text-center transition-all hover:shadow-md', statusFilter === 'no_show' && 'ring-2 ring-red-500')}><p className="text-2xl font-bold text-red-600">{noShowCount}</p><p className="text-xs text-gray-500">Gelmedi</p></button>
         </div>
         <div className="flex justify-end">
-          <div className="inline-flex rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-0.5 shadow-sm">
-            <button
-              type="button"
-              onClick={() => setViewMode('list')}
-              className={cn('inline-flex items-center rounded-full px-2.5 py-1 text-xs transition-colors', viewMode === 'list' ? 'bg-pulse-50 text-pulse-700 dark:bg-pulse-900/40 dark:text-pulse-300' : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700')}
-              title="Liste görünüm"
-            >
-              <LayoutList className="h-3.5 w-3.5" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('week')}
-              className={cn('inline-flex items-center rounded-full px-2.5 py-1 text-xs transition-colors', viewMode === 'week' ? 'bg-pulse-50 text-pulse-700 dark:bg-pulse-900/40 dark:text-pulse-300' : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700')}
-              title="Haftalık takvim"
-            >
-              <CalendarDays className="h-3.5 w-3.5" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('box')}
-              className={cn('inline-flex items-center rounded-full px-2.5 py-1 text-xs transition-colors', viewMode === 'box' ? 'bg-pulse-50 text-pulse-700 dark:bg-pulse-900/40 dark:text-pulse-300' : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700')}
-              title="Kutu görünüm"
-            >
-              <LayoutGrid className="h-3.5 w-3.5" />
-            </button>
+          <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+            <ToolbarPopover icon={<Filter className="h-4 w-4" />} label="Filtre" active={hasActiveFilters}>
+              <div className="p-3 w-56 space-y-3">
+                <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Personel</p>
+                <select value={staffIdFilter} onChange={e => setStaffIdFilter(e.target.value)} className="input text-sm w-full">
+                  <option value="">Tümü</option>
+                  {staffMembers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+                <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider pt-1">Hizmet</p>
+                <select value={serviceIdFilter} onChange={e => setServiceIdFilter(e.target.value)} className="input text-sm w-full">
+                  <option value="">Tümü</option>
+                  {services.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+                {hasActiveFilters && (
+                  <button onClick={() => { setStaffIdFilter(''); setServiceIdFilter('') }}
+                    className="w-full text-xs text-center py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-center gap-1">
+                    <X className="h-3 w-3" /> Temizle
+                  </button>
+                )}
+              </div>
+            </ToolbarPopover>
+            <ToolbarPopover icon={<ArrowUpDown className="h-4 w-4" />} label="Sırala" active={sortField !== null}>
+              <SortPopoverContent
+                options={[
+                  { value: 'start_time', label: 'Saat' },
+                  { value: 'customer_name', label: 'Müşteri adı' },
+                  { value: 'service_name', label: 'Hizmet' },
+                ]}
+                sortField={sortField} sortDir={sortDir} onSortField={setSortField} onSortDir={setSortDir}
+              />
+            </ToolbarPopover>
+            <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-0.5" />
+            <button type="button" onClick={() => setViewMode('list')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'list' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Liste görünüm"><LayoutList className="h-4 w-4" /></button>
+            <button type="button" onClick={() => setViewMode('week')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'week' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Haftalık takvim"><CalendarDays className="h-4 w-4" /></button>
+            <button type="button" onClick={() => setViewMode('box')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'box' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Kutu görünüm"><LayoutGrid className="h-4 w-4" /></button>
           </div>
         </div>
       </div>
+
+      {/* Arama (liste/kutu modunda) */}
+      {viewMode !== 'week' && (
+        <div className="mb-4 relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <input type="text" value={search} onChange={e => setSearch(e.target.value)} className="input pl-10" placeholder="Müşteri, hizmet veya personel ara..." />
+        </div>
+      )}
 
       {/* Randevu Listesi / Takvim */}
       {loading ? (
@@ -913,17 +970,15 @@ export default function AppointmentsPage() {
         </div>
       )}
 
-      {!loading && viewMode !== 'week' ? (appointments.length === 0 ? (
+      {!loading && viewMode !== 'week' ? (filteredAppointments.length === 0 ? (
         <div className="card flex flex-col items-center justify-center py-16">
           <Calendar className="mb-4 h-12 w-12 text-gray-300" />
-          <p className="mb-4 text-gray-500">Bu tarihte randevu yok</p>
-          <button onClick={() => openNewModal()} className="btn-primary">
-            <Plus className="mr-2 h-4 w-4" />Randevu Ekle
-          </button>
+          <p className="mb-4 text-gray-500">{search || statusFilter ? 'Filtreye uygun randevu bulunamadı' : 'Bu tarihte randevu yok'}</p>
+          {!search && !statusFilter && <button onClick={() => openNewModal()} className="btn-primary"><Plus className="mr-2 h-4 w-4" />Randevu Ekle</button>}
         </div>
       ) : viewMode === 'list' ? (
         <AnimatedList className="space-y-3">
-          {appointments.map((apt) => {
+          {filteredAppointments.map((apt) => {
             const timeState = getTimeState(apt)
             return (
               <AnimatedItem
@@ -964,7 +1019,7 @@ export default function AppointmentsPage() {
         </AnimatedList>
       ) : (
         <AnimatedList className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
-          {appointments.map((apt) => {
+          {filteredAppointments.map((apt) => {
             const timeState = getTimeState(apt)
             return (
               <AnimatedItem
