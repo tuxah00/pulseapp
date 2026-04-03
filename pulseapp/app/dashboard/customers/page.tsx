@@ -6,7 +6,7 @@ import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useDebounce } from '@/lib/hooks/use-debounce'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
 import {
-  Plus, Search, Loader2, Phone, Mail, Calendar, Filter,
+  Plus, Search, Loader2, Phone, Mail, Calendar, Filter, ArrowUpDown,
   X, Pencil, Trash2, User, LayoutList, LayoutGrid,
   Clock, Star, MessageSquare, CheckCircle, XCircle, AlertTriangle, Info, Download,
 } from 'lucide-react'
@@ -15,6 +15,7 @@ import { SEGMENT_LABELS, STATUS_LABELS, type Customer, type CustomerSegment } fr
 import { logAudit } from '@/lib/utils/audit'
 import CompactBoxCard from '@/components/ui/compact-box-card'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
+import { ToolbarPopover, SortPopoverContent } from '@/components/ui/toolbar-popover'
 import { exportToCSV } from '@/lib/utils/export'
 
 import { getCustomerLabel } from '@/lib/config/sector-modules'
@@ -45,11 +46,14 @@ export default function CustomersPage() {
   const [notes, setNotes] = useState('')
   const [segment, setSegment] = useState<CustomerSegment>('new')
 
-  // Advanced filters
-  const [showAdvanced, setShowAdvanced] = useState(false)
+  // Advanced filters (popover tabanlı)
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [minVisits, setMinVisits] = useState('')
+
+  // Sort
+  const [sortField, setSortField] = useState<string | null>(null)
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
 
   // Timeline state
   const [panelTab, setPanelTab] = useState<'info' | 'history'>('info')
@@ -321,12 +325,34 @@ export default function CustomersPage() {
     return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-pulse-500" /></div>
   }
 
-  const filteredCustomers = customers.filter(c => {
-    if (dateFrom && c.created_at && c.created_at < dateFrom) return false
-    if (dateTo && c.created_at && c.created_at > dateTo + 'T23:59:59') return false
-    if (minVisits && (c.total_visits || 0) < parseInt(minVisits)) return false
-    return true
-  })
+  const hasActiveFilters = !!(dateFrom || dateTo || minVisits)
+  const SORT_OPTIONS = [
+    { value: 'name', label: 'İsim' },
+    { value: 'created_at', label: 'Kayıt tarihi' },
+    { value: 'total_visits', label: 'Toplam ziyaret' },
+    { value: 'segment', label: 'Segment' },
+  ]
+
+  const filteredCustomers = (() => {
+    let list = customers.filter(c => {
+      if (dateFrom && c.created_at && c.created_at < dateFrom) return false
+      if (dateTo && c.created_at && c.created_at > dateTo + 'T23:59:59') return false
+      if (minVisits && (c.total_visits || 0) < parseInt(minVisits)) return false
+      return true
+    })
+    if (sortField) {
+      list = [...list].sort((a, b) => {
+        const va = (a as any)[sortField]
+        const vb = (b as any)[sortField]
+        if (va == null && vb == null) return 0
+        if (va == null) return 1
+        if (vb == null) return -1
+        const cmp = typeof va === 'string' ? va.localeCompare(vb, 'tr') : (va as number) - (vb as number)
+        return sortDir === 'asc' ? cmp : -cmp
+      })
+    }
+    return list
+  })()
 
   return (
     <div>
@@ -385,36 +411,45 @@ export default function CustomersPage() {
               {SEGMENT_LABELS[seg]}
             </button>
           ))}
-          <button onClick={() => setShowAdvanced(v => !v)} className={cn('badge px-3 py-1.5 cursor-pointer transition-colors', showAdvanced ? 'bg-pulse-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600')}>
-            <Filter className="h-3 w-3 mr-1 inline" />Filtreler
-          </button>
         </div>
-        <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+        {/* Birleşik toolbar: Filtre + Sırala + Görünüm */}
+        <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 shrink-0">
+          <ToolbarPopover icon={<Filter className="h-4 w-4" />} label="Filtre" active={hasActiveFilters}>
+            <div className="p-3 w-64 space-y-3">
+              <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Gelişmiş Filtreler</p>
+              <div className="space-y-1">
+                <label className="text-xs text-gray-500 dark:text-gray-400">Kayıt tarihi</label>
+                <div className="flex items-center gap-1">
+                  <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="input py-1 text-xs flex-1" />
+                  <span className="text-gray-400 text-xs">—</span>
+                  <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="input py-1 text-xs flex-1" />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-gray-500 dark:text-gray-400">Min. ziyaret sayısı</label>
+                <input type="number" min={0} value={minVisits} onChange={e => setMinVisits(e.target.value)} className="input py-1 text-sm w-full" placeholder="0" />
+              </div>
+              {hasActiveFilters && (
+                <button onClick={() => { setDateFrom(''); setDateTo(''); setMinVisits('') }} className="w-full text-xs text-center py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-center gap-1">
+                  <X className="h-3 w-3" /> Temizle
+                </button>
+              )}
+            </div>
+          </ToolbarPopover>
+          <ToolbarPopover icon={<ArrowUpDown className="h-4 w-4" />} label="Sırala" active={sortField !== null}>
+            <SortPopoverContent
+              options={SORT_OPTIONS}
+              sortField={sortField}
+              sortDir={sortDir}
+              onSortField={setSortField}
+              onSortDir={setSortDir}
+            />
+          </ToolbarPopover>
+          <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-0.5" />
           <button onClick={() => setViewMode('list')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'list' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Liste"><LayoutList className="h-4 w-4" /></button>
           <button onClick={() => setViewMode('box')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'box' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Kutular"><LayoutGrid className="h-4 w-4" /></button>
         </div>
       </div>
-
-      {/* Gelişmiş filtreler */}
-      {showAdvanced && (
-        <div className="flex flex-wrap gap-3 items-center mb-4 p-3 card">
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <span>Kayıt tarihi:</span>
-            <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="input py-1 text-sm w-auto" />
-            <span>—</span>
-            <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="input py-1 text-sm w-auto" />
-          </div>
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <span>Min ziyaret:</span>
-            <input type="number" min={0} value={minVisits} onChange={e => setMinVisits(e.target.value)} className="input py-1 text-sm w-20" placeholder="0" />
-          </div>
-          {(dateFrom || dateTo || minVisits) && (
-            <button onClick={() => { setDateFrom(''); setDateTo(''); setMinVisits('') }} className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 flex items-center gap-1">
-              <X className="h-3.5 w-3.5" /> Temizle
-            </button>
-          )}
-        </div>
-      )}
 
       {filteredCustomers.length === 0 ? (
         <div className="card flex flex-col items-center justify-center py-16">

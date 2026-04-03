@@ -5,9 +5,10 @@ import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
-import { Plus, Pencil, Trash2, Loader2, UserPlus, X, Mail, Phone, Settings, LayoutList, LayoutGrid, Check } from 'lucide-react'
+import { Plus, Pencil, Trash2, Loader2, UserPlus, X, Mail, Phone, Settings, LayoutList, LayoutGrid, Check, ArrowUpDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import CompactBoxCard from '@/components/ui/compact-box-card'
+import { ToolbarPopover, SortPopoverContent } from '@/components/ui/toolbar-popover'
 import type { StaffMember, StaffRole, StaffPermissions } from '@/types'
 import { logAudit } from '@/lib/utils/audit'
 import { DEFAULT_PERMISSIONS, getEffectivePermissions } from '@/types'
@@ -79,6 +80,7 @@ export default function StaffPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [viewMode, setViewMode] = useViewMode('staff', 'list')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const { confirm } = useConfirm()
 
   const [name, setName] = useState('')
@@ -113,12 +115,13 @@ export default function StaffPage() {
 
   useEffect(() => { if (!ctxLoading) fetchStaff() }, [fetchStaff, ctxLoading])
 
-  // Sort by role hierarchy, then name
+  // Sort by role hierarchy, then name (respecting sortDir)
   const sortedStaff = [...staff].sort((a, b) => {
     const roleA = ROLE_ORDER[a.role] ?? 3
     const roleB = ROLE_ORDER[b.role] ?? 3
     if (roleA !== roleB) return roleA - roleB
-    return a.name.localeCompare(b.name, 'tr')
+    const cmp = a.name.localeCompare(b.name, 'tr')
+    return sortDir === 'asc' ? cmp : -cmp
   })
 
   const staffGroups = [
@@ -429,7 +432,17 @@ export default function StaffPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+          <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 shrink-0">
+            <ToolbarPopover icon={<ArrowUpDown className="h-4 w-4" />} label="Sırala" active={sortDir !== 'asc'}>
+              <SortPopoverContent
+                options={[{ value: 'name', label: 'İsim' }]}
+                sortField="name"
+                sortDir={sortDir}
+                onSortField={() => {}}
+                onSortDir={setSortDir}
+              />
+            </ToolbarPopover>
+            <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-0.5" />
             <button onClick={() => setViewMode('list')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'list' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Liste"><LayoutList className="h-4 w-4" /></button>
             <button onClick={() => setViewMode('box')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'box' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Kutular"><LayoutGrid className="h-4 w-4" /></button>
           </div>

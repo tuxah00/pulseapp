@@ -9,9 +9,11 @@ import {
   Plus, Package, Loader2, X, Pencil, Trash2, Search,
   ChevronRight, Clock, CheckCircle, XCircle, AlertTriangle,
   Users, Tag, Minus, LayoutList, LayoutGrid, CalendarPlus,
+  Filter, ArrowUpDown,
 } from 'lucide-react'
 import { formatCurrency, formatDate, cn } from '@/lib/utils'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
+import { ToolbarPopover, SortPopoverContent } from '@/components/ui/toolbar-popover'
 import { logAudit } from '@/lib/utils/audit'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
 import CompactBoxCard from '@/components/ui/compact-box-card'
@@ -59,6 +61,8 @@ export default function PaketlerPage() {
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounce(search, 300)
   const [selectedCp, setSelectedCp] = useState<CustomerPackage | null>(null)
+  const [sortField, setSortField] = useState<string | null>(null)
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
 
   // Sell package form
   const [showSellModal, setShowSellModal] = useState(false)
@@ -385,6 +389,18 @@ export default function PaketlerPage() {
 
   const activeTemplate = templates.find(t => t.id === sTemplateId)
 
+  const sortedPackages = sortField
+    ? [...customerPackages].sort((a, b) => {
+        const va = (a as any)[sortField]
+        const vb = (b as any)[sortField]
+        if (va == null && vb == null) return 0
+        if (va == null) return 1
+        if (vb == null) return -1
+        const cmp = typeof va === 'string' ? va.localeCompare(vb, 'tr') : (va as number) - (vb as number)
+        return sortDir === 'asc' ? cmp : -cmp
+      })
+    : customerPackages
+
   return (
     <div className="space-y-6 overflow-hidden">
       {/* Header */}
@@ -396,6 +412,29 @@ export default function PaketlerPage() {
         <div className="flex items-center gap-2">
           {pageTab === 'customer' && (
             <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+              <ToolbarPopover icon={<Filter className="h-4 w-4" />} label="Filtre" active={statusFilter !== 'all'}>
+                <div className="p-3 w-52 space-y-1">
+                  <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Durum</p>
+                  {(['all', 'active', 'completed', 'expired', 'cancelled'] as StatusFilter[]).map(s => (
+                    <button key={s} onClick={() => setStatusFilter(s)}
+                      className={cn('w-full text-left px-3 py-2 rounded-lg text-sm transition-colors', statusFilter === s ? 'bg-pulse-50 text-pulse-700 dark:bg-pulse-900/30 dark:text-pulse-300 font-medium' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700')}>
+                      {s === 'all' ? 'Tümü' : STATUS_CONFIG[s as PackageStatus].label}
+                    </button>
+                  ))}
+                </div>
+              </ToolbarPopover>
+              <ToolbarPopover icon={<ArrowUpDown className="h-4 w-4" />} label="Sırala" active={sortField !== null}>
+                <SortPopoverContent
+                  options={[
+                    { value: 'customer_name', label: 'Müşteri adı' },
+                    { value: 'sessions_used', label: 'Seans kullanımı' },
+                    { value: 'purchase_date', label: 'Satın alma tarihi' },
+                    { value: 'status', label: 'Durum' },
+                  ]}
+                  sortField={sortField} sortDir={sortDir} onSortField={setSortField} onSortDir={setSortDir}
+                />
+              </ToolbarPopover>
+              <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-0.5" />
               <button onClick={() => setViewMode('list')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'list' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Liste"><LayoutList className="h-4 w-4" /></button>
               <button onClick={() => setViewMode('box')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'box' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Kutular"><LayoutGrid className="h-4 w-4" /></button>
             </div>
@@ -526,36 +565,18 @@ export default function PaketlerPage() {
 
       {/* ── CUSTOMER PACKAGES TAB ── */}
       {pageTab === 'customer' && (
-        <div className={cn('flex gap-4', selectedCp ? 'items-start' : '')}>
+        <div className="flex gap-4 items-start">
           <div className="flex-1 min-w-0 space-y-4">
-            {/* Filters */}
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="relative flex-1 max-w-xs">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Müşteri ara..."
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  className="input pl-9 text-sm w-full"
-                />
-              </div>
-              <div className="flex gap-2 flex-wrap">
-                {(['all', 'active', 'completed', 'expired', 'cancelled'] as StatusFilter[]).map(s => (
-                  <button
-                    key={s}
-                    onClick={() => setStatusFilter(s)}
-                    className={cn(
-                      'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border',
-                      statusFilter === s
-                        ? 'bg-pulse-500 text-white border-pulse-500'
-                        : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
-                    )}
-                  >
-                    {s === 'all' ? 'Tümü' : STATUS_CONFIG[s as PackageStatus].label}
-                  </button>
-                ))}
-              </div>
+            {/* Arama */}
+            <div className="relative max-w-xs">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Müşteri ara..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="input pl-9 text-sm w-full"
+              />
             </div>
 
             {/* List / Box */}
@@ -571,7 +592,7 @@ export default function PaketlerPage() {
               </div>
             ) : viewMode === 'box' ? (
               <AnimatedList className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 gap-2">
-                {customerPackages.map(cp => {
+                {sortedPackages.map(cp => {
                   const cfg = STATUS_CONFIG[cp.status]
                   return (
                     <AnimatedItem key={cp.id}>
@@ -590,7 +611,7 @@ export default function PaketlerPage() {
               </AnimatedList>
             ) : (
               <AnimatedList className="space-y-2">
-                {customerPackages.map(cp => {
+                {sortedPackages.map(cp => {
                   const pct = Math.round((cp.sessions_used / cp.sessions_total) * 100)
                   const remaining = cp.sessions_total - cp.sessions_used
                   const cfg = STATUS_CONFIG[cp.status]
@@ -663,7 +684,7 @@ export default function PaketlerPage() {
           {selectedCp && (() => {
             const detailPct = Math.round((selectedCp.sessions_used / selectedCp.sessions_total) * 100)
             return (
-            <div className="w-80 flex-shrink-0 card space-y-4">
+            <div className="w-80 flex-shrink-0 card space-y-4 transition-all duration-200">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">{selectedCp.customer_name}</h3>
                 <button onClick={closePanel} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400">

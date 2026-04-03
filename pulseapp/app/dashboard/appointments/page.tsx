@@ -23,13 +23,14 @@ import {
   Trash2,
   Repeat,
   CalendarDays,
-  Search,
+  Search, Filter, ArrowUpDown,
 } from 'lucide-react'
 import { formatTime, formatDate, getStatusColor, formatCurrency, cn } from '@/lib/utils'
 import { STATUS_LABELS, type AppointmentStatus, type Customer, type Service, type StaffMember } from '@/types'
 import { logAudit } from '@/lib/utils/audit'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
+import { ToolbarPopover, SortPopoverContent } from '@/components/ui/toolbar-popover'
 
 export default function AppointmentsPage() {
   const { businessId, staffId: currentStaffId, staffName: currentStaffName, loading: ctxLoading } = useBusinessContext()
@@ -56,6 +57,8 @@ export default function AppointmentsPage() {
   const [statusFilter, setStatusFilter] = useState<string | null>(null)
   const [staffIdFilter, setStaffIdFilter] = useState('')
   const [serviceIdFilter, setServiceIdFilter] = useState('')
+  const [sortField, setSortField] = useState<string | null>(null)
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
 
   const [customers, setCustomers] = useState<Customer[]>([])
   const [services, setServices] = useState<Service[]>([])
@@ -496,19 +499,36 @@ export default function AppointmentsPage() {
     return slots
   }
 
-  const filteredAppointments = appointments.filter(a => {
-    if (statusFilter && a.status !== statusFilter) return false
-    if (staffIdFilter && a.staff_id !== staffIdFilter) return false
-    if (serviceIdFilter && a.service_id !== serviceIdFilter) return false
-    if (!search.trim()) return true
-    const q = search.toLowerCase()
-    return (
-      a.customers?.name?.toLowerCase().includes(q) ||
-      a.services?.name?.toLowerCase().includes(q) ||
-      a.staff_members?.name?.toLowerCase().includes(q) ||
-      a.notes?.toLowerCase().includes(q)
-    )
-  })
+  const hasActiveFilters = !!(staffIdFilter || serviceIdFilter)
+  const filteredAppointments = (() => {
+    let list = appointments.filter(a => {
+      if (statusFilter && a.status !== statusFilter) return false
+      if (staffIdFilter && a.staff_id !== staffIdFilter) return false
+      if (serviceIdFilter && a.service_id !== serviceIdFilter) return false
+      if (!search.trim()) return true
+      const q = search.toLowerCase()
+      return (
+        a.customers?.name?.toLowerCase().includes(q) ||
+        a.services?.name?.toLowerCase().includes(q) ||
+        a.staff_members?.name?.toLowerCase().includes(q) ||
+        a.notes?.toLowerCase().includes(q)
+      )
+    })
+    if (sortField) {
+      list = [...list].sort((a, b) => {
+        let va: any, vb: any
+        if (sortField === 'customer_name') { va = a.customers?.name; vb = b.customers?.name }
+        else if (sortField === 'service_name') { va = a.services?.name; vb = b.services?.name }
+        else { va = (a as any)[sortField]; vb = (b as any)[sortField] }
+        if (va == null && vb == null) return 0
+        if (va == null) return 1
+        if (vb == null) return -1
+        const cmp = typeof va === 'string' ? va.localeCompare(vb, 'tr') : (va as number) - (vb as number)
+        return sortDir === 'asc' ? cmp : -cmp
+      })
+    }
+    return list
+  })()
 
   const totalCount = appointments.length
   const confirmedCount = appointments.filter(a => a.status === 'confirmed').length
@@ -641,6 +661,37 @@ export default function AppointmentsPage() {
         </div>
         <div className="flex justify-end">
           <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+            <ToolbarPopover icon={<Filter className="h-4 w-4" />} label="Filtre" active={hasActiveFilters}>
+              <div className="p-3 w-56 space-y-3">
+                <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Personel</p>
+                <select value={staffIdFilter} onChange={e => setStaffIdFilter(e.target.value)} className="input text-sm w-full">
+                  <option value="">Tümü</option>
+                  {staffMembers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+                <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider pt-1">Hizmet</p>
+                <select value={serviceIdFilter} onChange={e => setServiceIdFilter(e.target.value)} className="input text-sm w-full">
+                  <option value="">Tümü</option>
+                  {services.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+                {hasActiveFilters && (
+                  <button onClick={() => { setStaffIdFilter(''); setServiceIdFilter('') }}
+                    className="w-full text-xs text-center py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-center gap-1">
+                    <X className="h-3 w-3" /> Temizle
+                  </button>
+                )}
+              </div>
+            </ToolbarPopover>
+            <ToolbarPopover icon={<ArrowUpDown className="h-4 w-4" />} label="Sırala" active={sortField !== null}>
+              <SortPopoverContent
+                options={[
+                  { value: 'start_time', label: 'Saat' },
+                  { value: 'customer_name', label: 'Müşteri adı' },
+                  { value: 'service_name', label: 'Hizmet' },
+                ]}
+                sortField={sortField} sortDir={sortDir} onSortField={setSortField} onSortDir={setSortDir}
+              />
+            </ToolbarPopover>
+            <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-0.5" />
             <button type="button" onClick={() => setViewMode('list')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'list' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Liste görünüm"><LayoutList className="h-4 w-4" /></button>
             <button type="button" onClick={() => setViewMode('week')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'week' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Haftalık takvim"><CalendarDays className="h-4 w-4" /></button>
             <button type="button" onClick={() => setViewMode('box')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'box' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Kutu görünüm"><LayoutGrid className="h-4 w-4" /></button>
@@ -648,23 +699,11 @@ export default function AppointmentsPage() {
         </div>
       </div>
 
-      {/* Arama + Filtreler (liste/kutu modunda) */}
+      {/* Arama (liste/kutu modunda) */}
       {viewMode !== 'week' && (
-        <div className="mb-4 flex flex-col gap-2">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input type="text" value={search} onChange={e => setSearch(e.target.value)} className="input pl-10" placeholder="Müşteri, hizmet veya personel ara..." />
-          </div>
-          <div className="flex gap-2">
-            <select value={staffIdFilter} onChange={e => setStaffIdFilter(e.target.value)} className="input flex-1">
-              <option value="">Tüm Personel</option>
-              {staffMembers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-            <select value={serviceIdFilter} onChange={e => setServiceIdFilter(e.target.value)} className="input flex-1">
-              <option value="">Tüm Hizmetler</option>
-              {services.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-          </div>
+        <div className="mb-4 relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <input type="text" value={search} onChange={e => setSearch(e.target.value)} className="input pl-10" placeholder="Müşteri, hizmet veya personel ara..." />
         </div>
       )}
 

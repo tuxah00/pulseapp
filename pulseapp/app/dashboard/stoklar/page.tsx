@@ -9,13 +9,14 @@ import {
   Plus, Package, Loader2, X, Pencil, Trash2,
   AlertTriangle, LayoutList, LayoutGrid, Search,
   History, Truck, Download, TrendingDown, TrendingUp,
-  ChevronRight,
+  ChevronRight, Filter, ArrowUpDown,
 } from 'lucide-react'
 import { formatCurrency, cn } from '@/lib/utils'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
 import { logAudit } from '@/lib/utils/audit'
 import CompactBoxCard from '@/components/ui/compact-box-card'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
+import { ToolbarPopover, SortPopoverContent } from '@/components/ui/toolbar-popover'
 import { exportToCSV } from '@/lib/utils/export'
 import type { StockMovement, Supplier } from '@/types'
 
@@ -57,6 +58,8 @@ export default function StoklarPage() {
   const [detailTab, setDetailTab] = useState<DetailTab>('info')
   const [stockFilter, setStockFilter] = useState<'low' | 'out' | null>(null)
   const [categoryFilter, setCategoryFilter] = useState<string>('')
+  const [sortField, setSortField] = useState<string | null>(null)
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
 
   // Movement history
   const [movements, setMovements] = useState<StockMovement[]>([])
@@ -306,17 +309,39 @@ export default function StoklarPage() {
   // Unique categories derived from all products
   const categories = [...new Set(products.filter(p => p.category).map(p => p.category!))].sort()
 
+  const hasActiveFilters = !!(stockFilter || categoryFilter)
+  const SORT_OPTIONS = [
+    { value: 'name', label: 'İsim' },
+    { value: 'stock_count', label: 'Stok adedi' },
+    { value: 'price', label: 'Fiyat' },
+    { value: 'category', label: 'Kategori' },
+  ]
+
   // Client-side filtered list
-  const filteredProducts = products.filter(p => {
-    if (stockFilter === 'low' && !(p.stock_count <= p.min_stock_level && p.stock_count > 0)) return false
-    if (stockFilter === 'out' && p.stock_count !== 0) return false
-    if (categoryFilter && p.category !== categoryFilter) return false
-    if (debouncedSearch.trim()) {
-      const q = debouncedSearch.toLowerCase()
-      if (!p.name.toLowerCase().includes(q) && !(p.category?.toLowerCase().includes(q))) return false
+  const filteredProducts = (() => {
+    let list = products.filter(p => {
+      if (stockFilter === 'low' && !(p.stock_count <= p.min_stock_level && p.stock_count > 0)) return false
+      if (stockFilter === 'out' && p.stock_count !== 0) return false
+      if (categoryFilter && p.category !== categoryFilter) return false
+      if (debouncedSearch.trim()) {
+        const q = debouncedSearch.toLowerCase()
+        if (!p.name.toLowerCase().includes(q) && !(p.category?.toLowerCase().includes(q))) return false
+      }
+      return true
+    })
+    if (sortField) {
+      list = [...list].sort((a, b) => {
+        const va = (a as any)[sortField]
+        const vb = (b as any)[sortField]
+        if (va == null && vb == null) return 0
+        if (va == null) return 1
+        if (vb == null) return -1
+        const cmp = typeof va === 'string' ? va.localeCompare(vb, 'tr') : (va as number) - (vb as number)
+        return sortDir === 'asc' ? cmp : -cmp
+      })
     }
-    return true
-  })
+    return list
+  })()
 
   function stockBadge(product: Product) {
     if (product.stock_count === 0)
@@ -396,6 +421,38 @@ export default function StoklarPage() {
                 <span className="hidden sm:inline">Dışa Aktar</span>
               </button>
               <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+                <ToolbarPopover icon={<Filter className="h-4 w-4" />} label="Filtre" active={hasActiveFilters}>
+                  <div className="p-3 w-56 space-y-3">
+                    <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Stok Durumu</p>
+                    {([['low', 'Az Stok'], ['out', 'Stok Yok']] as ['low'|'out', string][]).map(([val, lbl]) => (
+                      <button key={val} onClick={() => setStockFilter(stockFilter === val ? null : val)}
+                        className={cn('w-full text-left px-3 py-2 rounded-lg text-sm transition-colors', stockFilter === val ? 'bg-pulse-50 text-pulse-700 dark:bg-pulse-900/30 dark:text-pulse-300 font-medium' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700')}>
+                        {lbl}
+                      </button>
+                    ))}
+                    {categories.length > 0 && (
+                      <>
+                        <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider pt-1 border-t dark:border-gray-700">Kategori</p>
+                        {categories.map(cat => (
+                          <button key={cat} onClick={() => setCategoryFilter(categoryFilter === cat ? '' : cat)}
+                            className={cn('w-full text-left px-3 py-2 rounded-lg text-sm transition-colors', categoryFilter === cat ? 'bg-pulse-50 text-pulse-700 dark:bg-pulse-900/30 dark:text-pulse-300 font-medium' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700')}>
+                            {cat}
+                          </button>
+                        ))}
+                      </>
+                    )}
+                    {hasActiveFilters && (
+                      <button onClick={() => { setStockFilter(null); setCategoryFilter('') }}
+                        className="w-full text-xs text-center py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-center gap-1 mt-1">
+                        <X className="h-3 w-3" /> Temizle
+                      </button>
+                    )}
+                  </div>
+                </ToolbarPopover>
+                <ToolbarPopover icon={<ArrowUpDown className="h-4 w-4" />} label="Sırala" active={sortField !== null}>
+                  <SortPopoverContent options={SORT_OPTIONS} sortField={sortField} sortDir={sortDir} onSortField={setSortField} onSortDir={setSortDir} />
+                </ToolbarPopover>
+                <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-0.5" />
                 <button onClick={() => setViewMode('list')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'list' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Liste"><LayoutList className="h-4 w-4" /></button>
                 <button onClick={() => setViewMode('box')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'box' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Kutular"><LayoutGrid className="h-4 w-4" /></button>
               </div>
@@ -484,27 +541,6 @@ export default function StoklarPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} className="input pl-10" placeholder="Ürün ara..." />
           </div>
-
-          {/* Kategori Filtre Pills */}
-          {categories.length >= 2 && (
-            <div className="flex flex-wrap gap-2 mb-4">
-              <button
-                onClick={() => setCategoryFilter('')}
-                className={cn('badge px-3 py-1.5 cursor-pointer transition-colors', !categoryFilter ? 'bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200')}
-              >
-                Tümü
-              </button>
-              {categories.map(cat => (
-                <button
-                  key={cat}
-                  onClick={() => setCategoryFilter(cat === categoryFilter ? '' : cat)}
-                  className={cn('badge px-3 py-1.5 cursor-pointer transition-colors', categoryFilter === cat ? 'bg-pulse-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200')}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-          )}
 
           {/* Ürün Listesi */}
           {products.length === 0 ? (
