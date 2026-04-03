@@ -1087,6 +1087,14 @@ export default function AppointmentsPage() {
                     </button>
                   </>
                 )}
+                {selectedAppointment.status === 'completed' && (
+                  <button
+                    onClick={() => { window.location.href = `/dashboard/kasa?appointmentId=${selectedAppointment.id}` }}
+                    className="w-full flex items-center gap-2 rounded-lg border border-pulse-200 dark:border-pulse-800 bg-pulse-50 dark:bg-pulse-900/20 px-4 py-2.5 text-sm font-medium text-pulse-700 dark:text-pulse-300 hover:bg-pulse-100 dark:hover:bg-pulse-800/30 transition-colors"
+                  >
+                    <CheckCircle className="h-4 w-4" /> Tahsilat Al
+                  </button>
+                )}
                 {selectedAppointment.status === 'confirmed' && (
                   <>
                     <button onClick={async () => { await updateStatus(selectedAppointment.id, 'completed'); setSelectedAppointment(null) }} className="w-full flex items-center gap-2 rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 px-4 py-2.5 text-sm font-medium text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-800/30 transition-colors">

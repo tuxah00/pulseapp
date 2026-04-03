@@ -41,6 +41,7 @@ export interface StaffPermissions {
   inventory?: boolean
   orders?: boolean
   invoices?: boolean
+  pos?: boolean
 }
 
 export const DEFAULT_PERMISSIONS: Record<StaffRole, StaffPermissions> = {
@@ -48,19 +49,19 @@ export const DEFAULT_PERMISSIONS: Record<StaffRole, StaffPermissions> = {
     dashboard: true, appointments: true, customers: true, analytics: true,
     messages: true, reviews: true, services: true, staff: true, shifts: true,
     settings: true, reservations: true, classes: true, memberships: true,
-    packages: true, records: true, portfolio: true, inventory: true, orders: true, invoices: true,
+    packages: true, records: true, portfolio: true, inventory: true, orders: true, invoices: true, pos: true,
   },
   manager: {
     dashboard: true, appointments: true, customers: true, analytics: true,
     messages: true, reviews: true, services: true, staff: false, shifts: true,
     settings: false, reservations: true, classes: true, memberships: true,
-    packages: true, records: true, portfolio: true, inventory: true, orders: true, invoices: true,
+    packages: true, records: true, portfolio: true, inventory: true, orders: true, invoices: true, pos: true,
   },
   staff: {
     dashboard: true, appointments: true, customers: true, analytics: false,
     messages: false, reviews: false, services: false, staff: false, shifts: false,
     settings: false, reservations: false, classes: false, memberships: false,
-    records: false, portfolio: false, inventory: false, orders: false,
+    records: false, portfolio: false, inventory: false, orders: false, pos: false,
   },
 }
 
@@ -89,6 +90,9 @@ export type NotificationType = 'appointment' | 'review' | 'payment' | 'customer'
 export type InvoiceStatus = 'pending' | 'paid' | 'partial' | 'overdue' | 'cancelled'
 export type PaymentMethod = 'cash' | 'card' | 'transfer' | 'online'
 export type StockMovementType = 'in' | 'out' | 'adjustment' | 'appointment' | 'order'
+export type TransactionType = 'sale' | 'refund' | 'package_sale'
+export type POSPaymentStatus = 'pending' | 'paid' | 'partial' | 'refunded'
+export type POSSessionStatus = 'open' | 'closed'
 
 // ── Fatura Kalemleri ──
 export interface InvoiceItem {
@@ -121,6 +125,71 @@ export interface Invoice {
   updated_at: string
   // JOINs
   customers?: { name: string; phone: string }
+}
+
+// ── POS / Kasa ──
+
+export interface POSPayment {
+  method: PaymentMethod
+  amount: number
+}
+
+export interface POSItem {
+  id: string
+  name: string
+  type: 'service' | 'product'
+  quantity: number
+  unit_price: number
+  total: number
+  product_id?: string
+  service_id?: string
+}
+
+export interface POSTransaction {
+  id: string
+  business_id: string
+  invoice_id: string | null
+  appointment_id: string | null
+  customer_id: string | null
+  staff_id: string | null
+  transaction_type: TransactionType
+  items: POSItem[]
+  subtotal: number
+  discount_amount: number
+  discount_type: 'percentage' | 'fixed' | null
+  tax_amount: number
+  total: number
+  payments: POSPayment[]
+  payment_status: POSPaymentStatus
+  receipt_number: string | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+  // JOINs
+  customers?: { name: string; phone: string } | null
+  staff_members?: { name: string } | null
+}
+
+export interface POSSession {
+  id: string
+  business_id: string
+  staff_id: string
+  opened_at: string
+  closed_at: string | null
+  opening_cash: number
+  total_cash: number
+  total_card: number
+  total_transfer: number
+  total_sales: number
+  total_refunds: number
+  expected_cash: number
+  actual_cash: number | null
+  difference: number | null
+  notes: string | null
+  status: POSSessionStatus
+  created_at: string
+  // JOINs
+  staff_members?: { name: string } | null
 }
 
 // ── Gider ──

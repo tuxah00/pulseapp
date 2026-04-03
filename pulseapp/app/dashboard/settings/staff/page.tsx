@@ -51,6 +51,7 @@ const PERMISSION_LABELS: Record<keyof StaffPermissions, string> = {
   inventory: 'Stoklar',
   orders: 'Siparişler',
   invoices: 'Faturalar',
+  pos: 'Kasa',
 }
 
 const PERMISSION_CATEGORIES: { label: string; keys: (keyof StaffPermissions)[] }[] = [
