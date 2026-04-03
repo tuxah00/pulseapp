@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import {
-  Loader2, Save, Building2, Bell, Sparkles,
+  Loader2, Save, Building2, Bell, Sparkles, Cake,
   CreditCard, MapPin, Phone, Mail, Globe,
   MessageSquare, ChevronDown, ChevronUp,
 } from 'lucide-react'
@@ -47,6 +47,9 @@ const DEFAULT_SETTINGS: BusinessSettings = {
   ai_auto_reply: false,
   language: 'tr',
   reservation_duration_minutes: 90,
+  birthday_sms_enabled: false,
+  birthday_sms_template: 'Doğum gününüz kutlu olsun {name}! 🎂 Size özel sürprizimiz var, bizi ziyaret edin!',
+  birthday_sms_hour: 9,
 }
 
 function generateTimeOptions(): string[] {
@@ -468,6 +471,59 @@ export default function BusinessSettingsPage() {
                 <p className="mt-1.5 text-xs text-gray-400">
                   Bu süreden uzun süre gelmeyen müşteriler &quot;riskli&quot; olarak işaretlenir.
                 </p>
+              </div>
+            </div>
+
+            <div className="card">
+              <div className="flex items-center gap-3 mb-1">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-pink-100">
+                  <Cake className="h-5 w-5 text-pink-600" />
+                </div>
+                <h2 className="text-lg font-semibold text-gray-900">Doğum Günü SMS</h2>
+              </div>
+              <p className="text-sm text-gray-500 mb-6">
+                Müşterilerinizin doğum günlerinde otomatik kutlama SMS&apos;i gönderin.
+              </p>
+
+              <div className="space-y-4">
+                <ToggleSetting
+                  label="Doğum günü SMS gönder"
+                  description="Doğum günü olan müşterilere otomatik kutlama mesajı gönderilir."
+                  checked={settings.birthday_sms_enabled}
+                  onChange={(v) => setSettings(prev => ({ ...prev, birthday_sms_enabled: v }))}
+                />
+
+                {settings.birthday_sms_enabled && (
+                  <div className="ml-14 space-y-4">
+                    <div>
+                      <label className="label">Mesaj Şablonu</label>
+                      <textarea
+                        value={settings.birthday_sms_template}
+                        onChange={(e) => setSettings(prev => ({ ...prev, birthday_sms_template: e.target.value }))}
+                        className="input w-full"
+                        rows={3}
+                        placeholder="Doğum gününüz kutlu olsun {name}!"
+                      />
+                      <p className="mt-1.5 text-xs text-gray-400">
+                        {'{name}'} yazdığınız yere müşterinin adı otomatik eklenir.
+                      </p>
+                    </div>
+                    <div>
+                      <label className="label">Gönderim Saati</label>
+                      <select
+                        value={settings.birthday_sms_hour}
+                        onChange={(e) => setSettings(prev => ({ ...prev, birthday_sms_hour: Number(e.target.value) }))}
+                        className="input w-48"
+                      >
+                        <option value={8}>08:00</option>
+                        <option value={9}>09:00</option>
+                        <option value={10}>10:00</option>
+                        <option value={11}>11:00</option>
+                        <option value={12}>12:00</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

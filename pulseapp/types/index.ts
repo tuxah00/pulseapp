@@ -213,6 +213,9 @@ export interface BusinessSettings {
   language: string
   reservation_duration_minutes: number
   shift_definitions?: ShiftDefinition[]
+  birthday_sms_enabled: boolean
+  birthday_sms_template: string
+  birthday_sms_hour: number
 }
 
 

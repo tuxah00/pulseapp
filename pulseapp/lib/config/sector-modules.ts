@@ -177,7 +177,7 @@ export function getSidebarSections(sector: SectorType, _plan: PlanType): Sidebar
 export const SECTOR_GROUPS: { label: string; sectors: SectorType[] }[] = [
   {
     label: 'Güzellik & Bakım',
-    sectors: ['hair_salon', 'barber', 'beauty_salon', 'spa_massage', 'tattoo_piercing'],
+    sectors: ['hair_salon', 'barber', 'beauty_salon', 'spa_massage'],
   },
   {
     label: 'Sağlık & Klinik',
@@ -185,11 +185,7 @@ export const SECTOR_GROUPS: { label: string; sectors: SectorType[] }[] = [
   },
   {
     label: 'Hizmet & Ticaret',
-    sectors: ['lawyer', 'auto_service', 'car_wash', 'tutoring', 'photo_studio'],
-  },
-  {
-    label: 'Yeme & İçme',
-    sectors: ['restaurant', 'cafe'],
+    sectors: ['auto_service', 'car_wash', 'tutoring'],
   },
   {
     label: 'Spor & Yaşam',

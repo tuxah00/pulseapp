@@ -6,7 +6,7 @@ import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useDebounce } from '@/lib/hooks/use-debounce'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
 import {
-  Plus, Search, Loader2, Phone, Mail, Calendar,
+  Plus, Search, Loader2, Phone, Mail, Calendar, Cake,
   X, Pencil, Trash2, User, LayoutList, LayoutGrid,
   Clock, Star, MessageSquare, CheckCircle, XCircle, AlertTriangle, Info, Download,
 } from 'lucide-react'
@@ -18,6 +18,17 @@ import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import { exportToCSV } from '@/lib/utils/export'
 
 import { getCustomerLabel } from '@/lib/config/sector-modules'
+
+function isBirthdayToday(birthday: string | null): boolean {
+  if (!birthday) return false
+  try {
+    const parts = birthday.split('-')
+    const bMonth = parseInt(parts[1], 10)
+    const bDay = parseInt(parts[2], 10)
+    const now = new Date()
+    return now.getMonth() + 1 === bMonth && now.getDate() === bDay
+  } catch { return false }
+}
 import { useConfirm } from '@/lib/hooks/use-confirm'
 
 export default function CustomersPage() {
@@ -393,6 +404,7 @@ export default function CustomersPage() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="font-medium text-gray-900 dark:text-gray-100 truncate">{customer.name}</span>
+                  {isBirthdayToday(customer.birthday) && <span title="Bugün doğum günü!"><Cake className="h-4 w-4 text-pink-500 flex-shrink-0" /></span>}
                   <span className={`badge ${getSegmentColor(customer.segment)}`}>{SEGMENT_LABELS[customer.segment]}</span>
                 </div>
                 <p className="text-sm text-gray-500 dark:text-gray-400">{formatPhone(customer.phone)}</p>
@@ -411,6 +423,7 @@ export default function CustomersPage() {
               key={customer.id}
               initials={customer.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
               title={customer.name}
+              badge={isBirthdayToday(customer.birthday) ? <Cake className="h-3.5 w-3.5 text-pink-500" /> : undefined}
               selected={selectedCustomer?.id === customer.id}
               onClick={() => setSelectedCustomer(customer)}
             />
