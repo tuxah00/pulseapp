@@ -625,13 +625,15 @@ function BusinessHeader({ business }: { business: BusinessData }) {
     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
       {/* Logo / Avatar — tam genişlik hero alanı */}
       {business.settings?.logo_url ? (
-        <img
-          src={business.settings.logo_url}
-          alt={business.name}
-          className="w-full h-44 object-cover"
-        />
+        <div className="w-full h-24 bg-gray-50 flex items-center justify-center">
+          <img
+            src={business.settings.logo_url}
+            alt={business.name}
+            className="h-full w-full object-contain"
+          />
+        </div>
       ) : (
-        <div className="w-full h-44 flex items-center justify-center bg-blue-500 text-white text-6xl font-bold tracking-tight">
+        <div className="w-full h-24 flex items-center justify-center bg-blue-500 text-white text-4xl font-bold tracking-tight">
           {initials}
         </div>
       )}
