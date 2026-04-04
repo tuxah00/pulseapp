@@ -424,7 +424,7 @@ export default function BookingPage() {
             <div className="mt-5">
               <div className="flex items-center gap-3 my-4">
                 <div className="flex-1 h-px bg-gray-200" />
-                <span className="text-xs text-gray-400 font-medium px-1">ya da</span>
+                <span className="text-xs text-gray-400 font-medium px-1">veya</span>
                 <div className="flex-1 h-px bg-gray-200" />
               </div>
               <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
@@ -554,95 +554,6 @@ export default function BookingPage() {
                 {submitError}
               </div>
             )}
-
-            {/* Waitlist */}
-            <div className="mt-4 rounded-xl border border-gray-100 bg-gray-50 p-4">
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={waitlistEnabled}
-                  onChange={(e) => setWaitlistEnabled(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
-                />
-                <div>
-                  <span className="text-sm font-medium text-gray-900 flex items-center gap-1.5">
-                    <Bell className="h-4 w-4 text-blue-500" />
-                    Randevu boşluğu oluştuğunda bildir
-                  </span>
-                  <span className="text-xs text-gray-400 mt-0.5 block">
-                    Tercih ettiğiniz zamanda yer açılırsa SMS ile haberdar ederiz.
-                  </span>
-                </div>
-              </label>
-
-              {waitlistEnabled && (
-                <div className="mt-4 space-y-3 pl-7">
-                  <div>
-                    <label className="text-xs font-medium text-gray-600">Şu saatte:</label>
-                    <select
-                      value={waitlistTime}
-                      onChange={(e) => {
-                        setWaitlistTime(e.target.value)
-                        if (e.target.value) setWaitlistEarliest(false)
-                      }}
-                      className="input mt-1"
-                    >
-                      <option value="">Saat seçin</option>
-                      {timeSlots.map((t) => (
-                        <option key={t} value={t}>{t}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-gray-600">Şu tarihte:</label>
-                    <input
-                      type="date"
-                      value={waitlistDate}
-                      onChange={(e) => {
-                        setWaitlistDate(e.target.value)
-                        if (e.target.value) setWaitlistEarliest(false)
-                      }}
-                      min={getTodayStr()}
-                      className="input mt-1"
-                    />
-                  </div>
-                  {staff.length > 0 && (
-                    <div>
-                      <label className="text-xs font-medium text-gray-600">Şu personelde:</label>
-                      <select
-                        value={waitlistStaffId}
-                        onChange={(e) => {
-                          setWaitlistStaffId(e.target.value)
-                          if (e.target.value) setWaitlistEarliest(false)
-                        }}
-                        className="input mt-1"
-                      >
-                        <option value="">Personel seçin</option>
-                        {staff.map((s) => (
-                          <option key={s.id} value={s.id}>{s.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={waitlistEarliest}
-                      onChange={(e) => {
-                        setWaitlistEarliest(e.target.checked)
-                        if (e.target.checked) {
-                          setWaitlistTime('')
-                          setWaitlistDate('')
-                          setWaitlistStaffId('')
-                        }
-                      }}
-                      className="h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
-                    />
-                    <span className="text-sm text-gray-700">En yakın zamanda</span>
-                  </label>
-                </div>
-              )}
-            </div>
 
             <p className="mt-4 text-center text-xs text-gray-400">
               Onaylayarak {business.name} ile iletişim kurulmasına izin vermiş olursunuz.
