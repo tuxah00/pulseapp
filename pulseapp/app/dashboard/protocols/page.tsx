@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useConfirm } from '@/lib/hooks/use-confirm'
+import { createClient } from '@/lib/supabase/client'
 import {
   Plus, ClipboardCheck, Search, X, Calendar, User, Activity,
   ChevronRight, Loader2, Pause, Play, CheckCircle, XCircle, SkipForward,
@@ -66,12 +67,13 @@ export default function ProtocolsPage() {
 
   const fetchMeta = useCallback(async () => {
     if (!businessId) return
-    const [custRes, svcRes] = await Promise.all([
-      fetch(`/api/customers?businessId=${businessId}&limit=500`).then(r => r.json()).catch(() => ({ customers: [] })),
-      fetch(`/api/services?businessId=${businessId}`).then(r => r.json()).catch(() => ({ services: [] })),
+    const supabase = createClient()
+    const [{ data: custsData }, { data: svcsData }] = await Promise.all([
+      supabase.from('customers').select('*').eq('business_id', businessId).eq('is_active', true).order('name'),
+      supabase.from('services').select('*').eq('business_id', businessId).eq('is_active', true).order('sort_order'),
     ])
-    setCustomers(custRes.customers || [])
-    setServices(svcRes.services || [])
+    setCustomers(custsData || [])
+    setServices(svcsData || [])
   }, [businessId])
 
   useEffect(() => { fetchProtocols() }, [fetchProtocols])
@@ -132,11 +134,12 @@ export default function ProtocolsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ businessId, sessionId, status }),
       })
-      fetchProtocols()
-      // Refresh selected protocol
-      const res = await fetch(`/api/protocols/${protocolId}?businessId=${businessId}`)
-      const json = await res.json()
-      if (json.protocol) setSelectedProtocol(json.protocol)
+      // Refresh list and detail in parallel
+      const [, detailJson] = await Promise.all([
+        fetchProtocols(),
+        fetch(`/api/protocols/${protocolId}?businessId=${businessId}`).then(r => r.json()),
+      ])
+      if (detailJson.protocol) setSelectedProtocol(detailJson.protocol)
     } catch { /* ignore */ }
   }
 

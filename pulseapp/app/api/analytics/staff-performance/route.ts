@@ -47,19 +47,17 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ performance: [] })
   }
 
-  // Randevular
+  // Randevular, faturalar ve yorumları paralel çek
   let aptQuery = admin
     .from('appointments')
     .select('id, staff_id, status, appointment_date, start_time, end_time')
     .eq('business_id', businessId)
+    .is('deleted_at', null)
 
   if (from) aptQuery = aptQuery.gte('appointment_date', from)
   if (to) aptQuery = aptQuery.lte('appointment_date', to)
   if (staffId) aptQuery = aptQuery.eq('staff_id', staffId)
 
-  const { data: appointments } = await aptQuery
-
-  // Faturalar (personel bazlı gelir)
   let invQuery = admin
     .from('invoices')
     .select('staff_id, total, paid_amount, status')
@@ -70,9 +68,6 @@ export async function GET(request: NextRequest) {
   if (to) invQuery = invQuery.lte('created_at', to)
   if (staffId) invQuery = invQuery.eq('staff_id', staffId)
 
-  const { data: invoices } = await invQuery
-
-  // Yorumlar (personel puanı)
   let reviewQuery = admin
     .from('reviews')
     .select('id, rating')
@@ -81,7 +76,11 @@ export async function GET(request: NextRequest) {
   if (from) reviewQuery = reviewQuery.gte('created_at', from)
   if (to) reviewQuery = reviewQuery.lte('created_at', to)
 
-  const { data: reviews } = await reviewQuery
+  const [{ data: appointments }, { data: invoices }, { data: reviews }] = await Promise.all([
+    aptQuery,
+    invQuery,
+    reviewQuery,
+  ])
 
   // Her personel için hesapla
   const performance = staffList.map(s => {

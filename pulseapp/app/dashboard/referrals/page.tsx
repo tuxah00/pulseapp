@@ -6,7 +6,7 @@ import {
   Plus, UserCheck, Search, X, Loader2, Gift, Phone, ArrowRight, CheckCircle, Clock
 } from 'lucide-react'
 import type { Referral, Customer, ReferralStatus, RewardType } from '@/types'
-import { REFERRAL_STATUS_LABELS } from '@/types'
+import { REFERRAL_STATUS_LABELS, REWARD_TYPE_LABELS } from '@/types'
 import { formatCurrency } from '@/lib/utils'
 
 const STATUS_CONFIG: Record<ReferralStatus, { bg: string; text: string; icon: typeof CheckCircle }> = {
@@ -15,12 +15,6 @@ const STATUS_CONFIG: Record<ReferralStatus, { bg: string; text: string; icon: ty
   expired: { bg: 'bg-gray-50 dark:bg-gray-800', text: 'text-gray-500 dark:text-gray-400', icon: X },
 }
 
-const REWARD_TYPE_LABELS: Record<RewardType, string> = {
-  discount_percent: '% İndirim',
-  discount_amount: '₺ İndirim',
-  free_service: 'Ücretsiz Hizmet',
-  points: 'Puan',
-}
 
 export default function ReferralsPage() {
   const { businessId, loading: ctxLoading } = useBusinessContext()

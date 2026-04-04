@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import {
   Calendar, Clock, User, MapPin, Phone, Loader2, AlertTriangle,
-  CheckCircle, XCircle, Edit3, ChevronLeft
+  CheckCircle, XCircle, Edit3
 } from 'lucide-react'
 import { STATUS_LABELS } from '@/types'
 import type { AppointmentStatus } from '@/types'
@@ -125,7 +125,7 @@ export default function ManageAppointmentPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
       </div>
     )
@@ -134,10 +134,10 @@ export default function ManageAppointmentPage() {
   if (error && !appointment) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-sm p-8 text-center max-w-md">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm p-8 text-center max-w-md">
           <AlertTriangle className="h-12 w-12 text-red-400 mx-auto mb-4" />
-          <h1 className="text-lg font-bold text-gray-900 mb-2">Randevu Bulunamadı</h1>
-          <p className="text-gray-500 text-sm">{error}</p>
+          <h1 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Randevu Bulunamadı</h1>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">{error}</p>
         </div>
       </div>
     )
@@ -151,7 +151,7 @@ export default function ManageAppointmentPage() {
   const location = [appointment.business?.district, appointment.business?.city].filter(Boolean).join(', ')
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <div className="mx-auto max-w-lg px-4 py-8">
         {/* Business header */}
         <div className="text-center mb-6">
@@ -183,10 +183,10 @@ export default function ManageAppointmentPage() {
         )}
 
         {/* Appointment Card */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-bold text-gray-900">Randevu Bilgileri</h2>
+              <h2 className="font-bold text-gray-900 dark:text-white">Randevu Bilgileri</h2>
               <span className={`text-xs px-3 py-1 rounded-full font-medium ${STATUS_COLORS[appointment.status] || STATUS_COLORS.pending}`}>
                 {STATUS_LABELS[appointment.status]}
               </span>
@@ -222,29 +222,29 @@ export default function ManageAppointmentPage() {
 
           {/* Edit Form */}
           {editing && appointment.isEditable && (
-            <div className="border-t border-gray-200 p-6 bg-gray-50 space-y-4">
-              <h3 className="font-medium text-gray-900 text-sm flex items-center gap-1">
+            <div className="border-t border-gray-200 dark:border-gray-700 p-6 bg-gray-50 dark:bg-gray-800/50 space-y-4">
+              <h3 className="font-medium text-gray-900 dark:text-white text-sm flex items-center gap-1">
                 <Edit3 className="h-4 w-4" /> Tarih/Saat Değiştir
               </h3>
               <div>
-                <label className="text-xs text-gray-500">Tarih</label>
-                <input type="date" className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                <label className="text-xs text-gray-500 dark:text-gray-400">Tarih</label>
+                <input type="date" className="w-full mt-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                   value={editDate} onChange={e => setEditDate(e.target.value)} min={new Date().toISOString().split('T')[0]} />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs text-gray-500">Başlangıç</label>
-                  <input type="time" className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  <label className="text-xs text-gray-500 dark:text-gray-400">Başlangıç</label>
+                  <input type="time" className="w-full mt-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                     value={editStartTime} onChange={e => setEditStartTime(e.target.value)} />
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500">Bitiş</label>
-                  <input type="time" className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  <label className="text-xs text-gray-500 dark:text-gray-400">Bitiş</label>
+                  <input type="time" className="w-full mt-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                     value={editEndTime} onChange={e => setEditEndTime(e.target.value)} />
                 </div>
               </div>
               <div className="flex gap-2">
-                <button onClick={() => setEditing(false)} className="flex-1 py-2 px-4 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+                <button onClick={() => setEditing(false)} className="flex-1 py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                   Vazgeç
                 </button>
                 <button onClick={handleSaveEdit} disabled={saving} className="flex-1 py-2 px-4 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600 transition-colors disabled:opacity-50">
@@ -256,13 +256,13 @@ export default function ManageAppointmentPage() {
 
           {/* Cancel Confirmation */}
           {showCancel && appointment.isEditable && (
-            <div className="border-t border-gray-200 p-6 bg-red-50 space-y-4">
-              <h3 className="font-medium text-red-800 text-sm flex items-center gap-1">
+            <div className="border-t border-gray-200 dark:border-gray-700 p-6 bg-red-50 dark:bg-red-950/30 space-y-4">
+              <h3 className="font-medium text-red-800 dark:text-red-400 text-sm flex items-center gap-1">
                 <XCircle className="h-4 w-4" /> Randevuyu İptal Et
               </h3>
               <div>
-                <label className="text-xs text-gray-600">İptal Nedeni (opsiyonel)</label>
-                <select className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+                <label className="text-xs text-gray-600 dark:text-gray-400">İptal Nedeni (opsiyonel)</label>
+                <select className="w-full mt-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                   value={cancelReason} onChange={e => setCancelReason(e.target.value)}>
                   <option value="">Neden seçin</option>
                   <option value="Zamanım uygun değil">Zamanım uygun değil</option>
@@ -272,7 +272,7 @@ export default function ManageAppointmentPage() {
                 </select>
               </div>
               <div className="flex gap-2">
-                <button onClick={() => setShowCancel(false)} className="flex-1 py-2 px-4 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-100 transition-colors bg-white">
+                <button onClick={() => setShowCancel(false)} className="flex-1 py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors bg-white dark:bg-gray-800">
                   Vazgeç
                 </button>
                 <button onClick={handleCancel} disabled={cancelling} className="flex-1 py-2 px-4 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600 transition-colors disabled:opacity-50">

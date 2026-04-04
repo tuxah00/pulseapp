@@ -842,6 +842,13 @@ export const REFERRAL_STATUS_LABELS: Record<ReferralStatus, string> = {
   expired: 'Süresi Doldu',
 }
 
+export const REWARD_TYPE_LABELS: Record<RewardType, string> = {
+  discount_percent: '% İndirim',
+  discount_amount: '₺ İndirim',
+  free_service: 'Ücretsiz Hizmet',
+  points: 'Puan',
+}
+
 export interface Referral {
   id: string
   business_id: string

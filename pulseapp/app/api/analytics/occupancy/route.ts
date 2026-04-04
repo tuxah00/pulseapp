@@ -45,6 +45,7 @@ export async function GET(request: NextRequest) {
     .from('appointments')
     .select('id, appointment_date, start_time, end_time, status, staff_id, staff_members(name)')
     .eq('business_id', businessId)
+    .is('deleted_at', null)
 
   if (staffId) query = query.eq('staff_id', staffId)
   if (from) query = query.gte('appointment_date', from)
