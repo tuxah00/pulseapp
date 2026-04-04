@@ -318,8 +318,7 @@ export async function exportInvoiceListPDF(
     didDrawCell: (data: import('jspdf-autotable').CellHookData) => {
       if (data.section === 'body' && data.column.index === 5) {
         const text = data.cell.text[0]
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const s = data.cell.styles as any
+        const s = data.cell.styles as any // eslint-disable-line
         if (text === 'Odendi' || text === 'Ödendi') {
           s.textColor = [5, 150, 105]; s.fillColor = [209, 250, 229]
         } else if (text === 'Bekliyor') {
