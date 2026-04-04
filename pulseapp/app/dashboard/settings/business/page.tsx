@@ -177,8 +177,6 @@ export default function BusinessSettingsPage() {
     fd.append('file', file)
     const res = await fetch('/api/business/logo', { method: 'POST', body: fd })
     if (res.ok) {
-      const { logo_url } = await res.json()
-      setSettings(prev => ({ ...prev, logo_url }))
       fetchBusiness()
     } else {
       const { error } = await res.json()
@@ -190,7 +188,6 @@ export default function BusinessSettingsPage() {
 
   async function handleLogoRemove() {
     await fetch('/api/business/logo', { method: 'DELETE' })
-    setSettings(prev => ({ ...prev, logo_url: null }))
     fetchBusiness()
   }
 

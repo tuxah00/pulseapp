@@ -13,6 +13,8 @@ import {
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { formatCurrency } from '@/lib/utils'
+import { STATUS_LABELS } from '@/types'
+import type { AppointmentStatus, InvoiceStatus } from '@/types'
 
 // ── Sayfa listesi ──────────────────────────────────────────────
 const PAGES = [
@@ -39,11 +41,7 @@ const STATUS_ICON: Record<string, React.ReactNode> = {
   cancelled:  <XCircle className="h-3 w-3 text-red-400" />,
   no_show:    <AlertCircle className="h-3 w-3 text-gray-400" />,
 }
-const STATUS_TR: Record<string, string> = {
-  confirmed: 'Onaylı', completed: 'Tamamlandı', pending: 'Bekliyor',
-  cancelled: 'İptal', no_show: 'Gelmedi',
-}
-const INVOICE_STATUS_TR: Record<string, string> = {
+const INVOICE_STATUS_TR: Record<InvoiceStatus, string> = {
   paid: 'Ödendi', pending: 'Bekliyor', partial: 'Kısmi', overdue: 'Vadesi Geçmiş', cancelled: 'İptal',
 }
 const INVOICE_STATUS_COLOR: Record<string, string> = {
@@ -115,13 +113,13 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
         .or(`name.ilike.%${lower}%,phone.ilike.%${lower}%`)
         .limit(5),
 
-      // Randevular
+      // Randevular — hizmet adı veya müşteri adına göre
       supabase
         .from('appointments')
-        .select('id, start_time, service_name, status, customers(name, phone)')
+        .select('id, start_time, service_name, status, customers!inner(name, phone)')
         .eq('business_id', businessId)
         .is('deleted_at', null)
-        .or(`service_name.ilike.%${lower}%`)
+        .or(`service_name.ilike.%${lower}%,customers.name.ilike.%${lower}%`)
         .order('start_time', { ascending: false })
         .limit(5),
 
@@ -150,31 +148,7 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
       href: `/dashboard/customers?search=${encodeURIComponent(c.name)}`,
     }))
 
-    // Randevularda müşteri adına göre de arama
-    const appointmentsByCustomer = await supabase
-      .from('appointments')
-      .select('id, start_time, service_name, status, customers(name, phone)')
-      .eq('business_id', businessId)
-      .is('deleted_at', null)
-      .order('start_time', { ascending: false })
-      .limit(10)
-
-    const allAppointments = [
-      ...(appointmentsRes.data || []),
-      ...(appointmentsByCustomer.data || []).filter(a => {
-        const cust = (Array.isArray(a.customers) ? a.customers[0] : a.customers) as { name: string; phone: string } | null
-        return cust?.name?.toLowerCase().includes(lower)
-      }),
-    ]
-    // Deduplicate
-    const seenAppt = new Set<string>()
-    const uniqueAppts = allAppointments.filter(a => {
-      if (seenAppt.has(a.id)) return false
-      seenAppt.add(a.id)
-      return true
-    }).slice(0, 5)
-
-    const appointmentResults: SearchResult[] = uniqueAppts.map(a => {
+    const appointmentResults: SearchResult[] = (appointmentsRes.data || []).map(a => {
       const cust = (Array.isArray(a.customers) ? a.customers[0] : a.customers) as { name: string; phone: string } | null
       const dt = new Date(a.start_time)
       const dateStr = dt.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -189,7 +163,7 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
         badge: (
           <span className="flex items-center gap-1 text-[10px]">
             {STATUS_ICON[a.status]}
-            <span className="text-gray-500 dark:text-gray-400">{STATUS_TR[a.status] || a.status}</span>
+            <span className="text-gray-500 dark:text-gray-400">{STATUS_LABELS[a.status as AppointmentStatus] || a.status}</span>
           </span>
         ),
         href: `/dashboard/appointments?date=${dt.toISOString().split('T')[0]}`,
@@ -206,8 +180,8 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
         sub2: formatCurrency(inv.total),
         icon: <Receipt className="h-4 w-4" />,
         badge: (
-          <span className={`text-[10px] font-medium ${INVOICE_STATUS_COLOR[inv.status] || 'text-gray-400'}`}>
-            {INVOICE_STATUS_TR[inv.status] || inv.status}
+          <span className={`text-[10px] font-medium ${INVOICE_STATUS_COLOR[inv.status as InvoiceStatus] || 'text-gray-400'}`}>
+            {INVOICE_STATUS_TR[inv.status as InvoiceStatus] || inv.status}
           </span>
         ),
         href: `/dashboard/invoices`,

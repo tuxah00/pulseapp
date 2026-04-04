@@ -7,6 +7,7 @@ import {
   User, Phone, AlertCircle, Bell, MapPin, Zap,
 } from 'lucide-react'
 import type { WorkingHours } from '@/types'
+import { getInitials } from '@/lib/utils'
 
 interface BusinessData {
   id: string
@@ -74,9 +75,6 @@ function getTodayStr(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-function getInitials(name: string) {
-  return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
-}
 
 export default function BookingPage() {
   const params = useParams()
@@ -97,10 +95,6 @@ export default function BookingPage() {
   const [customerPhone, setCustomerPhone] = useState('')
 
   const [waitlistEnabled, setWaitlistEnabled] = useState(false)
-  const [waitlistTime, setWaitlistTime] = useState('')
-  const [waitlistDate, setWaitlistDate] = useState('')
-  const [waitlistStaffId, setWaitlistStaffId] = useState('')
-  const [waitlistEarliest, setWaitlistEarliest] = useState(false)
 
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
@@ -420,38 +414,29 @@ export default function BookingPage() {
               </div>
             )}
 
-            {/* Ya da — Bekleme listesi */}
-            <div className="mt-5">
-              <div className="flex items-center gap-3 my-4">
-                <div className="flex-1 h-px bg-gray-200" />
-                <span className="text-xs text-gray-400 font-medium px-1">veya</span>
-                <div className="flex-1 h-px bg-gray-200" />
-              </div>
-              <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
-                <label className="flex items-start gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={waitlistEnabled}
-                    onChange={(e) => {
-                      setWaitlistEnabled(e.target.checked)
-                      if (e.target.checked) {
-                        setWaitlistDate(selectedDate || '')
-                        setWaitlistTime(selectedTime || '')
-                      }
-                    }}
-                    className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
-                  />
-                  <div>
-                    <span className="text-sm font-medium text-gray-900 flex items-center gap-1.5">
-                      <Bell className="h-4 w-4 text-blue-500" />
-                      Randevu boşluğu oluştuğunda bildir
-                    </span>
-                    <span className="text-xs text-gray-400 mt-0.5 block">
-                      Tercih ettiğiniz zamanda yer açılırsa SMS ile haberdar ederiz.
-                    </span>
-                  </div>
-                </label>
-              </div>
+            <div className="flex items-center gap-3 my-4">
+              <div className="flex-1 h-px bg-gray-200" />
+              <span className="text-xs text-gray-400 font-medium px-1">veya</span>
+              <div className="flex-1 h-px bg-gray-200" />
+            </div>
+            <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={waitlistEnabled}
+                  onChange={(e) => setWaitlistEnabled(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+                />
+                <div>
+                  <span className="text-sm font-medium text-gray-900 flex items-center gap-1.5">
+                    <Bell className="h-4 w-4 text-blue-500" />
+                    Randevu boşluğu oluştuğunda bildir
+                  </span>
+                  <span className="text-xs text-gray-400 mt-0.5 block">
+                    Tercih ettiğiniz zamanda yer açılırsa SMS ile haberdar ederiz.
+                  </span>
+                </div>
+              </label>
             </div>
 
             <div className="mt-4 pt-4 border-t border-gray-100 flex gap-2.5">
