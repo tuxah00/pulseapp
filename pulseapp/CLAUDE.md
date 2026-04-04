@@ -165,7 +165,7 @@ CREATE INDEX IF NOT EXISTS idx_customers_birthday ON customers (birthday) WHERE 
 -- pos_transactions ve pos_sessions tabloları, RLS policy'leri ve index'ler
 ```
 
-11. **Fatura ödeme geçmişi + genişletme** (`019_invoice_payments.sql`): ⏳ Supabase SQL Editor'den çalıştırılacak
+11. **Fatura ödeme geçmişi + genişletme** (`019_invoice_payments.sql`): ✅ Uygulandı (2026-04-04)
 ```sql
 -- invoice_payments tablosu (ödeme geçmişi), invoices tablosuna paid_amount, pos_transaction_id,
 -- staff_id, staff_name, payment_type, installment_count, installment_frequency kolonları
