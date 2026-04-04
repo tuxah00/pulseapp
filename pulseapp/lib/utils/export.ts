@@ -205,3 +205,222 @@ export function printInvoicePDF(params: {
     printWindow.close()
   }, 500)
 }
+
+/**
+ * Fatura listesi PDF export — jspdf + jspdf-autotable
+ */
+export async function exportInvoiceListPDF(
+  invoices: Array<{
+    invoice_number: string
+    customers?: { name: string } | null
+    total: number
+    paid_amount?: number
+    tax_rate: number
+    tax_amount: number
+    status: string
+    payment_method?: string | null
+    payment_type?: string
+    created_at: string
+    due_date?: string | null
+  }>,
+  statusConfig?: Record<string, { label: string }>
+): Promise<void> {
+  const { default: jsPDF } = await import('jspdf')
+  await import('jspdf-autotable')
+
+  const formatCurrency = (n: number) =>
+    new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(n)
+
+  const formatDate = (d: string) =>
+    new Date(d).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+
+  const statusLabel = (s: string) => statusConfig?.[s]?.label || s
+  const paymentLabel = (m: string | null | undefined) => {
+    if (!m) return '—'
+    const labels: Record<string, string> = { cash: 'Nakit', card: 'Kart', transfer: 'Havale/EFT', online: 'Online' }
+    return labels[m] || m
+  }
+  const paymentTypeLabel = (t: string | undefined) => {
+    if (!t || t === 'standard') return 'Standart'
+    if (t === 'installment') return 'Taksitli'
+    if (t === 'deposit') return 'Kaporali'
+    return t
+  }
+
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
+
+  // Header
+  doc.setFontSize(18)
+  doc.setTextColor(99, 102, 241)
+  doc.text('Fatura Listesi', 14, 18)
+
+  doc.setFontSize(9)
+  doc.setTextColor(107, 114, 128)
+  doc.text(`Olusturma: ${new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })} | ${invoices.length} fatura`, 14, 25)
+
+  // Summary stats
+  const totalPaid = invoices.filter(i => i.status === 'paid').reduce((s, i) => s + i.total, 0)
+  const totalPending = invoices.filter(i => i.status === 'pending' || i.status === 'partial').reduce((s, i) => s + i.total - (i.paid_amount || 0), 0)
+  const totalOverdue = invoices.filter(i => i.status === 'overdue').length
+
+  const boxY = 30
+  const boxH = 14
+  const boxW = 60
+
+  // Paid box
+  doc.setFillColor(209, 250, 229)
+  doc.roundedRect(14, boxY, boxW, boxH, 2, 2, 'F')
+  doc.setFontSize(8)
+  doc.setTextColor(5, 150, 105)
+  doc.text('Tahsil Edilen', 18, boxY + 5)
+  doc.setFontSize(11)
+  doc.text(formatCurrency(totalPaid), 18, boxY + 11)
+
+  // Pending box
+  doc.setFillColor(254, 243, 199)
+  doc.roundedRect(14 + boxW + 8, boxY, boxW, boxH, 2, 2, 'F')
+  doc.setFontSize(8)
+  doc.setTextColor(217, 119, 6)
+  doc.text('Bekleyen', 18 + boxW + 8, boxY + 5)
+  doc.setFontSize(11)
+  doc.text(formatCurrency(totalPending), 18 + boxW + 8, boxY + 11)
+
+  // Overdue box
+  doc.setFillColor(254, 226, 226)
+  doc.roundedRect(14 + (boxW + 8) * 2, boxY, boxW, boxH, 2, 2, 'F')
+  doc.setFontSize(8)
+  doc.setTextColor(220, 38, 38)
+  doc.text('Vadesi Gecmis', 18 + (boxW + 8) * 2, boxY + 5)
+  doc.setFontSize(11)
+  doc.text(`${totalOverdue} fatura`, 18 + (boxW + 8) * 2, boxY + 11)
+
+  // Table
+  const tableData = invoices.map(inv => [
+    inv.invoice_number,
+    inv.customers?.name || '—',
+    formatCurrency(inv.total),
+    inv.tax_rate > 0 ? `%${inv.tax_rate}` : '—',
+    formatCurrency(inv.paid_amount || 0),
+    statusLabel(inv.status),
+    paymentLabel(inv.payment_method),
+    paymentTypeLabel(inv.payment_type),
+    formatDate(inv.created_at),
+    inv.due_date ? formatDate(inv.due_date) : '—',
+  ])
+
+  const autoTable = (doc as unknown as { autoTable: (options: Record<string, unknown>) => void }).autoTable
+  autoTable.call(doc, {
+    startY: boxY + boxH + 6,
+    head: [['Fatura No', 'Musteri', 'Toplam', 'KDV', 'Odenen', 'Durum', 'Odeme', 'Tip', 'Tarih', 'Son Odeme']],
+    body: tableData,
+    styles: { fontSize: 8, cellPadding: 2 },
+    headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold' },
+    alternateRowStyles: { fillColor: [249, 250, 251] },
+    didDrawCell: (data: { section: string; column: { index: number }; cell: { text: string[]; styles: { textColor: number[]; fillColor: number[] } } }) => {
+      if (data.section === 'body' && data.column.index === 5) {
+        const text = data.cell.text[0]
+        if (text === 'Odendi' || text === 'Ödendi') {
+          data.cell.styles.textColor = [5, 150, 105]
+          data.cell.styles.fillColor = [209, 250, 229]
+        } else if (text === 'Bekliyor') {
+          data.cell.styles.textColor = [217, 119, 6]
+          data.cell.styles.fillColor = [254, 243, 199]
+        } else if (text === 'Vadesi Gecmis' || text === 'Vadesi Geçmiş') {
+          data.cell.styles.textColor = [220, 38, 38]
+          data.cell.styles.fillColor = [254, 226, 226]
+        } else if (text === 'Iptal' || text === 'İptal') {
+          data.cell.styles.textColor = [107, 114, 128]
+          data.cell.styles.fillColor = [243, 244, 246]
+        }
+      }
+    },
+  })
+
+  // Footer
+  const pageCount = (doc as unknown as { getNumberOfPages: () => number }).getNumberOfPages()
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i)
+    doc.setFontSize(8)
+    doc.setTextColor(156, 163, 175)
+    doc.text(`PulseApp | Sayfa ${i}/${pageCount}`, doc.internal.pageSize.getWidth() / 2, doc.internal.pageSize.getHeight() - 8, { align: 'center' })
+  }
+
+  doc.save('fatura-listesi.pdf')
+}
+
+/**
+ * Fatura listesi Excel export — xlsx
+ */
+export async function exportInvoiceListXLSX(
+  invoices: Array<{
+    invoice_number: string
+    customers?: { name: string } | null
+    subtotal: number
+    total: number
+    paid_amount?: number
+    tax_rate: number
+    tax_amount: number
+    status: string
+    payment_method?: string | null
+    payment_type?: string
+    created_at: string
+    due_date?: string | null
+    paid_at?: string | null
+  }>
+): Promise<void> {
+  const XLSX = await import('xlsx')
+
+  const statusLabels: Record<string, string> = {
+    pending: 'Bekliyor', paid: 'Ödendi', partial: 'Kısmi Ödeme',
+    overdue: 'Vadesi Geçmiş', cancelled: 'İptal',
+  }
+  const paymentLabels: Record<string, string> = { cash: 'Nakit', card: 'Kart', transfer: 'Havale/EFT', online: 'Online' }
+  const paymentTypeLabels: Record<string, string> = { standard: 'Standart', installment: 'Taksitli', deposit: 'Kaporalı' }
+
+  const formatDate = (d: string | null | undefined) => d ? new Date(d).toLocaleDateString('tr-TR') : '—'
+
+  const data = invoices.map(inv => ({
+    'Fatura No': inv.invoice_number,
+    'Müşteri': inv.customers?.name || '—',
+    'Ara Toplam': inv.subtotal,
+    'KDV (%)': inv.tax_rate,
+    'KDV Tutarı': inv.tax_amount,
+    'Toplam': inv.total,
+    'Ödenen': inv.paid_amount || 0,
+    'Kalan': inv.total - (inv.paid_amount || 0),
+    'Durum': statusLabels[inv.status] || inv.status,
+    'Ödeme Yöntemi': paymentLabels[inv.payment_method || ''] || '—',
+    'Ödeme Tipi': paymentTypeLabels[inv.payment_type || 'standard'] || 'Standart',
+    'Tarih': formatDate(inv.created_at),
+    'Son Ödeme': formatDate(inv.due_date),
+    'Ödeme Tarihi': formatDate(inv.paid_at),
+  }))
+
+  // Total row
+  const totalRow: Record<string, string | number> = {
+    'Fatura No': 'TOPLAM',
+    'Müşteri': `${invoices.length} fatura`,
+    'Ara Toplam': invoices.reduce((s, i) => s + i.subtotal, 0),
+    'KDV (%)': '',
+    'KDV Tutarı': invoices.reduce((s, i) => s + i.tax_amount, 0),
+    'Toplam': invoices.reduce((s, i) => s + i.total, 0),
+    'Ödenen': invoices.reduce((s, i) => s + (i.paid_amount || 0), 0),
+    'Kalan': invoices.reduce((s, i) => s + i.total - (i.paid_amount || 0), 0),
+    'Durum': '', 'Ödeme Yöntemi': '', 'Ödeme Tipi': '',
+    'Tarih': '', 'Son Ödeme': '', 'Ödeme Tarihi': '',
+  }
+  data.push(totalRow as typeof data[0])
+
+  const ws = XLSX.utils.json_to_sheet(data)
+
+  // Column widths
+  ws['!cols'] = [
+    { wch: 16 }, { wch: 20 }, { wch: 12 }, { wch: 8 }, { wch: 12 },
+    { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 14 },
+    { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
+  ]
+
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, 'Faturalar')
+  XLSX.writeFile(wb, 'fatura-listesi.xlsx')
+}

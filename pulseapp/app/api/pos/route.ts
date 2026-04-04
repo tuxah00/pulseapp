@@ -110,10 +110,12 @@ export async function POST(req: NextRequest) {
         tax_rate: tax_rate || 0,
         tax_amount,
         total,
+        paid_amount: total,
         status: 'paid',
         payment_method: primaryMethod,
         paid_at: new Date().toISOString(),
         notes: notes || null,
+        staff_id: staff_id || null,
       })
       .select('id')
       .single()
@@ -175,6 +177,12 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // POS → Fatura backlink: pos_transaction_id güncelle
+  if (transaction && invoice_id) {
+    await admin.from('invoices').update({ pos_transaction_id: transaction.id }).eq('id', invoice_id)
+  }
+
   return NextResponse.json({ transaction })
 }
 

@@ -949,7 +949,7 @@ function KPICard({ icon, label, value, trend, color, currency }: {
   }
   const cfg = colorMap[color] || colorMap.blue
   return (
-    <div className={cn('relative overflow-hidden rounded-2xl border border-gray-100 dark:border-gray-800 p-4 transition-all hover:shadow-sm hover:-translate-y-0.5', cfg.bg)}>
+    <div className={cn('relative overflow-hidden rounded-2xl border border-gray-100 dark:border-gray-800 p-4 transition-all hover:shadow-sm', cfg.bg)}>
       <div className="flex items-start justify-between mb-3">
         <div className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-xl', cfg.icon)}>{icon}</div>
         {trend !== undefined && <TrendBadge value={trend} />}

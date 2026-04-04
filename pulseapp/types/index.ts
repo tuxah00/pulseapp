@@ -104,6 +104,26 @@ export interface InvoiceItem {
   type?: 'service' | 'product'
 }
 
+// ── Fatura Ödeme Tipleri ──
+export type InvoicePaymentType = 'standard' | 'installment' | 'deposit'
+export type InstallmentFrequency = 'weekly' | 'biweekly' | 'monthly'
+export type PaymentRecordType = 'payment' | 'deposit' | 'installment' | 'refund'
+
+// ── Fatura Ödeme Kaydı ──
+export interface InvoicePayment {
+  id: string
+  business_id: string
+  invoice_id: string
+  amount: number
+  method: PaymentMethod
+  payment_type: PaymentRecordType
+  installment_number: number | null
+  notes: string | null
+  staff_id: string | null
+  staff_name: string | null
+  created_at: string
+}
+
 // ── Fatura ──
 export interface Invoice {
   id: string
@@ -116,8 +136,15 @@ export interface Invoice {
   tax_rate: number
   tax_amount: number
   total: number
+  paid_amount: number
   status: InvoiceStatus
   payment_method: PaymentMethod | null
+  payment_type: InvoicePaymentType
+  installment_count: number | null
+  installment_frequency: InstallmentFrequency | null
+  pos_transaction_id: string | null
+  staff_id: string | null
+  staff_name: string | null
   paid_at: string | null
   due_date: string | null
   notes: string | null
@@ -125,6 +152,8 @@ export interface Invoice {
   updated_at: string
   // JOINs
   customers?: { name: string; phone: string }
+  // Virtual (loaded separately)
+  payments?: InvoicePayment[]
 }
 
 // ── POS / Kasa ──
