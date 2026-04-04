@@ -99,7 +99,7 @@ const { businessId, userId, staffId, staffName, staffRole, permissions, sector, 
 |-------|---------|
 | `businesses` | İşletme kayıtları |
 | `staff_members` | Personel + yetki (user_id → auth.uid()) |
-| `appointments` | Randevular (deleted_at ile soft delete) |
+| `appointments` | Randevular (deleted_at soft delete, manage_token public link) |
 | `customers` | Müşteriler (segment: new/regular/vip/risk/lost) |
 | `services` | Hizmetler |
 | `notifications` | Bildirimler (is_read, type) |
@@ -108,6 +108,13 @@ const { businessId, userId, staffId, staffName, staffRole, permissions, sector, 
 | `business_records` | Dosya kayıtları (diş/psikolog/klinik vb.) |
 | `orders` | Siparişler (restoran/kafe sektörü) |
 | `table_reservations` | Masa rezervasyonları |
+| `treatment_protocols` | Tedavi protokolleri (seans sayısı, aralık, durum) |
+| `protocol_sessions` | Protokol seansları (planned/completed/skipped) |
+| `customer_photos` | Öncesi/sonrası fotoğraflar (Supabase Storage URL) |
+| `customer_allergies` | Müşteri alerjileri (allergen, severity) |
+| `service_contraindications` | Hizmet-alerjen uyumsuzlukları |
+| `referrals` | Müşteri tavsiye sistemi (referrer → referred, ödül) |
+| `follow_up_queue` | Seans sonrası takip kuyruğu (scheduled_for, status) |
 
 ## Dark Mode Stratejisi
 - `globals.css`'te `.dark .bg-white`, `.dark .text-gray-900`, `.dark .bg-gray-100` vb. agresif global `!important` override'lar mevcut — bunlar `@layer base` içinde
@@ -272,6 +279,36 @@ ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'tutoring';
 - `lib/config/sector-modules.ts` → tüm sektörlerin sidebar config'i
 - `components/dashboard/sidebar.tsx` → ICON_MAP, PERMISSION_MAP, bottomNav
 - Yeni icon eklenince hem sidebar.tsx ICON_MAP'e hem import'a ekle
+
+## Faz 2 API Önemli Notlar
+
+### Kontrendikasyon Çapraz Kontrol
+`PUT /api/contraindications` — auth gerektiren, body: `{ businessId, customerId, serviceId }`
+Response: `{ warnings: [...], hasRisk: boolean }`
+Randevu oluştururken müşteri + hizmet seçilince bu endpoint çağrılmalı.
+
+### AI Tedavi Önerisi
+`POST /api/ai/treatment-suggestion` — body: `{ businessId, customerId, complaint?, additionalNotes? }`
+Claude'a müşteri geçmişi (alerjiler, protokoller, randevular, mevcut hizmetler) gönderir.
+Model: `claude-sonnet-4-20250514` — yanıt Türkçe, markdown formatında.
+
+### Public Randevu Yönetimi (manage_token)
+`GET/PATCH/DELETE /api/public/appointments/[token]` — auth GEREKTİRMEZ (public endpoint)
+Token 30 gün geçerli. PATCH ile tarih/saat değiştirilince status → 'pending' olur.
+Token URL formatı: `{APP_URL}/book/manage/{manage_token}`
+Randevu onaylandığında bu link müşteriye gösterilmeli.
+
+### Analytics Endpoint'leri
+Tüm analytics endpoint'leri `?businessId=&from=&to=` parametresi alır:
+- `/api/analytics/revenue?groupBy=service|staff|period|customer_type`
+- `/api/analytics/clv?customerId=` (tekil) veya `?limit=20` (top liste)
+- `/api/analytics/occupancy?staffId=` (opsiyonel filtre)
+- `/api/analytics/staff-performance?staffId=` (opsiyonel filtre)
+
+### Fotoğraf Yükleme Akışı
+1. Client → Supabase Storage'a direkt upload (bucket: `customer-photos`)
+2. Dönen URL → `POST /api/photos` ile DB'ye kaydet
+3. Silme: `DELETE /api/photos/[id]?businessId=` hem DB'yi hem Storage'ı temizler
 
 ## Yeni Özellik Eklerken
 1. Önce `types/index.ts`'e tip ekle
