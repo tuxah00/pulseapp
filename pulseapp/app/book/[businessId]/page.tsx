@@ -623,38 +623,34 @@ function BusinessHeader({ business }: { business: BusinessData }) {
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-      {/* Top accent bar */}
-      <div className="h-1.5 bg-blue-500" />
-      <div className="p-5 flex items-center gap-4">
-        {/* Avatar / Logo */}
-        {business.settings?.logo_url ? (
-          <img
-            src={business.settings.logo_url}
-            alt={business.name}
-            className="flex-shrink-0 h-20 w-20 rounded-2xl object-cover border border-gray-100 shadow-sm"
-          />
-        ) : (
-          <div className="flex-shrink-0 flex h-20 w-20 items-center justify-center rounded-2xl bg-blue-500 text-white text-2xl font-bold shadow-sm">
-            {initials}
-          </div>
-        )}
-        {/* Info */}
-        <div className="min-w-0">
-          <h1 className="text-lg font-bold text-gray-900 truncate">{business.name}</h1>
-          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
-            {business.phone && (
-              <span className="flex items-center gap-1 text-xs text-gray-500">
-                <Phone className="h-3 w-3" />
-                {business.phone}
-              </span>
-            )}
-            {location && (
-              <span className="flex items-center gap-1 text-xs text-gray-500">
-                <MapPin className="h-3 w-3" />
-                {location}
-              </span>
-            )}
-          </div>
+      {/* Logo / Avatar — tam genişlik hero alanı */}
+      {business.settings?.logo_url ? (
+        <img
+          src={business.settings.logo_url}
+          alt={business.name}
+          className="w-full h-44 object-cover"
+        />
+      ) : (
+        <div className="w-full h-44 flex items-center justify-center bg-blue-500 text-white text-6xl font-bold tracking-tight">
+          {initials}
+        </div>
+      )}
+      {/* Info */}
+      <div className="px-5 py-4">
+        <h1 className="text-lg font-bold text-gray-900">{business.name}</h1>
+        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+          {business.phone && (
+            <span className="flex items-center gap-1 text-xs text-gray-500">
+              <Phone className="h-3 w-3" />
+              {business.phone}
+            </span>
+          )}
+          {location && (
+            <span className="flex items-center gap-1 text-xs text-gray-500">
+              <MapPin className="h-3 w-3" />
+              {location}
+            </span>
+          )}
         </div>
       </div>
     </div>
