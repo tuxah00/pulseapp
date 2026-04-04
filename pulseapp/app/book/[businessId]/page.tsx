@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import {
   CheckCircle2, ChevronLeft, Loader2, Clock, Calendar,
-  User, Phone, AlertCircle, Bell,
+  User, Phone, AlertCircle, Bell, MapPin, Zap,
 } from 'lucide-react'
 import type { WorkingHours } from '@/types'
 
@@ -71,6 +71,10 @@ function formatPrice(amount: number): string {
 function getTodayStr(): string {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function getInitials(name: string) {
+  return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
 }
 
 export default function BookingPage() {
@@ -164,451 +168,511 @@ export default function BookingPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-        <p className="mt-4 text-sm text-gray-500">Yükleniyor...</p>
+      <div className="flex flex-col items-center justify-center py-24">
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white shadow-sm mb-5">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        </div>
+        <p className="text-sm font-medium text-gray-500">Yükleniyor...</p>
       </div>
     )
   }
 
   if (error || !business) {
     return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <AlertCircle className="h-12 w-12 text-red-400" />
-        <p className="mt-4 text-gray-600">{error || 'İşletme bulunamadı'}</p>
+      <div className="flex flex-col items-center justify-center py-24">
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-red-50 mb-5">
+          <AlertCircle className="h-8 w-8 text-red-400" />
+        </div>
+        <p className="text-base font-medium text-gray-700">{error || 'İşletme bulunamadı'}</p>
+        <p className="text-sm text-gray-400 mt-1">Lütfen linki kontrol edin.</p>
       </div>
     )
   }
 
   if (submitted) {
     return (
-      <div className="text-center py-12">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-          <CheckCircle2 className="h-8 w-8 text-green-600" />
+      <div>
+        {/* Business Header */}
+        <BusinessHeader business={business} />
+
+        <div className="mt-4 bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-green-100 mb-6">
+            <CheckCircle2 className="h-10 w-10 text-green-500" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900">Randevunuz Alındı!</h2>
+          <p className="mt-2 text-gray-500">
+            {business.name} sizi bekliyor.
+          </p>
+
+          <div className="mt-6 bg-gray-50 rounded-xl p-4 text-left space-y-3 text-sm">
+            <SummaryRow label="Hizmet" value={selectedService?.name ?? ''} />
+            <SummaryRow label="Tarih" value={formatDate(selectedDate)} />
+            <SummaryRow label="Saat" value={selectedTime ?? ''} />
+            {selectedService?.price != null && (
+              <SummaryRow label="Ücret" value={formatPrice(selectedService.price)} />
+            )}
+          </div>
+
+          <button
+            onClick={() => {
+              setStep(1)
+              setSelectedServiceId(null)
+              setSelectedDate('')
+              setSelectedTime(null)
+              setSelectedStaffId('')
+              setCustomerName('')
+              setCustomerPhone('')
+              setWaitlistEnabled(false)
+              setSubmitted(false)
+            }}
+            className="mt-6 btn-secondary w-full"
+          >
+            Yeni Randevu Al
+          </button>
         </div>
-        <h2 className="mt-6 text-2xl font-bold text-gray-900">Randevunuz Alındı!</h2>
-        <p className="mt-2 text-gray-500">
-          {business.name} için randevunuz başarıyla oluşturuldu.
-        </p>
-        <div className="mt-6 card text-left text-sm space-y-2">
-          <div className="flex justify-between">
-            <span className="text-gray-500">Hizmet</span>
-            <span className="font-medium text-gray-900">{selectedService?.name}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-500">Tarih</span>
-            <span className="font-medium text-gray-900">{formatDate(selectedDate)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-500">Saat</span>
-            <span className="font-medium text-gray-900">{selectedTime}</span>
-          </div>
-        </div>
-        <button
-          onClick={() => {
-            setStep(1)
-            setSelectedServiceId(null)
-            setSelectedDate('')
-            setSelectedTime(null)
-            setSelectedStaffId('')
-            setCustomerName('')
-            setCustomerPhone('')
-            setWaitlistEnabled(false)
-            setSubmitted(false)
-          }}
-          className="mt-6 btn-secondary"
-        >
-          Yeni Randevu Al
-        </button>
+
+        <BookingFooter />
       </div>
     )
   }
 
   return (
     <div>
-      {/* İşletme Adı */}
-      <h1 className="text-xl font-bold text-gray-900 mb-6">{business.name}</h1>
+      {/* Business Header */}
+      <BusinessHeader business={business} />
 
-      {/* Stepper */}
-      <div className="flex items-center justify-between mb-8">
-        {STEPS.map((label, i) => {
-          const stepNum = i + 1
-          const isCompleted = step > stepNum
-          const isCurrent = step === stepNum
-          return (
-            <div key={label} className="flex items-center">
-              <div className="flex flex-col items-center">
-                <div
-                  className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition-colors ${
-                    isCompleted || isCurrent
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-gray-200 text-gray-500'
-                  }`}
-                >
-                  {isCompleted ? (
-                    <CheckCircle2 className="h-5 w-5" />
-                  ) : (
-                    stepNum
-                  )}
+      {/* Step Indicator */}
+      <div className="mt-4 bg-white rounded-2xl shadow-sm border border-gray-200 px-6 py-4">
+        <div className="flex items-center justify-between">
+          {STEPS.map((label, i) => {
+            const stepNum = i + 1
+            const isCompleted = step > stepNum
+            const isCurrent = step === stepNum
+            return (
+              <div key={label} className="flex items-center flex-1">
+                <div className="flex flex-col items-center">
+                  <div
+                    className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold transition-all ${
+                      isCompleted
+                        ? 'bg-blue-500 text-white shadow-sm shadow-blue-200'
+                        : isCurrent
+                          ? 'bg-blue-500 text-white shadow-sm shadow-blue-200 ring-4 ring-blue-100'
+                          : 'bg-gray-100 text-gray-400'
+                    }`}
+                  >
+                    {isCompleted ? <CheckCircle2 className="h-5 w-5" /> : stepNum}
+                  </div>
+                  <span className={`mt-1.5 text-[11px] font-medium whitespace-nowrap ${
+                    isCurrent ? 'text-blue-600' : isCompleted ? 'text-gray-600' : 'text-gray-400'
+                  }`}>
+                    {label}
+                  </span>
                 </div>
-                <span className={`mt-1 text-[11px] ${isCurrent ? 'text-blue-600 font-medium' : 'text-gray-400'}`}>
-                  {label}
-                </span>
+                {i < STEPS.length - 1 && (
+                  <div className={`flex-1 mx-2 h-0.5 mt-[-14px] transition-colors ${
+                    step > stepNum ? 'bg-blue-500' : 'bg-gray-200'
+                  }`} />
+                )}
               </div>
-              {i < STEPS.length - 1 && (
-                <div className={`mx-1 h-0.5 w-6 sm:w-10 ${step > stepNum ? 'bg-blue-500' : 'bg-gray-200'}`} />
-              )}
-            </div>
-          )
-        })}
+            )
+          })}
+        </div>
       </div>
 
-      {/* Step 1: Hizmet */}
-      {step === 1 && (
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Hizmet Seçin</h2>
-          {services.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">Bu işletmenin aktif hizmeti yok.</p>
-          ) : (
-            <div className="space-y-3">
-              {services.map((service) => (
-                <button
-                  key={service.id}
-                  onClick={() => setSelectedServiceId(service.id)}
-                  className={`w-full text-left rounded-xl border p-4 transition-all ${
-                    selectedServiceId === service.id
-                      ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-500'
-                      : 'border-gray-200 bg-white hover:border-gray-300'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-gray-900">{service.name}</p>
-                      {service.description && (
-                        <p className="mt-0.5 text-sm text-gray-500">{service.description}</p>
-                      )}
-                    </div>
-                    <div className="text-right flex-shrink-0 ml-4">
-                      {service.price != null && (
-                        <p className="font-semibold text-gray-900">{formatPrice(service.price)}</p>
-                      )}
-                      <p className="text-sm text-gray-500 flex items-center gap-1 justify-end">
-                        <Clock className="h-3.5 w-3.5" />
-                        {service.duration_minutes} dk
-                      </p>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-          <div className="mt-6">
-            <button
-              onClick={() => setStep(2)}
-              disabled={!selectedServiceId}
-              className="btn-primary w-full"
-            >
-              Devam
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Step Content */}
+      <div className="mt-4 bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
 
-      {/* Step 2: Tarih & Saat */}
-      {step === 2 && (
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Tarih & Saat Seçin</h2>
-
-          {staff.length > 0 && (
-            <div className="mb-4">
-              <label className="label">Personel (isteğe bağlı)</label>
-              <select
-                value={selectedStaffId}
-                onChange={(e) => setSelectedStaffId(e.target.value)}
-                className="input"
-              >
-                <option value="">Fark etmez</option>
-                {staff.map((s) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          <div className="mb-4">
-            <label className="label">
-              <Calendar className="inline h-4 w-4 mr-1" />
-              Tarih
-            </label>
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => {
-                setSelectedDate(e.target.value)
-                setSelectedTime(null)
-              }}
-              min={getTodayStr()}
-              className="input"
-            />
-          </div>
-
-          {selectedDate && (
-            <div>
-              <label className="label">
-                <Clock className="inline h-4 w-4 mr-1" />
-                Saat
-              </label>
-              {isDayClosed ? (
-                <p className="text-center py-6 text-gray-500 bg-gray-100 rounded-lg">
-                  Bu gün kapalı
-                </p>
-              ) : timeSlots.length === 0 ? (
-                <p className="text-center py-6 text-gray-500 bg-gray-100 rounded-lg">
-                  Uygun saat bulunamadı
-                </p>
-              ) : (
-                <div className="grid grid-cols-4 gap-2">
-                  {timeSlots.map((time) => (
+        {/* Step 1: Hizmet */}
+        {step === 1 && (
+          <div>
+            <h2 className="text-base font-semibold text-gray-900 mb-4">Hizmet Seçin</h2>
+            {services.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 mx-auto mb-3">
+                  <Zap className="h-7 w-7 text-gray-300" />
+                </div>
+                <p className="text-gray-500 text-sm">Bu işletmenin aktif hizmeti bulunmuyor.</p>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {services.map((service) => {
+                  const isSelected = selectedServiceId === service.id
+                  return (
                     <button
-                      key={time}
-                      onClick={() => setSelectedTime(time)}
-                      className={`rounded-lg py-2.5 text-sm font-medium transition-colors ${
-                        selectedTime === time
-                          ? 'bg-blue-500 text-white'
-                          : 'bg-white border border-gray-200 text-gray-700 hover:border-blue-300'
+                      key={service.id}
+                      onClick={() => setSelectedServiceId(service.id)}
+                      className={`w-full text-left rounded-xl border-2 p-4 transition-all ${
+                        isSelected
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-100 bg-gray-50 hover:border-gray-200 hover:bg-white'
                       }`}
                     >
-                      {time}
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className={`flex-shrink-0 flex h-5 w-5 items-center justify-center rounded-full border-2 transition-colors ${
+                            isSelected ? 'border-blue-500 bg-blue-500' : 'border-gray-300'
+                          }`}>
+                            {isSelected && <div className="h-2 w-2 rounded-full bg-white" />}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-semibold text-gray-900 text-sm">{service.name}</p>
+                            {service.description && (
+                              <p className="mt-0.5 text-xs text-gray-500 truncate">{service.description}</p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex-shrink-0 text-right">
+                          {service.price != null && (
+                            <p className="text-sm font-bold text-gray-900">{formatPrice(service.price)}</p>
+                          )}
+                          <p className="text-xs text-gray-400 flex items-center gap-1 justify-end mt-0.5">
+                            <Clock className="h-3 w-3" />
+                            {service.duration_minutes} dk
+                          </p>
+                        </div>
+                      </div>
                     </button>
+                  )
+                })}
+              </div>
+            )}
+            <div className="mt-5 pt-4 border-t border-gray-100">
+              <button
+                onClick={() => setStep(2)}
+                disabled={!selectedServiceId}
+                className="btn-primary w-full"
+              >
+                Devam Et
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 2: Tarih & Saat */}
+        {step === 2 && (
+          <div>
+            <h2 className="text-base font-semibold text-gray-900 mb-4">Tarih & Saat Seçin</h2>
+
+            {staff.length > 0 && (
+              <div className="mb-4">
+                <label className="label">Personel (isteğe bağlı)</label>
+                <select
+                  value={selectedStaffId}
+                  onChange={(e) => setSelectedStaffId(e.target.value)}
+                  className="input"
+                >
+                  <option value="">Fark etmez</option>
+                  {staff.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
                   ))}
-                </div>
-              )}
-            </div>
-          )}
+                </select>
+              </div>
+            )}
 
-          <div className="mt-6 flex gap-3">
-            <button onClick={() => setStep(1)} className="btn-secondary flex items-center gap-1">
-              <ChevronLeft className="h-4 w-4" /> Geri
-            </button>
-            <button
-              onClick={() => setStep(3)}
-              disabled={!selectedDate || !selectedTime}
-              className="btn-primary flex-1"
-            >
-              Devam
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Step 3: Bilgiler */}
-      {step === 3 && (
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Bilgileriniz</h2>
-          <div className="space-y-4">
-            <div>
-              <label className="label">
-                <User className="inline h-4 w-4 mr-1" />
-                Ad Soyad
+            <div className="mb-4">
+              <label className="label flex items-center gap-1.5">
+                <Calendar className="h-3.5 w-3.5" /> Tarih
               </label>
               <input
-                type="text"
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                placeholder="Adınız ve soyadınız"
+                type="date"
+                value={selectedDate}
+                onChange={(e) => {
+                  setSelectedDate(e.target.value)
+                  setSelectedTime(null)
+                }}
+                min={getTodayStr()}
                 className="input"
               />
             </div>
-            <div>
-              <label className="label">
-                <Phone className="inline h-4 w-4 mr-1" />
-                Telefon
-              </label>
-              <input
-                type="tel"
-                value={customerPhone}
-                onChange={(e) => setCustomerPhone(e.target.value)}
-                placeholder="0532 123 45 67"
-                className="input"
-              />
-            </div>
-          </div>
-          <div className="mt-6 flex gap-3">
-            <button onClick={() => setStep(2)} className="btn-secondary flex items-center gap-1">
-              <ChevronLeft className="h-4 w-4" /> Geri
-            </button>
-            <button
-              onClick={() => setStep(4)}
-              disabled={!customerName.trim() || !customerPhone.trim()}
-              className="btn-primary flex-1"
-            >
-              Devam
-            </button>
-          </div>
-        </div>
-      )}
 
-      {/* Step 4: Onay */}
-      {step === 4 && selectedService && (
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Randevu Özeti</h2>
-
-          <div className="card">
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-500">İşletme</span>
-                <span className="font-medium text-gray-900">{business.name}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Hizmet</span>
-                <span className="font-medium text-gray-900">{selectedService.name}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Tarih</span>
-                <span className="font-medium text-gray-900">{formatDate(selectedDate)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Saat</span>
-                <span className="font-medium text-gray-900">{selectedTime}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Süre</span>
-                <span className="font-medium text-gray-900">{selectedService.duration_minutes} dk</span>
-              </div>
-              {selectedService.price != null && (
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Ücret</span>
-                  <span className="font-medium text-gray-900">{formatPrice(selectedService.price)}</span>
-                </div>
-              )}
-              <div className="border-t border-gray-100 pt-3 flex justify-between">
-                <span className="text-gray-500">Ad Soyad</span>
-                <span className="font-medium text-gray-900">{customerName}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Telefon</span>
-                <span className="font-medium text-gray-900">{customerPhone}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-6 flex gap-3">
-            <button onClick={() => setStep(3)} className="btn-secondary flex items-center gap-1">
-              <ChevronLeft className="h-4 w-4" /> Geri
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={submitting}
-              className="btn-primary flex-1"
-            >
-              {submitting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-              Randevuyu Onayla
-            </button>
-          </div>
-
-          {submitError && (
-            <div className="mt-3 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
-              {submitError}
-            </div>
-          )}
-
-          {/* Waitlist Checkbox */}
-          <div className="mt-6 rounded-xl border border-gray-200 bg-white p-4">
-            <label className="flex items-start gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={waitlistEnabled}
-                onChange={(e) => setWaitlistEnabled(e.target.checked)}
-                className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
-              />
+            {selectedDate && (
               <div>
-                <span className="text-sm font-medium text-gray-900 flex items-center gap-1.5">
-                  <Bell className="h-4 w-4 text-blue-500" />
-                  Randevu boşluğu oluştuğunda beni SMS ile bilgilendir
-                </span>
-                <span className="text-xs text-gray-500 mt-0.5 block">
-                  Tercih ettiğiniz zamanda yer açılırsa size haber veririz.
-                </span>
-              </div>
-            </label>
-
-            {waitlistEnabled && (
-              <div className="mt-4 space-y-3 pl-7">
-                <div>
-                  <label className="text-sm text-gray-600">Şu saatte:</label>
-                  <select
-                    value={waitlistTime}
-                    onChange={(e) => {
-                      setWaitlistTime(e.target.value)
-                      if (e.target.value) setWaitlistEarliest(false)
-                    }}
-                    className="input mt-1"
-                  >
-                    <option value="">Saat seçin</option>
-                    {timeSlots.map((t) => (
-                      <option key={t} value={t}>{t}</option>
+                <label className="label flex items-center gap-1.5">
+                  <Clock className="h-3.5 w-3.5" /> Saat
+                </label>
+                {isDayClosed ? (
+                  <div className="text-center py-8 bg-gray-50 rounded-xl border border-gray-100">
+                    <p className="text-sm text-gray-500 font-medium">Bu gün kapalı</p>
+                    <p className="text-xs text-gray-400 mt-1">Lütfen farklı bir gün seçin</p>
+                  </div>
+                ) : timeSlots.length === 0 ? (
+                  <div className="text-center py-8 bg-gray-50 rounded-xl border border-gray-100">
+                    <p className="text-sm text-gray-500">Uygun saat bulunamadı</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
+                    {timeSlots.map((time) => (
+                      <button
+                        key={time}
+                        onClick={() => setSelectedTime(time)}
+                        className={`rounded-lg py-2.5 text-sm font-medium transition-all ${
+                          selectedTime === time
+                            ? 'bg-blue-500 text-white shadow-sm shadow-blue-200'
+                            : 'bg-gray-50 border border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50'
+                        }`}
+                      >
+                        {time}
+                      </button>
                     ))}
-                  </select>
-                </div>
+                  </div>
+                )}
+              </div>
+            )}
 
+            <div className="mt-5 pt-4 border-t border-gray-100 flex gap-2.5">
+              <button onClick={() => setStep(1)} className="btn-secondary flex items-center gap-1 px-3">
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setStep(3)}
+                disabled={!selectedDate || !selectedTime}
+                className="btn-primary flex-1"
+              >
+                Devam Et
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 3: Bilgiler */}
+        {step === 3 && (
+          <div>
+            <h2 className="text-base font-semibold text-gray-900 mb-4">Bilgileriniz</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="label flex items-center gap-1.5">
+                  <User className="h-3.5 w-3.5" /> Ad Soyad
+                </label>
+                <input
+                  type="text"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  placeholder="Adınız ve soyadınız"
+                  className="input"
+                />
+              </div>
+              <div>
+                <label className="label flex items-center gap-1.5">
+                  <Phone className="h-3.5 w-3.5" /> Telefon
+                </label>
+                <input
+                  type="tel"
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value)}
+                  placeholder="0532 123 45 67"
+                  className="input"
+                />
+              </div>
+            </div>
+            <div className="mt-5 pt-4 border-t border-gray-100 flex gap-2.5">
+              <button onClick={() => setStep(2)} className="btn-secondary flex items-center gap-1 px-3">
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setStep(4)}
+                disabled={!customerName.trim() || !customerPhone.trim()}
+                className="btn-primary flex-1"
+              >
+                Devam Et
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 4: Onay */}
+        {step === 4 && selectedService && (
+          <div>
+            <h2 className="text-base font-semibold text-gray-900 mb-4">Randevu Özeti</h2>
+
+            <div className="bg-gray-50 rounded-xl border border-gray-100 p-4 space-y-3 text-sm">
+              <SummaryRow label="İşletme" value={business.name} />
+              <SummaryRow label="Hizmet" value={selectedService.name} />
+              <SummaryRow label="Tarih" value={formatDate(selectedDate)} />
+              <SummaryRow label="Saat" value={selectedTime ?? ''} />
+              <SummaryRow label="Süre" value={`${selectedService.duration_minutes} dk`} />
+              {selectedService.price != null && (
+                <SummaryRow label="Ücret" value={formatPrice(selectedService.price)} highlight />
+              )}
+              <div className="border-t border-gray-200 pt-3 space-y-3">
+                <SummaryRow label="Ad Soyad" value={customerName} />
+                <SummaryRow label="Telefon" value={customerPhone} />
+              </div>
+            </div>
+
+            <div className="mt-5 pt-4 border-t border-gray-100 flex gap-2.5">
+              <button onClick={() => setStep(3)} className="btn-secondary flex items-center gap-1 px-3">
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={submitting}
+                className="btn-primary flex-1"
+              >
+                {submitting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                Randevuyu Onayla
+              </button>
+            </div>
+
+            {submitError && (
+              <div className="mt-3 rounded-xl bg-red-50 border border-red-100 p-3 text-sm text-red-600 flex gap-2">
+                <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                {submitError}
+              </div>
+            )}
+
+            {/* Waitlist */}
+            <div className="mt-4 rounded-xl border border-gray-100 bg-gray-50 p-4">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={waitlistEnabled}
+                  onChange={(e) => setWaitlistEnabled(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+                />
                 <div>
-                  <label className="text-sm text-gray-600">Şu tarihte:</label>
-                  <input
-                    type="date"
-                    value={waitlistDate}
-                    onChange={(e) => {
-                      setWaitlistDate(e.target.value)
-                      if (e.target.value) setWaitlistEarliest(false)
-                    }}
-                    min={getTodayStr()}
-                    className="input mt-1"
-                  />
+                  <span className="text-sm font-medium text-gray-900 flex items-center gap-1.5">
+                    <Bell className="h-4 w-4 text-blue-500" />
+                    Randevu boşluğu oluştuğunda bildir
+                  </span>
+                  <span className="text-xs text-gray-400 mt-0.5 block">
+                    Tercih ettiğiniz zamanda yer açılırsa SMS ile haberdar ederiz.
+                  </span>
                 </div>
+              </label>
 
-                {staff.length > 0 && (
+              {waitlistEnabled && (
+                <div className="mt-4 space-y-3 pl-7">
                   <div>
-                    <label className="text-sm text-gray-600">Şu personelde:</label>
+                    <label className="text-xs font-medium text-gray-600">Şu saatte:</label>
                     <select
-                      value={waitlistStaffId}
+                      value={waitlistTime}
                       onChange={(e) => {
-                        setWaitlistStaffId(e.target.value)
+                        setWaitlistTime(e.target.value)
                         if (e.target.value) setWaitlistEarliest(false)
                       }}
                       className="input mt-1"
                     >
-                      <option value="">Personel seçin</option>
-                      {staff.map((s) => (
-                        <option key={s.id} value={s.id}>{s.name}</option>
+                      <option value="">Saat seçin</option>
+                      {timeSlots.map((t) => (
+                        <option key={t} value={t}>{t}</option>
                       ))}
                     </select>
                   </div>
-                )}
+                  <div>
+                    <label className="text-xs font-medium text-gray-600">Şu tarihte:</label>
+                    <input
+                      type="date"
+                      value={waitlistDate}
+                      onChange={(e) => {
+                        setWaitlistDate(e.target.value)
+                        if (e.target.value) setWaitlistEarliest(false)
+                      }}
+                      min={getTodayStr()}
+                      className="input mt-1"
+                    />
+                  </div>
+                  {staff.length > 0 && (
+                    <div>
+                      <label className="text-xs font-medium text-gray-600">Şu personelde:</label>
+                      <select
+                        value={waitlistStaffId}
+                        onChange={(e) => {
+                          setWaitlistStaffId(e.target.value)
+                          if (e.target.value) setWaitlistEarliest(false)
+                        }}
+                        className="input mt-1"
+                      >
+                        <option value="">Personel seçin</option>
+                        {staff.map((s) => (
+                          <option key={s.id} value={s.id}>{s.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={waitlistEarliest}
+                      onChange={(e) => {
+                        setWaitlistEarliest(e.target.checked)
+                        if (e.target.checked) {
+                          setWaitlistTime('')
+                          setWaitlistDate('')
+                          setWaitlistStaffId('')
+                        }
+                      }}
+                      className="h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700">En yakın zamanda</span>
+                  </label>
+                </div>
+              )}
+            </div>
 
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={waitlistEarliest}
-                    onChange={(e) => {
-                      setWaitlistEarliest(e.target.checked)
-                      if (e.target.checked) {
-                        setWaitlistTime('')
-                        setWaitlistDate('')
-                        setWaitlistStaffId('')
-                      }
-                    }}
-                    className="h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
-                  />
-                  <span className="text-sm text-gray-700">En yakın zamanda</span>
-                </label>
-              </div>
+            <p className="mt-4 text-center text-xs text-gray-400">
+              Onaylayarak {business.name} ile iletişim kurulmasına izin vermiş olursunuz.
+            </p>
+          </div>
+        )}
+      </div>
+
+      <BookingFooter />
+    </div>
+  )
+}
+
+function BusinessHeader({ business }: { business: BusinessData }) {
+  const initials = getInitials(business.name)
+  const location = [business.district, business.city].filter(Boolean).join(', ')
+
+  return (
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+      {/* Top accent bar */}
+      <div className="h-1.5 bg-gradient-to-r from-blue-500 to-blue-400" />
+      <div className="p-5 flex items-center gap-4">
+        {/* Avatar */}
+        <div className="flex-shrink-0 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 text-white text-lg font-bold shadow-sm shadow-blue-200">
+          {initials}
+        </div>
+        {/* Info */}
+        <div className="min-w-0">
+          <h1 className="text-lg font-bold text-gray-900 truncate">{business.name}</h1>
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+            {business.phone && (
+              <span className="flex items-center gap-1 text-xs text-gray-500">
+                <Phone className="h-3 w-3" />
+                {business.phone}
+              </span>
+            )}
+            {location && (
+              <span className="flex items-center gap-1 text-xs text-gray-500">
+                <MapPin className="h-3 w-3" />
+                {location}
+              </span>
             )}
           </div>
-
-          <p className="mt-4 text-center text-xs text-gray-400">
-            Randevunuzu onaylayarak {business.name} ile iletişim kurulmasına izin vermiş olursunuz.
-          </p>
         </div>
-      )}
+      </div>
+    </div>
+  )
+}
+
+function SummaryRow({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+  return (
+    <div className="flex justify-between items-center">
+      <span className="text-gray-500">{label}</span>
+      <span className={`font-medium ${highlight ? 'text-blue-600' : 'text-gray-900'}`}>{value}</span>
+    </div>
+  )
+}
+
+function BookingFooter() {
+  return (
+    <div className="mt-6 text-center">
+      <p className="text-xs text-gray-400 flex items-center justify-center gap-1">
+        <Zap className="h-3 w-3" />
+        <span>PulseApp ile güçlendirilmiştir</span>
+      </p>
     </div>
   )
 }

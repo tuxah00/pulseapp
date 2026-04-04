@@ -289,8 +289,9 @@
 .booking-page textarea::placeholder {
   color: #9ca3af !important;
 }
-.booking-page .bg-white   { background-color: #ffffff !important; }
-.booking-page .bg-gray-50 { background-color: #f9fafb !important; }
+.booking-page .bg-white    { background-color: #ffffff !important; }
+.booking-page .bg-gray-50  { background-color: #f9fafb !important; }
+.booking-page .bg-gray-100 { background-color: #f3f4f6 !important; }
 .booking-page .text-gray-900 { color: #111827 !important; }
 .booking-page .text-gray-700 { color: #374151 !important; }
 .booking-page .text-gray-600 { color: #4b5563 !important; }
