@@ -10,7 +10,7 @@ import {
   X, Pencil, Trash2, User, LayoutList, LayoutGrid,
   Clock, Star, MessageSquare, CheckCircle, XCircle, AlertTriangle, Info, Download,
 } from 'lucide-react'
-import { formatPhone, formatDate, formatTime, formatCurrency, getSegmentColor, cn } from '@/lib/utils'
+import { formatPhone, formatDate, formatTime, formatCurrency, getSegmentColor, cn, getInitials, getAvatarColor } from '@/lib/utils'
 import { SEGMENT_LABELS, STATUS_LABELS, type Customer, type CustomerSegment } from '@/types'
 import { logAudit } from '@/lib/utils/audit'
 import CompactBoxCard from '@/components/ui/compact-box-card'
@@ -473,9 +473,8 @@ export default function CustomersPage() {
       ) : viewMode === 'list' ? (
         <AnimatedList className="space-y-2">
           {filteredCustomers.map((customer) => {
-            const initials = customer.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
-            const avatarIdx = customer.name.charCodeAt(0) % 6
-            const avatarGrads = ['from-violet-500 to-purple-600','from-blue-500 to-indigo-600','from-emerald-500 to-teal-600','from-rose-500 to-pink-600','from-amber-500 to-orange-600','from-cyan-500 to-sky-600']
+            const initials = getInitials(customer.name)
+            const avatarColor = getAvatarColor(customer.name)
             return (
               <AnimatedItem key={customer.id} onClick={() => setSelectedCustomer(customer)} className={cn(
                 'rounded-2xl border px-4 py-3 cursor-pointer transition-all',
@@ -484,7 +483,7 @@ export default function CustomersPage() {
                 selectedCustomer?.id === customer.id && 'ring-2 ring-pulse-500 border-pulse-300 dark:border-pulse-700',
               )}>
                 <div className="flex items-center gap-3">
-                  <div className={cn('flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br text-white font-semibold text-sm flex-shrink-0', avatarGrads[avatarIdx])}>
+                  <div className={cn('flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br text-white font-semibold text-sm flex-shrink-0', avatarColor)}>
                     {initials}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -566,15 +565,9 @@ export default function CustomersPage() {
                 <>
                   {/* Avatar + isim */}
                   <div className="text-center">
-                    {(() => {
-                      const idx = selectedCustomer.name.charCodeAt(0) % 6
-                      const grads = ['from-violet-500 to-purple-600','from-blue-500 to-indigo-600','from-emerald-500 to-teal-600','from-rose-500 to-pink-600','from-amber-500 to-orange-600','from-cyan-500 to-sky-600']
-                      return (
-                        <div className={cn('mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br text-white font-bold text-lg', grads[idx])}>
-                          {selectedCustomer.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
-                        </div>
-                      )
-                    })()}
+                    <div className={cn('mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br text-white font-bold text-lg', getAvatarColor(selectedCustomer.name))}>
+                      {getInitials(selectedCustomer.name)}
+                    </div>
                     <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{selectedCustomer.name}</h4>
                     <span className={`badge mt-1 ${getSegmentColor(selectedCustomer.segment)}`}>{SEGMENT_LABELS[selectedCustomer.segment]}</span>
                   </div>

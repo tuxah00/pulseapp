@@ -25,7 +25,7 @@ import {
   CalendarDays,
   Search, Filter, ArrowUpDown,
 } from 'lucide-react'
-import { formatTime, formatDate, getStatusColor, formatCurrency, cn } from '@/lib/utils'
+import { formatTime, formatDate, getStatusColor, formatCurrency, cn, getInitials, getAvatarColor } from '@/lib/utils'
 import { STATUS_LABELS, type AppointmentStatus, type Customer, type Service, type StaffMember } from '@/types'
 import { logAudit } from '@/lib/utils/audit'
 import { useConfirm } from '@/lib/hooks/use-confirm'
@@ -982,9 +982,8 @@ export default function AppointmentsPage() {
         <AnimatedList className="space-y-2">
           {filteredAppointments.map((apt) => {
             const timeState = getTimeState(apt)
-            const initials = (apt.customers?.name || 'İ').split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)
-            const avatarIdx = (apt.customers?.name || '').charCodeAt(0) % 6
-            const avatarGrads = ['from-violet-500 to-purple-600','from-blue-500 to-indigo-600','from-emerald-500 to-teal-600','from-rose-500 to-pink-600','from-amber-500 to-orange-600','from-cyan-500 to-sky-600']
+            const initials = getInitials(apt.customers?.name || 'İ')
+            const avatarColor = getAvatarColor(apt.customers?.name)
             return (
               <AnimatedItem
                 key={apt.id}
@@ -1000,7 +999,7 @@ export default function AppointmentsPage() {
               >
                 <div className="flex items-center gap-3">
                   {/* Avatar */}
-                  <div className={cn('flex-shrink-0 flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br text-white text-sm font-bold', avatarGrads[avatarIdx])}>
+                  <div className={cn('flex-shrink-0 flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br text-white text-sm font-bold', avatarColor)}>
                     {initials}
                   </div>
                   {/* Time */}
@@ -1034,9 +1033,8 @@ export default function AppointmentsPage() {
         <AnimatedList className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
           {filteredAppointments.map((apt) => {
             const timeState = getTimeState(apt)
-            const initials = (apt.customers?.name || 'İ').split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)
-            const avatarIdx = (apt.customers?.name || '').charCodeAt(0) % 6
-            const avatarGrads = ['from-violet-500 to-purple-600','from-blue-500 to-indigo-600','from-emerald-500 to-teal-600','from-rose-500 to-pink-600','from-amber-500 to-orange-600','from-cyan-500 to-sky-600']
+            const initials = getInitials(apt.customers?.name || 'İ')
+            const avatarColor = getAvatarColor(apt.customers?.name)
             return (
               <AnimatedItem
                 key={apt.id}
@@ -1061,7 +1059,7 @@ export default function AppointmentsPage() {
                 )}
                 {/* Avatar + time */}
                 <div className="flex items-center gap-2 mb-3">
-                  <div className={cn('flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br text-white text-xs font-bold flex-shrink-0', avatarGrads[avatarIdx])}>
+                  <div className={cn('flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br text-white text-xs font-bold flex-shrink-0', avatarColor)}>
                     {initials}
                   </div>
                   <div>

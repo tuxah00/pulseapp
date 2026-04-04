@@ -2,7 +2,7 @@
 
 import { Calendar, LayoutGrid, List, Clock, CheckCircle2, XCircle, AlertCircle, CircleDot } from 'lucide-react'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
-import { formatTime, getStatusColor } from '@/lib/utils'
+import { formatTime, getStatusColor, getInitials, getAvatarColor } from '@/lib/utils'
 import { STATUS_LABELS } from '@/types'
 import { cn } from '@/lib/utils'
 
@@ -36,25 +36,6 @@ const STATUS_DOT: Record<string, string> = {
   pending:   'bg-gray-300 dark:bg-gray-600',
 }
 
-function getInitials(name?: string | null) {
-  if (!name) return '?'
-  return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
-}
-
-const AVATAR_COLORS = [
-  'from-violet-500 to-purple-600',
-  'from-blue-500 to-indigo-600',
-  'from-emerald-500 to-teal-600',
-  'from-rose-500 to-pink-600',
-  'from-amber-500 to-orange-600',
-  'from-cyan-500 to-sky-600',
-]
-
-function getAvatarColor(name?: string | null) {
-  if (!name) return AVATAR_COLORS[0]
-  const idx = name.charCodeAt(0) % AVATAR_COLORS.length
-  return AVATAR_COLORS[idx]
-}
 
 export default function TodayAppointments({ appointments }: TodayAppointmentsProps) {
   const [viewMode, setViewMode] = useViewMode('dashboard-today', 'list')

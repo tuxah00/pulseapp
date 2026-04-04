@@ -98,3 +98,24 @@ export function getStatusColor(status: string): string {
 export function getStarDisplay(rating: number): string {
   return '★'.repeat(rating) + '☆'.repeat(5 - rating)
 }
+
+// ── Avatar yardımcıları ──
+
+export const AVATAR_COLORS = [
+  'from-violet-500 to-purple-600',
+  'from-blue-500 to-indigo-600',
+  'from-emerald-500 to-teal-600',
+  'from-rose-500 to-pink-600',
+  'from-amber-500 to-orange-600',
+  'from-cyan-500 to-sky-600',
+] as const
+
+export function getInitials(name?: string | null): string {
+  if (!name) return '?'
+  return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
+}
+
+export function getAvatarColor(name?: string | null): string {
+  if (!name) return AVATAR_COLORS[0]
+  return AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length]
+}
