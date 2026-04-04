@@ -605,12 +605,12 @@ export default function AppointmentsPage() {
   return (
     <div className="space-y-5">
       {/* Başlık */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Randevular</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{totalCount} randevu</p>
         </div>
-        <button onClick={() => openNewModal()} className="btn-primary">
+        <button onClick={() => openNewModal()} className="btn-primary shrink-0">
           <Plus className="mr-2 h-4 w-4" />Yeni Randevu
         </button>
       </div>
@@ -999,7 +999,7 @@ export default function AppointmentsPage() {
               >
                 <div className="flex items-center gap-3">
                   {/* Avatar */}
-                  <div className={cn('flex-shrink-0 flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br text-white text-sm font-bold', avatarColor)}>
+                  <div className={cn('flex-shrink-0 flex h-10 w-10 items-center justify-center rounded-xl text-white text-sm font-bold', avatarColor)}>
                     {initials}
                   </div>
                   {/* Time */}
@@ -1059,7 +1059,7 @@ export default function AppointmentsPage() {
                 )}
                 {/* Avatar + time */}
                 <div className="flex items-center gap-2 mb-3">
-                  <div className={cn('flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br text-white text-xs font-bold flex-shrink-0', avatarColor)}>
+                  <div className={cn('flex h-9 w-9 items-center justify-center rounded-xl text-white text-xs font-bold flex-shrink-0', avatarColor)}>
                     {initials}
                   </div>
                   <div>

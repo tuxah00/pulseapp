@@ -102,12 +102,12 @@ export function getStarDisplay(rating: number): string {
 // ── Avatar yardımcıları ──
 
 export const AVATAR_COLORS = [
-  'from-violet-500 to-purple-600',
-  'from-blue-500 to-indigo-600',
-  'from-emerald-500 to-teal-600',
-  'from-rose-500 to-pink-600',
-  'from-amber-500 to-orange-600',
-  'from-cyan-500 to-sky-600',
+  'bg-violet-500',
+  'bg-blue-500',
+  'bg-emerald-500',
+  'bg-rose-500',
+  'bg-amber-500',
+  'bg-cyan-500',
 ] as const
 
 export function getInitials(name?: string | null): string {

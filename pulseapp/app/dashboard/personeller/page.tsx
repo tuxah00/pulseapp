@@ -425,14 +425,14 @@ export default function StaffPage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Personeller</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Randevu atayabileceğiniz personelleri yönetin.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0 flex-wrap">
           <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 shrink-0">
             <ToolbarPopover icon={<ArrowUpDown className="h-4 w-4" />} label="Sırala" active={sortDir !== 'asc'}>
               <SortPopoverContent

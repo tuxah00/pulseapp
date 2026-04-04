@@ -367,12 +367,12 @@ export default function CustomersPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">{customerLabel}</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{customers.length} {customerLabel.toLowerCase()} kayıtlı</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={() => exportToCSV(
               customers.map(c => ({
@@ -483,7 +483,7 @@ export default function CustomersPage() {
                 selectedCustomer?.id === customer.id && 'ring-2 ring-pulse-500 border-pulse-300 dark:border-pulse-700',
               )}>
                 <div className="flex items-center gap-3">
-                  <div className={cn('flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br text-white font-semibold text-sm flex-shrink-0', avatarColor)}>
+                  <div className={cn('flex h-10 w-10 items-center justify-center rounded-xl text-white font-semibold text-sm flex-shrink-0', avatarColor)}>
                     {initials}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -565,7 +565,7 @@ export default function CustomersPage() {
                 <>
                   {/* Avatar + isim */}
                   <div className="text-center">
-                    <div className={cn('mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br text-white font-bold text-lg', getAvatarColor(selectedCustomer.name))}>
+                    <div className={cn('mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-2xl text-white font-bold text-lg', getAvatarColor(selectedCustomer.name))}>
                       {getInitials(selectedCustomer.name)}
                     </div>
                     <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{selectedCustomer.name}</h4>

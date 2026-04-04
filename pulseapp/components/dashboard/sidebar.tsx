@@ -134,7 +134,7 @@ export default function Sidebar({ businessName, userName, sector, plan, permissi
       )}>
         <div className="flex items-center gap-3 min-w-0">
           <div className="relative flex-shrink-0">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-pulse-400 to-pulse-600 shadow-lg shadow-pulse-500/25">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-pulse-500 shadow-sm shadow-pulse-500/20">
               <Zap className="h-5 w-5 text-white" />
             </div>
             <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-green-400 ring-2 ring-white dark:ring-gray-900" />
@@ -295,7 +295,7 @@ export default function Sidebar({ businessName, userName, sector, plan, permissi
               className="mt-2 overflow-hidden"
             >
               <div className="flex items-center gap-3 rounded-xl bg-gray-50 dark:bg-white/5 px-3 py-2.5">
-                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-pulse-400 to-pulse-600 text-xs font-bold text-white">
+                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-pulse-500 text-xs font-bold text-white">
                   {initials}
                 </div>
                 <div className="min-w-0">

@@ -23,9 +23,8 @@ export default function EmptyState({ icon, title, description, action }: EmptySt
       className="flex flex-col items-center justify-center py-16 text-center"
     >
       <div className="relative mb-5">
-        <div className="absolute inset-0 rounded-full bg-gradient-to-br from-pulse-100 to-pulse-200 dark:from-pulse-900/20 dark:to-pulse-800/20 blur-xl opacity-60" />
         <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl
-                        bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900
+                        bg-gray-100 dark:bg-gray-800
                         border border-gray-200 dark:border-gray-700
                         text-gray-400 dark:text-gray-500 shadow-sm">
           {icon}

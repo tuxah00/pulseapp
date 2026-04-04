@@ -136,7 +136,7 @@ export default function TodayAppointments({ appointments }: TodayAppointmentsPro
                   {/* Avatar */}
                   <div className={cn(
                     'flex-shrink-0 flex h-8 w-8 items-center justify-center rounded-lg',
-                    'bg-gradient-to-br text-white text-xs font-bold',
+                    'text-white text-xs font-bold',
                     getAvatarColor(apt.customers?.name)
                   )}>
                     {getInitials(apt.customers?.name)}
@@ -186,7 +186,7 @@ export default function TodayAppointments({ appointments }: TodayAppointmentsPro
                 <div className="flex items-start justify-between mb-2 gap-2">
                   <div className={cn(
                     'flex h-8 w-8 items-center justify-center rounded-lg flex-shrink-0',
-                    'bg-gradient-to-br text-white text-xs font-bold',
+                    'text-white text-xs font-bold',
                     getAvatarColor(apt.customers?.name)
                   )}>
                     {getInitials(apt.customers?.name)}

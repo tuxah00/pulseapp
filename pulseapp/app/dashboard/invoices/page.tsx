@@ -404,12 +404,12 @@ export default function InvoicesPage() {
   return (
     <div className="space-y-5">
       {/* Başlık */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Faturalar</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{invoices.length} fatura</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {/* Export Dropdown */}
           <div className="relative">
             <button onClick={() => setShowExportMenu(!showExportMenu)} className="btn-secondary text-sm gap-1.5">

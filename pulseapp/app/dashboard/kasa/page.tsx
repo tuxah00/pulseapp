@@ -328,7 +328,7 @@ export default function KasaPage() {
   return (
     <div className="space-y-4">
       {/* ── Header ── */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <Wallet className="h-6 w-6 text-pulse-600" />
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Kasa</h1>
@@ -338,7 +338,7 @@ export default function KasaPage() {
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {!session ? (
             <button onClick={() => { setShowSessionModal(true) }} className="btn-primary flex items-center gap-2">
               <DoorOpen className="h-4 w-4" /> Kasayı Aç

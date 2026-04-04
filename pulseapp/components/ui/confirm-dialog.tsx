@@ -113,8 +113,8 @@ export default function ConfirmDialog({
                     className={`flex-1 rounded-xl px-4 py-2.5 text-sm font-medium text-white
                                 transition-all duration-150 active:scale-[0.98] ${
                       variant === 'danger'
-                        ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 shadow-sm shadow-red-500/25'
-                        : 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 shadow-sm shadow-amber-500/25'
+                        ? 'bg-red-500 hover:bg-red-600 shadow-sm shadow-red-500/20'
+                        : 'bg-amber-500 hover:bg-amber-600 shadow-sm shadow-amber-500/20'
                     }`}
                   >
                     {confirmText}

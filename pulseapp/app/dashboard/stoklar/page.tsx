@@ -406,14 +406,14 @@ export default function StoklarPage() {
   return (
     <div>
       {/* Başlık */}
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Stoklar</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             {dbError ? 'Ürün ve stok yönetimi' : `${products.length} ürün`}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0 flex-wrap">
           {!dbError && pageTab === 'products' && (
             <>
               <button onClick={handleExport} className="btn-secondary text-sm gap-1.5">
