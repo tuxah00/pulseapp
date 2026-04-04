@@ -226,7 +226,7 @@ export async function exportInvoiceListPDF(
   statusConfig?: Record<string, { label: string }>
 ): Promise<void> {
   const { default: jsPDF } = await import('jspdf')
-  await import('jspdf-autotable')
+  const { default: autoTable } = await import('jspdf-autotable')
 
   const formatCurrency = (n: number) =>
     new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(n)
@@ -308,36 +308,33 @@ export async function exportInvoiceListPDF(
     inv.due_date ? formatDate(inv.due_date) : '—',
   ])
 
-  const autoTable = (doc as unknown as { autoTable: (options: Record<string, unknown>) => void }).autoTable
-  autoTable.call(doc, {
+  autoTable(doc, {
     startY: boxY + boxH + 6,
     head: [['Fatura No', 'Musteri', 'Toplam', 'KDV', 'Odenen', 'Durum', 'Odeme', 'Tip', 'Tarih', 'Son Odeme']],
     body: tableData,
     styles: { fontSize: 8, cellPadding: 2 },
     headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold' },
     alternateRowStyles: { fillColor: [249, 250, 251] },
-    didDrawCell: (data: { section: string; column: { index: number }; cell: { text: string[]; styles: { textColor: number[]; fillColor: number[] } } }) => {
+    didDrawCell: (data: import('jspdf-autotable').CellHookData) => {
       if (data.section === 'body' && data.column.index === 5) {
         const text = data.cell.text[0]
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const s = data.cell.styles as any
         if (text === 'Odendi' || text === 'Ödendi') {
-          data.cell.styles.textColor = [5, 150, 105]
-          data.cell.styles.fillColor = [209, 250, 229]
+          s.textColor = [5, 150, 105]; s.fillColor = [209, 250, 229]
         } else if (text === 'Bekliyor') {
-          data.cell.styles.textColor = [217, 119, 6]
-          data.cell.styles.fillColor = [254, 243, 199]
+          s.textColor = [217, 119, 6]; s.fillColor = [254, 243, 199]
         } else if (text === 'Vadesi Gecmis' || text === 'Vadesi Geçmiş') {
-          data.cell.styles.textColor = [220, 38, 38]
-          data.cell.styles.fillColor = [254, 226, 226]
+          s.textColor = [220, 38, 38]; s.fillColor = [254, 226, 226]
         } else if (text === 'Iptal' || text === 'İptal') {
-          data.cell.styles.textColor = [107, 114, 128]
-          data.cell.styles.fillColor = [243, 244, 246]
+          s.textColor = [107, 114, 128]; s.fillColor = [243, 244, 246]
         }
       }
     },
   })
 
   // Footer
-  const pageCount = (doc as unknown as { getNumberOfPages: () => number }).getNumberOfPages()
+  const pageCount = doc.getNumberOfPages()
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i)
     doc.setFontSize(8)
