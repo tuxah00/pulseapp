@@ -643,9 +643,9 @@ export default function AppointmentsPage() {
           </div>
         </div>
         {/* Current time pill */}
-        <div className="flex items-center gap-2 rounded-xl bg-gray-900 dark:bg-gray-100 px-4 py-2.5 shadow-sm self-center">
-          <Clock className="h-4 w-4 text-gray-400 dark:text-gray-600 flex-shrink-0" />
-          <span className="text-base font-bold tabular-nums text-white dark:text-gray-900">
+        <div className="flex items-center gap-2 rounded-xl bg-gray-900 dark:bg-gray-800 px-4 py-2.5 shadow-sm self-center">
+          <Clock className="h-4 w-4 text-gray-400 flex-shrink-0" />
+          <span className="text-base font-bold tabular-nums text-white">
             {now ? now.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '--:--:--'}
           </span>
         </div>
