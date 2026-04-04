@@ -95,6 +95,10 @@ export default function BookingPage() {
   const [customerPhone, setCustomerPhone] = useState('')
 
   const [waitlistEnabled, setWaitlistEnabled] = useState(false)
+  const [waitlistTime, setWaitlistTime] = useState('')
+  const [waitlistDate, setWaitlistDate] = useState('')
+  const [waitlistStaffId, setWaitlistStaffId] = useState('')
+  const [waitlistEarliest, setWaitlistEarliest] = useState(false)
 
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
@@ -218,6 +222,10 @@ export default function BookingPage() {
               setCustomerName('')
               setCustomerPhone('')
               setWaitlistEnabled(false)
+              setWaitlistTime('')
+              setWaitlistDate('')
+              setWaitlistStaffId('')
+              setWaitlistEarliest(false)
               setSubmitted(false)
             }}
             className="mt-6 btn-secondary w-full"
@@ -424,19 +432,76 @@ export default function BookingPage() {
                 <input
                   type="checkbox"
                   checked={waitlistEnabled}
-                  onChange={(e) => setWaitlistEnabled(e.target.checked)}
+                  onChange={(e) => {
+                    setWaitlistEnabled(e.target.checked)
+                    if (e.target.checked) {
+                      setWaitlistTime(selectedTime || '')
+                      setWaitlistDate(selectedDate || '')
+                    }
+                  }}
                   className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
                 />
-                <div>
+                <div className="flex-1 min-w-0">
                   <span className="text-sm font-medium text-gray-900 flex items-center gap-1.5">
                     <Bell className="h-4 w-4 text-blue-500" />
-                    Randevu boşluğu oluştuğunda bildir
+                    Randevu boşluğu oluştuğunda beni bilgilendir
                   </span>
                   <span className="text-xs text-gray-400 mt-0.5 block">
                     Tercih ettiğiniz zamanda yer açılırsa SMS ile haberdar ederiz.
                   </span>
                 </div>
               </label>
+
+              {waitlistEnabled && (
+                <div className="mt-4 space-y-3 pl-7">
+                  <div>
+                    <label className="text-xs font-medium text-gray-600">Şu saatte:</label>
+                    <select
+                      value={waitlistTime}
+                      onChange={(e) => { setWaitlistTime(e.target.value); if (e.target.value) setWaitlistEarliest(false) }}
+                      className="input mt-1"
+                    >
+                      <option value="">Saat seçin</option>
+                      {timeSlots.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-600">Şu tarihte:</label>
+                    <input
+                      type="date"
+                      value={waitlistDate}
+                      onChange={(e) => { setWaitlistDate(e.target.value); if (e.target.value) setWaitlistEarliest(false) }}
+                      min={getTodayStr()}
+                      className="input mt-1"
+                    />
+                  </div>
+                  {staff.length > 0 && (
+                    <div>
+                      <label className="text-xs font-medium text-gray-600">Şu personelde:</label>
+                      <select
+                        value={waitlistStaffId}
+                        onChange={(e) => { setWaitlistStaffId(e.target.value); if (e.target.value) setWaitlistEarliest(false) }}
+                        className="input mt-1"
+                      >
+                        <option value="">Personel seçin</option>
+                        {staff.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                      </select>
+                    </div>
+                  )}
+                  <label className="flex items-center gap-2 cursor-pointer pt-1">
+                    <input
+                      type="checkbox"
+                      checked={waitlistEarliest}
+                      onChange={(e) => {
+                        setWaitlistEarliest(e.target.checked)
+                        if (e.target.checked) { setWaitlistTime(''); setWaitlistDate(''); setWaitlistStaffId('') }
+                      }}
+                      className="h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700">En yakın zamanda</span>
+                  </label>
+                </div>
+              )}
             </div>
 
             <div className="mt-4 pt-4 border-t border-gray-100 flex gap-2.5">
@@ -566,10 +631,10 @@ function BusinessHeader({ business }: { business: BusinessData }) {
           <img
             src={business.settings.logo_url}
             alt={business.name}
-            className="flex-shrink-0 h-14 w-14 rounded-2xl object-cover border border-gray-100 shadow-sm"
+            className="flex-shrink-0 h-20 w-20 rounded-2xl object-cover border border-gray-100 shadow-sm"
           />
         ) : (
-          <div className="flex-shrink-0 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-500 text-white text-lg font-bold shadow-sm">
+          <div className="flex-shrink-0 flex h-20 w-20 items-center justify-center rounded-2xl bg-blue-500 text-white text-2xl font-bold shadow-sm">
             {initials}
           </div>
         )}
