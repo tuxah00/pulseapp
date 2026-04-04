@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useEffect, useId } from 'react'
-import { ResponsiveContainer, AreaChart, Area, Tooltip } from 'recharts'
+import { ResponsiveContainer, AreaChart, Area } from 'recharts'
 
-export function Sparkline({ data, color, height = 48, showTooltip = false }: { data: number[]; color: string; height?: number; showTooltip?: boolean }) {
+export function Sparkline({ data, color, height = 48 }: { data: number[]; color: string; height?: number }) {
   const [mounted, setMounted] = useState(false)
   const gradientId = useId().replace(/:/g, '')
 
@@ -25,7 +25,6 @@ export function Sparkline({ data, color, height = 48, showTooltip = false }: { d
             <stop offset="95%" stopColor={color} stopOpacity={0} />
           </linearGradient>
         </defs>
-        {showTooltip && <Tooltip contentStyle={{ display: 'none' }} />}
         <Area
           type="monotone"
           dataKey="v"
