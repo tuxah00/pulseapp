@@ -700,11 +700,11 @@ export default function MessagesPage() {
           ) : (
             /* Boş durum — henüz konuşma seçilmedi */
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
-              <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-pulse-100 to-purple-100">
-                <MessageSquare className="h-10 w-10 text-pulse-600" />
+              <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-pulse-100 to-purple-100 dark:from-pulse-900/40 dark:to-purple-900/30">
+                <MessageSquare className="h-10 w-10 text-pulse-600 dark:text-pulse-400" />
               </div>
-              <h2 className="text-xl font-semibold text-gray-900 mb-2">Mesajlarınız</h2>
-              <p className="text-sm text-gray-500 max-w-sm">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Mesajlarınız</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm">
                 Sol panelden bir konuşma seçerek mesaj geçmişini görüntüleyin
                 ve müşterilerinizle iletişim kurun.
               </p>
@@ -735,13 +735,13 @@ export default function MessagesPage() {
 
 function FeatureItem({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: string }) {
   return (
-    <div className="flex items-start gap-3 rounded-lg bg-white border border-gray-100 p-3">
-      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-50 flex-shrink-0">
+    <div className="flex items-start gap-3 rounded-lg bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-3">
+      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-50 dark:bg-gray-700 flex-shrink-0">
         {icon}
       </div>
       <div>
-        <p className="text-sm font-medium text-gray-900">{title}</p>
-        <p className="text-xs text-gray-500">{desc}</p>
+        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{title}</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400">{desc}</p>
       </div>
     </div>
   )
