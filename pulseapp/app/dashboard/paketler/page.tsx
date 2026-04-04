@@ -406,7 +406,7 @@ export default function PaketlerPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Paket & Seans Yönetimi</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Paket & Seans Yönetimi</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Paket şablonları oluştur, müşterilere sat ve seans düşümü yap</p>
         </div>
         <div className="flex items-center gap-2">

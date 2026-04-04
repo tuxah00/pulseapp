@@ -408,7 +408,7 @@ export default function StoklarPage() {
       {/* Başlık */}
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Stoklar</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Stoklar</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             {dbError ? 'Ürün ve stok yönetimi' : `${products.length} ürün`}
           </p>
@@ -508,11 +508,11 @@ export default function StoklarPage() {
               className="card p-4 text-left transition-all hover:shadow-md"
             >
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Toplam Ürün</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{products.length}</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-50">{products.length}</p>
             </button>
             <div className="card p-4">
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Stok Değeri</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{formatCurrency(totalValue)}</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-50">{formatCurrency(totalValue)}</p>
             </div>
             <button
               onClick={() => setStockFilter(stockFilter === 'low' ? null : 'low')}
@@ -697,7 +697,7 @@ export default function StoklarPage() {
 
                   <div className="grid grid-cols-2 gap-3">
                     <div className="text-center p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
-                      <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{selectedProduct.stock_count}</p>
+                      <p className="text-2xl font-bold text-gray-900 dark:text-gray-50">{selectedProduct.stock_count}</p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">{selectedProduct.unit}</p>
                     </div>
                     <div className="text-center p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">

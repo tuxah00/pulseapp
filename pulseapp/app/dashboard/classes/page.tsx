@@ -209,7 +209,7 @@ export default function ClassesPage() {
         <div className="flex items-center gap-3">
           <CalendarDays className="h-7 w-7 text-indigo-600" />
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Sınıf Programı</h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Sınıf Programı</h1>
             <p className="text-sm text-gray-500">Haftalık grup dersleri</p>
           </div>
         </div>

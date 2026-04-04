@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
@@ -35,9 +35,16 @@ const PAYMENT_METHODS: { key: PaymentMethod; label: string; icon: React.ReactNod
   { key: 'transfer', label: 'Havale', icon: <ArrowRightLeft className="h-4 w-4" /> },
 ]
 
+function showToast(title: string, body?: string) {
+  window.dispatchEvent(new CustomEvent('pulse-toast', {
+    detail: { type: 'system', title, body: body || null, related_id: null, related_type: null, created_at: Date.now() }
+  }))
+}
+
 export default function KasaPage() {
   const { businessId, staffId, staffName, staffRole } = useBusinessContext()
-  const supabase = createClient()
+  const supabaseRef = useRef(createClient())
+  const supabase = supabaseRef.current
   const { confirm } = useConfirm()
   const searchParams = useSearchParams()
   const appointmentId = searchParams.get('appointmentId')
@@ -95,7 +102,7 @@ export default function KasaPage() {
     setTransactions(txRes.transactions || [])
     setSession(sessRes.openSession || null)
     setLoading(false)
-  }, [businessId, supabase])
+  }, [businessId])
 
   useEffect(() => { fetchData() }, [fetchData])
 
@@ -238,7 +245,7 @@ export default function KasaPage() {
       clearCart()
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Bilinmeyen hata'
-      alert('Hata: ' + message)
+      showToast('Hata', message)
     } finally {
       setProcessing(false)
     }
@@ -258,7 +265,7 @@ export default function KasaPage() {
       setShowSessionModal(false)
       setOpeningCash('')
     } else {
-      alert(data.error || 'Kasa açılamadı')
+      showToast('Hata', data.error || 'Kasa açılamadı')
     }
   }
 
@@ -285,7 +292,7 @@ export default function KasaPage() {
       setClosingCash('')
       setClosingNote('')
     } else {
-      alert(data.error || 'Kasa kapatılamadı')
+      showToast('Hata', data.error || 'Kasa kapatılamadı')
     }
   }
 
@@ -324,7 +331,7 @@ export default function KasaPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Wallet className="h-6 w-6 text-pulse-600" />
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Kasa</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Kasa</h1>
           {session && (
             <span className="badge bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
               Açık

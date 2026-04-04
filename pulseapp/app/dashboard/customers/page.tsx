@@ -366,10 +366,10 @@ export default function CustomersPage() {
   })()
 
   return (
-    <div>
-      <div className="mb-6 flex items-center justify-between">
+    <div className="space-y-5">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{customerLabel}</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">{customerLabel}</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{customers.length} {customerLabel.toLowerCase()} kayıtlı</p>
         </div>
         <div className="flex items-center gap-2">
@@ -410,7 +410,7 @@ export default function CustomersPage() {
         </div>
       </div>
 
-      <div className="mb-6 flex flex-col sm:flex-row gap-3">
+      <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} className="input pl-10" placeholder="İsim veya telefon ara..." />
@@ -464,31 +464,45 @@ export default function CustomersPage() {
 
       {filteredCustomers.length === 0 ? (
         <div className="card flex flex-col items-center justify-center py-16">
-          <User className="mb-4 h-12 w-12 text-gray-300" />
-          <p className="text-gray-500 mb-4">{search || dateFrom || dateTo || minVisits ? 'Filtreye uygun müşteri bulunamadı' : 'Henüz müşteri eklenmemiş'}</p>
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 dark:bg-gray-800 mb-4">
+            <User className="h-7 w-7 text-gray-300 dark:text-gray-600" />
+          </div>
+          <p className="font-medium text-gray-500 dark:text-gray-400 mb-4">{search || dateFrom || dateTo || minVisits ? 'Filtreye uygun müşteri bulunamadı' : 'Henüz müşteri eklenmemiş'}</p>
           {!search && !dateFrom && !dateTo && !minVisits && <button onClick={openNewModal} className="btn-primary"><Plus className="mr-2 h-4 w-4" />İlk Müşteriyi Ekle</button>}
         </div>
       ) : viewMode === 'list' ? (
         <AnimatedList className="space-y-2">
-          {filteredCustomers.map((customer) => (
-            <AnimatedItem key={customer.id} onClick={() => setSelectedCustomer(customer)} className={cn('card flex items-center gap-4 p-4 cursor-pointer transition-all hover:shadow-md', selectedCustomer?.id === customer.id && 'ring-2 ring-pulse-500')}>
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-pulse-100 text-pulse-700 font-semibold text-sm flex-shrink-0">
-                {customer.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-gray-900 dark:text-gray-100 truncate">{customer.name}</span>
-                  {isBirthdayToday(customer.birthday) && <span title="Bugün doğum günü!"><Cake className="h-4 w-4 text-pink-500 flex-shrink-0" /></span>}
-                  <span className={`badge ${getSegmentColor(customer.segment)}`}>{SEGMENT_LABELS[customer.segment]}</span>
+          {filteredCustomers.map((customer) => {
+            const initials = customer.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
+            const avatarIdx = customer.name.charCodeAt(0) % 6
+            const avatarGrads = ['from-violet-500 to-purple-600','from-blue-500 to-indigo-600','from-emerald-500 to-teal-600','from-rose-500 to-pink-600','from-amber-500 to-orange-600','from-cyan-500 to-sky-600']
+            return (
+              <AnimatedItem key={customer.id} onClick={() => setSelectedCustomer(customer)} className={cn(
+                'rounded-2xl border px-4 py-3 cursor-pointer transition-all',
+                'border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900/50',
+                'hover:border-gray-200 dark:hover:border-gray-700 hover:shadow-sm',
+                selectedCustomer?.id === customer.id && 'ring-2 ring-pulse-500 border-pulse-300 dark:border-pulse-700',
+              )}>
+                <div className="flex items-center gap-3">
+                  <div className={cn('flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br text-white font-semibold text-sm flex-shrink-0', avatarGrads[avatarIdx])}>
+                    {initials}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{customer.name}</span>
+                      {isBirthdayToday(customer.birthday) && <span title="Bugün doğum günü!"><Cake className="h-4 w-4 text-pink-500 flex-shrink-0" /></span>}
+                      <span className={`badge text-xs ${getSegmentColor(customer.segment)}`}>{SEGMENT_LABELS[customer.segment]}</span>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-0.5">{formatPhone(customer.phone)}</p>
+                  </div>
+                  <div className="text-right text-xs flex-shrink-0 hidden sm:block">
+                    <p className="font-semibold text-gray-900 dark:text-gray-100">{customer.total_visits} ziyaret</p>
+                    <p className="text-gray-400 mt-0.5">{customer.last_visit_at ? formatDate(customer.last_visit_at) : 'Henüz yok'}</p>
+                  </div>
                 </div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{formatPhone(customer.phone)}</p>
-              </div>
-              <div className="text-right text-sm flex-shrink-0 hidden sm:block">
-                <p className="text-gray-900 dark:text-gray-100 font-medium">{customer.total_visits} ziyaret</p>
-                <p className="text-gray-400">{customer.last_visit_at ? formatDate(customer.last_visit_at) : 'Henüz yok'}</p>
-              </div>
-            </AnimatedItem>
-          ))}
+              </AnimatedItem>
+            )
+          })}
         </AnimatedList>
       ) : (
         <AnimatedList className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 gap-2">
@@ -552,9 +566,15 @@ export default function CustomersPage() {
                 <>
                   {/* Avatar + isim */}
                   <div className="text-center">
-                    <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-pulse-100 text-pulse-700 font-bold text-lg">
-                      {selectedCustomer.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-                    </div>
+                    {(() => {
+                      const idx = selectedCustomer.name.charCodeAt(0) % 6
+                      const grads = ['from-violet-500 to-purple-600','from-blue-500 to-indigo-600','from-emerald-500 to-teal-600','from-rose-500 to-pink-600','from-amber-500 to-orange-600','from-cyan-500 to-sky-600']
+                      return (
+                        <div className={cn('mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br text-white font-bold text-lg', grads[idx])}>
+                          {selectedCustomer.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
+                        </div>
+                      )
+                    })()}
                     <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{selectedCustomer.name}</h4>
                     <span className={`badge mt-1 ${getSegmentColor(selectedCustomer.segment)}`}>{SEGMENT_LABELS[selectedCustomer.segment]}</span>
                   </div>

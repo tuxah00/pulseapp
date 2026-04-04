@@ -603,11 +603,11 @@ export default function AppointmentsPage() {
   }
 
   return (
-    <div>
+    <div className="space-y-5">
       {/* Başlık */}
-      <div className="mb-6 flex items-center justify-between">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Randevular</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Randevular</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{totalCount} randevu</p>
         </div>
         <button onClick={() => openNewModal()} className="btn-primary">
@@ -615,49 +615,49 @@ export default function AppointmentsPage() {
         </button>
       </div>
 
-      {/* Tarih Navigasyonu */}
-      <div className="mb-6 card p-4 flex items-center justify-between">
-        <button onClick={() => changeDate(-1)} className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
-          <ChevronLeft className="h-5 w-5" />
-        </button>
-        <div className="text-center">
-          {viewMode === 'week' ? (
-            <>
-              <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{formatWeekRange()}</p>
-              <button onClick={goToday} className="text-sm text-pulse-600 hover:text-pulse-700 mt-0.5">Bu Haftaya Dön</button>
-            </>
-          ) : (
-            <>
-              <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{formatSelectedDate()}</p>
-              {!isToday && (
-                <button onClick={goToday} className="text-sm text-pulse-600 hover:text-pulse-700 mt-0.5">Bugüne Dön</button>
+      {/* Tarih Navigasyonu + Saat */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="flex-1 card !p-0 overflow-hidden">
+          <div className="flex items-center">
+            <button onClick={() => changeDate(-1)} className="flex h-12 w-12 flex-shrink-0 items-center justify-center text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-600 transition-colors">
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <div className="flex-1 text-center py-2.5 min-w-0">
+              {viewMode === 'week' ? (
+                <>
+                  <p className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">{formatWeekRange()}</p>
+                  <button onClick={goToday} className="text-xs text-pulse-600 dark:text-pulse-400 hover:underline mt-0.5">Bu Haftaya Dön</button>
+                </>
+              ) : (
+                <>
+                  <p className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">{formatSelectedDate()}</p>
+                  {!isToday
+                    ? <button onClick={goToday} className="text-xs text-pulse-600 dark:text-pulse-400 hover:underline mt-0.5">Bugüne Dön</button>
+                    : <p className="text-xs text-pulse-600 dark:text-pulse-400 mt-0.5">Bugün</p>}
+                </>
               )}
-              {isToday && <p className="text-sm text-pulse-600 mt-0.5">Bugün</p>}
-            </>
-          )}
+            </div>
+            <button onClick={() => changeDate(1)} className="flex h-12 w-12 flex-shrink-0 items-center justify-center text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-600 transition-colors">
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </div>
         </div>
-        <button onClick={() => changeDate(1)} className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
-          <ChevronRight className="h-5 w-5" />
-        </button>
-      </div>
-
-      {/* Şu anki saat */}
-      <div className="mb-6 flex justify-center">
-        <div className="inline-flex items-center rounded-2xl bg-gray-200/90 dark:bg-gray-700/90 px-8 py-4 text-3xl font-bold text-gray-800 dark:text-gray-100 shadow-sm">
-          Şu an:{' '}
-          <span className="ml-1 tabular-nums">
+        {/* Current time pill */}
+        <div className="flex items-center gap-2 rounded-xl bg-gray-900 dark:bg-gray-100 px-4 py-2.5 shadow-sm self-center">
+          <Clock className="h-4 w-4 text-gray-400 dark:text-gray-600 flex-shrink-0" />
+          <span className="text-base font-bold tabular-nums text-white dark:text-gray-900">
             {now ? now.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '--:--:--'}
           </span>
         </div>
       </div>
 
       {/* Mini İstatistik + Görünüm butonları */}
-      <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className="grid flex-1 grid-cols-4 gap-3">
-          <button onClick={() => setStatusFilter(null)} className={cn('card p-3 text-center transition-all hover:shadow-md', statusFilter === null && 'ring-2 ring-gray-400')}><p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{totalCount}</p><p className="text-xs text-gray-500">Toplam</p></button>
-          <button onClick={() => setStatusFilter(statusFilter === 'confirmed' ? null : 'confirmed')} className={cn('card p-3 text-center transition-all hover:shadow-md', statusFilter === 'confirmed' && 'ring-2 ring-blue-500')}><p className="text-2xl font-bold text-blue-600">{confirmedCount}</p><p className="text-xs text-gray-500">Onaylı</p></button>
-          <button onClick={() => setStatusFilter(statusFilter === 'completed' ? null : 'completed')} className={cn('card p-3 text-center transition-all hover:shadow-md', statusFilter === 'completed' && 'ring-2 ring-green-500')}><p className="text-2xl font-bold text-green-600">{completedCount}</p><p className="text-xs text-gray-500">Tamamlandı</p></button>
-          <button onClick={() => setStatusFilter(statusFilter === 'no_show' ? null : 'no_show')} className={cn('card p-3 text-center transition-all hover:shadow-md', statusFilter === 'no_show' && 'ring-2 ring-red-500')}><p className="text-2xl font-bold text-red-600">{noShowCount}</p><p className="text-xs text-gray-500">Gelmedi</p></button>
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="grid flex-1 grid-cols-4 gap-2">
+          <button onClick={() => setStatusFilter(null)} className={cn('rounded-2xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 p-3 text-center transition-all hover:shadow-sm hover:-translate-y-0.5', statusFilter === null && 'ring-2 ring-gray-400 dark:ring-gray-500')}><p className="text-xl font-bold text-gray-900 dark:text-gray-100">{totalCount}</p><p className="text-xs text-gray-500 mt-0.5">Toplam</p></button>
+          <button onClick={() => setStatusFilter(statusFilter === 'confirmed' ? null : 'confirmed')} className={cn('rounded-2xl border border-blue-100 dark:border-blue-900/40 bg-blue-50 dark:bg-blue-950/30 p-3 text-center transition-all hover:shadow-sm hover:-translate-y-0.5', statusFilter === 'confirmed' && 'ring-2 ring-blue-500')}><p className="text-xl font-bold text-blue-600 dark:text-blue-400">{confirmedCount}</p><p className="text-xs text-gray-500 mt-0.5">Onaylı</p></button>
+          <button onClick={() => setStatusFilter(statusFilter === 'completed' ? null : 'completed')} className={cn('rounded-2xl border border-green-100 dark:border-green-900/40 bg-green-50 dark:bg-green-950/30 p-3 text-center transition-all hover:shadow-sm hover:-translate-y-0.5', statusFilter === 'completed' && 'ring-2 ring-green-500')}><p className="text-xl font-bold text-green-600 dark:text-green-400">{completedCount}</p><p className="text-xs text-gray-500 mt-0.5">Tamamlandı</p></button>
+          <button onClick={() => setStatusFilter(statusFilter === 'no_show' ? null : 'no_show')} className={cn('rounded-2xl border border-red-100 dark:border-red-900/40 bg-red-50 dark:bg-red-950/30 p-3 text-center transition-all hover:shadow-sm hover:-translate-y-0.5', statusFilter === 'no_show' && 'ring-2 ring-red-500')}><p className="text-xl font-bold text-red-600 dark:text-red-400">{noShowCount}</p><p className="text-xs text-gray-500 mt-0.5">Gelmedi</p></button>
         </div>
         <div className="flex justify-end">
           <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
@@ -701,7 +701,7 @@ export default function AppointmentsPage() {
 
       {/* Arama (liste/kutu modunda) */}
       {viewMode !== 'week' && (
-        <div className="mb-4 relative">
+        <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <input type="text" value={search} onChange={e => setSearch(e.target.value)} className="input pl-10" placeholder="Müşteri, hizmet veya personel ara..." />
         </div>
@@ -972,42 +972,55 @@ export default function AppointmentsPage() {
 
       {!loading && viewMode !== 'week' ? (filteredAppointments.length === 0 ? (
         <div className="card flex flex-col items-center justify-center py-16">
-          <Calendar className="mb-4 h-12 w-12 text-gray-300" />
-          <p className="mb-4 text-gray-500">{search || statusFilter ? 'Filtreye uygun randevu bulunamadı' : 'Bu tarihte randevu yok'}</p>
-          {!search && !statusFilter && <button onClick={() => openNewModal()} className="btn-primary"><Plus className="mr-2 h-4 w-4" />Randevu Ekle</button>}
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 dark:bg-gray-800 mb-4">
+            <Calendar className="h-7 w-7 text-gray-300 dark:text-gray-600" />
+          </div>
+          <p className="mb-1 font-medium text-gray-500 dark:text-gray-400">{search || statusFilter ? 'Filtreye uygun randevu bulunamadı' : 'Bu tarihte randevu yok'}</p>
+          {!search && !statusFilter && <button onClick={() => openNewModal()} className="btn-primary mt-4"><Plus className="mr-2 h-4 w-4" />Randevu Ekle</button>}
         </div>
       ) : viewMode === 'list' ? (
-        <AnimatedList className="space-y-3">
+        <AnimatedList className="space-y-2">
           {filteredAppointments.map((apt) => {
             const timeState = getTimeState(apt)
+            const initials = (apt.customers?.name || 'İ').split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)
+            const avatarIdx = (apt.customers?.name || '').charCodeAt(0) % 6
+            const avatarGrads = ['from-violet-500 to-purple-600','from-blue-500 to-indigo-600','from-emerald-500 to-teal-600','from-rose-500 to-pink-600','from-amber-500 to-orange-600','from-cyan-500 to-sky-600']
             return (
               <AnimatedItem
                 key={apt.id}
                 onClick={() => setSelectedAppointment(apt)}
                 className={cn(
-                  'card p-4 transition-all cursor-pointer hover:shadow-md',
-                  timeState === 'past' && 'border-transparent bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300',
-                  timeState === 'current' && 'border-green-500 ring-2 ring-green-400 bg-white dark:bg-gray-800',
-                  selectedAppointment?.id === apt.id && 'ring-2 ring-pulse-500',
+                  'rounded-2xl border px-4 py-3 transition-all cursor-pointer',
+                  'border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900/50',
+                  'hover:border-gray-200 dark:hover:border-gray-700 hover:shadow-sm',
+                  timeState === 'past' && 'opacity-60',
+                  timeState === 'current' && 'border-green-400 dark:border-green-600 ring-1 ring-green-400 dark:ring-green-600',
+                  selectedAppointment?.id === apt.id && 'ring-2 ring-pulse-500 border-pulse-300 dark:border-pulse-700',
                 )}
               >
-                <div className="flex items-center gap-4">
-                  <div className="w-16 flex-shrink-0 text-center">
-                    <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{formatTime(apt.start_time)}</p>
-                    <p className="text-xs text-gray-400">{formatTime(apt.end_time)}</p>
+                <div className="flex items-center gap-3">
+                  {/* Avatar */}
+                  <div className={cn('flex-shrink-0 flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br text-white text-sm font-bold', avatarGrads[avatarIdx])}>
+                    {initials}
                   </div>
-                  <div className="h-12 w-px flex-shrink-0 bg-gray-200 dark:bg-gray-600" />
+                  {/* Time */}
+                  <div className="flex flex-col items-center w-14 flex-shrink-0">
+                    <span className="text-sm font-bold text-gray-900 dark:text-gray-100 tabular-nums">{formatTime(apt.start_time)}</span>
+                    <span className="text-[10px] text-gray-400 tabular-nums">{formatTime(apt.end_time)}</span>
+                  </div>
+                  <div className="w-px h-8 bg-gray-100 dark:bg-gray-800 flex-shrink-0" />
+                  {/* Info */}
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-gray-900 dark:text-gray-100">{apt.customers?.name || 'İsimsiz'}</span>
-                      <span className={`badge ${getStatusColor(apt.status)}`}>{STATUS_LABELS[apt.status as keyof typeof STATUS_LABELS]}</span>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold text-sm text-gray-900 dark:text-gray-100">{apt.customers?.name || 'İsimsiz'}</span>
+                      <span className={`badge text-xs ${getStatusColor(apt.status)}`}>{STATUS_LABELS[apt.status as keyof typeof STATUS_LABELS]}</span>
                       {apt.recurrence_group_id && <span title="Tekrarlayan randevu"><Repeat className="h-3.5 w-3.5 text-purple-400" /></span>}
                     </div>
-                    <div className="mt-1 flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
+                    <div className="mt-0.5 flex items-center gap-2 text-xs text-gray-400">
                       {apt.services?.name && <span>{apt.services.name}</span>}
-                      {apt.staff_members?.name && <span>· {apt.staff_members.name}</span>}
+                      {apt.staff_members?.name && <><span>·</span><span>{apt.staff_members.name}</span></>}
+                      {apt.notes && <><span>·</span><span className="truncate italic">{apt.notes}</span></>}
                     </div>
-                    {apt.notes && <p className="mt-1 truncate text-sm text-gray-400">{apt.notes}</p>}
                   </div>
                   <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                     <ActionButtons apt={apt} size="md" />
@@ -1021,18 +1034,22 @@ export default function AppointmentsPage() {
         <AnimatedList className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
           {filteredAppointments.map((apt) => {
             const timeState = getTimeState(apt)
+            const initials = (apt.customers?.name || 'İ').split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)
+            const avatarIdx = (apt.customers?.name || '').charCodeAt(0) % 6
+            const avatarGrads = ['from-violet-500 to-purple-600','from-blue-500 to-indigo-600','from-emerald-500 to-teal-600','from-rose-500 to-pink-600','from-amber-500 to-orange-600','from-cyan-500 to-sky-600']
             return (
               <AnimatedItem
                 key={apt.id}
                 onClick={() => setSelectedAppointment(apt)}
                 className={cn(
-                  'card relative flex aspect-square flex-col justify-between p-4 transition-all cursor-pointer hover:shadow-md',
-                  timeState === 'past' && 'border-transparent bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300',
-                  timeState === 'current' && 'border-green-500 ring-2 ring-green-400 bg-white dark:bg-gray-800',
+                  'relative rounded-2xl border p-4 transition-all cursor-pointer hover:shadow-md hover:-translate-y-0.5 flex flex-col',
+                  'border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900/50',
+                  timeState === 'past' && 'opacity-60',
+                  timeState === 'current' && 'border-green-400 ring-1 ring-green-400',
                   selectedAppointment?.id === apt.id && 'ring-2 ring-pulse-500',
                 )}
               >
-                {/* Sağ üst silme butonu (no_show/cancelled) */}
+                {/* Delete button */}
                 {(apt.status === 'no_show' || apt.status === 'cancelled') && (
                   <button
                     onClick={(e) => handleDeleteAppointment(apt.id, e)}
@@ -1042,24 +1059,26 @@ export default function AppointmentsPage() {
                     <X className="h-4 w-4" />
                   </button>
                 )}
-                <div className="flex flex-col items-center gap-1">
-                  <div className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{formatTime(apt.start_time)}</div>
-                  <div className="flex items-center gap-1">
-                    <span className={`badge ${getStatusColor(apt.status)}`}>{STATUS_LABELS[apt.status as keyof typeof STATUS_LABELS]}</span>
-                    {apt.recurrence_group_id && <Repeat className="h-3 w-3 text-purple-400" />}
+                {/* Avatar + time */}
+                <div className="flex items-center gap-2 mb-3">
+                  <div className={cn('flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br text-white text-xs font-bold flex-shrink-0', avatarGrads[avatarIdx])}>
+                    {initials}
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-gray-900 dark:text-gray-100 tabular-nums">{formatTime(apt.start_time)}</p>
+                    <p className="text-[10px] text-gray-400 tabular-nums">{formatTime(apt.end_time)}</p>
                   </div>
                 </div>
-
-                <div className="mt-3 min-h-[5rem] flex flex-col justify-center space-y-0.5 text-xs text-gray-600 dark:text-gray-400">
-                  <p className="font-medium text-gray-900 dark:text-gray-100 truncate">{apt.customers?.name || 'İsimsiz'}</p>
-                  <p className="text-gray-500 dark:text-gray-400">{formatTime(apt.start_time)} – {formatTime(apt.end_time)}</p>
-                  <p className="truncate">{apt.services?.name ? `Hizmet: ${apt.services.name}` : '—'}</p>
-                  <p className="truncate">{apt.staff_members?.name ? `Personel: ${apt.staff_members.name}` : '—'}</p>
-                  <p>Ücret: <span className="text-price">{formatCurrency(apt.services?.price ?? 0)}</span></p>
-                  <p className={cn('truncate text-gray-400', !apt.notes && 'invisible')}>{apt.notes || '—'}</p>
+                <div className="flex items-center gap-1 mb-2 flex-wrap">
+                  <span className={`badge text-xs ${getStatusColor(apt.status)}`}>{STATUS_LABELS[apt.status as keyof typeof STATUS_LABELS]}</span>
+                  {apt.recurrence_group_id && <Repeat className="h-3 w-3 text-purple-400" />}
                 </div>
+                <p className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{apt.customers?.name || 'İsimsiz'}</p>
+                <p className="text-xs text-gray-400 truncate mt-0.5">{apt.services?.name || '—'}</p>
+                {apt.staff_members?.name && <p className="text-xs text-gray-400 truncate">{apt.staff_members.name}</p>}
+                {apt.services?.price && <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 mt-1">{formatCurrency(apt.services.price)}</p>}
 
-                <div className="mt-4 flex items-center justify-end" onClick={(e) => e.stopPropagation()}>
+                <div className="mt-auto pt-3 flex items-center justify-end" onClick={(e) => e.stopPropagation()}>
                   <ActionButtons apt={apt} size="sm" />
                 </div>
               </AnimatedItem>

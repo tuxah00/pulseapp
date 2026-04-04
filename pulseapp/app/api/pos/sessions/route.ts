@@ -94,11 +94,20 @@ export async function PATCH(req: NextRequest) {
 
   const admin = createAdminClient()
 
-  // Mevcut oturumu al
+  // Kullanıcının business_id'sini al ve oturumun sahipliğini doğrula
+  const { data: staff } = await supabase
+    .from('staff_members')
+    .select('business_id')
+    .eq('user_id', user.id)
+    .single()
+
+  if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
+
   const { data: session } = await admin
     .from('pos_sessions')
     .select('*')
     .eq('id', id)
+    .eq('business_id', staff.business_id)
     .eq('status', 'open')
     .single()
 
@@ -106,12 +115,12 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'Açık oturum bulunamadı' }, { status: 404 })
   }
 
-  // Oturum sırasındaki tüm işlemleri topla
   const { data: transactions } = await admin
     .from('pos_transactions')
     .select('payments, total, transaction_type')
     .eq('business_id', session.business_id)
     .gte('created_at', session.opened_at)
+    .limit(2000)
 
   let totalCash = 0
   let totalCard = 0

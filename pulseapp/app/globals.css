@@ -4,8 +4,11 @@
 
 @layer base {
   :root {
+    /* PulseApp brand */
     --pulse-primary: #338dff;
     --pulse-primary-dark: #1b6df5;
+
+    /* shadcn/ui variables */
     --background: 0 0% 100%;
     --foreground: 224 71% 4%;
     --card: 0 0% 100%;
@@ -25,19 +28,45 @@
     --input: 214 32% 91%;
     --ring: 220 90% 56%;
     --radius: 0.625rem;
+
+    /* Chart colors */
+    --chart-1: 220 90% 56%;
+    --chart-2: 142 71% 45%;
+    --chart-3: 38 92% 50%;
+    --chart-4: 262 80% 60%;
+    --chart-5: 350 80% 60%;
+
+    /* Sidebar */
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 220 90% 56%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 220 90% 56%;
+
+    /* Glass morphism */
+    --glass-bg: rgba(255, 255, 255, 0.8);
+    --glass-border: rgba(255, 255, 255, 0.2);
+    --glass-blur: 16px;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, #338dff 0%, #1457e1 100%);
+    --gradient-accent: linear-gradient(135deg, #7c3aed 0%, #338dff 100%);
+    --gradient-success: linear-gradient(135deg, #10b981 0%, #047857 100%);
+    --gradient-warning: linear-gradient(135deg, #f59e0b 0%, #b45309 100%);
+    --gradient-danger: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
   }
 
-  body {
-    @apply bg-gray-50 text-gray-900 antialiased dark:bg-gray-900 dark:text-gray-100;
-  }
   .dark {
-    --background: 222 47% 11%;
+    --background: 222 47% 7%;
     --foreground: 210 40% 98%;
-    --card: 222 47% 15%;
+    --card: 222 47% 11%;
     --card-foreground: 210 40% 98%;
-    --popover: 222 47% 15%;
+    --popover: 222 47% 11%;
     --popover-foreground: 210 40% 98%;
-    --primary: 220 90% 56%;
+    --primary: 220 90% 60%;
     --primary-foreground: 210 40% 98%;
     --secondary: 217 33% 17%;
     --secondary-foreground: 210 40% 98%;
@@ -48,143 +77,174 @@
     --destructive: 0 62% 50%;
     --border: 217 33% 17%;
     --input: 217 33% 17%;
-    --ring: 220 90% 56%;
+    --ring: 220 90% 60%;
+
+    --chart-1: 220 90% 65%;
+    --chart-2: 142 60% 55%;
+    --chart-3: 38 80% 60%;
+    --chart-4: 262 70% 65%;
+    --chart-5: 350 70% 65%;
+
+    --sidebar-background: 222 47% 9%;
+    --sidebar-foreground: 210 40% 85%;
+    --sidebar-primary: 220 90% 60%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 217 33% 15%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217 33% 15%;
+    --sidebar-ring: 220 90% 60%;
+
+    --glass-bg: rgba(17, 24, 39, 0.85);
+    --glass-border: rgba(255, 255, 255, 0.06);
   }
+
+  body {
+    @apply bg-gray-50 text-gray-900 antialiased dark:bg-gray-950 dark:text-gray-100;
+  }
+
   html {
     @apply font-sans;
+  }
+
+  * {
+    @apply border-border;
   }
 }
 
 @layer components {
-  /* Genel buton stilleri */
+
+  /* ── Buttons ── */
   .btn-primary {
-    @apply inline-flex items-center justify-center rounded-lg bg-pulse-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-pulse-600 focus:outline-none focus:ring-2 focus:ring-pulse-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium text-white
+           transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-pulse-500 focus:ring-offset-2
+           disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98];
+    background: var(--gradient-primary);
+    box-shadow: 0 1px 3px rgba(51, 141, 255, 0.3), 0 1px 2px rgba(0,0,0,0.06);
+  }
+  .btn-primary:hover:not(:disabled) {
+    box-shadow: 0 4px 12px rgba(51, 141, 255, 0.4), 0 2px 4px rgba(0,0,0,0.08);
+    transform: translateY(-1px);
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-pulse-500 focus:ring-offset-2;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5
+           text-sm font-medium text-gray-700 transition-all duration-200
+           hover:bg-gray-50 hover:border-gray-300
+           focus:outline-none focus:ring-2 focus:ring-pulse-500 focus:ring-offset-2
+           active:scale-[0.98] dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200
+           dark:hover:bg-gray-700 dark:hover:border-gray-600;
   }
 
   .btn-danger {
-    @apply inline-flex items-center justify-center rounded-lg bg-danger-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-danger-700 focus:outline-none focus:ring-2 focus:ring-danger-500 focus:ring-offset-2;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium text-white
+           transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-danger-500 focus:ring-offset-2
+           disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98];
+    background: var(--gradient-danger);
+    box-shadow: 0 1px 3px rgba(239, 68, 68, 0.3);
+  }
+  .btn-danger:hover:not(:disabled) {
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
+    transform: translateY(-1px);
   }
 
-  /* Input stilleri */
+  /* ── Inputs ── */
   .input {
-    @apply block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 transition-colors focus:border-pulse-500 focus:outline-none focus:ring-1 focus:ring-pulse-500;
+    @apply block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900
+           placeholder-gray-400 transition-all duration-150
+           focus:border-pulse-500 focus:outline-none focus:ring-2 focus:ring-pulse-500/20
+           dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-500
+           dark:focus:border-pulse-400 dark:focus:ring-pulse-400/20;
   }
 
   .label {
-    @apply block text-sm font-medium text-gray-700 mb-1.5;
+    @apply block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5;
   }
 
-  /* Kart stilleri */
+  /* ── Cards ── */
   .card {
-    @apply rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-[border-color,box-shadow] duration-150;
+    @apply rounded-xl border border-gray-200 bg-white shadow-sm
+           transition-all duration-200
+           dark:bg-gray-900 dark:border-gray-800;
+  }
+  .card:hover {
+    @apply shadow-md dark:border-gray-700;
   }
 
-  /* Badge stilleri */
+  /* ── Badges ── */
   .badge {
-    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium
+           transition-colors duration-150;
   }
 
-  /* Para / fiyat gösterimi (tüm uygulama genelinde yeşil) */
+  /* ── Price ── */
   .text-price {
-    @apply text-green-600 font-medium;
+    @apply text-green-600 dark:text-green-400 font-medium;
   }
 
-  /* ── Karanlık Mod Overrides ── */
-  .dark .card {
-    background-color: #1f2937; /* gray-800 */
-    border-color: #374151;     /* gray-700 */
-    color: #f3f4f6;            /* gray-100 */
-  }
-
-  /* Karanlık modda hover gölgesi: koyu arka planlarda açık gölgeler görünmez,
-     bunun yerine hafif mavi border + koyu gölge kullan (gri halka yerine).
-     --tw-ring-shadow korunarak ring-2 sınıflarıyla çakışma önlenir. */
-  .dark .card:hover {
-    border-color: rgba(59, 130, 246, 0.35); /* mavi tint — gri halkayı önler */
-    --tw-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.55), 0 2px 6px -2px rgba(0, 0, 0, 0.4);
-    box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
-  }
-
-  /* Aktif ring'li kartlarda (seçili stat kutuları vb.) hover mavi border'ı gizle */
-  .dark .card:hover:where([class*="ring-"]) {
-    border-color: transparent;
-  }
-
-  .dark .input {
-    background-color: #374151; /* gray-700 */
-    border-color: #4b5563;     /* gray-600 */
-    color: #f3f4f6;
-  }
-
-  .dark .input::placeholder {
-    color: #6b7280; /* gray-500 */
-  }
-
-  .dark select.input option {
-    background-color: #374151;
-    color: #f3f4f6;
-  }
-
-  .dark .label {
-    color: #d1d5db; /* gray-300 */
-  }
-
-  .dark .btn-secondary {
-    background-color: #374151;
-    border-color: #4b5563;
-    color: #e5e7eb;
-  }
-
-  .dark .btn-secondary:hover {
-    background-color: #4b5563;
-  }
-
-  /* Dark modda card içindeki metin renklerini otomatik düzelt */
-  .dark .card .text-gray-900 { color: #f9fafb; }
-  .dark .card .text-gray-700 { color: #e5e7eb; }
-  .dark .card .text-gray-600 { color: #d1d5db; }
-  .dark .card .text-gray-500 { color: #9ca3af; }
-  .dark .card .text-gray-400 { color: #6b7280; }
-
-  /* Slide-over panel (detay paneli) */
+  /* ── Slide panel ── */
   .slide-panel {
-    @apply fixed inset-y-0 right-0 z-50 flex w-full sm:w-96 flex-col bg-white shadow-xl dark:bg-gray-800 overflow-y-auto;
+    @apply fixed inset-y-0 right-0 z-50 flex w-full sm:w-96 flex-col
+           bg-white dark:bg-gray-900 shadow-2xl overflow-y-auto
+           border-l border-gray-200 dark:border-gray-800;
+  }
+
+  /* ── Glass morphism utility ── */
+  .glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+  }
+
+  /* ── Gradient cards ── */
+  .gradient-card-blue {
+    background: linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%);
+  }
+  .dark .gradient-card-blue {
+    background: linear-gradient(135deg, rgba(30, 64, 175, 0.3) 0%, rgba(29, 78, 216, 0.1) 100%);
+  }
+  .gradient-card-green {
+    background: linear-gradient(135deg, #d1fae5 0%, #ecfdf5 100%);
+  }
+  .dark .gradient-card-green {
+    background: linear-gradient(135deg, rgba(4, 120, 87, 0.3) 0%, rgba(6, 95, 70, 0.1) 100%);
+  }
+  .gradient-card-amber {
+    background: linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%);
+  }
+  .dark .gradient-card-amber {
+    background: linear-gradient(135deg, rgba(180, 83, 9, 0.3) 0%, rgba(146, 64, 14, 0.1) 100%);
+  }
+  .gradient-card-purple {
+    background: linear-gradient(135deg, #ede9fe 0%, #f5f3ff 100%);
+  }
+  .dark .gradient-card-purple {
+    background: linear-gradient(135deg, rgba(109, 40, 217, 0.3) 0%, rgba(91, 33, 182, 0.1) 100%);
+  }
+
+  /* ── Shimmer skeleton ── */
+  .skeleton {
+    @apply rounded-lg bg-gray-200 dark:bg-gray-800;
+    background-size: 200% 100%;
+    background-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255,255,255,0.4) 50%,
+      transparent 100%
+    );
+    animation: shimmer 1.5s infinite;
+  }
+  .dark .skeleton {
+    background-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255,255,255,0.06) 50%,
+      transparent 100%
+    );
   }
 }
 
 @layer utilities {
-  /* ── Dark mod: metin renkleri global override ── */
-  .dark .text-gray-900 { color: #f9fafb !important; }
-  .dark .text-gray-800 { color: #f3f4f6 !important; }
-  .dark .text-gray-700 { color: #e5e7eb !important; }
-  .dark .text-gray-600 { color: #d1d5db !important; }
-  .dark .text-gray-500 { color: #9ca3af !important; }
-  .dark .text-gray-400 { color: #6b7280 !important; }
-  .dark .text-gray-300 { color: #4b5563 !important; }
-
-  /* ── Dark mod: arka plan renkleri global override ── */
-  .dark .bg-white       { background-color: #1f2937 !important; }
-  .dark .bg-gray-50     { background-color: #111827 !important; }
-  .dark .bg-gray-100    { background-color: #1f2937 !important; }
-  .dark .bg-gray-200    { background-color: #374151 !important; }
-
-  /* ── Dark mod: border renkleri ── */
-  .dark .border-gray-100 { border-color: #374151 !important; }
-  .dark .border-gray-200 { border-color: #374151 !important; }
-  .dark .border-gray-300 { border-color: #4b5563 !important; }
-
-  /* ── İstisna: amber/green/blue/red renkli özel kartlar dark modda değişmesin ── */
-  .dark .bg-amber-50    { background-color: #1c1007 !important; }
-  .dark .bg-green-50    { background-color: #052e16 !important; }
-  .dark .bg-red-50      { background-color: #1c0505 !important; }
-  .dark .bg-blue-50     { background-color: #030d1a !important; }
-  .dark .bg-purple-50   { background-color: #120820 !important; }
-  .dark .bg-pulse-50    { background-color: #0a1628 !important; }
-
   /* ── Dark mod: renkli badge arka planları ── */
   .dark .bg-blue-100    { background-color: rgba(59, 130, 246, 0.15) !important; }
   .dark .bg-green-100   { background-color: rgba(34, 197, 94, 0.15) !important; }
@@ -193,6 +253,7 @@
   .dark .bg-purple-100  { background-color: rgba(168, 85, 247, 0.15) !important; }
   .dark .bg-orange-100  { background-color: rgba(249, 115, 22, 0.15) !important; }
   .dark .bg-amber-100   { background-color: rgba(245, 158, 11, 0.15) !important; }
+  .dark .bg-pink-100    { background-color: rgba(236, 72, 153, 0.15) !important; }
 
   /* ── Dark mod: renkli badge metin renkleri ── */
   .dark .text-blue-700    { color: #93c5fd !important; }
@@ -202,9 +263,11 @@
   .dark .text-purple-700  { color: #d8b4fe !important; }
   .dark .text-orange-700  { color: #fdba74 !important; }
   .dark .text-amber-700   { color: #fcd34d !important; }
+  .dark .text-pink-700    { color: #f9a8d4 !important; }
 
-  /* ── Dark mod: divider border ── */
-  .dark .divide-gray-200 > * + * { border-color: #374151 !important; }
+  /* ── Dark mod: border/divide ── */
+  .dark .divide-gray-200 > * + * { border-color: #1f2937 !important; }
+  .dark .divide-gray-100 > * + * { border-color: #1f2937 !important; }
 }
 
 /* ── Booking page: dark mode override (müşteri tarafı light kalmalı) ── */
@@ -224,75 +287,63 @@
 }
 .booking-page .bg-white   { background-color: #ffffff !important; }
 .booking-page .bg-gray-50 { background-color: #f9fafb !important; }
-.booking-page .bg-gray-100 { background-color: #f3f4f6 !important; }
 .booking-page .text-gray-900 { color: #111827 !important; }
 .booking-page .text-gray-700 { color: #374151 !important; }
 .booking-page .text-gray-600 { color: #4b5563 !important; }
 .booking-page .text-gray-500 { color: #6b7280 !important; }
-.booking-page .text-gray-400 { color: #9ca3af !important; }
-.booking-page .border-gray-100 { border-color: #f3f4f6 !important; }
-.booking-page .border-gray-200 { border-color: #e5e7eb !important; }
 
-/* Modal / Slide-over animasyonları */
+/* ── Modal / Slide-over animasyonlar ── */
 @keyframes fadeIn {
   from { opacity: 0; }
-  to { opacity: 1; }
+  to   { opacity: 1; }
 }
 @keyframes scaleIn {
   from { transform: scale(0.95); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
+  to   { transform: scale(1);    opacity: 1; }
 }
 @keyframes slideInRight {
   from { transform: translateX(100%); }
-  to { transform: translateX(0); }
+  to   { transform: translateX(0); }
 }
-.modal-overlay { animation: fadeIn 0.15s ease-out; }
-.modal-content { animation: scaleIn 0.2s ease-out; }
-.slide-panel { animation: slideInRight 0.15s ease-out; }
-
-@keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+@keyframes fadeOut  { from { opacity: 1; } to { opacity: 0; } }
 @keyframes scaleOut { from { transform: scale(1); opacity: 1; } to { transform: scale(0.95); opacity: 0; } }
 @keyframes slideOutRight { from { transform: translateX(0); } to { transform: translateX(100%); } }
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
 
-.modal-overlay.closing { animation: fadeOut 0.25s ease-in forwards; }
-.modal-content.closing { animation: scaleOut 0.25s ease-in forwards; }
-.slide-panel.closing { animation: slideOutRight 0.15s ease-in forwards; }
+.modal-overlay          { animation: fadeIn       0.15s ease-out; }
+.modal-content          { animation: scaleIn      0.2s  ease-out; }
+.slide-panel            { animation: slideInRight 0.2s  ease-out; }
+.modal-overlay.closing  { animation: fadeOut      0.2s  ease-in  forwards; }
+.modal-content.closing  { animation: scaleOut     0.2s  ease-in  forwards; }
+.slide-panel.closing    { animation: slideOutRight 0.15s ease-in forwards; }
 
-/* Form zorunlu alan göstergesi */
+/* ── Toast animasyonlar ── */
+@keyframes toast-slide-in {
+  from { transform: translateX(110%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+@keyframes toast-slide-out {
+  from { transform: translateX(0);    opacity: 1; }
+  to   { transform: translateX(110%); opacity: 0; }
+}
+.toast-enter { animation: toast-slide-in 0.3s ease-out forwards; }
+
+/* ── Form zorunlu alan ── */
 .label-required::after {
   content: ' *';
   color: #ef4444;
 }
 
-/* Toast animasyonları */
-@keyframes toast-slide-in {
-  from { transform: translateX(100%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
-}
-@keyframes toast-slide-out {
-  from { transform: translateX(0); opacity: 1; }
-  to { transform: translateX(100%); opacity: 0; }
-}
-.toast-enter {
-  animation: toast-slide-in 0.3s ease-out forwards;
-}
-
-/* Scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
+/* ── Scrollbar ── */
+::-webkit-scrollbar       { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
   background: #d1d5db;
-  border-radius: 3px;
+  border-radius: 999px;
 }
-::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
-}
-
-.dark ::-webkit-scrollbar-thumb {
-  background: #4b5563;
-}
+::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+.dark ::-webkit-scrollbar-thumb { background: #374151; }
+.dark ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
