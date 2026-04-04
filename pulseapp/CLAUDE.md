@@ -165,7 +165,13 @@ CREATE INDEX IF NOT EXISTS idx_customers_birthday ON customers (birthday) WHERE 
 -- pos_transactions ve pos_sessions tabloları, RLS policy'leri ve index'ler
 ```
 
-11. **Sektör enum genişletme** (yoga_pilates, spa_massage vb. için):
+11. **Fatura ödeme geçmişi + genişletme** (`019_invoice_payments.sql`): ⏳ Supabase SQL Editor'den çalıştırılacak
+```sql
+-- invoice_payments tablosu (ödeme geçmişi), invoices tablosuna paid_amount, pos_transaction_id,
+-- staff_id, staff_name, payment_type, installment_count, installment_frequency kolonları
+```
+
+12. **Sektör enum genişletme** (yoga_pilates, spa_massage vb. için):
 ```sql
 ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'spa_massage';
 ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'yoga_pilates';
@@ -292,6 +298,22 @@ ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'tutoring';
 - **Gelir Trendi:** Grafik hem randevu + fatura + manuel geliri gösterir; 7 gün/30 gün/1 yıl
 - **Fatura → Stok otomatik düşürme:** Fatura ödendiğinde (`status: 'paid'`), `product_id` olan kalemler stoktan düşer + `stock_movements` kaydı oluşur
 - `InvoiceItem` type'ında `product_id?: string` ve `type?: 'service' | 'product'` alanları mevcut
+
+## Fatura Ödeme Sistemi
+- **Ödeme tipleri:** Standart (tek seferde), Taksitli (2-12 taksit, haftalık/2 haftalık/aylık), Kaporalı (ön ödeme + kalan)
+- **Ödeme geçmişi:** `invoice_payments` tablosu — her ödeme kaydı (tutar, yöntem, tip, taksit no, personel, not)
+- **paid_amount:** Fatura üzerinde toplam ödenen tutar; ödeme kaydedildikçe otomatik güncellenir
+- **Otomatik status:** paid_amount >= total → 'paid', > 0 → 'partial', 0 → 'pending'
+- **İlerleme çubuğu:** Detay panelde ödeme progress bar'ı
+- **API endpoint:** `/api/invoices/payments` — GET (geçmiş), POST (yeni ödeme kaydet + status güncelle)
+- **POS backlink:** Kasadan oluşturulan faturalarda `pos_transaction_id` ayarlanır → "Kasadan Oluşturuldu" badge
+- **Gelişmiş filtreler:** Müşteri, ödeme yöntemi, tarih aralığı, tutar aralığı, sıralama (server-side)
+- **Export:** CSV + PDF (jspdf + jspdf-autotable) + Excel (xlsx)
+- **Tipler:** `InvoicePayment`, `InvoicePaymentType`, `InstallmentFrequency`, `PaymentRecordType` — `types/index.ts`
+
+## Sektör Odak Stratejisi
+Öncelikli sektörler: Kuaför, Berber, Güzellik Salonu, Diş Kliniği, Medikal Estetik, Psikolog, Veteriner, Fizyoterapi, Diyetisyen, Fitness, Yoga/Pilates, Spa/Masaj, Dövme/Piercing, Fotoğraf Stüdyosu, Oto Yıkama, Özel Ders.
+Odak: Medikal Estetik & Güzellik Kliniği — taksitli ödeme, kapora sistemi, paket satışı, hizmet+ürün birlikte faturalandırma.
 
 ## Personel Detay Popup
 - Personel detayı slide-over yerine ortada popup (centered modal) olarak açılır

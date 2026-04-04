@@ -414,7 +414,7 @@ function StatCard({
   trend?: 'up' | 'down' | 'flat'
 }) {
   return (
-    <div className={`relative overflow-hidden rounded-2xl border border-gray-100 dark:border-gray-800 ${bgLight} p-5 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5`}>
+    <div className={`relative overflow-hidden rounded-2xl border border-gray-100 dark:border-gray-800 ${bgLight} p-5 transition-all duration-200 hover:shadow-md`}>
       <div className="flex items-start justify-between mb-3">
         <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${iconBg}`}>
           <span className={iconColor}>{icon}</span>

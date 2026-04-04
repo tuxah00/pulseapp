@@ -1,0 +1,140 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+
+// GET: Faturanın ödeme geçmişi
+export async function GET(req: NextRequest) {
+  const supabase = createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
+
+  const { searchParams } = new URL(req.url)
+  const invoiceId = searchParams.get('invoiceId')
+  if (!invoiceId) return NextResponse.json({ error: 'invoiceId gerekli' }, { status: 400 })
+
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from('invoice_payments')
+    .select('*')
+    .eq('invoice_id', invoiceId)
+    .order('created_at', { ascending: true })
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ payments: data })
+}
+
+// POST: Yeni ödeme kaydet → paid_amount güncelle → status güncelle
+export async function POST(req: NextRequest) {
+  const supabase = createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
+
+  const body = await req.json()
+  const { invoice_id, amount, method, payment_type = 'payment', installment_number, notes, staff_id, staff_name } = body
+
+  if (!invoice_id || !amount || !method) {
+    return NextResponse.json({ error: 'invoice_id, amount ve method gerekli' }, { status: 400 })
+  }
+
+  const admin = createAdminClient()
+
+  // Faturayı getir
+  const { data: invoice, error: invoiceError } = await admin
+    .from('invoices')
+    .select('*')
+    .eq('id', invoice_id)
+    .single()
+
+  if (invoiceError || !invoice) {
+    return NextResponse.json({ error: 'Fatura bulunamadı' }, { status: 404 })
+  }
+
+  // İade kontrolü
+  const isRefund = payment_type === 'refund'
+  const paymentAmount = isRefund ? -Math.abs(amount) : Math.abs(amount)
+
+  // Ödeme kaydı oluştur
+  const { data: payment, error: paymentError } = await admin
+    .from('invoice_payments')
+    .insert({
+      business_id: invoice.business_id,
+      invoice_id,
+      amount: Math.abs(amount),
+      method,
+      payment_type,
+      installment_number: installment_number || null,
+      notes: notes || null,
+      staff_id: staff_id || null,
+      staff_name: staff_name || null,
+    })
+    .select()
+    .single()
+
+  if (paymentError) return NextResponse.json({ error: paymentError.message }, { status: 500 })
+
+  // paid_amount güncelle
+  const newPaidAmount = Math.max(0, (parseFloat(invoice.paid_amount) || 0) + paymentAmount)
+
+  // Status otomatik belirle
+  let newStatus = invoice.status
+  if (newPaidAmount >= parseFloat(invoice.total)) {
+    newStatus = 'paid'
+  } else if (newPaidAmount > 0) {
+    newStatus = 'partial'
+  } else {
+    newStatus = 'pending'
+  }
+
+  const updateObj: Record<string, unknown> = {
+    paid_amount: newPaidAmount,
+    status: newStatus,
+    updated_at: new Date().toISOString(),
+  }
+
+  if (newStatus === 'paid') {
+    updateObj.paid_at = new Date().toISOString()
+    updateObj.payment_method = method
+  }
+
+  const { data: updatedInvoice, error: updateError } = await admin
+    .from('invoices')
+    .update(updateObj)
+    .eq('id', invoice_id)
+    .select('*, customers(name, phone)')
+    .single()
+
+  if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 })
+
+  // Fatura tam ödendiyse stok düş
+  if (newStatus === 'paid' && invoice.status !== 'paid' && updatedInvoice?.items) {
+    const items = updatedInvoice.items as Array<{ product_id?: string; type?: string; quantity: number }>
+    for (const item of items) {
+      if (item.product_id && item.type === 'product') {
+        const { data: product } = await admin
+          .from('products')
+          .select('stock_quantity')
+          .eq('id', item.product_id)
+          .single()
+
+        if (product) {
+          const newQty = Math.max(0, (product.stock_quantity || 0) - item.quantity)
+          await admin
+            .from('products')
+            .update({ stock_quantity: newQty, updated_at: new Date().toISOString() })
+            .eq('id', item.product_id)
+
+          await admin.from('stock_movements').insert({
+            business_id: invoice.business_id,
+            product_id: item.product_id,
+            type: 'out',
+            quantity: item.quantity,
+            notes: `Fatura ${invoice.invoice_number} ile satış`,
+            created_by: user.id,
+          })
+        }
+      }
+    }
+  }
+
+  return NextResponse.json({ payment, invoice: updatedInvoice })
+}
