@@ -53,6 +53,8 @@ const PERMISSION_LABELS: Record<keyof StaffPermissions, string> = {
   orders: 'Siparişler',
   invoices: 'Faturalar',
   pos: 'Kasa',
+  protocols: 'Tedavi Protokolleri',
+  referrals: 'Referanslar',
 }
 
 const PERMISSION_CATEGORIES: { label: string; keys: (keyof StaffPermissions)[] }[] = [

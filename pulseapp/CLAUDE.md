@@ -183,7 +183,32 @@ CREATE INDEX IF NOT EXISTS idx_customers_birthday ON customers (birthday) WHERE 
 -- staff_id, staff_name, payment_type, installment_count, installment_frequency kolonları
 ```
 
-12. **Sektör enum genişletme** (yoga_pilates, spa_massage vb. için):
+12. **Tedavi protokolleri + seans takibi** (`020_treatment_protocols.sql`): ✅ Uygulandı (2026-04-04)
+```sql
+-- treatment_protocols ve protocol_sessions tabloları, RLS, trigger
+```
+
+13. **Müşteri fotoğraf galerisi** (`021_customer_photos.sql`): ✅ Uygulandı (2026-04-04)
+```sql
+-- customer_photos tablosu, Supabase Storage entegrasyonu
+```
+
+14. **Alerji & kontrendikasyon** (`022_allergies.sql`): ✅ Uygulandı (2026-04-04)
+```sql
+-- customer_allergies ve service_contraindications tabloları
+```
+
+15. **Referans/tavsiye sistemi** (`023_referrals.sql`): ✅ Uygulandı (2026-04-04)
+```sql
+-- referrals tablosu, ödül takibi
+```
+
+16. **Randevu yönetim token + takip kuyruğu** (`024_appointment_manage_token.sql`): ✅ Uygulandı (2026-04-04)
+```sql
+-- appointments.manage_token, follow_up_queue tablosu
+```
+
+17. **Sektör enum genişletme** (yoga_pilates, spa_massage vb. için):
 ```sql
 ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'spa_massage';
 ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'yoga_pilates';
@@ -196,13 +221,52 @@ ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'dietitian';
 ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'tutoring';
 ```
 
+## Faz 2: Estetik Klinik Özellik Seti (2026-04-04)
+
+### Yeni Tablolar
+- `treatment_protocols` — Tedavi protokolü (seans planlı tedavi takibi)
+- `protocol_sessions` — Protokol seansları (her seans ayrı satır, planned/completed)
+- `customer_photos` — Öncesi/sonrası fotoğraf galerisi
+- `customer_allergies` — Müşteri alerji kayıtları
+- `service_contraindications` — Hizmet-alerjen uyumsuzluk tanımları
+- `referrals` — Müşteri tavsiye/referans sistemi
+- `follow_up_queue` — Seans sonrası takip kuyruğu (cron ile işlenir)
+
+### Yeni API Route'ları
+- `/api/protocols/*` — Tedavi protokolü CRUD + seans güncelleme
+- `/api/photos/*` — Fotoğraf CRUD (Supabase Storage)
+- `/api/allergies` — Alerji CRUD
+- `/api/contraindications` — Kontrendikasyon CRUD + çapraz kontrol (PUT)
+- `/api/referrals` — Referans CRUD + dönüştürme + ödül
+- `/api/follow-ups` — Takip kuyruğu yönetimi
+- `/api/analytics/revenue` — Gelişmiş gelir analizi (hizmet/personel/dönem/müşteri tipi)
+- `/api/analytics/clv` — Müşteri Yaşam Boyu Değeri hesaplama
+- `/api/analytics/occupancy` — Doluluk oranı ve verimlilik
+- `/api/analytics/staff-performance` — Personel performans karnesi
+- `/api/ai/treatment-suggestion` — AI tedavi önerisi (Claude API)
+- `/api/public/appointments/[token]` — Token ile randevu görüntüleme/düzenleme/iptal
+
+### Yeni Dashboard Sayfaları
+- `/dashboard/protocols` — Tedavi protokolleri listesi + detay paneli + seans timeline
+- `/dashboard/referrals` — Referans listesi + istatistikler + ödül takibi
+
+### Yeni Public Sayfalar
+- `/book/manage/[token]` — Müşterinin randevusunu düzenlemesi/iptal etmesi
+
+### Sidebar Değişiklikleri
+- `medical_aesthetic` sektörüne `protocols` (Tedavi Protokolleri) ve `referrals` (Referanslar) modülleri eklendi
+- `StaffPermissions`'a `protocols` ve `referrals` izinleri eklendi
+
 ## Sayfa Yapısı
 - `/dashboard` → Genel Bakış (server component, bugünkü durum + PerformanceStats)
 - `/dashboard/appointments` → Randevular (liste/kutu/haftalık takvim görünüm, soft delete, tekrarlayan randevu desteği)
 - `/dashboard/analytics` → Gelir-Gider Tablosu (randevu + fatura + manuel gelir, gider takibi, kâr-zarar)
 - `/dashboard/customers` → Müşteriler (slide-over panelde Bilgiler + Geçmiş tabları, timeline)
+- `/dashboard/protocols` → Tedavi Protokolleri (seans takibi, ilerleme çubuğu)
+- `/dashboard/referrals` → Referanslar (tavsiye sistemi, dönüşüm takibi)
 - `/dashboard/settings/audit` → Denetim Kaydı (sadece owner)
 - `/invite/[token]` → Personel davet kabul sayfası (public)
+- `/book/manage/[token]` → Randevu düzenleme/iptal (public, token bazlı)
 
 ## Sidebar Yapısı
 - `lib/config/sector-modules.ts` → tüm sektörlerin sidebar config'i

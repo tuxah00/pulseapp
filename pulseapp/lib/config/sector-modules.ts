@@ -54,8 +54,10 @@ const SECTOR_ITEMS: Partial<Record<SectorType, SidebarItem[]>> = {
     { key: 'reviews', name: 'Yorumlar', href: '/dashboard/reviews', iconName: 'Star' },
   ],
   medical_aesthetic: [
+    { key: 'protocols', name: 'Tedavi Protokolleri', href: '/dashboard/protocols', iconName: 'ClipboardCheck' },
     { key: 'packages', name: 'Paket & Seans', href: '/dashboard/paketler', iconName: 'Layers' },
     { key: 'records', name: 'Hasta Dosyaları', href: '/dashboard/records?type=patient_file', iconName: 'FolderOpen' },
+    { key: 'referrals', name: 'Referanslar', href: '/dashboard/referrals', iconName: 'UserCheck' },
     { key: 'reviews', name: 'Yorumlar', href: '/dashboard/reviews', iconName: 'Star' },
   ],
   physiotherapy: [

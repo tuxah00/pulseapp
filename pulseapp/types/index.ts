@@ -42,6 +42,8 @@ export interface StaffPermissions {
   orders?: boolean
   invoices?: boolean
   pos?: boolean
+  protocols?: boolean
+  referrals?: boolean
 }
 
 export const DEFAULT_PERMISSIONS: Record<StaffRole, StaffPermissions> = {
@@ -50,12 +52,14 @@ export const DEFAULT_PERMISSIONS: Record<StaffRole, StaffPermissions> = {
     messages: true, reviews: true, services: true, staff: true, shifts: true,
     settings: true, reservations: true, classes: true, memberships: true,
     packages: true, records: true, portfolio: true, inventory: true, orders: true, invoices: true, pos: true,
+    protocols: true, referrals: true,
   },
   manager: {
     dashboard: true, appointments: true, customers: true, analytics: true,
     messages: true, reviews: true, services: true, staff: false, shifts: true,
     settings: false, reservations: true, classes: true, memberships: true,
     packages: true, records: true, portfolio: true, inventory: true, orders: true, invoices: true, pos: true,
+    protocols: true, referrals: true,
   },
   staff: {
     dashboard: true, appointments: true, customers: true, analytics: false,
@@ -407,6 +411,8 @@ export interface Appointment {
   cancellation_reason: string | null
   recurrence_group_id: string | null
   recurrence_pattern: Record<string, any> | null
+  manage_token: string | null
+  token_expires_at: string | null
   created_at: string
   updated_at: string
   // JOIN'lerden gelen opsiyonel alanlar
@@ -697,4 +703,189 @@ export const SEGMENT_LABELS: Record<CustomerSegment, string> = {
   vip: 'VIP',
   risk: 'Riskli',
   lost: 'Kayıp',
+}
+
+
+// ── Tedavi Protokolü & Seans Takibi ──
+
+export type ProtocolStatus = 'active' | 'completed' | 'cancelled' | 'paused'
+export type SessionStatus = 'planned' | 'completed' | 'cancelled' | 'skipped'
+
+export const PROTOCOL_STATUS_LABELS: Record<ProtocolStatus, string> = {
+  active: 'Aktif',
+  completed: 'Tamamlandı',
+  cancelled: 'İptal',
+  paused: 'Duraklatıldı',
+}
+
+export const SESSION_STATUS_LABELS: Record<SessionStatus, string> = {
+  planned: 'Planlandı',
+  completed: 'Tamamlandı',
+  cancelled: 'İptal',
+  skipped: 'Atlandı',
+}
+
+export interface TreatmentProtocol {
+  id: string
+  business_id: string
+  customer_id: string
+  service_id: string | null
+  name: string
+  total_sessions: number
+  completed_sessions: number
+  interval_days: number
+  status: ProtocolStatus
+  notes: string | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
+  // JOINs
+  customer?: Customer
+  service?: Service
+  staff?: StaffMember
+  sessions?: ProtocolSession[]
+}
+
+export interface ProtocolSession {
+  id: string
+  protocol_id: string
+  business_id: string
+  session_number: number
+  appointment_id: string | null
+  status: SessionStatus
+  planned_date: string | null
+  completed_date: string | null
+  notes: string | null
+  before_photo_url: string | null
+  after_photo_url: string | null
+  created_at: string
+  // JOINs
+  appointment?: Appointment
+}
+
+
+// ── Müşteri Fotoğraf Galerisi ──
+
+export type PhotoType = 'before' | 'after' | 'progress'
+
+export interface CustomerPhoto {
+  id: string
+  business_id: string
+  customer_id: string
+  protocol_id: string | null
+  session_id: string | null
+  photo_url: string
+  photo_type: PhotoType
+  tags: string[]
+  notes: string | null
+  taken_at: string
+  uploaded_by: string | null
+  created_at: string
+  // JOINs
+  protocol?: TreatmentProtocol
+  session?: ProtocolSession
+  staff?: StaffMember
+}
+
+
+// ── Alerji & Kontrendikasyon ──
+
+export type AllergySeverity = 'mild' | 'moderate' | 'severe'
+export type ContraindicationRiskLevel = 'low' | 'medium' | 'high'
+
+export const ALLERGY_SEVERITY_LABELS: Record<AllergySeverity, string> = {
+  mild: 'Hafif',
+  moderate: 'Orta',
+  severe: 'Şiddetli',
+}
+
+export const RISK_LEVEL_LABELS: Record<ContraindicationRiskLevel, string> = {
+  low: 'Düşük',
+  medium: 'Orta',
+  high: 'Yüksek',
+}
+
+export interface CustomerAllergy {
+  id: string
+  business_id: string
+  customer_id: string
+  allergen: string
+  severity: AllergySeverity
+  reaction: string | null
+  notes: string | null
+  reported_at: string
+  created_by: string | null
+  created_at: string
+}
+
+export interface ServiceContraindication {
+  id: string
+  business_id: string
+  service_id: string
+  allergen: string
+  risk_level: ContraindicationRiskLevel
+  warning_message: string | null
+  created_at: string
+  // JOINs
+  service?: Service
+}
+
+
+// ── Referans / Tavsiye Sistemi ──
+
+export type ReferralStatus = 'pending' | 'converted' | 'expired'
+export type RewardType = 'discount_percent' | 'discount_amount' | 'free_service' | 'points'
+
+export const REFERRAL_STATUS_LABELS: Record<ReferralStatus, string> = {
+  pending: 'Bekliyor',
+  converted: 'Dönüştürüldü',
+  expired: 'Süresi Doldu',
+}
+
+export interface Referral {
+  id: string
+  business_id: string
+  referrer_customer_id: string
+  referred_customer_id: string | null
+  referred_name: string | null
+  referred_phone: string | null
+  status: ReferralStatus
+  reward_type: RewardType | null
+  reward_value: number | null
+  reward_claimed: boolean
+  converted_at: string | null
+  expires_at: string | null
+  created_at: string
+  // JOINs
+  referrer?: Customer
+  referred?: Customer
+}
+
+
+// ── Takip Kuyruğu ──
+
+export type FollowUpType = 'post_session' | 'next_session_reminder' | 'protocol_completion'
+export type FollowUpStatus = 'pending' | 'sent' | 'cancelled'
+
+export const FOLLOW_UP_TYPE_LABELS: Record<FollowUpType, string> = {
+  post_session: 'Seans Sonrası Kontrol',
+  next_session_reminder: 'Sonraki Seans Hatırlatma',
+  protocol_completion: 'Protokol Tamamlama',
+}
+
+export interface FollowUpJob {
+  id: string
+  business_id: string
+  appointment_id: string
+  customer_id: string
+  protocol_id: string | null
+  type: FollowUpType
+  scheduled_for: string
+  status: FollowUpStatus
+  message: string | null
+  created_at: string
+  // JOINs
+  customer?: Customer
+  appointment?: Appointment
+  protocol?: TreatmentProtocol
 }
