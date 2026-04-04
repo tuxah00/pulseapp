@@ -4,7 +4,7 @@ import { useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { Eye, EyeOff, Loader2 } from 'lucide-react'
+import { Eye, EyeOff, Loader2, Mail, Lock } from 'lucide-react'
 
 // Next.js 14 useSearchParams() için Suspense gerekli
 export default function LoginPage() {
@@ -81,35 +81,42 @@ function LoginForm() {
   }
 
   return (
-    <div className="card">
-      <h2 className="text-xl font-semibold text-gray-900 mb-6">Giriş Yap</h2>
+    <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
+      <div className="mb-7">
+        <h2 className="text-2xl font-bold text-gray-900">Tekrar hoş geldiniz</h2>
+        <p className="mt-1 text-sm text-gray-500">Hesabınıza giriş yapın</p>
+      </div>
 
-      <form onSubmit={handleLogin} className="space-y-4">
+      <form onSubmit={handleLogin} className="space-y-5">
         {/* E-posta */}
         <div>
           <label htmlFor="email" className="label">E-posta</label>
-          <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="input"
-            placeholder="ornek@email.com"
-            required
-            autoComplete="email"
-          />
+          <div className="relative">
+            <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="input pl-9"
+              placeholder="ornek@email.com"
+              required
+              autoComplete="email"
+            />
+          </div>
         </div>
 
         {/* Şifre */}
         <div>
           <label htmlFor="password" className="label">Şifre</label>
           <div className="relative">
+            <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
             <input
               id="password"
               type={showPassword ? 'text' : 'password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="input pr-10"
+              className="input pl-9 pr-10"
               placeholder="••••••••"
               required
               autoComplete="current-password"
@@ -119,31 +126,29 @@ function LoginForm() {
               onClick={() => setShowPassword(!showPassword)}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
             >
-              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           </div>
         </div>
 
         {/* Hata */}
         {error && (
-          <div className="rounded-lg bg-danger-50 px-4 py-3 text-sm text-danger-700">
+          <div className="rounded-lg bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-700">
             {error}
           </div>
         )}
 
         {/* Giriş butonu */}
-        <button type="submit" disabled={loading} className="btn-primary w-full">
-          {loading ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : null}
+        <button type="submit" disabled={loading} className="btn-primary w-full justify-center py-3">
+          {loading && <Loader2 className="h-4 w-4 animate-spin" />}
           Giriş Yap
         </button>
       </form>
 
       {/* Ayırıcı */}
-      <div className="my-6 flex items-center">
+      <div className="my-5 flex items-center gap-3">
         <div className="flex-1 border-t border-gray-200" />
-        <span className="px-3 text-xs text-gray-400">veya</span>
+        <span className="text-xs text-gray-400">veya</span>
         <div className="flex-1 border-t border-gray-200" />
       </div>
 
@@ -151,16 +156,17 @@ function LoginForm() {
       <button
         onClick={handleMagicLink}
         disabled={loading}
-        className="btn-secondary w-full"
+        className="btn-secondary w-full justify-center"
       >
+        <Mail size={15} />
         Şifresiz giriş linki gönder
       </button>
 
       {/* Kayıt linki */}
       <p className="mt-6 text-center text-sm text-gray-500">
         Hesabınız yok mu?{' '}
-        <Link href="/auth/register" className="font-medium text-pulse-600 hover:text-pulse-700">
-          Ücretsiz deneyin
+        <Link href="/auth/register" className="font-semibold text-pulse-600 hover:text-pulse-700">
+          Ücretsiz deneyin →
         </Link>
       </p>
     </div>

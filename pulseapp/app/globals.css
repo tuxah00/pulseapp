@@ -289,8 +289,9 @@
 .booking-page textarea::placeholder {
   color: #9ca3af !important;
 }
-.booking-page .bg-white   { background-color: #ffffff !important; }
-.booking-page .bg-gray-50 { background-color: #f9fafb !important; }
+.booking-page .bg-white    { background-color: #ffffff !important; }
+.booking-page .bg-gray-50  { background-color: #f9fafb !important; }
+.booking-page .bg-gray-100 { background-color: #f3f4f6 !important; }
 .booking-page .text-gray-900 { color: #111827 !important; }
 .booking-page .text-gray-700 { color: #374151 !important; }
 .booking-page .text-gray-600 { color: #4b5563 !important; }
@@ -351,3 +352,23 @@
 ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
 .dark ::-webkit-scrollbar-thumb { background: #374151; }
 .dark ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+
+/* ── Micro-interaction: focus-visible ring ── */
+:focus-visible {
+  outline: 2px solid var(--pulse-primary);
+  outline-offset: 2px;
+}
+
+/* ── Stat card hover lift ── */
+.stat-card {
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(51, 141, 255, 0.12), 0 2px 8px rgba(0,0,0,0.06);
+}
+
+/* ── Link / nav micro-animation ── */
+a, button {
+  -webkit-tap-highlight-color: transparent;
+}

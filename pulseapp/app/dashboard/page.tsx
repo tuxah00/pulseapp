@@ -10,7 +10,10 @@ import {
   TrendingDown,
   Minus,
   ExternalLink,
-  Copy,
+  Scissors,
+  CreditCard,
+  UserPlus,
+  ArrowRight,
 } from 'lucide-react'
 import { addDays, format } from 'date-fns'
 import { formatCurrency } from '@/lib/utils'
@@ -189,6 +192,11 @@ export default async function DashboardPage() {
         />
       </div>
 
+      {/* ── Onboarding (yeni işletme) ── */}
+      {s.total_customers === 0 && s.today_appointments === 0 && (
+        <OnboardingCard bookingUrl={bookingUrl} />
+      )}
+
       {/* ── Online booking banner ── */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-pulse-600 to-indigo-600 px-5 py-4 shadow-lg shadow-pulse-500/20">
         <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
@@ -301,6 +309,74 @@ export default async function DashboardPage() {
             </div>
           )}
         </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Onboarding Card ──
+function OnboardingCard({ bookingUrl }: { bookingUrl: string }) {
+  const steps = [
+    {
+      icon: <Scissors className="h-5 w-5" />,
+      iconBg: 'bg-pulse-500/10',
+      iconColor: 'text-pulse-600 dark:text-pulse-400',
+      title: 'Hizmetlerini Ekle',
+      desc: 'Sunduğun hizmetleri ve fiyatları tanımla',
+      href: '/dashboard/hizmetler',
+    },
+    {
+      icon: <UserPlus className="h-5 w-5" />,
+      iconBg: 'bg-emerald-500/10',
+      iconColor: 'text-emerald-600 dark:text-emerald-400',
+      title: 'Müşteri Ekle',
+      desc: 'İlk müşterini ekle veya randevu bağla',
+      href: '/dashboard/customers',
+    },
+    {
+      icon: <Calendar className="h-5 w-5" />,
+      iconBg: 'bg-blue-500/10',
+      iconColor: 'text-blue-600 dark:text-blue-400',
+      title: 'İlk Randevunu Oluştur',
+      desc: 'Takvimini doldurmaya başla',
+      href: '/dashboard/appointments',
+    },
+    {
+      icon: <CreditCard className="h-5 w-5" />,
+      iconBg: 'bg-amber-500/10',
+      iconColor: 'text-amber-600 dark:text-amber-400',
+      title: 'Online Randevu Linkini Paylaş',
+      desc: 'Müşterilerin senden kolayca randevu alsın',
+      href: bookingUrl,
+      external: true,
+    },
+  ]
+
+  return (
+    <div className="rounded-2xl border border-pulse-200/60 dark:border-pulse-900/40 bg-gradient-to-br from-pulse-50 to-indigo-50 dark:from-pulse-950/20 dark:to-indigo-950/20 p-5">
+      <div className="mb-4">
+        <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">Başlamak için 4 adım</h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">PulseApp&apos;i tam kapasite kullanmak için şu adımları tamamla</p>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {steps.map((step, i) => (
+          <a
+            key={i}
+            href={step.href}
+            target={step.external ? '_blank' : undefined}
+            rel={step.external ? 'noopener noreferrer' : undefined}
+            className="group flex items-center gap-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-3.5 hover:border-pulse-300 dark:hover:border-pulse-700 hover:shadow-sm transition-all duration-150"
+          >
+            <div className={`flex-shrink-0 flex h-9 w-9 items-center justify-center rounded-xl ${step.iconBg}`}>
+              <span className={step.iconColor}>{step.icon}</span>
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{step.title}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 truncate mt-0.5">{step.desc}</p>
+            </div>
+            <ArrowRight className="h-4 w-4 text-gray-300 dark:text-gray-600 flex-shrink-0 group-hover:text-pulse-500 transition-colors" />
+          </a>
+        ))}
       </div>
     </div>
   )
