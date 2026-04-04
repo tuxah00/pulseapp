@@ -4,13 +4,13 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { Loader2 } from 'lucide-react'
+import { Loader2, User, Mail, Phone, Lock, Building2, MapPin } from 'lucide-react'
 import { SECTOR_LABELS, type SectorType } from '@/types'
 
 export default function RegisterPage() {
   const router = useRouter()
 
-  const [step, setStep] = useState<1 | 2>(1)  // 1: hesap, 2: işletme bilgisi
+  const [step, setStep] = useState<1 | 2>(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -29,7 +29,6 @@ export default function RegisterPage() {
     e.preventDefault()
 
     if (step === 1) {
-      // Validasyon
       if (password.length < 6) {
         setError('Şifre en az 6 karakter olmalı.')
         return
@@ -45,7 +44,6 @@ export default function RegisterPage() {
 
     const supabase = createClient()
 
-    // 1. Supabase Auth'a kayıt
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
@@ -66,7 +64,6 @@ export default function RegisterPage() {
 
     // E-posta onayı gerekiyorsa (Supabase varsayılan ayarı)
     if (authData.user && !authData.session) {
-      // 2. İşletme oluştur (kullanıcı henüz login olmadı ama user.id var)
       const res = await fetch('/api/onboarding', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -115,20 +112,42 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="card">
-      <h2 className="text-xl font-semibold text-gray-900 mb-1">
-        {step === 1 ? 'Hesap Oluştur' : 'İşletme Bilgileri'}
-      </h2>
-      <p className="text-sm text-gray-500 mb-6">
-        {step === 1
-          ? '14 gün ücretsiz deneyin, kart bilgisi gerekmez.'
-          : 'Son adım — işletmenizi tanımlayın.'}
-      </p>
+    <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
+      {/* Başlık */}
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-gray-900">
+          {step === 1 ? 'Hesap oluştur' : 'İşletme bilgileri'}
+        </h2>
+        <p className="mt-1 text-sm text-gray-500">
+          {step === 1
+            ? '14 gün ücretsiz deneyin, kart bilgisi gerekmez.'
+            : 'Son adım — işletmenizi tanımlayın.'}
+        </p>
+      </div>
 
-      {/* İlerleme göstergesi */}
-      <div className="mb-6 flex gap-2">
-        <div className={`h-1 flex-1 rounded-full ${step >= 1 ? 'bg-pulse-500' : 'bg-gray-200'}`} />
-        <div className={`h-1 flex-1 rounded-full ${step >= 2 ? 'bg-pulse-500' : 'bg-gray-200'}`} />
+      {/* Adım göstergesi */}
+      <div className="mb-7 flex items-center gap-2">
+        {[1, 2].map((n) => (
+          <div key={n} className="flex items-center gap-2 flex-1">
+            <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold
+              transition-colors duration-200
+              ${step === n
+                ? 'bg-pulse-600 text-white shadow-sm shadow-pulse-300'
+                : step > n
+                  ? 'bg-pulse-100 text-pulse-600'
+                  : 'bg-gray-100 text-gray-400'
+              }`}
+            >
+              {step > n ? '✓' : n}
+            </div>
+            <span className={`text-xs font-medium ${step === n ? 'text-gray-900' : 'text-gray-400'}`}>
+              {n === 1 ? 'Hesap' : 'İşletme'}
+            </span>
+            {n < 2 && (
+              <div className={`flex-1 h-px ${step > n ? 'bg-pulse-300' : 'bg-gray-200'}`} />
+            )}
+          </div>
+        ))}
       </div>
 
       <form onSubmit={handleRegister} className="space-y-4">
@@ -136,67 +155,82 @@ export default function RegisterPage() {
           <>
             <div>
               <label htmlFor="fullName" className="label">Ad Soyad</label>
-              <input
-                id="fullName"
-                type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                className="input"
-                placeholder="Ahmet Yılmaz"
-                required
-              />
+              <div className="relative">
+                <User size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                <input
+                  id="fullName"
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  className="input pl-9"
+                  placeholder="Ahmet Yılmaz"
+                  required
+                />
+              </div>
             </div>
             <div>
               <label htmlFor="email" className="label">E-posta</label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="input"
-                placeholder="ornek@email.com"
-                required
-              />
+              <div className="relative">
+                <Mail size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="input pl-9"
+                  placeholder="ornek@email.com"
+                  required
+                />
+              </div>
             </div>
             <div>
               <label htmlFor="phone" className="label">Telefon</label>
-              <input
-                id="phone"
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="input"
-                placeholder="0532 123 45 67"
-                required
-              />
+              <div className="relative">
+                <Phone size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                <input
+                  id="phone"
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="input pl-9"
+                  placeholder="0532 123 45 67"
+                  required
+                />
+              </div>
             </div>
             <div>
               <label htmlFor="password" className="label">Şifre</label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="input"
-                placeholder="En az 6 karakter"
-                required
-                minLength={6}
-              />
+              <div className="relative">
+                <Lock size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                <input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="input pl-9"
+                  placeholder="En az 6 karakter"
+                  required
+                  minLength={6}
+                />
+              </div>
             </div>
           </>
         ) : (
           <>
             <div>
               <label htmlFor="businessName" className="label">İşletme Adı</label>
-              <input
-                id="businessName"
-                type="text"
-                value={businessName}
-                onChange={(e) => setBusinessName(e.target.value)}
-                className="input"
-                placeholder="Güzellik Salonu Nur"
-                required
-              />
+              <div className="relative">
+                <Building2 size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                <input
+                  id="businessName"
+                  type="text"
+                  value={businessName}
+                  onChange={(e) => setBusinessName(e.target.value)}
+                  className="input pl-9"
+                  placeholder="Güzellik Salonu Nur"
+                  required
+                />
+              </div>
             </div>
             <div>
               <label htmlFor="sector" className="label">Sektör</label>
@@ -214,26 +248,29 @@ export default function RegisterPage() {
             </div>
             <div>
               <label htmlFor="city" className="label">Şehir</label>
-              <input
-                id="city"
-                type="text"
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                className="input"
-                placeholder="Erzincan"
-                required
-              />
+              <div className="relative">
+                <MapPin size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                <input
+                  id="city"
+                  type="text"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  className="input pl-9"
+                  placeholder="Erzincan"
+                  required
+                />
+              </div>
             </div>
           </>
         )}
 
         {error && (
-          <div className="rounded-lg bg-danger-50 px-4 py-3 text-sm text-danger-700">
+          <div className="rounded-lg bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-700">
             {error}
           </div>
         )}
 
-        <div className="flex gap-3">
+        <div className="flex gap-3 pt-1">
           {step === 2 && (
             <button
               type="button"
@@ -243,18 +280,16 @@ export default function RegisterPage() {
               Geri
             </button>
           )}
-          <button type="submit" disabled={loading} className="btn-primary flex-1">
-            {loading ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : null}
-            {step === 1 ? 'Devam Et' : 'Hesap Oluştur'}
+          <button type="submit" disabled={loading} className="btn-primary flex-1 justify-center py-3">
+            {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+            {step === 1 ? 'Devam Et →' : 'Hesap Oluştur'}
           </button>
         </div>
       </form>
 
       <p className="mt-6 text-center text-sm text-gray-500">
         Zaten hesabınız var mı?{' '}
-        <Link href="/auth/login" className="font-medium text-pulse-600 hover:text-pulse-700">
+        <Link href="/auth/login" className="font-semibold text-pulse-600 hover:text-pulse-700">
           Giriş yapın
         </Link>
       </p>

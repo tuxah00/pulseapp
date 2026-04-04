@@ -356,7 +356,7 @@ function OnboardingCard({ bookingUrl }: { bookingUrl: string }) {
     <div className="rounded-2xl border border-pulse-200/60 dark:border-pulse-900/40 bg-gradient-to-br from-pulse-50 to-indigo-50 dark:from-pulse-950/20 dark:to-indigo-950/20 p-5">
       <div className="mb-4">
         <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">Başlamak için 4 adım</h2>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">PulseApp'i tam kapasite kullanmak için şu adımları tamamla</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">PulseApp&apos;i tam kapasite kullanmak için şu adımları tamamla</p>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         {steps.map((step, i) => (
