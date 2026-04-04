@@ -190,7 +190,7 @@ function AttendancePage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Date */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Tarih</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tarih</label>
             <input
               type="date"
               value={selectedDate}
@@ -200,13 +200,13 @@ function AttendancePage() {
                 setSession(null)
                 setAttendance([])
               }}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
 
           {/* Class */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Sınıf</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Sınıf</label>
             {loadingClasses ? (
               <div className="text-sm text-gray-400 py-2">Yükleniyor...</div>
             ) : (
@@ -232,10 +232,10 @@ function AttendancePage() {
 
         {/* Selected class info */}
         {selectedClass && (
-          <div className="flex items-center gap-3 pt-2 border-t border-gray-100">
+          <div className="flex items-center gap-3 pt-2 border-t border-gray-100 dark:border-gray-700">
             <div className="w-3 h-3 rounded-full" style={{ backgroundColor: selectedClass.color }} />
-            <div className="flex items-center gap-4 text-sm text-gray-600">
-              <span className="font-medium text-gray-900">{selectedClass.name}</span>
+            <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+              <span className="font-medium text-gray-900 dark:text-gray-100">{selectedClass.name}</span>
               <span className="flex items-center gap-1">
                 <Clock className="h-3.5 w-3.5" />
                 {selectedClass.start_time.slice(0, 5)} · {selectedClass.duration_minutes}dk
@@ -270,14 +270,14 @@ function AttendancePage() {
           </div>
 
           {/* Add person */}
-          <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100">
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100 dark:border-gray-700">
             <input
               type="text"
               value={newName}
               onChange={e => setNewName(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleAddPerson()}
               placeholder="Katılımcı adı ekle..."
-              className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="flex-1 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
             <button
               onClick={handleAddPerson}

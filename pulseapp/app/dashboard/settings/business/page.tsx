@@ -597,7 +597,7 @@ export default function BusinessSettingsPage() {
           <div className="card">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Mevcut Abonelik</h2>
             <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-pulse-100">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-pulse-100 dark:bg-pulse-900/30">
                 <CreditCard className="h-6 w-6 text-pulse-600" />
               </div>
               <div className="flex-1">
@@ -710,8 +710,8 @@ function ToggleSetting({
         <div className="h-6 w-11 rounded-full bg-gray-300 dark:bg-gray-600 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-pulse-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:ring-2 peer-focus:ring-pulse-300" />
       </label>
       <div>
-        <p className="text-sm font-medium text-gray-900">{label}</p>
-        <p className="text-xs text-gray-500 mt-0.5">{description}</p>
+        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{label}</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{description}</p>
       </div>
     </div>
   )
@@ -736,8 +736,8 @@ function PlanCard({
         current
           ? 'border-pulse-500 bg-pulse-50/30 dark:bg-gray-700/50 ring-1 ring-pulse-500'
           : popular
-          ? 'border-purple-200 bg-white'
-          : 'border-gray-200 bg-white'
+          ? 'border-purple-200 dark:border-purple-800 bg-white dark:bg-gray-800'
+          : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'
       }`}
     >
       {popular && !current && (
@@ -765,7 +765,7 @@ function PlanCard({
 
       <ul className="flex-1 space-y-2.5 mb-6">
         {features.map((feature, i) => (
-          <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
+          <li key={i} className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
             <svg className="h-4 w-4 mt-0.5 flex-shrink-0 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
@@ -781,7 +781,7 @@ function PlanCard({
             ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
             : popular
             ? 'bg-purple-600 text-white hover:bg-purple-700'
-            : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+            : 'border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600'
         }`}
       >
         {current ? 'Mevcut Planınız' : 'Plan Seç'}
