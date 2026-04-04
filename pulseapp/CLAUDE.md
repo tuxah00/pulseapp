@@ -110,12 +110,24 @@ const { businessId, userId, staffId, staffName, staffRole, permissions, sector, 
 | `table_reservations` | Masa rezervasyonları |
 
 ## Dark Mode Stratejisi
-- `globals.css`'te `.dark .bg-white`, `.dark .text-gray-900`, `.dark .bg-gray-100` vb. agresif global `!important` override'lar mevcut
+- `globals.css`'te `.dark .bg-white`, `.dark .text-gray-900`, `.dark .bg-gray-100` vb. agresif global `!important` override'lar mevcut — bunlar `@layer base` içinde
 - Colored badge'ler için semi-transparent dark variants: `.dark .bg-blue-100 { background-color: rgba(59,130,246,0.15) !important }` vb.
 - Custom input alanları (`.input` class kullanmayanlar) explicit `dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600` almalı
 - Modal/dialog arka planları: `dark:bg-gray-900`
 - **Tema toggle:** `components/dashboard/top-bar.tsx`'te Sun/Moon butonu (notification bell'in solunda)
 - Settings sayfasından tema toggle kaldırıldı
+
+## Proaktif Dark Mode Kuralı — KESİNLİKLE UYULMALI
+Her yeni bileşen veya sayfa yazıldığında KULLANICININ SÖYLEMESİNE GEREK KALMADAN şunlar kontrol edilmeli:
+
+1. **Renk çakışması testi**: Her yeni UI elemanı için hem light hem dark modda `bg-`, `text-`, `border-` renklerinin okunabilir olduğunu zihinsel olarak doğrula
+2. **Hover state'leri**: `hover:bg-gray-50`, `hover:bg-white` gibi hover class'ları dark modda `#1f2937` veya `#111827`'ye döner — eğer kart/panel arka planı zaten dark ise metin okunmaz hale gelir
+3. **Input/select elemanları**: `.input` class kullanmayan her form elemanı explicit `dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600` almalı
+4. **Badge ve durum renkleri**: Açık renkli badge'ler (bg-blue-100, bg-green-100 vb.) dark modda semi-transparent olmalı: `dark:bg-blue-900/30 dark:text-blue-300`
+5. **CSS @layer spesifite kuralı**: `globals.css`'teki dark mode override'ları `@layer base` içinde. Bunları geçmek için ya `@layer base` içine (dark mode kurallarından sonra) ekle ya da `.dark .booking-page .xyz` gibi daha spesifik (0,3,0) selector kullan
+6. **Public sayfalar (booking vb.)**: Dark mode dashboard class'larından izole edilmeli — `.dark .booking-page .xyz` şeklinde tersine override kullanılır (bkz. `globals.css` booking-page bölümü)
+
+**Kural**: Herhangi bir sayfada veya bileşende dark mode sorunu görürsen (hover çakışması, metin görünmez, kart çok koyu/açık), bunu kullanıcı söylemeden tespit edip düzelt.
 
 ## Modal Animasyonları & ESC
 - `globals.css` → `.modal-overlay` (fadeIn 0.15s), `.modal-content` (scaleIn 0.2s), `.slide-panel` (slideInRight 0.2s)

@@ -304,28 +304,45 @@
   .dark .hover\:bg-gray-100:hover { background-color: #374151 !important; }
 }
 
-/* ── Booking page: dark mode override (müşteri tarafı light kalmalı) ── */
+/* ── Booking page: müşteri tarafı her zaman light kalmalı ── */
+/* color-scheme: light ile tarayıcı dark mode form elemanlarını engeller */
 .booking-page,
 .booking-page * {
   color-scheme: light !important;
 }
-.booking-page input,
-.booking-page textarea {
+
+/* .dark .booking-page — daha yüksek spesifite (0,3,0) ile dark mode kurallarını ezer */
+.dark .booking-page .bg-white,
+.dark .booking-page .hover\:bg-white:hover   { background-color: #ffffff !important; }
+.dark .booking-page .bg-gray-50,
+.dark .booking-page .hover\:bg-gray-50:hover { background-color: #f9fafb !important; }
+.dark .booking-page .bg-gray-100,
+.dark .booking-page .hover\:bg-gray-100:hover { background-color: #f3f4f6 !important; }
+.dark .booking-page .bg-blue-50  { background-color: #eff6ff !important; }
+.dark .booking-page .bg-blue-500 { background-color: #3b82f6 !important; }
+.dark .booking-page .bg-red-50   { background-color: #fef2f2 !important; }
+
+.dark .booking-page .text-gray-900 { color: #111827 !important; }
+.dark .booking-page .text-gray-700 { color: #374151 !important; }
+.dark .booking-page .text-gray-600 { color: #4b5563 !important; }
+.dark .booking-page .text-gray-500 { color: #6b7280 !important; }
+.dark .booking-page .text-gray-400 { color: #9ca3af !important; }
+.dark .booking-page .text-white    { color: #ffffff !important; }
+
+.dark .booking-page .border-gray-100 { border-color: #f3f4f6 !important; }
+.dark .booking-page .border-gray-200 { border-color: #e5e7eb !important; }
+.dark .booking-page .border-blue-500 { border-color: #3b82f6 !important; }
+.dark .booking-page .border-red-100  { border-color: #fee2e2 !important; }
+
+.dark .booking-page input,
+.dark .booking-page textarea,
+.dark .booking-page select {
   background-color: #ffffff !important;
   color: #111827 !important;
   border-color: #e5e7eb !important;
 }
-.booking-page input::placeholder,
-.booking-page textarea::placeholder {
-  color: #9ca3af !important;
-}
-.booking-page .bg-white    { background-color: #ffffff !important; }
-.booking-page .bg-gray-50  { background-color: #f9fafb !important; }
-.booking-page .bg-gray-100 { background-color: #f3f4f6 !important; }
-.booking-page .text-gray-900 { color: #111827 !important; }
-.booking-page .text-gray-700 { color: #374151 !important; }
-.booking-page .text-gray-600 { color: #4b5563 !important; }
-.booking-page .text-gray-500 { color: #6b7280 !important; }
+.dark .booking-page input::placeholder,
+.dark .booking-page textarea::placeholder { color: #9ca3af !important; }
 
 /* ── Modal / Slide-over animasyonlar ── */
 @keyframes fadeIn {
