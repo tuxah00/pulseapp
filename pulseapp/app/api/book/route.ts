@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
 
   const { data: business, error: bizErr } = await supabase
     .from('businesses')
-    .select('id, name, sector, working_hours, phone, address, city, district')
+    .select('id, name, sector, working_hours, phone, address, city, district, settings')
     .eq('id', businessId)
     .eq('is_active', true)
     .single()

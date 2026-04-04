@@ -314,6 +314,7 @@ export interface BusinessSettings {
   birthday_sms_enabled: boolean
   birthday_sms_template: string
   birthday_sms_hour: number
+  logo_url?: string | null
 }
 
 

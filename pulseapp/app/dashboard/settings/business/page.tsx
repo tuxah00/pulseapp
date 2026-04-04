@@ -7,7 +7,7 @@ import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import {
   Loader2, Save, Building2, Bell, Sparkles, Cake,
   CreditCard, MapPin, Phone, Mail, Globe,
-  MessageSquare, ChevronDown, ChevronUp,
+  MessageSquare, ChevronDown, ChevronUp, Camera, X,
 } from 'lucide-react'
 import {
   SECTOR_LABELS, PLAN_LABELS, PLAN_PRICES,
@@ -76,6 +76,9 @@ export default function BusinessSettingsPage() {
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<TabId>('info')
+
+  // Logo
+  const [logoUploading, setLogoUploading] = useState(false)
 
   // İşletme bilgileri formu
   const [name, setName] = useState('')
@@ -164,6 +167,31 @@ export default function BusinessSettingsPage() {
   async function handleSaveSettings(e: React.FormEvent) {
     e.preventDefault()
     await saveBusiness({ settings })
+  }
+
+  async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setLogoUploading(true)
+    const fd = new FormData()
+    fd.append('file', file)
+    const res = await fetch('/api/business/logo', { method: 'POST', body: fd })
+    if (res.ok) {
+      const { logo_url } = await res.json()
+      setSettings(prev => ({ ...prev, logo_url }))
+      fetchBusiness()
+    } else {
+      const { error } = await res.json()
+      setError(error || 'Logo yüklenemedi')
+    }
+    setLogoUploading(false)
+    e.target.value = ''
+  }
+
+  async function handleLogoRemove() {
+    await fetch('/api/business/logo', { method: 'DELETE' })
+    setSettings(prev => ({ ...prev, logo_url: null }))
+    fetchBusiness()
   }
 
   async function saveBusiness(updates: Record<string, any>) {
@@ -266,6 +294,50 @@ export default function BusinessSettingsPage() {
       {activeTab === 'info' && (
         <form onSubmit={handleSaveInfo}>
           <div className="space-y-6">
+            {/* Logo */}
+            <div className="card">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">İşletme Logosu</h2>
+              <div className="flex items-center gap-5">
+                <div className="relative flex-shrink-0">
+                  {settings.logo_url ? (
+                    <img
+                      src={settings.logo_url}
+                      alt="Logo"
+                      className="h-20 w-20 rounded-2xl object-cover border border-gray-200 dark:border-gray-700"
+                    />
+                  ) : (
+                    <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-pulse-100 dark:bg-pulse-900/30 text-pulse-600 dark:text-pulse-400 text-2xl font-bold border-2 border-dashed border-pulse-300 dark:border-pulse-700">
+                      {name.charAt(0).toUpperCase() || '?'}
+                    </div>
+                  )}
+                  {settings.logo_url && (
+                    <button
+                      type="button"
+                      onClick={handleLogoRemove}
+                      className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Profil Fotoğrafı</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">JPG, PNG veya WebP. Maks 5 MB.<br />Müşteri randevu sayfasında görünür.</p>
+                  <label className="btn-secondary text-sm cursor-pointer flex items-center gap-2 w-fit">
+                    {logoUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+                    {logoUploading ? 'Yükleniyor...' : 'Fotoğraf Seç'}
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="hidden"
+                      onChange={handleLogoUpload}
+                      disabled={logoUploading}
+                    />
+                  </label>
+                </div>
+              </div>
+            </div>
+
             <div className="card">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Temel Bilgiler</h2>
               <div className="grid gap-4 sm:grid-cols-2">

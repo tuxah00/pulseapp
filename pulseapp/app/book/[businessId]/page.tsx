@@ -17,6 +17,7 @@ interface BusinessData {
   address: string | null
   city: string | null
   district: string | null
+  settings?: { logo_url?: string | null } | null
 }
 
 interface ServiceData {
@@ -419,7 +420,41 @@ export default function BookingPage() {
               </div>
             )}
 
-            <div className="mt-5 pt-4 border-t border-gray-100 flex gap-2.5">
+            {/* Ya da — Bekleme listesi */}
+            <div className="mt-5">
+              <div className="flex items-center gap-3 my-4">
+                <div className="flex-1 h-px bg-gray-200" />
+                <span className="text-xs text-gray-400 font-medium px-1">ya da</span>
+                <div className="flex-1 h-px bg-gray-200" />
+              </div>
+              <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={waitlistEnabled}
+                    onChange={(e) => {
+                      setWaitlistEnabled(e.target.checked)
+                      if (e.target.checked) {
+                        setWaitlistDate(selectedDate || '')
+                        setWaitlistTime(selectedTime || '')
+                      }
+                    }}
+                    className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+                  />
+                  <div>
+                    <span className="text-sm font-medium text-gray-900 flex items-center gap-1.5">
+                      <Bell className="h-4 w-4 text-blue-500" />
+                      Randevu boşluğu oluştuğunda bildir
+                    </span>
+                    <span className="text-xs text-gray-400 mt-0.5 block">
+                      Tercih ettiğiniz zamanda yer açılırsa SMS ile haberdar ederiz.
+                    </span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <div className="mt-4 pt-4 border-t border-gray-100 flex gap-2.5">
               <button onClick={() => setStep(1)} className="btn-secondary flex items-center gap-1 px-3">
                 <ChevronLeft className="h-4 w-4" />
               </button>
@@ -628,12 +663,20 @@ function BusinessHeader({ business }: { business: BusinessData }) {
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
       {/* Top accent bar */}
-      <div className="h-1.5 bg-gradient-to-r from-blue-500 to-blue-400" />
+      <div className="h-1.5 bg-blue-500" />
       <div className="p-5 flex items-center gap-4">
-        {/* Avatar */}
-        <div className="flex-shrink-0 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 text-white text-lg font-bold shadow-sm shadow-blue-200">
-          {initials}
-        </div>
+        {/* Avatar / Logo */}
+        {business.settings?.logo_url ? (
+          <img
+            src={business.settings.logo_url}
+            alt={business.name}
+            className="flex-shrink-0 h-14 w-14 rounded-2xl object-cover border border-gray-100 shadow-sm"
+          />
+        ) : (
+          <div className="flex-shrink-0 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-500 text-white text-lg font-bold shadow-sm">
+            {initials}
+          </div>
+        )}
         {/* Info */}
         <div className="min-w-0">
           <h1 className="text-lg font-bold text-gray-900 truncate">{business.name}</h1>

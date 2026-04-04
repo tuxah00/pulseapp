@@ -380,7 +380,7 @@ export default function MessagesPage() {
           </div>
 
           {/* Konuşma Listesi */}
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto bg-white dark:bg-gray-900">
             {loading ? (
               <div className="flex items-center justify-center py-20">
                 <Loader2 className="h-6 w-6 animate-spin text-pulse-500" />
@@ -406,7 +406,7 @@ export default function MessagesPage() {
                     key={conv.customer.id}
                     onClick={() => selectConversation(conv)}
                     className={cn(
-                      'w-full flex items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-800 border-b border-gray-100 dark:border-gray-800',
+                      'w-full flex items-start gap-3 px-4 py-3 text-left transition-colors bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 border-b border-gray-100 dark:border-gray-800',
                       selectedCustomer?.id === conv.customer.id && 'bg-pulse-50 hover:bg-pulse-50 dark:bg-pulse-900/20 dark:hover:bg-pulse-900/20'
                     )}
                   >
@@ -416,7 +416,7 @@ export default function MessagesPage() {
                         'flex h-11 w-11 items-center justify-center rounded-full font-semibold text-sm',
                         selectedCustomer?.id === conv.customer.id
                           ? 'bg-pulse-200 text-pulse-800'
-                          : 'bg-gray-200 text-gray-600'
+                          : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
                       )}>
                         {conv.customer.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                       </div>
