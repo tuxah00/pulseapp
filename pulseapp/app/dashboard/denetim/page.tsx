@@ -46,6 +46,16 @@ const RESOURCE_LABELS: Record<string, string> = {
   membership: 'Üyelik',
   service_packages: 'Paket Şablonu',
   customer_packages: 'Müşteri Paketi',
+  pos_transaction: 'Kasa İşlemi',
+  pos_session: 'Kasa Oturumu',
+  income: 'Gelir',
+  class: 'Sınıf',
+  class_session: 'Sınıf Seansı',
+  attendance: 'Devam Kaydı',
+  reservation: 'Rezervasyon',
+  review: 'Yorum',
+  notification: 'Bildirim',
+  order: 'Sipariş',
 }
 
 const STATUS_LABELS_TR: Record<string, string> = {
