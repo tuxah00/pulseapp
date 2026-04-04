@@ -172,7 +172,7 @@ export default function ReviewsPage() {
       {/* Başlık */}
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Yorumlar</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Yorumlar</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{totalReviews} yorum · Ortalama {avgRating} ★</p>
         </div>
         <button onClick={() => setShowAddModal(true)} className="btn-primary">

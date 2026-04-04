@@ -275,11 +275,11 @@ export default function InvoicesPage() {
   }
 
   return (
-    <div>
+    <div className="space-y-5">
       {/* Başlık */}
-      <div className="mb-6 flex items-center justify-between">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Faturalar</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Faturalar</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{invoices.length} fatura</p>
         </div>
         <div className="flex items-center gap-2">
@@ -294,23 +294,23 @@ export default function InvoicesPage() {
       </div>
 
       {/* Özet Kartlar */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
-        <button onClick={() => setStatusFilter(statusFilter === 'paid' ? 'all' : 'paid')} className={cn('card p-4 text-left transition-all hover:shadow-md', statusFilter === 'paid' && 'ring-2 ring-green-500')}>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Tahsil Edilen</p>
-          <p className="text-xl font-bold text-green-600">{formatCurrency(totalRevenue)}</p>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <button onClick={() => setStatusFilter(statusFilter === 'paid' ? 'all' : 'paid')} className={cn('relative overflow-hidden rounded-2xl border border-green-100 dark:border-green-900/40 bg-green-50 dark:bg-green-950/30 p-4 text-left transition-all hover:shadow-sm hover:-translate-y-0.5', statusFilter === 'paid' && 'ring-2 ring-green-500')}>
+          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Tahsil Edilen</p>
+          <p className="text-xl font-bold bg-gradient-to-r from-emerald-500 to-teal-600 bg-clip-text text-transparent">{formatCurrency(totalRevenue)}</p>
         </button>
-        <button onClick={() => setStatusFilter(statusFilter === 'pending' ? 'all' : 'pending')} className={cn('card p-4 text-left transition-all hover:shadow-md', statusFilter === 'pending' && 'ring-2 ring-amber-500')}>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Bekleyen</p>
-          <p className="text-xl font-bold text-amber-600">{formatCurrency(pendingTotal)}</p>
+        <button onClick={() => setStatusFilter(statusFilter === 'pending' ? 'all' : 'pending')} className={cn('relative overflow-hidden rounded-2xl border border-amber-100 dark:border-amber-900/40 bg-amber-50 dark:bg-amber-950/30 p-4 text-left transition-all hover:shadow-sm hover:-translate-y-0.5', statusFilter === 'pending' && 'ring-2 ring-amber-500')}>
+          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Bekleyen</p>
+          <p className="text-xl font-bold bg-gradient-to-r from-amber-500 to-orange-600 bg-clip-text text-transparent">{formatCurrency(pendingTotal)}</p>
         </button>
-        <button onClick={() => setStatusFilter(statusFilter === 'overdue' ? 'all' : 'overdue')} className={cn('card p-4 text-left transition-all hover:shadow-md', statusFilter === 'overdue' && 'ring-2 ring-red-500')}>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Vadesi Geçmiş</p>
-          <p className={cn('text-xl font-bold', overdueCount > 0 ? 'text-red-600' : 'text-gray-900 dark:text-gray-100')}>{overdueCount} fatura</p>
+        <button onClick={() => setStatusFilter(statusFilter === 'overdue' ? 'all' : 'overdue')} className={cn('relative overflow-hidden rounded-2xl border border-red-100 dark:border-red-900/40 bg-red-50 dark:bg-red-950/30 p-4 text-left transition-all hover:shadow-sm hover:-translate-y-0.5', statusFilter === 'overdue' && 'ring-2 ring-red-500')}>
+          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Vadesi Geçmiş</p>
+          <p className={cn('text-xl font-bold', overdueCount > 0 ? 'bg-gradient-to-r from-red-500 to-rose-600 bg-clip-text text-transparent' : 'text-gray-900 dark:text-gray-100')}>{overdueCount} fatura</p>
         </button>
       </div>
 
       {/* Filtreler + Arama */}
-      <div className="mb-4 flex flex-col sm:flex-row gap-3">
+      <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex gap-1 overflow-x-auto pb-1">
           {(['all', 'pending', 'paid', 'partial', 'overdue', 'cancelled'] as const).map(s => (
             <button

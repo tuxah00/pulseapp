@@ -313,7 +313,7 @@ export default function MembershipsPage() {
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Üyelikler</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Üyelikler</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Üyelik planları, seans takibi ve süreli üyelikler
           </p>
@@ -372,7 +372,7 @@ export default function MembershipsPage() {
               <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{activeCount}</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-50">{activeCount}</p>
               <p className="text-xs text-gray-500 dark:text-gray-400">Aktif Üye</p>
             </div>
           </div>
@@ -381,7 +381,7 @@ export default function MembershipsPage() {
               <Calendar className="h-5 w-5 text-orange-600 dark:text-orange-400" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{expiringThisMonth}</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-50">{expiringThisMonth}</p>
               <p className="text-xs text-gray-500 dark:text-gray-400">Bu Ay Bitiyor</p>
             </div>
           </div>
@@ -390,7 +390,7 @@ export default function MembershipsPage() {
               <Users className="h-5 w-5 text-purple-600 dark:text-purple-400" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{totalCount}</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-50">{totalCount}</p>
               <p className="text-xs text-gray-500 dark:text-gray-400">Toplam</p>
             </div>
           </div>

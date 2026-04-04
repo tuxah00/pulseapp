@@ -331,7 +331,7 @@ export default function KasaPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Wallet className="h-6 w-6 text-pulse-600" />
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Kasa</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Kasa</h1>
           {session && (
             <span className="badge bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
               Açık

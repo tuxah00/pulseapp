@@ -374,18 +374,18 @@ export default function AnalyticsPage() {
   const periodLabel = period === 'week' ? 'Son 7 Gün' : period === 'month' ? 'Son 30 Gün' : 'Son 1 Yıl'
 
   return (
-    <div>
+    <div className="space-y-5">
       {/* Başlık */}
-      <div className="mb-6 flex items-center justify-between flex-wrap gap-3">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Gelir-Gider Tablosu</h1>
-          <p className="mt-1 text-sm text-gray-500">{periodLabel} · önceki dönemle karşılaştırmalı</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Gelir-Gider Tablosu</h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{periodLabel} · önceki dönemle karşılaştırmalı</p>
         </div>
-        <div className="flex gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+        <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
           {([['week', '7 Gün'], ['month', '30 Gün'], ['year', '1 Yıl']] as const).map(([key, label]) => (
             <button key={key} onClick={() => setPeriod(key)}
-              className={cn('px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
-                period === key ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              className={cn('px-3 py-1.5 rounded-lg text-sm font-medium transition-all',
+                period === key ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
               )}>
               {label}
             </button>
@@ -394,7 +394,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* KPI Kartları (dönem karşılaştırmalı) */}
-      <div className="mb-6 grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         <KPICard icon={<DollarSign className="h-5 w-5" />} label={invoiceOnlyRevenue > 0 ? 'Toplam Gelir' : 'Gelir'}
           value={formatCurrency(totalRevenue)} trend={revenueTrend} color="green" currency />
         <KPICard icon={<Users className="h-5 w-5" />} label="Ort. Müşteri Değeri"
@@ -404,7 +404,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Sekmeler */}
-      <div className="mb-4 flex gap-1 border-b border-gray-200 dark:border-gray-700 overflow-x-auto whitespace-nowrap">
+      <div className="flex gap-1 border-b border-gray-200 dark:border-gray-700 overflow-x-auto whitespace-nowrap">
         {([
           ['overview', 'Genel Bakış', <BarChart3 key="o" className="h-3.5 w-3.5" />],
           ['staff', 'Personel', <Users key="s" className="h-3.5 w-3.5" />],
@@ -941,20 +941,21 @@ function TrendBadge({ value }: { value: number }) {
 function KPICard({ icon, label, value, trend, color, currency }: {
   icon: React.ReactNode; label: string; value: string | number; trend?: number; color: string; currency?: boolean
 }) {
-  const colorMap: Record<string, string> = {
-    blue: 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
-    green: 'bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400',
-    purple: 'bg-purple-50 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400',
-    amber: 'bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400',
+  const colorMap: Record<string, { icon: string; bg: string; gradient: string }> = {
+    blue:   { icon: 'bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400',   bg: 'bg-blue-50 dark:bg-blue-950/40',   gradient: 'from-blue-500 to-indigo-600' },
+    green:  { icon: 'bg-green-500/10 dark:bg-green-500/20 text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-950/40', gradient: 'from-emerald-500 to-teal-600' },
+    purple: { icon: 'bg-purple-500/10 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-950/40', gradient: 'from-purple-500 to-violet-600' },
+    amber:  { icon: 'bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400',  bg: 'bg-amber-50 dark:bg-amber-950/40',  gradient: 'from-amber-500 to-orange-600' },
   }
+  const cfg = colorMap[color] || colorMap.blue
   return (
-    <div className="card p-4 flex items-start gap-3">
-      <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-lg', colorMap[color])}>{icon}</div>
-      <div className="min-w-0">
-        <p className="text-xs text-gray-500">{label}</p>
-        <p className={cn('text-xl font-bold truncate', currency ? 'text-price' : 'text-gray-900 dark:text-gray-100')}>{value}</p>
+    <div className={cn('relative overflow-hidden rounded-2xl border border-gray-100 dark:border-gray-800 p-4 transition-all hover:shadow-sm hover:-translate-y-0.5', cfg.bg)}>
+      <div className="flex items-start justify-between mb-3">
+        <div className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-xl', cfg.icon)}>{icon}</div>
         {trend !== undefined && <TrendBadge value={trend} />}
       </div>
+      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{label}</p>
+      <p className={cn('text-2xl font-bold bg-gradient-to-r bg-clip-text text-transparent', cfg.gradient)}>{value}</p>
     </div>
   )
 }

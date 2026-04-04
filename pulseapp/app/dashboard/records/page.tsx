@@ -540,7 +540,7 @@ function RecordsPageInner() {
       {/* ── Header ── */}
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{config.label}</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">{config.label}</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             {dbError ? config.label : `${records.length} kayıt`}
           </p>

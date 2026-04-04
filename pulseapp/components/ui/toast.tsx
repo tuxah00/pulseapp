@@ -1,3 +1,4 @@
+// REPLACED — see bottom of file for new implementation
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'

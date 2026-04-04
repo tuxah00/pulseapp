@@ -403,7 +403,7 @@ export default function VardiyePage() {
       {/* Başlık */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Vardiya Yönetimi</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Vardiya Yönetimi</h1>
           <p className="text-sm text-gray-500 mt-1">Personel vardiyelerini ve çalışma saatlerini yönetin</p>
         </div>
         {activeTab === 'shifts' && (
