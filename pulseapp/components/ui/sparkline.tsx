@@ -17,7 +17,7 @@ export function Sparkline({ data, color, height = 48 }: { data: number[]; color:
   const chartData = data.map(v => ({ v }))
 
   return (
-    <ResponsiveContainer width="100%" height={height}>
+    <ResponsiveContainer width="100%" height={height} className="pointer-events-none">
       <AreaChart data={chartData} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
         <defs>
           <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">

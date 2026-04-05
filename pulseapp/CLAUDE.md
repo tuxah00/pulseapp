@@ -124,6 +124,12 @@ const { businessId, userId, staffId, staffName, staffRole, permissions, sector, 
 - **Tema toggle:** `components/dashboard/top-bar.tsx`'te Sun/Moon butonu (notification bell'in solunda)
 - Settings sayfasından tema toggle kaldırıldı
 
+## Cursor & Seçim Kuralı
+- `.card` class'ı `cursor-default` içerir — bilgi kutularında metin imleci (I-beam) görünmez, normal ok imleci çıkar
+- Yeni bilgi kutuları/card'lar oluştururken `.card` class'ını kullan veya `cursor-default` ekle
+- `select-none` KULLANILMAMALI — kullanıcı sürükleyerek metin seçip kopyalayabilmeli
+- `pointer-events-none` yalnızca dekoratif/grafik elementlerde (sparkline, arka plan deseni vb.) kullanılmalı
+
 ## Proaktif Dark Mode Kuralı — KESİNLİKLE UYULMALI
 Her yeni bileşen veya sayfa yazıldığında KULLANICININ SÖYLEMESİNE GEREK KALMADAN şunlar kontrol edilmeli:
 

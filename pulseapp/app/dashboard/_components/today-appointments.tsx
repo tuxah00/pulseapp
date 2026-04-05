@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { Calendar, LayoutGrid, List, Clock, CheckCircle2, XCircle, AlertCircle, CircleDot } from 'lucide-react'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
 import { formatTime, getStatusColor, getInitials, getAvatarColor } from '@/lib/utils'
@@ -37,8 +38,23 @@ const STATUS_DOT: Record<string, string> = {
 }
 
 
+function isActiveNow(apt: Appointment, now: Date): boolean {
+  if (apt.status === 'completed' || apt.status === 'cancelled' || apt.status === 'no_show') return false
+  if (!apt.start_time || !apt.end_time) return false
+  const [sh, sm] = apt.start_time.split(':').map(Number)
+  const [eh, em] = apt.end_time.split(':').map(Number)
+  const nowMinutes = now.getHours() * 60 + now.getMinutes()
+  return nowMinutes >= sh * 60 + sm && nowMinutes < eh * 60 + em
+}
+
 export default function TodayAppointments({ appointments }: TodayAppointmentsProps) {
   const [viewMode, setViewMode] = useViewMode('dashboard-today', 'list')
+  const [now, setNow] = useState(() => new Date())
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60_000)
+    return () => clearInterval(timer)
+  }, [])
 
   return (
     <div className="card h-full">
@@ -100,13 +116,15 @@ export default function TodayAppointments({ appointments }: TodayAppointmentsPro
           <div className="absolute left-[26px] top-2 bottom-2 w-px bg-gray-100 dark:bg-gray-800" />
 
           <div className="space-y-3">
-            {appointments.map((apt, i) => (
+            {appointments.map((apt, i) => {
+              const active = isActiveNow(apt, now)
+              return (
               <div key={apt.id} className="flex items-start gap-3 group">
                 {/* Timeline dot */}
                 <div className="relative flex-shrink-0 flex items-center justify-center w-[52px] pt-1">
                   <div className={cn(
                     'h-3 w-3 rounded-full border-2 border-white dark:border-gray-950 z-10',
-                    STATUS_DOT[apt.status] || 'bg-gray-300'
+                    active ? 'bg-green-500 ring-4 ring-green-500/20' : (STATUS_DOT[apt.status] || 'bg-gray-300')
                   )} />
                 </div>
 
@@ -117,6 +135,7 @@ export default function TodayAppointments({ appointments }: TodayAppointmentsPro
                   'bg-white dark:bg-gray-900/50',
                   'group-hover:border-gray-200 dark:group-hover:border-gray-700',
                   'group-hover:shadow-sm transition-all duration-150',
+                  active && 'ring-2 ring-green-500/40 border-green-400 dark:border-green-500 bg-green-50/50 dark:bg-green-950/20',
                   apt.status === 'completed' && 'opacity-60',
                   apt.status === 'cancelled' && 'opacity-50',
                 )}>
@@ -159,27 +178,31 @@ export default function TodayAppointments({ appointments }: TodayAppointmentsPro
                   </div>
                 </div>
               </div>
-            ))}
+            )})}
           </div>
         </div>
       ) : (
         /* ── Box grid view ── */
         <div className="grid gap-3 sm:grid-cols-2">
-          {appointments.map((apt) => (
+          {appointments.map((apt) => {
+            const active = isActiveNow(apt, now)
+            return (
             <div
               key={apt.id}
               className={cn(
                 'relative rounded-xl border p-4 transition-all duration-150',
                 'border-gray-100 dark:border-gray-800',
                 'hover:border-gray-200 dark:hover:border-gray-700 hover:shadow-sm',
+                active && 'ring-2 ring-green-500/40 border-green-400 dark:border-green-500 bg-green-50/30 dark:bg-green-950/20',
                 apt.status === 'completed' && 'opacity-70',
                 apt.status === 'cancelled' && 'opacity-50',
               )}
             >
               {/* Status indicator stripe */}
               <div className={cn(
-                'absolute top-0 left-0 bottom-0 w-0.5 rounded-l-xl',
-                STATUS_DOT[apt.status] || 'bg-gray-300'
+                'absolute top-0 left-0 bottom-0 rounded-l-xl',
+                active ? 'w-1 bg-green-500' : 'w-0.5',
+                !active && (STATUS_DOT[apt.status] || 'bg-gray-300')
               )} />
 
               <div className="pl-2">
@@ -212,7 +235,7 @@ export default function TodayAppointments({ appointments }: TodayAppointmentsPro
                 </div>
               </div>
             </div>
-          ))}
+          )})}
         </div>
       )}
     </div>

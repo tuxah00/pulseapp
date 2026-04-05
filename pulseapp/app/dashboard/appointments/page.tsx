@@ -397,6 +397,16 @@ export default function AppointmentsPage() {
         await fetch('/api/messages/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ businessId, customerId: apt.customer_id, content: 'Merhaba, randevunuz iptal edilmiştir. Sorularınız için bizi arayabilirsiniz.' }) })
       } catch { /* bildirim hatası randevu iptalini geri almaz */ }
     }
+    // Bildirim: randevu iptal edildi
+    try {
+      await supabase.from('notifications').insert({
+        business_id: businessId,
+        type: 'appointment',
+        title: 'Randevu İptal Edildi',
+        body: `${apt.customers?.name || 'Müşteri'} — ${apt.services?.name || ''} — ${apt.appointment_date} ${apt.start_time}`,
+        is_read: false,
+      })
+    } catch { /* */ }
     setSaving(false); setCancelConfirmAppointment(null)
     if (selectedAppointment?.id === apt.id) setSelectedAppointment(null)
     fetchAppointments()

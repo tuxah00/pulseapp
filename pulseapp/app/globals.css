@@ -162,7 +162,7 @@
   /* ── Cards ── */
   .card {
     @apply rounded-xl border border-gray-200 bg-white p-6 shadow-sm
-           transition-all duration-200
+           transition-all duration-200 cursor-default
            dark:bg-gray-900 dark:border-gray-800;
   }
   .card:hover {

@@ -54,7 +54,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { token:
   // Token doğrulama
   const { data: appointment } = await admin
     .from('appointments')
-    .select('id, business_id, status, token_expires_at, service_id, staff_id')
+    .select('id, business_id, status, token_expires_at, service_id, staff_id, appointment_date, start_time, customers(name), services(name)')
     .eq('manage_token', params.token)
     .single()
 
@@ -99,11 +99,25 @@ export async function PATCH(request: NextRequest, { params }: { params: { token:
       appointment_date: date,
       start_time: startTime,
       end_time: endTime,
-      status: 'pending', // Değişiklik sonrası yeniden onay bekle
+      status: 'pending',
     })
     .eq('id', appointment.id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Bildirim: müşteri randevuyu değiştirdi
+  const custName = (Array.isArray(appointment.customers) ? appointment.customers[0] : appointment.customers)?.name || 'Müşteri'
+  const svcName = (Array.isArray(appointment.services) ? appointment.services[0] : appointment.services)?.name || ''
+  try {
+    await admin.from('notifications').insert({
+      business_id: appointment.business_id,
+      type: 'appointment',
+      title: 'Randevu Değiştirildi',
+      body: `${custName} — ${svcName} — ${date} ${startTime}`,
+      is_read: false,
+    })
+  } catch { /* bildirim hatası işlemi etkilemez */ }
+
   return NextResponse.json({ success: true, message: 'Randevu güncellendi' })
 }
 
@@ -113,7 +127,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { token
 
   const { data: appointment } = await admin
     .from('appointments')
-    .select('id, status, token_expires_at')
+    .select('id, business_id, status, token_expires_at, appointment_date, start_time, customers(name), services(name)')
     .eq('manage_token', params.token)
     .single()
 
@@ -139,5 +153,19 @@ export async function DELETE(request: NextRequest, { params }: { params: { token
     .eq('id', appointment.id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Bildirim: müşteri randevuyu iptal etti
+  const custName = (Array.isArray(appointment.customers) ? appointment.customers[0] : appointment.customers)?.name || 'Müşteri'
+  const svcName = (Array.isArray(appointment.services) ? appointment.services[0] : appointment.services)?.name || ''
+  try {
+    await admin.from('notifications').insert({
+      business_id: appointment.business_id,
+      type: 'appointment',
+      title: 'Randevu İptal Edildi (Online)',
+      body: `${custName} — ${svcName} — ${appointment.appointment_date} ${appointment.start_time}`,
+      is_read: false,
+    })
+  } catch { /* bildirim hatası işlemi etkilemez */ }
+
   return NextResponse.json({ success: true, message: 'Randevu iptal edildi' })
 }
