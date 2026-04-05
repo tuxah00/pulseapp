@@ -124,6 +124,34 @@ const { businessId, userId, staffId, staffName, staffRole, permissions, sector, 
 - **Tema toggle:** `components/dashboard/top-bar.tsx`'te Sun/Moon butonu (notification bell'in solunda)
 - Settings sayfasından tema toggle kaldırıldı
 
+## Modal & Z-Index Standardı
+- **Dialog/DialogOverlay:** `z-[60]` (`components/ui/dialog.tsx`)
+- **Inline modal backdrop'lar:** `z-[60]` (`fixed inset-0 bg-black/40 z-[60]`)
+- **ConfirmDialog:** `z-[60]` / `z-[61]` (`components/ui/confirm-dialog.tsx`)
+- **Lightbox (resim görüntüleyici):** `z-[70]` (modal'ların üstünde)
+- **TopBar:** `sticky top-0 z-30` — modal overlay'ler bunun üstünde olmalı
+- **Sidebar mobile:** `z-40` / `z-50`
+- Yeni modal oluştururken `z-50` KULLANMA — her zaman `z-[60]` kullan
+
+## Çalışma Saatleri Validasyonu
+- **Admin randevu formu:** `generateTimeSlots(date, workingHours)` ile çalışma saatlerine göre slot üretir
+- **Booking API:** `POST /api/book` çalışma saati dışı randevu → 400 hatası döner
+- **Public booking:** `book/[businessId]/page.tsx` zaten enforce eder
+- **Kapalı gün:** `workingHours[dayKey] === null` → slot yok, "Bu gün kapalıdır" mesajı
+- Yeni randevu oluşturma akışı eklenirken mutlaka çalışma saati kontrolü yapılmalı
+
+## Hasta Dosyaları (Records) Pattern
+- **Lightbox:** `ImageLightbox` bileşeni `records/page.tsx` içinde tanımlı — resim tıklandığında sayfa içi görüntüleme
+- **Created-by:** `data.created_by_staff_id` + `data.created_by_staff_name` JSONB data'da saklanır
+- **File metadata:** `data.file_metadata[]` = `{ name, size, type, uploadedAt }` — upload API'den dönen metadata
+- **TYPE_CONFIG:** Her kayıt tipinin dinamik alanları burada tanımlı — yeni alan eklerken bu config'e ekle
+
+## UI Border-Radius Standardı
+- **Card/Dialog:** `rounded-xl`
+- **Button/Input:** `rounded-lg`
+- **Badge:** `rounded-full`
+- **Avatar (list):** `rounded-xl`, **Avatar (box):** `rounded-full`, **Avatar (detail):** `rounded-2xl`
+
 ## Cursor & Seçim Kuralı
 - `.card` class'ı `cursor-default` içerir — bilgi kutularında metin imleci (I-beam) görünmez, normal ok imleci çıkar
 - Yeni bilgi kutuları/card'lar oluştururken `.card` class'ını kullan veya `cursor-default` ekle
