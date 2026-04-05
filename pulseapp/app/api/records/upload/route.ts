@@ -43,5 +43,13 @@ export async function POST(req: NextRequest) {
   }
 
   const { data: urlData } = supabase.storage.from(BUCKET_NAME).getPublicUrl(path)
-  return NextResponse.json({ url: urlData.publicUrl })
+  return NextResponse.json({
+    url: urlData.publicUrl,
+    metadata: {
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      uploadedAt: new Date().toISOString(),
+    },
+  })
 }
