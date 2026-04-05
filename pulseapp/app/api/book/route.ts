@@ -64,13 +64,32 @@ export async function POST(req: NextRequest) {
 
   const { data: business } = await supabase
     .from('businesses')
-    .select('id')
+    .select('id, working_hours')
     .eq('id', businessId)
     .eq('is_active', true)
     .single()
 
   if (!business) {
     return NextResponse.json({ error: 'İşletme bulunamadı' }, { status: 404 })
+  }
+
+  // Çalışma saatleri doğrulaması
+  if (business.working_hours) {
+    const wh = business.working_hours as Record<string, { open: string; close: string } | null>
+    const dayMap: Record<number, string> = {
+      0: 'sun', 1: 'mon', 2: 'tue', 3: 'wed', 4: 'thu', 5: 'fri', 6: 'sat'
+    }
+    const d = new Date(appointment_date + 'T00:00:00')
+    const dayKey = dayMap[d.getDay()]
+    const dayHours = wh[dayKey]
+
+    if (!dayHours) {
+      return NextResponse.json({ error: 'Bu gün kapalıdır' }, { status: 400 })
+    }
+
+    if (start_time < dayHours.open) {
+      return NextResponse.json({ error: 'Çalışma saatleri dışında randevu oluşturulamaz' }, { status: 400 })
+    }
   }
 
   const { data: service } = await supabase
@@ -89,6 +108,20 @@ export async function POST(req: NextRequest) {
   const endH = Math.floor(totalMin / 60)
   const endM = totalMin % 60
   const end_time = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`
+
+  // Bitiş saati çalışma saatleri kontrolü
+  if (business.working_hours) {
+    const wh = business.working_hours as Record<string, { open: string; close: string } | null>
+    const dayMap: Record<number, string> = {
+      0: 'sun', 1: 'mon', 2: 'tue', 3: 'wed', 4: 'thu', 5: 'fri', 6: 'sat'
+    }
+    const d = new Date(appointment_date + 'T00:00:00')
+    const dayKey = dayMap[d.getDay()]
+    const dayHours = wh[dayKey]
+    if (dayHours && end_time > dayHours.close) {
+      return NextResponse.json({ error: 'Çalışma saatleri dışında randevu oluşturulamaz' }, { status: 400 })
+    }
+  }
 
   let conflictQuery = supabase
     .from('appointments')
