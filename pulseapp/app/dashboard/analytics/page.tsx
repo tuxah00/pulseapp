@@ -7,7 +7,7 @@ import { logAudit } from '@/lib/utils/audit'
 import {
   Loader2, TrendingUp, TrendingDown, Users, Calendar,
   DollarSign, AlertTriangle, Clock, Star, UserCheck, Minus,
-  BarChart3, PieChart, Activity, Plus, X, Wallet, Download,
+  BarChart3, PieChart, Activity, Plus, X, Wallet, Download, Layers,
 } from 'lucide-react'
 import { formatCurrency, cn } from '@/lib/utils'
 import { useConfirm } from '@/lib/hooks/use-confirm'
@@ -371,6 +371,20 @@ export default function AnalyticsPage() {
     return { ...svc, count, revenue: count * (svc.price || 0) }
   }).sort((a, b) => b.count - a.count)
 
+  // Hizmet bazlı gelir kırılımı (tamamlanan randevulardan)
+  const serviceRevenueMap = completed.reduce((acc: Record<string, { name: string; count: number; revenue: number }>, apt: any) => {
+    const sid = apt.service_id
+    if (!sid) return acc
+    const name = apt.services?.name || 'Bilinmeyen'
+    const price = apt.services?.price || 0
+    if (!acc[sid]) acc[sid] = { name, count: 0, revenue: 0 }
+    acc[sid].count++
+    acc[sid].revenue += price
+    return acc
+  }, {} as Record<string, { name: string; count: number; revenue: number }>)
+  const serviceRevenueList = Object.values(serviceRevenueMap).sort((a, b) => b.revenue - a.revenue)
+  const maxServiceRevenue = serviceRevenueList.length > 0 ? serviceRevenueList[0].revenue : 0
+
   const periodLabel = period === 'week' ? 'Son 7 Gün' : period === 'month' ? 'Son 30 Gün' : 'Son 1 Yıl'
 
   return (
@@ -606,6 +620,58 @@ export default function AnalyticsPage() {
               })()}
             </div>
           </div>
+
+          {/* Hizmet Bazlı Gelir Kırılımı */}
+          {serviceRevenueList.length > 0 && (
+            <div className="card p-4">
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
+                <Layers className="h-4 w-4" /> Hizmet Bazlı Gelir
+              </h3>
+              <div className="space-y-3">
+                {serviceRevenueList.map((svc, idx) => {
+                  const pct = maxServiceRevenue > 0 ? (svc.revenue / maxServiceRevenue) * 100 : 0
+                  const avg = svc.count > 0 ? svc.revenue / svc.count : 0
+                  const isTop = idx === 0
+                  return (
+                    <div key={idx} className={cn('rounded-lg p-3 transition-colors', isTop ? 'bg-amber-50/60 dark:bg-amber-900/15 ring-1 ring-amber-200/50 dark:ring-amber-700/30' : 'bg-gray-50/50 dark:bg-gray-800/30')}>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <div className="flex items-center gap-2">
+                          {isTop && <span className="text-amber-500 text-xs font-semibold">★</span>}
+                          <span className={cn('text-sm font-medium', isTop ? 'text-amber-800 dark:text-amber-300' : 'text-gray-900 dark:text-gray-100')}>
+                            {svc.name}
+                          </span>
+                        </div>
+                        <span className={cn('text-sm font-bold', isTop ? 'text-amber-700 dark:text-amber-400' : 'text-gray-900 dark:text-gray-100')}>
+                          {formatCurrency(svc.revenue)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="flex-1 h-2 bg-pulse-500/20 dark:bg-pulse-500/10 rounded-full overflow-hidden">
+                          <div
+                            className={cn('h-full rounded-full transition-all', isTop ? 'bg-amber-500 dark:bg-amber-400' : 'bg-pulse-500')}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+                        <span>{svc.count} randevu</span>
+                        <span>Ort. {formatCurrency(avg)}</span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+              {/* Toplam satırı */}
+              <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  Toplam ({serviceRevenueList.reduce((s, r) => s + r.count, 0)} randevu)
+                </span>
+                <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                  {formatCurrency(serviceRevenueList.reduce((s, r) => s + r.revenue, 0))}
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* Gider Listesi Başlığı */}
           <div className="flex items-center justify-between">
