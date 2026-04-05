@@ -28,6 +28,8 @@ const STATUS_CONFIG: Record<string, { icon: typeof CheckCircle2; color: string; 
   pending:   { icon: CircleDot, color: 'text-gray-400', bg: 'bg-gray-50 dark:bg-gray-800', dot: 'bg-gray-300 dark:bg-gray-600', label: 'Bekliyor' },
 }
 
+const MAX_VISIBLE = 6
+
 function isActiveNow(apt: Appointment, now: Date): boolean {
   if (apt.status === 'completed' || apt.status === 'cancelled' || apt.status === 'no_show') return false
   if (!apt.start_time || !apt.end_time) return false
@@ -35,6 +37,35 @@ function isActiveNow(apt: Appointment, now: Date): boolean {
   const [eh, em] = apt.end_time.split(':').map(Number)
   const nowMinutes = now.getHours() * 60 + now.getMinutes()
   return nowMinutes >= sh * 60 + sm && nowMinutes < eh * 60 + em
+}
+
+function getStartMinutes(apt: Appointment): number {
+  const [h, m] = (apt.start_time || '0:0').split(':').map(Number)
+  return h * 60 + m
+}
+
+function getVisibleAppointments(appointments: Appointment[], now: Date): Appointment[] {
+  if (appointments.length <= MAX_VISIBLE) return appointments
+
+  const nowMinutes = now.getHours() * 60 + now.getMinutes()
+
+  // Score each appointment by proximity to current time (lower = closer)
+  const scored = appointments.map((apt, idx) => {
+    const startMin = getStartMinutes(apt)
+    const isActive = isActiveNow(apt, now)
+    // Active appointments get priority (distance = -1)
+    const distance = isActive ? -1 : Math.abs(startMin - nowMinutes)
+    return { apt, idx, distance }
+  })
+
+  // Sort by distance (active first, then closest)
+  scored.sort((a, b) => a.distance - b.distance)
+
+  // Take top MAX_VISIBLE, then restore original time order
+  const selected = scored.slice(0, MAX_VISIBLE)
+  selected.sort((a, b) => a.idx - b.idx)
+
+  return selected.map(s => s.apt)
 }
 
 export default function TodayAppointments({ appointments }: TodayAppointmentsProps) {
@@ -72,7 +103,7 @@ export default function TodayAppointments({ appointments }: TodayAppointmentsPro
         </div>
       ) : (
         <div className="space-y-2">
-          {appointments.map((apt) => {
+          {getVisibleAppointments(appointments, now).map((apt) => {
             const active = isActiveNow(apt, now)
             const config = STATUS_CONFIG[apt.status] || STATUS_CONFIG.pending
             const StatusIcon = config.icon
@@ -148,6 +179,16 @@ export default function TodayAppointments({ appointments }: TodayAppointmentsPro
               </div>
             )
           })}
+
+          {appointments.length > MAX_VISIBLE && (
+            <a
+              href="/dashboard/appointments"
+              className="flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-gray-200 dark:border-gray-700 px-3 py-2.5 text-sm font-medium text-pulse-600 dark:text-pulse-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:border-pulse-300 dark:hover:border-pulse-600 transition-all"
+            >
+              + {appointments.length - MAX_VISIBLE} randevu daha
+              <ArrowRight className="h-3.5 w-3.5" />
+            </a>
+          )}
         </div>
       )}
     </div>

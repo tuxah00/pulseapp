@@ -450,7 +450,7 @@ function StatCard({
   trend?: 'up' | 'down' | 'flat'
 }) {
   return (
-    <div className={`relative overflow-hidden rounded-2xl border border-gray-100 dark:border-gray-800 ${bgLight} p-5 transition-all duration-200 hover:shadow-md cursor-default`}>
+    <div className={`relative overflow-visible rounded-2xl border border-gray-100 dark:border-gray-800 ${bgLight} p-5 transition-all duration-200 hover:shadow-md cursor-default`}>
       <div className="flex items-start justify-between mb-3">
         <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${iconBg}`}>
           <span className={iconColor}>{icon}</span>
@@ -477,7 +477,7 @@ function StatCard({
       )}
 
       {sparkline && (
-        <div className="mt-3 -mx-1">
+        <div className="mt-3">
           {sparkline}
         </div>
       )}
