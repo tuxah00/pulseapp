@@ -339,7 +339,7 @@ export default function PortfolioPage() {
 
       {/* Upload Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 modal-overlay">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 modal-overlay">
           <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-md modal-content">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Yeni Görsel Ekle</h2>
@@ -483,7 +483,7 @@ export default function PortfolioPage() {
 
       {/* Delete confirm dialog */}
       {deleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 modal-overlay">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 modal-overlay">
           <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-sm p-6 modal-content">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">

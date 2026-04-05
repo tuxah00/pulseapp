@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
+import { createClient } from '@/lib/supabase/client'
 import {
   Plus, UserCheck, Search, X, Loader2, Gift, Phone, ArrowRight, CheckCircle, Clock
 } from 'lucide-react'
@@ -49,9 +50,14 @@ export default function ReferralsPage() {
   const fetchCustomers = useCallback(async () => {
     if (!businessId) return
     try {
-      const res = await fetch(`/api/customers?businessId=${businessId}&limit=500`)
-      const json = await res.json()
-      setCustomers(json.customers || [])
+      const supabase = createClient()
+      const { data } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('business_id', businessId)
+        .is('deleted_at', null)
+        .order('name')
+      setCustomers((data as Customer[]) || [])
     } catch { /* ignore */ }
   }, [businessId])
 
@@ -268,7 +274,7 @@ export default function ReferralsPage() {
 
       {/* Create Modal */}
       {showCreate && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
           <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-lg">
             <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
               <h2 className="text-lg font-bold text-gray-900 dark:text-white">Yeni Referans</h2>

@@ -677,7 +677,7 @@ function RecordsPageInner() {
             className="fixed inset-0 z-40 bg-black/30 dark:bg-black/50"
             onClick={() => setSelectedRecord(null)}
           />
-          <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setSelectedRecord(null)}>
+          <div className="modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={() => setSelectedRecord(null)}>
             <div
               className="modal-content bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
               onClick={(e) => e.stopPropagation()}
@@ -791,7 +791,7 @@ function RecordsPageInner() {
 
       {/* ── Create / Edit Modal ── */}
       {showModal && (
-        <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
           <div className="modal-content card w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">

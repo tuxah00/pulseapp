@@ -1235,7 +1235,7 @@ export default function AppointmentsPage() {
 
       {/* Yeni / Düzenleme Randevu Modal */}
       {showModal && (
-        <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
           <div className="modal-content card w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -1360,7 +1360,7 @@ export default function AppointmentsPage() {
 
       {/* Erteleme Modal */}
       {rescheduleAppointment && (
-        <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
           <div className="modal-content card w-full max-w-sm">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Randevuyu Ertele</h2>
@@ -1394,7 +1394,7 @@ export default function AppointmentsPage() {
 
       {/* İptal Onay Modal */}
       {cancelConfirmAppointment && (
-        <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
           <div className="modal-content card w-full max-w-sm">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Randevuyu İptal Et</h2>
