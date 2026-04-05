@@ -60,7 +60,7 @@ export default function ConfirmDialog({
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.92, y: 12 }}
               transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-              className="pointer-events-auto w-full max-w-sm overflow-hidden rounded-2xl
+              className="pointer-events-auto w-full max-w-sm overflow-hidden rounded-xl
                          bg-white dark:bg-gray-900
                          border border-gray-200/80 dark:border-white/10
                          shadow-2xl shadow-black/20 dark:shadow-black/60"

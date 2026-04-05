@@ -24,12 +24,12 @@ interface Conversation {
 }
 
 const AI_LABELS: Record<AiClassification, { label: string; color: string; icon: React.ReactNode }> = {
-  appointment: { label: 'Randevu', color: 'bg-blue-100 text-blue-700', icon: <Calendar className="h-3 w-3" /> },
-  question: { label: 'Soru', color: 'bg-purple-100 text-purple-700', icon: <HelpCircle className="h-3 w-3" /> },
-  complaint: { label: 'Şikayet', color: 'bg-red-100 text-red-700', icon: <AlertTriangle className="h-3 w-3" /> },
-  cancellation: { label: 'İptal', color: 'bg-orange-100 text-orange-700', icon: <X className="h-3 w-3" /> },
-  greeting: { label: 'Selamlama', color: 'bg-green-100 text-green-700', icon: <MessageCircle className="h-3 w-3" /> },
-  other: { label: 'Diğer', color: 'bg-gray-100 text-gray-600', icon: <MessageSquare className="h-3 w-3" /> },
+  appointment: { label: 'Randevu', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300', icon: <Calendar className="h-3 w-3" /> },
+  question: { label: 'Soru', color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300', icon: <HelpCircle className="h-3 w-3" /> },
+  complaint: { label: 'Şikayet', color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300', icon: <AlertTriangle className="h-3 w-3" /> },
+  cancellation: { label: 'İptal', color: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300', icon: <X className="h-3 w-3" /> },
+  greeting: { label: 'Selamlama', color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300', icon: <MessageCircle className="h-3 w-3" /> },
+  other: { label: 'Diğer', color: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400', icon: <MessageSquare className="h-3 w-3" /> },
 }
 
 function formatMessageTime(dateStr: string): string {
@@ -319,12 +319,12 @@ export default function MessagesPage() {
   }
 
   return (
-    <div className="fixed inset-0 lg:left-64 top-14 z-30 bg-white dark:bg-gray-900">
+    <div className="fixed inset-0 lg:left-64 top-14 z-30 bg-white dark:bg-gray-950">
       <div className="flex h-full">
 
         {/* Sol Panel — Konuşma Listesi */}
         <div className={cn(
-          'flex flex-col border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 w-full lg:w-96 lg:flex-shrink-0',
+          'flex flex-col border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 w-full lg:w-96 lg:flex-shrink-0',
           mobileShowChat ? 'hidden lg:flex' : 'flex'
         )}>
           {/* Başlık */}
@@ -380,7 +380,7 @@ export default function MessagesPage() {
           </div>
 
           {/* Konuşma Listesi */}
-          <div className="flex-1 overflow-y-auto bg-white dark:bg-gray-900">
+          <div className="flex-1 overflow-y-auto bg-white dark:bg-gray-950">
             {loading ? (
               <div className="flex items-center justify-center py-20">
                 <Loader2 className="h-6 w-6 animate-spin text-pulse-500" />
@@ -406,7 +406,7 @@ export default function MessagesPage() {
                     key={conv.customer.id}
                     onClick={() => selectConversation(conv)}
                     className={cn(
-                      'w-full flex items-start gap-3 px-4 py-3 text-left transition-colors bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 border-b border-gray-100 dark:border-gray-800',
+                      'w-full flex items-start gap-3 px-4 py-3 text-left transition-colors bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900 border-b border-gray-100 dark:border-gray-800',
                       selectedCustomer?.id === conv.customer.id && 'bg-pulse-50 hover:bg-pulse-50 dark:bg-pulse-900/20 dark:hover:bg-pulse-900/20'
                     )}
                   >
