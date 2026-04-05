@@ -510,6 +510,7 @@ export default function CustomersPage() {
               <CompactBoxCard
                 initials={customer.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                 title={customer.name}
+                colorClass={`${getAvatarColor(customer.name)} text-white`}
                 badge={isBirthdayToday(customer.birthday) ? <Cake className="h-3.5 w-3.5 text-pink-500" /> : undefined}
                 selected={selectedCustomer?.id === customer.id}
                 onClick={() => setSelectedCustomer(customer)}

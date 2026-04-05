@@ -26,7 +26,7 @@ import {
   Search, Filter, ArrowUpDown,
 } from 'lucide-react'
 import { formatTime, formatDate, getStatusColor, formatCurrency, cn, getInitials, getAvatarColor } from '@/lib/utils'
-import { STATUS_LABELS, type AppointmentStatus, type Customer, type Service, type StaffMember } from '@/types'
+import { STATUS_LABELS, type AppointmentStatus, type Customer, type Service, type StaffMember, type WorkingHours } from '@/types'
 import { logAudit } from '@/lib/utils/audit'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
@@ -500,8 +500,33 @@ export default function AppointmentsPage() {
     fetchAppointments()
   }
 
-  function generateTimeSlots() {
-    const slots = []
+  function getDayKeyFromDate(dateStr: string): keyof WorkingHours {
+    const dayMap: Record<number, keyof WorkingHours> = {
+      0: 'sun', 1: 'mon', 2: 'tue', 3: 'wed', 4: 'thu', 5: 'fri', 6: 'sat'
+    }
+    const d = new Date(dateStr + 'T00:00:00')
+    return dayMap[d.getDay()]
+  }
+
+  function generateTimeSlots(dateStr?: string, wh?: Record<string, { open: string; close: string } | null> | null): string[] {
+    if (dateStr && wh) {
+      const dayKey = getDayKeyFromDate(dateStr)
+      const dayHours = wh[dayKey]
+      if (!dayHours) return [] // kapalı gün
+      const [openH, openM] = dayHours.open.split(':').map(Number)
+      const [closeH, closeM] = dayHours.close.split(':').map(Number)
+      const openTotal = openH * 60 + openM
+      const closeTotal = closeH * 60 + closeM
+      const slots: string[] = []
+      for (let t = openTotal; t < closeTotal; t += 30) {
+        const hh = Math.floor(t / 60)
+        const mm = t % 60
+        slots.push(`${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`)
+      }
+      return slots
+    }
+    // Fallback: 08:00 - 21:30
+    const slots: string[] = []
     for (let h = 8; h <= 21; h++) {
       slots.push(`${String(h).padStart(2, '0')}:00`)
       slots.push(`${String(h).padStart(2, '0')}:30`)
@@ -782,8 +807,8 @@ export default function AppointmentsPage() {
           const toMinutes = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
 
           return (
-            <div className="card overflow-hidden !p-0">
-              <div className="overflow-x-auto">
+            <div className="card overflow-hidden !p-0 min-h-[calc(100vh-220px)]">
+              <div className="overflow-x-auto overflow-y-auto">
                 <div className="min-w-[800px] relative">
 
                   {/* ── TEK arka plan grid — header + body ikisini birden kapsar ── */}
@@ -1276,8 +1301,11 @@ export default function AppointmentsPage() {
                 <div>
                   <label className="label">Saat</label>
                   <select value={startTime} onChange={(e) => setStartTime(e.target.value)} className="input" required>
-                    {generateTimeSlots().map(t => <option key={t} value={t}>{t}</option>)}
+                    {generateTimeSlots(date, workingHours).map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
+                  {date && workingHours && generateTimeSlots(date, workingHours).length === 0 && (
+                    <p className="text-xs text-red-500 mt-1">Bu gün kapalıdır, randevu oluşturulamaz.</p>
+                  )}
                 </div>
               </div>
               {serviceId && (
@@ -1377,8 +1405,11 @@ export default function AppointmentsPage() {
               <div>
                 <label className="label">Yeni Saat</label>
                 <select value={rescheduleTime} onChange={(e) => setRescheduleTime(e.target.value)} className="input" required>
-                  {generateTimeSlots().map(t => <option key={t} value={t}>{t}</option>)}
+                  {generateTimeSlots(rescheduleDate, workingHours).map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
+                {rescheduleDate && workingHours && generateTimeSlots(rescheduleDate, workingHours).length === 0 && (
+                  <p className="text-xs text-red-500 mt-1">Bu gün kapalıdır, randevu oluşturulamaz.</p>
+                )}
               </div>
               {error && <div className="rounded-lg bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-400">{error}</div>}
               <div className="flex gap-3 pt-2">
