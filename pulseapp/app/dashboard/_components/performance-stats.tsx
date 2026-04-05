@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
-import { Clock, TrendingUp, CheckCircle, XCircle } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { Clock, TrendingUp } from 'lucide-react'
+import { cn, formatCurrency } from '@/lib/utils'
 
 export default function PerformanceStats() {
   const { businessId, loading: ctxLoading } = useBusinessContext()
@@ -26,7 +26,7 @@ export default function PerformanceStats() {
         .gte('appointment_date', startStr)
         .is('deleted_at', null),
       supabase.from('services')
-        .select('id, name')
+        .select('id, name, price')
         .eq('business_id', businessId)
         .eq('is_active', true),
     ])
@@ -56,10 +56,10 @@ export default function PerformanceStats() {
   const topHours = [...hourDist].sort((a, b) => b.count - a.count).slice(0, 3)
 
   // Popular services
-  const serviceStats = services.map(svc => ({
-    name: svc.name,
-    count: completed.filter(a => a.service_id === svc.id).length,
-  })).filter(s => s.count > 0).sort((a, b) => b.count - a.count).slice(0, 5)
+  const serviceStats = services.map(svc => {
+    const count = completed.filter(a => a.service_id === svc.id).length
+    return { name: svc.name, count, revenue: count * (svc.price || 0) }
+  }).filter(s => s.count > 0).sort((a, b) => b.count - a.count).slice(0, 5)
 
   if (total === 0) return null
 
@@ -70,19 +70,19 @@ export default function PerformanceStats() {
         <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Son 30 Gün Performansı</h3>
         <div className="grid grid-cols-3 gap-3">
           <div className="text-center">
-            <p className={cn('text-xl font-bold', completionRate >= 80 ? 'text-green-600' : completionRate >= 60 ? 'text-amber-600' : 'text-red-600')}>
+            <p className="text-xl font-bold text-green-600 dark:text-green-400">
               %{completionRate}
             </p>
             <p className="text-xs text-gray-500 mt-0.5">Tamamlanma</p>
           </div>
           <div className="text-center">
-            <p className={cn('text-xl font-bold', noShowRate <= 5 ? 'text-green-600' : noShowRate <= 15 ? 'text-amber-600' : 'text-red-600')}>
+            <p className="text-xl font-bold text-red-600 dark:text-red-400">
               %{noShowRate}
             </p>
             <p className="text-xs text-gray-500 mt-0.5">Gelmeme</p>
           </div>
           <div className="text-center">
-            <p className="text-xl font-bold text-gray-700 dark:text-gray-300">{cancelled.length}</p>
+            <p className="text-xl font-bold text-amber-600 dark:text-amber-400">{cancelled.length}</p>
             <p className="text-xs text-gray-500 mt-0.5">İptal</p>
           </div>
         </div>
@@ -118,13 +118,18 @@ export default function PerformanceStats() {
             <TrendingUp className="h-3.5 w-3.5" /> Popüler Hizmetler
           </h3>
           <div className="space-y-2">
-            {serviceStats.map(({ name, count }, i) => (
+            {serviceStats.map(({ name, count, revenue }, i) => (
               <div key={name} className="flex items-center justify-between">
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="text-xs text-gray-400 w-4">{i + 1}.</span>
                   <span className="text-sm text-gray-700 dark:text-gray-300 truncate">{name}</span>
                 </div>
-                <span className="text-xs font-medium text-gray-500 ml-2 flex-shrink-0">{count} randevu</span>
+                <div className="flex items-center gap-2 ml-2 flex-shrink-0">
+                  <span className="text-xs text-gray-500">{count} randevu</span>
+                  {revenue > 0 && (
+                    <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">{formatCurrency(revenue)}</span>
+                  )}
+                </div>
               </div>
             ))}
           </div>

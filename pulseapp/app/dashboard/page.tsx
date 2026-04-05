@@ -2,7 +2,6 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import {
   Calendar,
-  Users,
   Star,
   AlertTriangle,
   Bell,
@@ -42,13 +41,22 @@ export default async function DashboardPage() {
   const sevenAgo = d7.toISOString().split('T')[0]
   const sevenAgoISO = d7.toISOString()
 
+  // Haftalık randevu için tarih aralığı (Pzt-Paz)
+  const nowDate = new Date()
+  const dayOfWeek = nowDate.getDay() // 0=Paz
+  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
+  const weekStart = new Date(nowDate); weekStart.setDate(nowDate.getDate() + mondayOffset)
+  const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 6)
+  const weekStartStr = weekStart.toISOString().split('T')[0]
+  const weekEndStr = weekEnd.toISOString().split('T')[0]
+
   let todayAppointments: any[] = []
   let stats: any = null
   let notifications: any[] = []
   let riskCustomers: any[] = []
   let aptTrend: number[] = []
-  let custTrend: number[] = []
   let ratingTrend: number[] = []
+  let weeklyAppointments: any[] = []
 
   try {
     const results = await Promise.all([
@@ -76,7 +84,7 @@ export default async function DashboardPage() {
 
       supabase
         .from('customers')
-        .select('*')
+        .select('id, name, segment, last_visit_at')
         .eq('business_id', businessId)
         .in('segment', ['risk', 'lost'])
         .order('last_visit_at', { ascending: true })
@@ -84,23 +92,27 @@ export default async function DashboardPage() {
 
       supabase
         .from('appointments')
-        .select('appointment_date')
+        .select('appointment_date, start_time')
         .eq('business_id', businessId)
         .gte('appointment_date', sevenAgo)
         .lte('appointment_date', today)
         .is('deleted_at', null),
 
       supabase
-        .from('customers')
-        .select('created_at')
-        .eq('business_id', businessId)
-        .gte('created_at', sevenAgoISO),
-
-      supabase
         .from('reviews')
         .select('rating, created_at')
         .eq('business_id', businessId)
         .gte('created_at', sevenAgoISO),
+
+      // Haftalık randevular
+      supabase
+        .from('appointments')
+        .select('appointment_date, status')
+        .eq('business_id', businessId)
+        .gte('appointment_date', weekStartStr)
+        .lte('appointment_date', weekEndStr)
+        .is('deleted_at', null)
+        .not('status', 'eq', 'cancelled'),
     ])
 
     todayAppointments = results[0].data || []
@@ -109,11 +121,30 @@ export default async function DashboardPage() {
     riskCustomers = results[3].data || []
 
     aptTrend = dailyCounts((results[4].data || []).map((r: any) => r.appointment_date), d7)
-    custTrend = dailyCounts((results[5].data || []).map((r: any) => r.created_at?.split('T')[0]), d7)
-    ratingTrend = dailyAverages((results[6].data || []).map((r: any) => ({ day: r.created_at?.split('T')[0], value: r.rating })), d7)
+    ratingTrend = dailyAverages((results[5].data || []).map((r: any) => ({ day: r.created_at?.split('T')[0], value: r.rating })), d7)
+    weeklyAppointments = results[6].data || []
   } catch (err) {
     console.error('Dashboard veri çekme hatası:', err)
   }
+
+  // Saatlik yoğunluk (bugünkü randevular)
+  const hourlyDensity: number[] = Array.from({ length: 12 }, (_, i) => {
+    const hour = i + 8 // 08:00 - 19:00
+    return todayAppointments.filter(a => {
+      const h = parseInt(a.start_time?.split(':')[0] || '0')
+      return h === hour
+    }).length
+  })
+  const hourLabels = Array.from({ length: 12 }, (_, i) => `${String(i + 8).padStart(2, '0')}:00`)
+
+  // Haftalık gün bazlı dağılım
+  const weekDayNames = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz']
+  const weeklyByDay: number[] = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(weekStart)
+    d.setDate(weekStart.getDate() + i)
+    const ds = d.toISOString().split('T')[0]
+    return weeklyAppointments.filter((a: any) => a.appointment_date === ds).length
+  })
 
   const s = stats || {
     total_customers: 0,
@@ -153,20 +184,18 @@ export default async function DashboardPage() {
           bgLight="bg-blue-50 dark:bg-blue-950/40"
           iconBg="bg-blue-500/10 dark:bg-blue-500/20"
           iconColor="text-blue-600 dark:text-blue-400"
-          sparkline={<Sparkline data={aptTrend} color="#3b82f6" height={44} />}
-          trend={getTrend(aptTrend)}
+          sparkline={<Sparkline data={hourlyDensity} color="#3b82f6" height={44} labels={hourLabels} unit=" randevu" />}
         />
         <StatCard
-          title="Toplam Müşteri"
-          value={s.total_customers}
-          subtitle={custTrend.at(-1) ? `+${custTrend.at(-1)} bugün` : undefined}
-          icon={<Users className="h-5 w-5" />}
+          title="Haftalık Randevu"
+          value={weeklyAppointments.length}
+          subtitle={`${weekDayNames[0]}–${weekDayNames[6]} aktif`}
+          icon={<Calendar className="h-5 w-5" />}
           gradient="from-emerald-500 to-teal-600"
           bgLight="bg-emerald-50 dark:bg-emerald-950/40"
           iconBg="bg-emerald-500/10 dark:bg-emerald-500/20"
           iconColor="text-emerald-600 dark:text-emerald-400"
-          sparkline={<Sparkline data={custTrend} color="#10b981" height={44} />}
-          trend={getTrend(custTrend)}
+          sparkline={<Sparkline data={weeklyByDay} color="#10b981" height={44} labels={weekDayNames} unit=" randevu" />}
         />
         <StatCard
           title="Ortalama Puan"
@@ -177,18 +206,18 @@ export default async function DashboardPage() {
           bgLight="bg-amber-50 dark:bg-amber-950/40"
           iconBg="bg-amber-500/10 dark:bg-amber-500/20"
           iconColor="text-amber-600 dark:text-amber-400"
-          sparkline={<Sparkline data={ratingTrend} color="#f59e0b" height={44} />}
+          sparkline={<Sparkline data={ratingTrend} color="#f59e0b" height={44} labels={dayKeys(d7).map(d => format(new Date(d), 'dd MMM'))} />}
           trend={getTrend(ratingTrend)}
         />
         <StatCard
-          title="Bildirimler"
-          value={s.unread_notifications}
-          subtitle="okunmamış"
-          icon={<Bell className="h-5 w-5" />}
-          gradient={s.unread_notifications > 0 ? 'from-rose-500 to-pink-600' : 'from-gray-400 to-gray-500'}
-          bgLight={s.unread_notifications > 0 ? 'bg-rose-50 dark:bg-rose-950/40' : 'bg-gray-50 dark:bg-gray-900/40'}
-          iconBg={s.unread_notifications > 0 ? 'bg-rose-500/10 dark:bg-rose-500/20' : 'bg-gray-500/10 dark:bg-gray-500/20'}
-          iconColor={s.unread_notifications > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-gray-500 dark:text-gray-400'}
+          title="Riskli Müşteriler"
+          value={riskCustomers.length}
+          subtitle={riskCustomers.length > 0 ? 'dikkat gerektiren' : 'sorun yok'}
+          icon={<AlertTriangle className="h-5 w-5" />}
+          gradient={riskCustomers.length > 0 ? 'from-rose-500 to-pink-600' : 'from-gray-400 to-gray-500'}
+          bgLight={riskCustomers.length > 0 ? 'bg-rose-50 dark:bg-rose-950/40' : 'bg-gray-50 dark:bg-gray-900/40'}
+          iconBg={riskCustomers.length > 0 ? 'bg-rose-500/10 dark:bg-rose-500/20' : 'bg-gray-500/10 dark:bg-gray-500/20'}
+          iconColor={riskCustomers.length > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-gray-500 dark:text-gray-400'}
         />
       </div>
 
@@ -231,7 +260,14 @@ export default async function DashboardPage() {
           {/* Notifications */}
           <div className="card">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">Bildirimler</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">Bildirimler</h2>
+                {notifications.length > 0 && (
+                  <span className="inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 rounded-full bg-red-500 text-white text-[10px] font-bold">
+                    {notifications.length}
+                  </span>
+                )}
+              </div>
               <a href="/dashboard/notifications" className="text-xs font-medium text-pulse-600 dark:text-pulse-400 hover:underline">
                 Tümünü gör →
               </a>
@@ -283,7 +319,7 @@ export default async function DashboardPage() {
                   <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                 </div>
                 <h2 className="text-sm font-semibold text-amber-900 dark:text-amber-300">
-                  Dikkat Gerektiren Müşteriler
+                  Riskli Müşteriler
                 </h2>
               </div>
               <div className="space-y-2">
@@ -441,7 +477,7 @@ function StatCard({
       )}
 
       {sparkline && (
-        <div className="mt-3 -mx-1 pointer-events-none">
+        <div className="mt-3 -mx-1">
           {sparkline}
         </div>
       )}
