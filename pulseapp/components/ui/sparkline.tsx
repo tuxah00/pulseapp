@@ -11,13 +11,14 @@ interface SparklineProps {
   unit?: string
 }
 
-function CustomTooltip({ active, payload, label, unit }: any) {
+function CustomTooltip({ active, payload, unit }: any) {
   if (!active || !payload?.length) return null
+  const item = payload[0]?.payload
   return (
-    <div className="rounded-lg bg-gray-900 dark:bg-gray-800 px-2.5 py-1.5 shadow-lg border border-gray-700">
-      {label && <p className="text-[10px] text-gray-400 mb-0.5">{label}</p>}
+    <div className="rounded-lg bg-gray-900 dark:bg-gray-800 px-2.5 py-1.5 shadow-lg border border-gray-700 z-50">
+      {item?.name && <p className="text-[10px] text-gray-400 mb-0.5">{item.name}</p>}
       <p className="text-xs font-semibold text-white">
-        {payload[0].value}{unit || ''}
+        {item?.v}{unit || ''}
       </p>
     </div>
   )
@@ -39,7 +40,7 @@ export function Sparkline({ data, color, height = 48, labels, unit }: SparklineP
   return (
     <div className="[&_svg]:outline-none [&_*]:outline-none">
       <ResponsiveContainer width="100%" height={height}>
-        <AreaChart data={chartData} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
+        <AreaChart data={chartData} margin={{ top: 4, right: 4, left: 4, bottom: 2 }}>
           <defs>
             <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor={color} stopOpacity={0.3} />
@@ -49,6 +50,7 @@ export function Sparkline({ data, color, height = 48, labels, unit }: SparklineP
           <Tooltip
             content={<CustomTooltip unit={unit} />}
             cursor={{ stroke: color, strokeWidth: 1, strokeDasharray: '3 3' }}
+            allowEscapeViewBox={{ x: true, y: true }}
           />
           <Area
             type="monotone"
@@ -57,6 +59,7 @@ export function Sparkline({ data, color, height = 48, labels, unit }: SparklineP
             fill={`url(#${gradientId})`}
             strokeWidth={2}
             dot={false}
+            activeDot={{ r: 3, strokeWidth: 1.5, stroke: color, fill: '#fff' }}
             isAnimationActive={true}
             animationDuration={800}
             animationEasing="ease-out"

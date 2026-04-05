@@ -55,11 +55,13 @@ export default function PerformanceStats() {
   const maxHour = Math.max(...hourDist.map(h => h.count), 1)
   const topHours = [...hourDist].sort((a, b) => b.count - a.count).slice(0, 3)
 
-  // Popular services
+  // Service revenue comparison (month)
   const serviceStats = services.map(svc => {
     const count = completed.filter(a => a.service_id === svc.id).length
-    return { name: svc.name, count, revenue: count * (svc.price || 0) }
-  }).filter(s => s.count > 0).sort((a, b) => b.count - a.count).slice(0, 5)
+    const revenue = count * (svc.price || 0)
+    return { name: svc.name, count, revenue }
+  }).filter(s => s.count > 0).sort((a, b) => b.revenue - a.revenue).slice(0, 5)
+  const maxRevenue = Math.max(...serviceStats.map(s => s.revenue), 1)
 
   if (total === 0) return null
 
@@ -111,24 +113,29 @@ export default function PerformanceStats() {
         </div>
       )}
 
-      {/* En popüler hizmetler */}
+      {/* Hizmet bazlı gelir karşılaştırması */}
       {serviceStats.length > 0 && (
         <div className="card p-4">
           <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-1.5">
-            <TrendingUp className="h-3.5 w-3.5" /> Popüler Hizmetler
+            <TrendingUp className="h-3.5 w-3.5" /> Hizmet Gelir Karşılaştırması
           </h3>
-          <div className="space-y-2">
-            {serviceStats.map(({ name, count, revenue }, i) => (
-              <div key={name} className="flex items-center justify-between">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-xs text-gray-400 w-4">{i + 1}.</span>
+          <div className="space-y-3">
+            {serviceStats.map(({ name, count, revenue }) => (
+              <div key={name}>
+                <div className="flex items-center justify-between mb-1">
                   <span className="text-sm text-gray-700 dark:text-gray-300 truncate">{name}</span>
+                  <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 ml-2 flex-shrink-0">
+                    {formatCurrency(revenue)}
+                  </span>
                 </div>
-                <div className="flex items-center gap-2 ml-2 flex-shrink-0">
-                  <span className="text-xs text-gray-500">{count} randevu</span>
-                  {revenue > 0 && (
-                    <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">{formatCurrency(revenue)}</span>
-                  )}
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full h-2">
+                    <div
+                      className="bg-emerald-500 h-2 rounded-full transition-all"
+                      style={{ width: `${(revenue / maxRevenue) * 100}%` }}
+                    />
+                  </div>
+                  <span className="text-[10px] text-gray-400 w-14 text-right flex-shrink-0">{count} randevu</span>
                 </div>
               </div>
             ))}

@@ -1,9 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Calendar, LayoutGrid, List, Clock, CheckCircle2, XCircle, AlertCircle, CircleDot } from 'lucide-react'
-import { useViewMode } from '@/lib/hooks/use-view-mode'
-import { formatTime, getStatusColor, getInitials, getAvatarColor } from '@/lib/utils'
+import { Calendar, Clock, CheckCircle2, XCircle, AlertCircle, CircleDot, ArrowRight } from 'lucide-react'
+import { formatTime, getInitials, getAvatarColor } from '@/lib/utils'
 import { STATUS_LABELS } from '@/types'
 import { cn } from '@/lib/utils'
 
@@ -21,22 +20,13 @@ interface TodayAppointmentsProps {
   appointments: Appointment[]
 }
 
-const STATUS_ICONS: Record<string, React.ReactNode> = {
-  confirmed:  <CheckCircle2 className="h-4 w-4 text-green-500" />,
-  completed:  <CheckCircle2 className="h-4 w-4 text-blue-500" />,
-  cancelled:  <XCircle className="h-4 w-4 text-red-400" />,
-  no_show:    <AlertCircle className="h-4 w-4 text-orange-400" />,
-  pending:    <CircleDot className="h-4 w-4 text-gray-400" />,
+const STATUS_CONFIG: Record<string, { icon: typeof CheckCircle2; color: string; bg: string; dot: string; label: string }> = {
+  confirmed: { icon: CheckCircle2, color: 'text-green-500', bg: 'bg-green-50 dark:bg-green-900/20', dot: 'bg-green-500', label: 'Onaylandı' },
+  completed: { icon: CheckCircle2, color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/20', dot: 'bg-blue-500', label: 'Tamamlandı' },
+  cancelled: { icon: XCircle, color: 'text-red-400', bg: 'bg-red-50 dark:bg-red-900/20', dot: 'bg-red-400', label: 'İptal' },
+  no_show:   { icon: AlertCircle, color: 'text-orange-400', bg: 'bg-orange-50 dark:bg-orange-900/20', dot: 'bg-orange-400', label: 'Gelmedi' },
+  pending:   { icon: CircleDot, color: 'text-gray-400', bg: 'bg-gray-50 dark:bg-gray-800', dot: 'bg-gray-300 dark:bg-gray-600', label: 'Bekliyor' },
 }
-
-const STATUS_DOT: Record<string, string> = {
-  confirmed: 'bg-green-500',
-  completed: 'bg-blue-500',
-  cancelled: 'bg-red-400',
-  no_show:   'bg-orange-400',
-  pending:   'bg-gray-300 dark:bg-gray-600',
-}
-
 
 function isActiveNow(apt: Appointment, now: Date): boolean {
   if (apt.status === 'completed' || apt.status === 'cancelled' || apt.status === 'no_show') return false
@@ -48,7 +38,6 @@ function isActiveNow(apt: Appointment, now: Date): boolean {
 }
 
 export default function TodayAppointments({ appointments }: TodayAppointmentsProps) {
-  const [viewMode, setViewMode] = useViewMode('dashboard-today', 'list')
   const [now, setNow] = useState(() => new Date())
 
   useEffect(() => {
@@ -65,40 +54,12 @@ export default function TodayAppointments({ appointments }: TodayAppointmentsPro
             <p className="text-xs text-gray-400 mt-0.5">{appointments.length} randevu</p>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <button
-              onClick={() => setViewMode('list')}
-              className={cn(
-                'flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium transition-colors',
-                viewMode === 'list'
-                  ? 'bg-pulse-500 text-white'
-                  : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
-              )}
-              title="Liste görünümü"
-            >
-              <List className="h-3.5 w-3.5" />
-            </button>
-            <button
-              onClick={() => setViewMode('box')}
-              className={cn(
-                'flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium transition-colors',
-                viewMode === 'box'
-                  ? 'bg-pulse-500 text-white'
-                  : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
-              )}
-              title="Kutu görünümü"
-            >
-              <LayoutGrid className="h-3.5 w-3.5" />
-            </button>
-          </div>
-          <a
-            href="/dashboard/appointments"
-            className="text-sm font-medium text-pulse-600 dark:text-pulse-400 hover:text-pulse-700 dark:hover:text-pulse-300 transition-colors"
-          >
-            Tümünü gör →
-          </a>
-        </div>
+        <a
+          href="/dashboard/appointments"
+          className="flex items-center gap-1 text-sm font-medium text-pulse-600 dark:text-pulse-400 hover:text-pulse-700 dark:hover:text-pulse-300 transition-colors"
+        >
+          Tümünü gör <ArrowRight className="h-3.5 w-3.5" />
+        </a>
       </div>
 
       {!appointments || appointments.length === 0 ? (
@@ -109,133 +70,84 @@ export default function TodayAppointments({ appointments }: TodayAppointmentsPro
           <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Bugün randevu yok</p>
           <p className="text-xs text-gray-400 dark:text-gray-600 mt-1">Yeni randevu eklemek için randevular sayfasına gidin</p>
         </div>
-      ) : viewMode === 'list' ? (
-        /* ── Timeline list view ── */
-        <div className="relative">
-          {/* Vertical timeline line */}
-          <div className="absolute left-[26px] top-2 bottom-2 w-px bg-gray-100 dark:bg-gray-800" />
-
-          <div className="space-y-3">
-            {appointments.map((apt, i) => {
-              const active = isActiveNow(apt, now)
-              return (
-              <div key={apt.id} className="flex items-start gap-3 group">
-                {/* Timeline dot */}
-                <div className="relative flex-shrink-0 flex items-center justify-center w-[52px] pt-1">
-                  <div className={cn(
-                    'h-3 w-3 rounded-full border-2 border-white dark:border-gray-950 z-10',
-                    active ? 'bg-green-500 ring-4 ring-green-500/20' : (STATUS_DOT[apt.status] || 'bg-gray-300')
-                  )} />
-                </div>
-
-                {/* Card */}
-                <div className={cn(
-                  'flex-1 min-w-0 flex items-center gap-3 rounded-xl px-3 py-2.5',
-                  'border border-gray-100 dark:border-gray-800',
-                  'bg-white dark:bg-gray-900/50',
-                  'group-hover:border-gray-200 dark:group-hover:border-gray-700',
-                  'group-hover:shadow-sm transition-all duration-150',
-                  active && 'ring-2 ring-green-500/40 border-green-400 dark:border-green-500 bg-green-50/50 dark:bg-green-950/20',
-                  apt.status === 'completed' && 'opacity-60',
-                  apt.status === 'cancelled' && 'opacity-50',
-                )}>
-                  {/* Time */}
-                  <div className="flex flex-col items-center min-w-[42px] flex-shrink-0">
-                    <span className="text-sm font-bold text-gray-900 dark:text-gray-100 tabular-nums">
-                      {formatTime(apt.start_time)}
-                    </span>
-                    <span className="text-[10px] text-gray-400 tabular-nums">
-                      {formatTime(apt.end_time)}
-                    </span>
-                  </div>
-
-                  {/* Divider */}
-                  <div className="w-px h-8 bg-gray-100 dark:bg-gray-800 flex-shrink-0" />
-
-                  {/* Avatar */}
-                  <div className={cn(
-                    'flex-shrink-0 flex h-8 w-8 items-center justify-center rounded-lg',
-                    'text-white text-xs font-bold',
-                    getAvatarColor(apt.customers?.name)
-                  )}>
-                    {getInitials(apt.customers?.name)}
-                  </div>
-
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
-                      {apt.customers?.name || 'İsimsiz'}
-                    </p>
-                    <p className="text-xs text-gray-400 truncate">
-                      {apt.services?.name || 'Hizmet belirtilmemiş'}
-                      {apt.staff_members?.name ? ` · ${apt.staff_members.name}` : ''}
-                    </p>
-                  </div>
-
-                  {/* Status */}
-                  <div className="flex-shrink-0">
-                    {STATUS_ICONS[apt.status] || STATUS_ICONS.pending}
-                  </div>
-                </div>
-              </div>
-            )})}
-          </div>
-        </div>
       ) : (
-        /* ── Box grid view ── */
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-2">
           {appointments.map((apt) => {
             const active = isActiveNow(apt, now)
+            const config = STATUS_CONFIG[apt.status] || STATUS_CONFIG.pending
+            const StatusIcon = config.icon
+            const isDone = apt.status === 'completed' || apt.status === 'cancelled'
+
             return (
-            <div
-              key={apt.id}
-              className={cn(
-                'relative rounded-xl border p-4 transition-all duration-150',
-                'border-gray-100 dark:border-gray-800',
-                'hover:border-gray-200 dark:hover:border-gray-700 hover:shadow-sm',
-                active && 'ring-2 ring-green-500/40 border-green-400 dark:border-green-500 bg-green-50/30 dark:bg-green-950/20',
-                apt.status === 'completed' && 'opacity-70',
-                apt.status === 'cancelled' && 'opacity-50',
-              )}
-            >
-              {/* Status indicator stripe */}
-              <div className={cn(
-                'absolute top-0 left-0 bottom-0 rounded-l-xl',
-                active ? 'w-1 bg-green-500' : 'w-0.5',
-                !active && (STATUS_DOT[apt.status] || 'bg-gray-300')
-              )} />
-
-              <div className="pl-2">
-                <div className="flex items-start justify-between mb-2 gap-2">
-                  <div className={cn(
-                    'flex h-8 w-8 items-center justify-center rounded-lg flex-shrink-0',
-                    'text-white text-xs font-bold',
-                    getAvatarColor(apt.customers?.name)
-                  )}>
-                    {getInitials(apt.customers?.name)}
-                  </div>
-                  <span className={`badge text-xs flex-shrink-0 ${getStatusColor(apt.status)}`}>
-                    {STATUS_LABELS[apt.status as keyof typeof STATUS_LABELS]}
-                  </span>
-                </div>
-
-                <p className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate mb-0.5">
-                  {apt.customers?.name || 'İsimsiz'}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                  {apt.services?.name || 'Hizmet belirtilmemiş'}
-                </p>
-                {apt.staff_members?.name && (
-                  <p className="text-xs text-gray-400 mt-1 truncate">{apt.staff_members.name}</p>
+              <div
+                key={apt.id}
+                className={cn(
+                  'group relative flex items-center gap-3 rounded-xl px-3.5 py-3 transition-all duration-150',
+                  'border',
+                  active
+                    ? 'border-green-400/60 dark:border-green-500/40 bg-green-50/60 dark:bg-green-950/20 shadow-sm shadow-green-500/10'
+                    : 'border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700 hover:bg-gray-50/50 dark:hover:bg-gray-800/30',
+                  isDone && 'opacity-55',
+                )}
+              >
+                {/* Active pulse indicator */}
+                {active && (
+                  <div className="absolute -left-px top-1/2 -translate-y-1/2 w-[3px] h-8 rounded-full bg-green-500" />
                 )}
 
-                <div className="flex items-center gap-1 mt-2 text-xs text-gray-400">
-                  <Clock className="h-3 w-3 flex-shrink-0" />
-                  <span className="tabular-nums">{formatTime(apt.start_time)} – {formatTime(apt.end_time)}</span>
+                {/* Time block */}
+                <div className="flex-shrink-0 w-[56px] text-center">
+                  <p className={cn(
+                    'text-sm font-bold tabular-nums',
+                    active ? 'text-green-600 dark:text-green-400' : 'text-gray-900 dark:text-gray-100'
+                  )}>
+                    {formatTime(apt.start_time)}
+                  </p>
+                  <p className="text-[10px] text-gray-400 tabular-nums mt-0.5">
+                    {formatTime(apt.end_time)}
+                  </p>
+                </div>
+
+                {/* Separator */}
+                <div className={cn(
+                  'w-px h-9 flex-shrink-0 rounded-full',
+                  active ? 'bg-green-300 dark:bg-green-700' : 'bg-gray-150 dark:bg-gray-750',
+                  !active && 'bg-gray-200 dark:bg-gray-700'
+                )} />
+
+                {/* Avatar */}
+                <div className={cn(
+                  'flex-shrink-0 flex h-9 w-9 items-center justify-center rounded-xl',
+                  'text-white text-xs font-bold shadow-sm',
+                  getAvatarColor(apt.customers?.name)
+                )}>
+                  {getInitials(apt.customers?.name)}
+                </div>
+
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate leading-tight">
+                    {apt.customers?.name || 'İsimsiz'}
+                  </p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 truncate mt-0.5">
+                    {apt.services?.name || 'Hizmet belirtilmemiş'}
+                    {apt.staff_members?.name ? ` · ${apt.staff_members.name}` : ''}
+                  </p>
+                </div>
+
+                {/* Status badge */}
+                <div className={cn(
+                  'flex-shrink-0 flex items-center gap-1 rounded-lg px-2 py-1',
+                  config.bg
+                )}>
+                  <StatusIcon className={cn('h-3.5 w-3.5', config.color)} />
+                  <span className={cn('text-[11px] font-medium', config.color)}>
+                    {config.label}
+                  </span>
                 </div>
               </div>
-            </div>
-          )})}
+            )
+          })}
         </div>
       )}
     </div>
