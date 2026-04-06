@@ -212,8 +212,8 @@ export default function TopBar({ businessName, userName, onOpenCommand }: TopBar
             <span className="text-xs text-gray-400 dark:text-gray-500 leading-none mt-0.5">{businessName}</span>
           </div>
           <div className="flex h-8 w-8 items-center justify-center rounded-lg
-                          bg-pulse-900
-                          text-white text-sm font-bold flex-shrink-0 shadow-sm shadow-pulse-900/20">
+                          bg-gray-200 dark:bg-gray-700
+                          text-gray-600 dark:text-gray-300 text-sm font-bold flex-shrink-0">
             {initials}
           </div>
         </div>

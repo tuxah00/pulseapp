@@ -301,7 +301,7 @@ export default function Sidebar({ businessName, userName, sector, plan, permissi
               className="mt-2 overflow-hidden"
             >
               <div className="flex items-center gap-3 rounded-xl bg-gray-50 dark:bg-white/5 px-3 py-2.5">
-                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-pulse-900 text-xs font-bold text-white">
+                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-gray-200 dark:bg-gray-700 text-xs font-bold text-gray-600 dark:text-gray-300">
                   {initials}
                 </div>
                 <div className="min-w-0">

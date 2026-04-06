@@ -393,7 +393,7 @@ function RecordsPageInner() {
   const [fileDescriptions, setFileDescriptions] = useState<string[]>([])
   const [uploading, setUploading] = useState(false)
   const [lightbox, setLightbox] = useState<{ images: string[]; index: number; metadata?: FileMetadataItem[] } | null>(null)
-  const [fileDescPopup, setFileDescPopup] = useState<{ index: number; value: string; fileName: string } | null>(null)
+  const [fileDescPopup, setFileDescPopup] = useState<{ index: number; value: string; fileName: string; fileSize: string | null; editing: boolean } | null>(null)
 
   // Dynamic form state: one string per field key
   const [formData, setFormData] = useState<Record<string, string>>({})
@@ -911,7 +911,7 @@ function RecordsPageInner() {
                   key={record.id}
                   initials={record.title?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || 'D'}
                   title={record.title}
-                  colorClass="bg-pulse-900 text-white"
+                  colorClass="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
                   onClick={() => setSelectedRecord(record)}
                 />
               ))}
@@ -1097,16 +1097,16 @@ function RecordsPageInner() {
                                 {meta?.description ? (
                                   <button
                                     type="button"
-                                    onClick={() => setFileDescPopup({ index: i, value: meta.description || '', fileName })}
+                                    onClick={() => setFileDescPopup({ index: i, value: meta.description || '', fileName, fileSize, editing: false })}
                                     className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-left w-full truncate mt-0.5"
-                                    title="Açıklamayı düzenlemek için tıklayın"
+                                    title="Açıklamayı görüntülemek için tıklayın"
                                   >
                                     {meta.description}
                                   </button>
                                 ) : (
                                   <button
                                     type="button"
-                                    onClick={() => setFileDescPopup({ index: i, value: '', fileName })}
+                                    onClick={() => setFileDescPopup({ index: i, value: '', fileName, fileSize, editing: true })}
                                     className="text-xs text-gray-300 dark:text-gray-600 hover:text-pulse-900 dark:hover:text-pulse-400 mt-0.5"
                                   >
                                     + Açıklama ekle
@@ -1156,23 +1156,41 @@ function RecordsPageInner() {
       {fileDescPopup && (
         <div className="modal-overlay fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4" onClick={() => setFileDescPopup(null)}>
           <div className="modal-content card w-full max-w-sm dark:bg-gray-900" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-1">
               <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate pr-4">{fileDescPopup.fileName}</h3>
               <button onClick={() => setFileDescPopup(null)} className="text-gray-400 hover:text-gray-600 shrink-0"><X className="h-4 w-4" /></button>
             </div>
-            <textarea
-              className="input text-sm w-full resize-none"
-              rows={3}
-              placeholder="Dosya açıklaması..."
-              value={fileDescPopup.value}
-              onChange={e => setFileDescPopup({ ...fileDescPopup, value: e.target.value })}
-              onKeyDown={e => { if (e.key === 'Escape') setFileDescPopup(null) }}
-              autoFocus
-            />
-            <div className="flex gap-2 mt-3">
-              <button type="button" onClick={() => setFileDescPopup(null)} className="btn-secondary flex-1 text-sm">İptal</button>
-              <button type="button" onClick={() => handleSaveFileDescription(fileDescPopup.index, fileDescPopup.value)} className="btn-primary flex-1 text-sm">Kaydet</button>
-            </div>
+            {fileDescPopup.fileSize && (
+              <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">{fileDescPopup.fileSize}</p>
+            )}
+            {fileDescPopup.editing ? (
+              <>
+                <textarea
+                  className="input text-sm w-full resize-none"
+                  rows={3}
+                  placeholder="Dosya açıklaması..."
+                  value={fileDescPopup.value}
+                  onChange={e => setFileDescPopup({ ...fileDescPopup, value: e.target.value })}
+                  onKeyDown={e => { if (e.key === 'Escape') setFileDescPopup(null) }}
+                  autoFocus
+                />
+                <div className="flex gap-2 mt-3">
+                  <button type="button" onClick={() => setFileDescPopup(null)} className="btn-secondary flex-1 text-sm">İptal</button>
+                  <button type="button" onClick={() => handleSaveFileDescription(fileDescPopup.index, fileDescPopup.value)} className="btn-primary flex-1 text-sm">Kaydet</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed min-h-[3rem] mb-3">{fileDescPopup.value}</p>
+                <button
+                  type="button"
+                  onClick={() => setFileDescPopup({ ...fileDescPopup, editing: true })}
+                  className="btn-secondary w-full text-sm"
+                >
+                  <Pencil className="mr-1.5 h-3.5 w-3.5" />Düzenle
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}
