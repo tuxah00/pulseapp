@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import {
   Star, Loader2, MessageSquare, AlertTriangle,
-  ExternalLink, Send, Filter, TrendingUp, Sparkles, Search,
+  ExternalLink, Send, TrendingUp, Sparkles, Search,
 } from 'lucide-react'
 import { formatDate, cn } from '@/lib/utils'
 import type { Review } from '@/types'
@@ -21,13 +21,6 @@ export default function ReviewsPage() {
   const [responseText, setResponseText] = useState('')
   const [saving, setSaving] = useState(false)
   const [aiDraftLoading, setAiDraftLoading] = useState<string | null>(null)
-
-  // Yeni yorum ekleme
-  const [showAddModal, setShowAddModal] = useState(false)
-  const [newRating, setNewRating] = useState(5)
-  const [newComment, setNewComment] = useState('')
-  const [newCustomerId, setNewCustomerId] = useState('')
-  const [customers, setCustomers] = useState<any[]>([])
 
   const supabase = createClient()
 
@@ -48,19 +41,7 @@ export default function ReviewsPage() {
     setLoading(false)
   }, [businessId, filterRating])
 
-  const fetchCustomers = useCallback(async () => {
-    if (!businessId) return
-    const { data } = await supabase
-      .from('customers')
-      .select('id, name, phone')
-      .eq('business_id', businessId)
-      .eq('is_active', true)
-      .order('name')
-    if (data) setCustomers(data)
-  }, [businessId])
-
   useEffect(() => { if (!ctxLoading) fetchReviews() }, [fetchReviews, ctxLoading])
-  useEffect(() => { if (!ctxLoading) fetchCustomers() }, [fetchCustomers, ctxLoading])
 
   // İstatistikler
   const totalReviews = reviews.length
@@ -84,24 +65,6 @@ export default function ReviewsPage() {
     setSaving(false)
     setRespondingTo(null)
     setResponseText('')
-    fetchReviews()
-  }
-
-  async function handleAddReview(e: React.FormEvent) {
-    e.preventDefault()
-    setSaving(true)
-    await supabase.from('reviews').insert({
-      business_id: businessId,
-      customer_id: newCustomerId || null,
-      rating: newRating,
-      comment: newComment || null,
-      status: newRating <= 3 ? 'escalated' : 'pending',
-    })
-    setSaving(false)
-    setShowAddModal(false)
-    setNewRating(5)
-    setNewComment('')
-    setNewCustomerId('')
     fetchReviews()
   }
 
@@ -175,9 +138,6 @@ export default function ReviewsPage() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Yorumlar</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{totalReviews} yorum · Ortalama {avgRating} ★</p>
         </div>
-        <button onClick={() => setShowAddModal(true)} className="btn-primary">
-          <Star className="mr-2 h-4 w-4" />Yorum Ekle
-        </button>
       </div>
 
       {/* İstatistik Kartları */}
@@ -352,46 +312,6 @@ export default function ReviewsPage() {
         </div>
       )}
 
-      {/* Yorum Ekleme Modal */}
-      {showAddModal && (
-        <div className="modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
-          <div className="modal-content card w-full max-w-md dark:bg-gray-900">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Yorum Ekle</h2>
-            <form onSubmit={handleAddReview} className="space-y-4">
-              <div>
-                <label className="label">Müşteri (opsiyonel)</label>
-                <select value={newCustomerId} onChange={(e) => setNewCustomerId(e.target.value)} className="input">
-                  <option value="">Müşteri seçin...</option>
-                  {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="label">Puan</label>
-                <div className="flex gap-2">
-                  {[1, 2, 3, 4, 5].map(r => (
-                    <button key={r} type="button" onClick={() => setNewRating(r)}
-                      className={cn('flex h-10 w-10 items-center justify-center rounded-lg text-lg transition-colors',
-                        r <= newRating ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500'
-                      )}>
-                      ★
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label className="label">Yorum (opsiyonel)</label>
-                <textarea value={newComment} onChange={(e) => setNewComment(e.target.value)} className="input" rows={3} placeholder="Müşterinin yorumu..." />
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setShowAddModal(false)} className="btn-secondary flex-1">İptal</button>
-                <button type="submit" disabled={saving} className="btn-primary flex-1">
-                  {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}Kaydet
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

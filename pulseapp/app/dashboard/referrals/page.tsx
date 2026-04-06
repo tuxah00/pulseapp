@@ -178,14 +178,14 @@ export default function ReferralsPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <input type="text" placeholder="Ara..." className="input pl-10 w-full" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
-        <div className="flex gap-1">
+        <div className="flex gap-2 flex-wrap">
           {(['all', 'pending', 'converted', 'expired'] as const).map(s => (
             <button key={s}
               onClick={() => setStatusFilter(s)}
-              className={`px-3 py-1.5 text-xs rounded-full transition-colors ${
+              className={`badge px-3 py-1.5 cursor-pointer transition-colors ${
                 statusFilter === s
-                  ? 'bg-pulse-500 text-white'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                  ? 'bg-gray-900 dark:bg-gray-700 text-white'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}>
               {s === 'all' ? 'Tümü' : REFERRAL_STATUS_LABELS[s]}
             </button>
