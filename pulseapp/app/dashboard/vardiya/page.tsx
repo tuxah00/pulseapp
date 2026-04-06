@@ -7,6 +7,7 @@ import { logAudit } from '@/lib/utils/audit'
 import type { WorkingHours, ShiftDefinition } from '@/types'
 import { cn } from '@/lib/utils'
 import { ChevronLeft, ChevronRight, Plus, Trash2, Zap, Loader2, X, Save, Clock, CalendarDays, Download, Share2, RotateCcw, ImageIcon } from 'lucide-react'
+import { CustomSelect } from '@/components/ui/custom-select'
 
 const DAY_LABELS = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz']
 const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
@@ -909,21 +910,17 @@ export default function VardiyePage() {
 
                     {isOpen ? (
                       <div className="flex flex-1 items-center gap-2">
-                        <select
+                        <CustomSelect
                           value={hours?.open || '09:00'}
-                          onChange={(e) => updateDayHours(day as keyof WorkingHours, 'open', e.target.value)}
-                          className="input w-28"
-                        >
-                          {TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
-                        </select>
+                          onChange={v => updateDayHours(day as keyof WorkingHours, 'open', v)}
+                          options={TIME_OPTIONS.map(t => ({ value: t, label: t }))}
+                        />
                         <span className="text-sm text-gray-400">—</span>
-                        <select
+                        <CustomSelect
                           value={hours?.close || '18:00'}
-                          onChange={(e) => updateDayHours(day as keyof WorkingHours, 'close', e.target.value)}
-                          className="input w-28"
-                        >
-                          {TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
-                        </select>
+                          onChange={v => updateDayHours(day as keyof WorkingHours, 'close', v)}
+                          options={TIME_OPTIONS.map(t => ({ value: t, label: t }))}
+                        />
                       </div>
                     ) : (
                       <span className="text-sm text-gray-400">Kapalı</span>

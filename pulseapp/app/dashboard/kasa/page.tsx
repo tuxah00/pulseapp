@@ -9,6 +9,7 @@ import { useConfirm } from '@/lib/hooks/use-confirm'
 import { logAudit } from '@/lib/utils/audit'
 import { formatCurrency, formatDateTime, cn } from '@/lib/utils'
 import type { Service, POSItem, POSPayment, POSTransaction, POSSession, PaymentMethod } from '@/types'
+import { CustomSelect } from '@/components/ui/custom-select'
 import {
   Loader2, Search, Plus, Minus, Trash2, X, Wallet,
   CreditCard, Banknote, ArrowRightLeft, ShoppingBag,
@@ -544,14 +545,14 @@ export default function KasaPage() {
                     className="input w-24 text-sm"
                     placeholder="0"
                   />
-                  <select
+                  <CustomSelect
                     value={discountType}
-                    onChange={(e) => setDiscountType(e.target.value as 'percentage' | 'fixed')}
-                    className="input w-16 text-sm"
-                  >
-                    <option value="fixed">₺</option>
-                    <option value="percentage">%</option>
-                  </select>
+                    onChange={v => setDiscountType(v as 'percentage' | 'fixed')}
+                    options={[
+                      { value: 'fixed', label: '₺' },
+                      { value: 'percentage', label: '%' },
+                    ]}
+                  />
                 </div>
                 {discountCalc > 0 && (
                   <span className="text-sm text-red-500">-{formatCurrency(discountCalc)}</span>
@@ -560,16 +561,16 @@ export default function KasaPage() {
 
               <div className="flex items-center gap-2">
                 <label className="text-sm text-gray-500 w-16">KDV</label>
-                <select
-                  value={taxRate}
-                  onChange={(e) => setTaxRate(Number(e.target.value))}
-                  className="input w-24 text-sm"
-                >
-                  <option value={0}>%0</option>
-                  <option value={1}>%1</option>
-                  <option value={10}>%10</option>
-                  <option value={20}>%20</option>
-                </select>
+                <CustomSelect
+                  value={String(taxRate)}
+                  onChange={v => setTaxRate(Number(v))}
+                  options={[
+                    { value: '0', label: '%0' },
+                    { value: '1', label: '%1' },
+                    { value: '10', label: '%10' },
+                    { value: '20', label: '%20' },
+                  ]}
+                />
                 {taxCalc > 0 && (
                   <span className="text-sm text-gray-500">+{formatCurrency(taxCalc)}</span>
                 )}

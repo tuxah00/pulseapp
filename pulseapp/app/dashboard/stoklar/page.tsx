@@ -16,6 +16,7 @@ import { useViewMode } from '@/lib/hooks/use-view-mode'
 import { logAudit } from '@/lib/utils/audit'
 import CompactBoxCard from '@/components/ui/compact-box-card'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
+import { CustomSelect } from '@/components/ui/custom-select'
 import { ToolbarPopover, SortPopoverContent } from '@/components/ui/toolbar-popover'
 import { exportToCSV } from '@/lib/utils/export'
 import type { StockMovement, Supplier } from '@/types'
@@ -813,16 +814,20 @@ export default function StoklarPage() {
                 </div>
                 <div>
                   <label className="label">Birim</label>
-                  <select value={unit} onChange={(e) => setUnit(e.target.value)} className="input">
-                    <option value="adet">Adet</option>
-                    <option value="kutu">Kutu</option>
-                    <option value="şişe">Şişe</option>
-                    <option value="paket">Paket</option>
-                    <option value="lt">Litre</option>
-                    <option value="kg">Kilogram</option>
-                    <option value="gr">Gram</option>
-                    <option value="ml">Mililitre</option>
-                  </select>
+                  <CustomSelect
+                    value={unit}
+                    onChange={v => setUnit(v)}
+                    options={[
+                      { value: 'adet', label: 'Adet' },
+                      { value: 'kutu', label: 'Kutu' },
+                      { value: 'şişe', label: 'Şişe' },
+                      { value: 'paket', label: 'Paket' },
+                      { value: 'lt', label: 'Litre' },
+                      { value: 'kg', label: 'Kilogram' },
+                      { value: 'gr', label: 'Gram' },
+                      { value: 'ml', label: 'Mililitre' },
+                    ]}
+                  />
                 </div>
               </div>
 
@@ -845,10 +850,12 @@ export default function StoklarPage() {
               {suppliers.length > 0 && (
                 <div>
                   <label className="label">Tedarikçi (opsiyonel)</label>
-                  <select value={supplierId} onChange={(e) => setSupplierId(e.target.value)} className="input">
-                    <option value="">— Seçin —</option>
-                    {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                  </select>
+                  <CustomSelect
+                    value={supplierId}
+                    onChange={v => setSupplierId(v)}
+                    placeholder="— Seçin —"
+                    options={suppliers.map(s => ({ value: s.id, label: s.name }))}
+                  />
                 </div>
               )}
 

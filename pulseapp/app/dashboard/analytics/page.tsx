@@ -14,6 +14,7 @@ import { useConfirm } from '@/lib/hooks/use-confirm'
 import { SEGMENT_LABELS } from '@/types'
 import { exportToCSV } from '@/lib/utils/export'
 import type { Expense, Income } from '@/types'
+import { CustomSelect } from '@/components/ui/custom-select'
 
 function getPeriodDates(period: 'week' | 'month' | 'year', offset = 0): { start: string; end: string } {
   const now = new Date()
@@ -717,17 +718,21 @@ export default function AnalyticsPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="label">Kategori</label>
-                    <select value={expCategory} onChange={(e) => setExpCategory(e.target.value)} className="input" required>
-                      <option value="">— Seçin —</option>
-                      <option value="Kira">Kira</option>
-                      <option value="Malzeme">Malzeme & Sarf</option>
-                      <option value="Personel">Personel Gideri</option>
-                      <option value="Fatura">Faturalar (Elektrik/Su/Doğalgaz)</option>
-                      <option value="Pazarlama">Pazarlama & Reklam</option>
-                      <option value="Bakım">Bakım & Onarım</option>
-                      <option value="Yazılım">Yazılım & Abonelik</option>
-                      <option value="Diğer">Diğer</option>
-                    </select>
+                    <CustomSelect
+                      value={expCategory}
+                      onChange={v => setExpCategory(v)}
+                      placeholder="— Seçin —"
+                      options={[
+                        { value: 'Kira', label: 'Kira' },
+                        { value: 'Malzeme', label: 'Malzeme & Sarf' },
+                        { value: 'Personel', label: 'Personel Gideri' },
+                        { value: 'Fatura', label: 'Faturalar (Elektrik/Su/Doğalgaz)' },
+                        { value: 'Pazarlama', label: 'Pazarlama & Reklam' },
+                        { value: 'Bakım', label: 'Bakım & Onarım' },
+                        { value: 'Yazılım', label: 'Yazılım & Abonelik' },
+                        { value: 'Diğer', label: 'Diğer' },
+                      ]}
+                    />
                   </div>
                   <div>
                     <label className="label">Tutar (TL)</label>
@@ -749,14 +754,18 @@ export default function AnalyticsPage() {
                   <label htmlFor="isRecurring" className="text-sm text-gray-700 dark:text-gray-300">Tekrarlayan gider</label>
                   {expIsRecurring && (
                     <div className="flex items-center gap-2 ml-2">
-                      <select value={expRecurringPeriod} onChange={(e) => setExpRecurringPeriod(e.target.value)} className="input w-auto text-sm py-1">
-                        <option value="weekly">Haftalık</option>
-                        <option value="biweekly">2 Haftada Bir</option>
-                        <option value="monthly">Aylık</option>
-                        <option value="quarterly">3 Ayda Bir</option>
-                        <option value="yearly">Yıllık</option>
-                        <option value="custom">Özel</option>
-                      </select>
+                      <CustomSelect
+                        value={expRecurringPeriod}
+                        onChange={v => setExpRecurringPeriod(v)}
+                        options={[
+                          { value: 'weekly', label: 'Haftalık' },
+                          { value: 'biweekly', label: '2 Haftada Bir' },
+                          { value: 'monthly', label: 'Aylık' },
+                          { value: 'quarterly', label: '3 Ayda Bir' },
+                          { value: 'yearly', label: 'Yıllık' },
+                          { value: 'custom', label: 'Özel' },
+                        ]}
+                      />
                       {expRecurringPeriod === 'custom' && (
                         <div className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400">
                           <span>Her</span>
@@ -785,15 +794,19 @@ export default function AnalyticsPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="label">Kategori</label>
-                    <select value={incCategory} onChange={(e) => setIncCategory(e.target.value)} className="input" required>
-                      <option value="">— Seçin —</option>
-                      <option value="Hizmet Geliri">Hizmet Geliri</option>
-                      <option value="Ürün Satışı">Ürün Satışı</option>
-                      <option value="Komisyon">Komisyon</option>
-                      <option value="Kira Geliri">Kira Geliri</option>
-                      <option value="Paket/Üyelik">Paket / Üyelik</option>
-                      <option value="Diğer">Diğer</option>
-                    </select>
+                    <CustomSelect
+                      value={incCategory}
+                      onChange={v => setIncCategory(v)}
+                      placeholder="— Seçin —"
+                      options={[
+                        { value: 'Hizmet Geliri', label: 'Hizmet Geliri' },
+                        { value: 'Ürün Satışı', label: 'Ürün Satışı' },
+                        { value: 'Komisyon', label: 'Komisyon' },
+                        { value: 'Kira Geliri', label: 'Kira Geliri' },
+                        { value: 'Paket/Üyelik', label: 'Paket / Üyelik' },
+                        { value: 'Diğer', label: 'Diğer' },
+                      ]}
+                    />
                   </div>
                   <div>
                     <label className="label">Tutar (TL)</label>
@@ -815,14 +828,18 @@ export default function AnalyticsPage() {
                   <label htmlFor="incIsRecurring" className="text-sm text-gray-700 dark:text-gray-300">Tekrarlayan gelir</label>
                   {incIsRecurring && (
                     <div className="flex items-center gap-2 ml-2">
-                      <select value={incRecurringPeriod} onChange={(e) => setIncRecurringPeriod(e.target.value)} className="input w-auto text-sm py-1">
-                        <option value="weekly">Haftalık</option>
-                        <option value="biweekly">2 Haftada Bir</option>
-                        <option value="monthly">Aylık</option>
-                        <option value="quarterly">3 Ayda Bir</option>
-                        <option value="yearly">Yıllık</option>
-                        <option value="custom">Özel</option>
-                      </select>
+                      <CustomSelect
+                        value={incRecurringPeriod}
+                        onChange={v => setIncRecurringPeriod(v)}
+                        options={[
+                          { value: 'weekly', label: 'Haftalık' },
+                          { value: 'biweekly', label: '2 Haftada Bir' },
+                          { value: 'monthly', label: 'Aylık' },
+                          { value: 'quarterly', label: '3 Ayda Bir' },
+                          { value: 'yearly', label: 'Yıllık' },
+                          { value: 'custom', label: 'Özel' },
+                        ]}
+                      />
                       {incRecurringPeriod === 'custom' && (
                         <div className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400">
                           <span>Her</span>

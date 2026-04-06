@@ -12,6 +12,7 @@ import { ToolbarPopover, SortPopoverContent } from '@/components/ui/toolbar-popo
 import type { StaffMember, StaffRole, StaffPermissions } from '@/types'
 import { logAudit } from '@/lib/utils/audit'
 import { DEFAULT_PERMISSIONS, getEffectivePermissions } from '@/types'
+import { CustomSelect } from '@/components/ui/custom-select'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 
 const ROLE_LABELS: Record<StaffRole, string> = {
@@ -612,11 +613,11 @@ export default function StaffPage() {
               </div>
               <div>
                 <label htmlFor="staffRole" className="label">Rol</label>
-                <select id="staffRole" value={role} onChange={(e) => setRole(e.target.value as StaffRole)} className="input">
-                  {availableRoles.map(r => (
-                    <option key={r} value={r}>{ROLE_LABELS[r]}</option>
-                  ))}
-                </select>
+                <CustomSelect
+                  value={role}
+                  onChange={v => setRole(v as StaffRole)}
+                  options={availableRoles.map(r => ({ value: r, label: ROLE_LABELS[r] }))}
+                />
               </div>
               <div>
                 <label htmlFor="staffPhone" className="label">Telefon (opsiyonel)</label>
@@ -743,10 +744,14 @@ export default function StaffPage() {
               <div className="space-y-4">
                 <div>
                   <label className="label">Rol</label>
-                  <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value as 'manager' | 'staff')} className="input">
-                    <option value="staff">Personel</option>
-                    {currentUserRole === 'owner' && <option value="manager">Yönetici</option>}
-                  </select>
+                  <CustomSelect
+                    value={inviteRole}
+                    onChange={v => setInviteRole(v as 'manager' | 'staff')}
+                    options={[
+                      { value: 'staff', label: 'Personel' },
+                      ...(currentUserRole === 'owner' ? [{ value: 'manager', label: 'Yönetici' }] : []),
+                    ]}
+                  />
                 </div>
                 <div>
                   <label className="label">E-posta (opsiyonel)</label>

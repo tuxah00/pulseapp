@@ -17,6 +17,7 @@ import { exportToCSV, printInvoicePDF } from '@/lib/utils/export'
 import { logAudit } from '@/lib/utils/audit'
 import type { Invoice, InvoiceItem, InvoiceStatus, PaymentMethod, InvoicePayment, InvoicePaymentType, InstallmentFrequency } from '@/types'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
+import { CustomSelect } from '@/components/ui/custom-select'
 
 interface SimpleCustomer {
   id: string
@@ -489,17 +490,21 @@ export default function InvoicesPage() {
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
               <div>
                 <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Müşteri</label>
-                <select value={filterCustomerId} onChange={e => setFilterCustomerId(e.target.value)} className="input text-sm">
-                  <option value="">Tümü</option>
-                  {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
+                <CustomSelect
+                  value={filterCustomerId}
+                  onChange={v => setFilterCustomerId(v)}
+                  placeholder="Tümü"
+                  options={customers.map(c => ({ value: c.id, label: c.name }))}
+                />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Ödeme Yöntemi</label>
-                <select value={filterPaymentMethod} onChange={e => setFilterPaymentMethod(e.target.value)} className="input text-sm">
-                  <option value="">Tümü</option>
-                  {PAYMENT_METHODS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-                </select>
+                <CustomSelect
+                  value={filterPaymentMethod}
+                  onChange={v => setFilterPaymentMethod(v)}
+                  placeholder="Tümü"
+                  options={PAYMENT_METHODS.map(m => ({ value: m.value, label: m.label }))}
+                />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"><CalendarDays className="inline h-3 w-3 mr-1" />Başlangıç</label>
@@ -521,12 +526,16 @@ export default function InvoicesPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Sırala:</label>
-                <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="input text-xs py-1 w-auto">
-                  <option value="created_at">Tarih</option>
-                  <option value="total">Tutar</option>
-                  <option value="due_date">Son Ödeme</option>
-                  <option value="paid_amount">Ödenen</option>
-                </select>
+                <CustomSelect
+                  value={sortBy}
+                  onChange={v => setSortBy(v)}
+                  options={[
+                    { value: 'created_at', label: 'Tarih' },
+                    { value: 'total', label: 'Tutar' },
+                    { value: 'due_date', label: 'Son Ödeme' },
+                    { value: 'paid_amount', label: 'Ödenen' },
+                  ]}
+                />
                 <button onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')} className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 flex items-center gap-1">
                   <ArrowUpDown className="h-3 w-3" />
                   {sortOrder === 'desc' ? 'Azalan' : 'Artan'}
@@ -748,9 +757,11 @@ export default function InvoicesPage() {
                       </div>
                       <div>
                         <label className="block text-[10px] text-gray-500 dark:text-gray-400 mb-0.5">Yöntem</label>
-                        <select value={payMethod} onChange={e => setPayMethod(e.target.value as PaymentMethod)} className="input text-sm">
-                          {PAYMENT_METHODS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-                        </select>
+                        <CustomSelect
+                          value={payMethod}
+                          onChange={v => setPayMethod(v as PaymentMethod)}
+                          options={PAYMENT_METHODS.map(m => ({ value: m.value, label: m.label }))}
+                        />
                       </div>
                     </div>
                     <input type="text" value={payNotes} onChange={e => setPayNotes(e.target.value)} className="input text-sm" placeholder="Not (opsiyonel)" />
@@ -878,10 +889,12 @@ export default function InvoicesPage() {
               {/* Müşteri Seç */}
               <div>
                 <label className="label">Müşteri (opsiyonel)</label>
-                <select value={formCustomerId} onChange={(e) => setFormCustomerId(e.target.value)} className="input">
-                  <option value="">— Müşteri seçin —</option>
-                  {customers.map(c => <option key={c.id} value={c.id}>{c.name} &bull; {c.phone}</option>)}
-                </select>
+                <CustomSelect
+                  value={formCustomerId}
+                  onChange={v => setFormCustomerId(v)}
+                  placeholder="— Müşteri seçin —"
+                  options={customers.map(c => ({ value: c.id, label: `${c.name} • ${c.phone}` }))}
+                />
               </div>
 
               {/* Ödeme Tipi */}
@@ -912,17 +925,23 @@ export default function InvoicesPage() {
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <label className="block text-xs text-gray-600 dark:text-gray-400 mb-0.5">Taksit Sayısı</label>
-                      <select value={formInstallmentCount} onChange={e => setFormInstallmentCount(e.target.value)} className="input text-sm">
-                        {[2,3,4,5,6,8,10,12].map(n => <option key={n} value={n}>{n} Taksit</option>)}
-                      </select>
+                      <CustomSelect
+                        value={formInstallmentCount}
+                        onChange={v => setFormInstallmentCount(v)}
+                        options={[2,3,4,5,6,8,10,12].map(n => ({ value: String(n), label: `${n} Taksit` }))}
+                      />
                     </div>
                     <div>
                       <label className="block text-xs text-gray-600 dark:text-gray-400 mb-0.5">Sıklık</label>
-                      <select value={formInstallmentFrequency} onChange={e => setFormInstallmentFrequency(e.target.value as InstallmentFrequency)} className="input text-sm">
-                        <option value="weekly">Haftalık</option>
-                        <option value="biweekly">2 Haftalık</option>
-                        <option value="monthly">Aylık</option>
-                      </select>
+                      <CustomSelect
+                        value={formInstallmentFrequency}
+                        onChange={v => setFormInstallmentFrequency(v as InstallmentFrequency)}
+                        options={[
+                          { value: 'weekly', label: 'Haftalık' },
+                          { value: 'biweekly', label: '2 Haftalık' },
+                          { value: 'monthly', label: 'Aylık' },
+                        ]}
+                      />
                     </div>
                   </div>
                   {formItems.some(i => i.total > 0) && (
@@ -944,9 +963,11 @@ export default function InvoicesPage() {
                     </div>
                     <div>
                       <label className="block text-xs text-gray-600 dark:text-gray-400 mb-0.5">Ödeme Yöntemi</label>
-                      <select value={formDepositMethod} onChange={e => setFormDepositMethod(e.target.value as PaymentMethod)} className="input text-sm">
-                        {PAYMENT_METHODS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-                      </select>
+                      <CustomSelect
+                        value={formDepositMethod}
+                        onChange={v => setFormDepositMethod(v as PaymentMethod)}
+                        options={PAYMENT_METHODS.map(m => ({ value: m.value, label: m.label }))}
+                      />
                     </div>
                   </div>
                 </div>
@@ -1003,13 +1024,17 @@ export default function InvoicesPage() {
               {/* KDV */}
               <div>
                 <label className="label">KDV Oranı (%)</label>
-                <select value={formTaxRate} onChange={(e) => setFormTaxRate(e.target.value)} className="input">
-                  <option value="0">KDV Yok (%0)</option>
-                  <option value="1">%1</option>
-                  <option value="8">%8 (Sağlık)</option>
-                  <option value="10">%10</option>
-                  <option value="20">%20</option>
-                </select>
+                <CustomSelect
+                  value={formTaxRate}
+                  onChange={v => setFormTaxRate(v)}
+                  options={[
+                    { value: '0', label: 'KDV Yok (%0)' },
+                    { value: '1', label: '%1' },
+                    { value: '8', label: '%8 (Sağlık)' },
+                    { value: '10', label: '%10' },
+                    { value: '20', label: '%20' },
+                  ]}
+                />
               </div>
 
               {/* Son Ödeme */}
