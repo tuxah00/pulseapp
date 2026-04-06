@@ -9,6 +9,7 @@ import {
 import type { Referral, Customer, ReferralStatus, RewardType } from '@/types'
 import { REFERRAL_STATUS_LABELS, REWARD_TYPE_LABELS } from '@/types'
 import { formatCurrency } from '@/lib/utils'
+import { CustomSelect } from '@/components/ui/custom-select'
 
 const STATUS_CONFIG: Record<ReferralStatus, { bg: string; text: string; icon: typeof CheckCircle }> = {
   pending: { bg: 'bg-yellow-50 dark:bg-yellow-900/20', text: 'text-yellow-600 dark:text-yellow-400', icon: Clock },
@@ -283,10 +284,13 @@ export default function ReferralsPage() {
             <div className="p-6 space-y-4">
               <div>
                 <label className="label">Tavsiye Eden Müşteri *</label>
-                <select className="input w-full" value={formReferrerId} onChange={e => setFormReferrerId(e.target.value)}>
-                  <option value="">Müşteri seçin</option>
-                  {customers.map(c => <option key={c.id} value={c.id}>{c.name} — {c.phone}</option>)}
-                </select>
+                <CustomSelect
+                  options={customers.map(c => ({ value: c.id, label: `${c.name} — ${c.phone}` }))}
+                  value={formReferrerId}
+                  onChange={v => setFormReferrerId(v)}
+                  placeholder="Müşteri seçin"
+                  className="input"
+                />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -301,12 +305,13 @@ export default function ReferralsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="label">Ödül Tipi</label>
-                  <select className="input w-full" value={formRewardType} onChange={e => setFormRewardType(e.target.value as RewardType)}>
-                    <option value="">Seçin (opsiyonel)</option>
-                    {(Object.entries(REWARD_TYPE_LABELS) as [RewardType, string][]).map(([k, v]) => (
-                      <option key={k} value={k}>{v}</option>
-                    ))}
-                  </select>
+                  <CustomSelect
+                    options={(Object.entries(REWARD_TYPE_LABELS) as [RewardType, string][]).map(([k, v]) => ({ value: k, label: v }))}
+                    value={formRewardType}
+                    onChange={v => setFormRewardType(v as RewardType)}
+                    placeholder="Seçin (opsiyonel)"
+                    className="input"
+                  />
                 </div>
                 <div>
                   <label className="label">Ödül Değeri</label>

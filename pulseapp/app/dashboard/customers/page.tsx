@@ -17,6 +17,7 @@ import CompactBoxCard from '@/components/ui/compact-box-card'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import { ToolbarPopover, SortPopoverContent } from '@/components/ui/toolbar-popover'
 import { exportToCSV } from '@/lib/utils/export'
+import { CustomSelect } from '@/components/ui/custom-select'
 
 import { getCustomerLabel, getCustomerLabelSingular } from '@/lib/config/sector-modules'
 
@@ -679,11 +680,12 @@ export default function CustomersPage() {
               <div><label htmlFor="custNotes" className="label">Notlar (opsiyonel)</label><textarea id="custNotes" value={notes} onChange={(e) => setNotes(e.target.value)} className="input" rows={3} placeholder="Tercihler, alerjiler, vb." /></div>
               <div>
                 <label htmlFor="custSegment" className="label">Segment</label>
-                <select id="custSegment" value={segment} onChange={e => setSegment(e.target.value as CustomerSegment)} className="input">
-                  {(['new', 'regular', 'vip', 'risk', 'lost'] as CustomerSegment[]).map(seg => (
-                    <option key={seg} value={seg}>{SEGMENT_LABELS[seg]}</option>
-                  ))}
-                </select>
+                <CustomSelect
+                  options={(['new', 'regular', 'vip', 'risk', 'lost'] as CustomerSegment[]).map(seg => ({ value: seg, label: SEGMENT_LABELS[seg] }))}
+                  value={segment}
+                  onChange={v => setSegment(v as CustomerSegment)}
+                  className="input"
+                />
               </div>
               {error && <div className="rounded-lg bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-400">{error}</div>}
               <div className="flex gap-3 pt-2">

@@ -19,6 +19,7 @@ import { useConfirm } from '@/lib/hooks/use-confirm'
 import type { Customer } from '@/types'
 import CompactBoxCard from '@/components/ui/compact-box-card'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
+import { CustomSelect } from '@/components/ui/custom-select'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1194,24 +1195,21 @@ function RecordsPageInner() {
               {!editingRecord && (
                 <div>
                   <label className="label">Danışan Seç (opsiyonel)</label>
-                  <select
+                  <CustomSelect
+                    options={customers.map(c => ({ value: c.id, label: `${c.name}${c.phone ? ` (${c.phone})` : ''}` }))}
                     value={selectedCustomerId}
-                    onChange={(e) => {
-                      setSelectedCustomerId(e.target.value)
-                      if (e.target.value) {
-                        const cust = customers.find(c => c.id === e.target.value)
+                    onChange={v => {
+                      setSelectedCustomerId(v)
+                      if (v) {
+                        const cust = customers.find(c => c.id === v)
                         if (cust && !formData['title']) {
                           setFormData(prev => ({ ...prev, title: cust.name }))
                         }
                       }
                     }}
+                    placeholder="— Danışan seçin —"
                     className="input"
-                  >
-                    <option value="">— Danışan seçin —</option>
-                    {customers.map(c => (
-                      <option key={c.id} value={c.id}>{c.name}{c.phone ? ` (${c.phone})` : ''}</option>
-                    ))}
-                  </select>
+                  />
                 </div>
               )}
 
@@ -1228,15 +1226,12 @@ function RecordsPageInner() {
                       required={f.key === 'title' && !selectedCustomerId}
                     />
                   ) : f.type === 'select' ? (
-                    <select
+                    <CustomSelect
+                      options={f.options ?? []}
                       value={formData[f.key] ?? ''}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, [f.key]: e.target.value }))}
+                      onChange={v => setFormData((prev) => ({ ...prev, [f.key]: v }))}
                       className="input"
-                    >
-                      {f.options?.map((o) => (
-                        <option key={o.value} value={o.value}>{o.label}</option>
-                      ))}
-                    </select>
+                    />
                   ) : (
                     <input
                       type={f.type ?? 'text'}

@@ -31,6 +31,7 @@ import { logAudit } from '@/lib/utils/audit'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import { ToolbarPopover, SortPopoverContent, FilterPopoverList } from '@/components/ui/toolbar-popover'
+import { CustomSelect } from '@/components/ui/custom-select'
 
 export default function AppointmentsPage() {
   const { businessId, staffId: currentStaffId, staffName: currentStaffName, loading: ctxLoading } = useBusinessContext()
@@ -1278,25 +1279,34 @@ export default function AppointmentsPage() {
             <form onSubmit={handleSave} className="space-y-4">
               <div>
                 <label className="label">Müşteri</label>
-                <select value={customerId} onChange={(e) => setCustomerId(e.target.value)} className="input" required>
-                  <option value="">Müşteri seçin...</option>
-                  {customers.map(c => <option key={c.id} value={c.id}>{c.name} — {c.phone}</option>)}
-                </select>
+                <CustomSelect
+                  options={customers.map(c => ({ value: c.id, label: `${c.name} — ${c.phone}` }))}
+                  value={customerId}
+                  onChange={v => setCustomerId(v)}
+                  placeholder="Müşteri seçin..."
+                  className="input"
+                />
                 {customers.length === 0 && <p className="text-xs text-amber-600 mt-1">Önce müşteri eklemelisiniz.</p>}
               </div>
               <div>
                 <label className="label">Hizmet</label>
-                <select value={serviceId} onChange={(e) => setServiceId(e.target.value)} className="input">
-                  <option value="">Hizmet seçin (opsiyonel)...</option>
-                  {services.map(s => <option key={s.id} value={s.id}>{s.name} — {s.duration_minutes} dk{s.price ? ` — ${s.price} TL` : ''}</option>)}
-                </select>
+                <CustomSelect
+                  options={services.map(s => ({ value: s.id, label: `${s.name} — ${s.duration_minutes} dk${s.price ? ` — ${s.price} TL` : ''}` }))}
+                  value={serviceId}
+                  onChange={v => setServiceId(v)}
+                  placeholder="Hizmet seçin (opsiyonel)..."
+                  className="input"
+                />
               </div>
               <div>
                 <label className="label">Personel</label>
-                <select value={staffId} onChange={(e) => setStaffId(e.target.value)} className="input">
-                  <option value="">Personel seçin (opsiyonel)...</option>
-                  {staffMembers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
+                <CustomSelect
+                  options={staffMembers.map(s => ({ value: s.id, label: s.name }))}
+                  value={staffId}
+                  onChange={v => setStaffId(v)}
+                  placeholder="Personel seçin (opsiyonel)..."
+                  className="input"
+                />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -1310,9 +1320,12 @@ export default function AppointmentsPage() {
                 </div>
                 <div>
                   <label className="label">Saat</label>
-                  <select value={startTime} onChange={(e) => setStartTime(e.target.value)} className="input" required>
-                    {generateTimeSlots(date, workingHours).map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
+                  <CustomSelect
+                    options={generateTimeSlots(date, workingHours).map(t => ({ value: t, label: t }))}
+                    value={startTime}
+                    onChange={v => setStartTime(v)}
+                    className="input"
+                  />
                   {date && workingHours && generateTimeSlots(date, workingHours).length === 0 && (
                     <p className="text-xs text-red-500 mt-1">Bu gün kapalıdır, randevu oluşturulamaz.</p>
                   )}
@@ -1349,27 +1362,25 @@ export default function AppointmentsPage() {
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Sıklık</label>
-                          <select
+                          <CustomSelect
+                            options={[
+                              { value: 'weekly', label: 'Her hafta' },
+                              { value: 'biweekly', label: 'Her 2 haftada bir' },
+                              { value: 'monthly', label: 'Her ay' },
+                            ]}
                             value={recurrenceFrequency}
-                            onChange={(e) => setRecurrenceFrequency(e.target.value as any)}
+                            onChange={v => setRecurrenceFrequency(v as any)}
                             className="input text-sm"
-                          >
-                            <option value="weekly">Her hafta</option>
-                            <option value="biweekly">Her 2 haftada bir</option>
-                            <option value="monthly">Her ay</option>
-                          </select>
+                          />
                         </div>
                         <div>
                           <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Seans sayısı</label>
-                          <select
-                            value={recurrenceCount}
-                            onChange={(e) => setRecurrenceCount(Number(e.target.value))}
+                          <CustomSelect
+                            options={[2, 3, 4, 6, 8, 10, 12].map(n => ({ value: String(n), label: `${n} seans` }))}
+                            value={String(recurrenceCount)}
+                            onChange={v => setRecurrenceCount(Number(v))}
                             className="input text-sm"
-                          >
-                            {[2, 3, 4, 6, 8, 10, 12].map(n => (
-                              <option key={n} value={n}>{n} seans</option>
-                            ))}
-                          </select>
+                          />
                         </div>
                       </div>
                       {date && (
@@ -1419,9 +1430,12 @@ export default function AppointmentsPage() {
               </div>
               <div>
                 <label className="label">Yeni Saat</label>
-                <select value={rescheduleTime} onChange={(e) => setRescheduleTime(e.target.value)} className="input" required>
-                  {generateTimeSlots(rescheduleDate, workingHours).map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
+                <CustomSelect
+                  options={generateTimeSlots(rescheduleDate, workingHours).map(t => ({ value: t, label: t }))}
+                  value={rescheduleTime}
+                  onChange={v => setRescheduleTime(v)}
+                  className="input"
+                />
                 {rescheduleDate && workingHours && generateTimeSlots(rescheduleDate, workingHours).length === 0 && (
                   <p className="text-xs text-red-500 mt-1">Bu gün kapalıdır, randevu oluşturulamaz.</p>
                 )}
