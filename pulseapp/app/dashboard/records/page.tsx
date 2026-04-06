@@ -512,6 +512,7 @@ function RecordsPageInner() {
       if (k === 'file_urls' || k === 'file_metadata' || k === 'created_by_staff_id' || k === 'created_by_staff_name') return
       fd[k] = v ?? ''
     })
+    setFormData(fd)
     setFormError(null)
     setSelectedCustomerId(record.customer_id || '')
     setUploadFiles([])
