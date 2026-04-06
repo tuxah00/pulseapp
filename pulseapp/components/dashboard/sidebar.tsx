@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -46,13 +46,25 @@ import {
 import type { SectorType, PlanType, StaffPermissions } from '@/types'
 import { getSidebarSections } from '@/lib/config/sector-modules'
 
-const ICON_MAP: Record<string, LucideIcon> = {
+// Custom Turkish Lira icon (₺) — Lucide'da bulunmadığı için özel SVG
+const TurkishLiraIcon = ({ className, ...props }: React.SVGProps<SVGSVGElement>) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true" {...props}>
+    <line x1="7" y1="4" x2="7" y2="20" />
+    <line x1="7" y1="4" x2="13" y2="4" />
+    <line x1="7" y1="11" x2="12" y2="11" />
+    <path d="M7 20 C 9 20 16 19 16 13" />
+  </svg>
+)
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const ICON_MAP: Record<string, any> = {
   LayoutDashboard, Calendar, CalendarCheck, Users, UserPlus,
   MessageSquare, MessageCircle, Star, BarChart3, TrendingUp,
   Shield, Settings, LogOut, Scissors, Package, FolderOpen,
   Briefcase, Car, PawPrint, ClipboardList, CreditCard,
   CalendarDays, CheckSquare, BookOpen, Image, Receipt, Layers, Wallet,
   ClipboardCheck, UserCheck,
+  TurkishLira: TurkishLiraIcon,
 }
 
 const bottomNav = [
@@ -206,7 +218,7 @@ export default function Sidebar({ businessName, userName, sector, plan, permissi
                     className={cn(
                       'group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150',
                       active
-                        ? 'bg-pulse-500/10 text-pulse-700 dark:text-pulse-300 dark:bg-pulse-500/15'
+                        ? 'bg-pulse-900/10 text-pulse-900 dark:text-pulse-300 dark:bg-pulse-900/15'
                         : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100/80 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-gray-100'
                     )}
                   >
@@ -214,13 +226,13 @@ export default function Sidebar({ businessName, userName, sector, plan, permissi
                     {active && (
                       <motion.div
                         layoutId="activeIndicator"
-                        className="absolute left-0 top-0 bottom-0 my-auto w-1 h-5 rounded-r-full bg-pulse-500"
+                        className="absolute left-0 top-0 bottom-0 my-auto w-1 h-5 rounded-r-full bg-pulse-900"
                         transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                       />
                     )}
                     <Icon className={cn(
                       'h-4.5 w-4.5 flex-shrink-0 transition-colors',
-                      active ? 'text-pulse-600 dark:text-pulse-400' : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300'
+                      active ? 'text-pulse-900 dark:text-pulse-400' : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300'
                     )} />
                     <AnimatePresence>
                       {!collapsed && (
@@ -258,11 +270,11 @@ export default function Sidebar({ businessName, userName, sector, plan, permissi
               className={cn(
                 'group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150',
                 active
-                  ? 'bg-pulse-500/10 text-pulse-700 dark:text-pulse-300'
+                  ? 'bg-pulse-900/10 text-pulse-900 dark:text-pulse-300'
                   : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100/80 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-gray-100'
               )}
             >
-              <item.icon className={cn('h-4.5 w-4.5 flex-shrink-0', active ? 'text-pulse-600' : 'text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300')} />
+              <item.icon className={cn('h-4.5 w-4.5 flex-shrink-0', active ? 'text-pulse-900' : 'text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300')} />
               <AnimatePresence>
                 {!collapsed && (
                   <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="overflow-hidden whitespace-nowrap">
@@ -300,7 +312,7 @@ export default function Sidebar({ businessName, userName, sector, plan, permissi
               className="mt-2 overflow-hidden"
             >
               <div className="flex items-center gap-3 rounded-xl bg-gray-50 dark:bg-white/5 px-3 py-2.5">
-                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-pulse-500 text-xs font-bold text-white">
+                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-pulse-900 text-xs font-bold text-white">
                   {initials}
                 </div>
                 <div className="min-w-0">

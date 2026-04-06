@@ -3,6 +3,12 @@
 ## Proje Özeti
 PulseApp, çok sektörlü SaaS işletme yönetim platformu. Next.js 14, Supabase, Tailwind CSS, TypeScript.
 
+## Marka Rengi (Primary Brand Color)
+- **Lacivert / Navy:** `#193d8f` = Tailwind `pulse-900`
+- Bu renk tüm birincil UI elemanlarında kullanılır: btn-primary, sidebar aktif durumu, avatar arka planları
+- Yeni buton/link/highlight eklerken `pulse-500` (parlak mavi) değil `pulse-900` (lacivert) kullan
+- Açık mod ve karanlık mod: her ikisinde de aynı lacivert, yalnızca dark modda `pulse-300` veya `pulse-400` text variant kullanılır
+
 ## Deploy
 - **GitHub repo:** tuxah00/pulseapp
 - **Vercel:** main branch'e her push'ta otomatik deploy

@@ -317,7 +317,7 @@ export default function AuditPage() {
               type="text"
               value={searchText}
               onChange={e => { setSearchText(e.target.value); setPage(0) }}
-              placeholder="Personel ara..."
+              placeholder="Personel, eylem, kaynak ara..."
               className="input py-1.5 pl-8 text-sm w-full"
             />
           </div>
