@@ -431,7 +431,13 @@ export default function AppointmentsPage() {
       })
       if (!res.ok) {
         const j = await res.json().catch(() => ({}))
-        alert(j.error || 'Randevu taşınamadı')
+        window.dispatchEvent(new CustomEvent('pulse-toast', {
+          detail: {
+            type: 'error',
+            title: 'Randevu Taşınamadı',
+            body: j.error || 'Bir hata oluştu, lütfen tekrar deneyin.',
+          },
+        }))
         return
       }
       await fetchAppointments()
@@ -453,7 +459,13 @@ export default function AppointmentsPage() {
       })
     } catch (err) {
       console.error('drag-drop hatası:', err)
-      alert('Randevu taşınamadı')
+      window.dispatchEvent(new CustomEvent('pulse-toast', {
+        detail: {
+          type: 'error',
+          title: 'Randevu Taşınamadı',
+          body: 'Bir hata oluştu, lütfen tekrar deneyin.',
+        },
+      }))
     }
   }
 
