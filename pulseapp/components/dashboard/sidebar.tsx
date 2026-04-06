@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -46,17 +46,6 @@ import {
 import type { SectorType, PlanType, StaffPermissions } from '@/types'
 import { getSidebarSections } from '@/lib/config/sector-modules'
 
-// Custom Turkish Lira icon (₺) — Lucide'da bulunmadığı için özel SVG (path tabanlı)
-const TurkishLiraIcon = ({ className, ...props }: React.SVGProps<SVGSVGElement>) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true" {...props}>
-    {/* Dikey çizgi + alt kıvrım */}
-    <line x1="10" y1="3" x2="10" y2="18" />
-    <path d="M10 18 Q10 21 7 21" />
-    {/* İki yatay çizgi */}
-    <line x1="10" y1="9" x2="17" y2="9" />
-    <line x1="10" y1="14" x2="17" y2="14" />
-  </svg>
-)
 
 const ICON_MAP: Record<string, any> = {
   LayoutDashboard, Calendar, CalendarCheck, Users, UserPlus,
@@ -65,7 +54,6 @@ const ICON_MAP: Record<string, any> = {
   Briefcase, Car, PawPrint, ClipboardList, CreditCard,
   CalendarDays, CheckSquare, BookOpen, Image, Receipt, Layers, Wallet,
   ClipboardCheck, UserCheck,
-  TurkishLira: TurkishLiraIcon,
 }
 
 const bottomNav = [

@@ -26,7 +26,7 @@ const MANAGEMENT_ITEMS: SidebarItem[] = [
   { key: 'staff', name: 'Personeller', href: '/dashboard/personeller', iconName: 'UserPlus' },
   { key: 'messages', name: 'Mesajlar', href: '/dashboard/messages', iconName: 'MessageSquare' },
   { key: 'analytics', name: 'Gelir-Gider', href: '/dashboard/analytics', iconName: 'TrendingUp' },
-  { key: 'invoices', name: 'Faturalar', href: '/dashboard/invoices', iconName: 'TurkishLira' },
+  { key: 'invoices', name: 'Faturalar', href: '/dashboard/invoices', iconName: 'Receipt' },
   { key: 'shifts', name: 'Vardiya', href: '/dashboard/vardiya', iconName: 'CalendarDays' },
   { key: 'audit', name: 'Denetim', href: '/dashboard/denetim', iconName: 'Shield' },
 ]
