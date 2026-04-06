@@ -552,7 +552,7 @@ export default function PaketlerPage() {
                     </button>
                     <button
                       onClick={() => openAptModalFromTemplate(t)}
-                      className="mt-2 w-full text-sm font-medium text-center py-2 rounded-lg border border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors flex items-center justify-center gap-1.5"
+                      className="mt-2 w-full text-sm font-medium text-center py-2 rounded-lg border border-pulse-200 dark:border-pulse-800 text-pulse-900 dark:text-pulse-300 hover:bg-pulse-50 dark:hover:bg-pulse-900/20 transition-colors flex items-center justify-center gap-1.5"
                     >
                       <CalendarPlus className="h-4 w-4" /> Randevu Oluştur
                     </button>
