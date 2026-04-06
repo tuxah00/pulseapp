@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { Users, Plus, Trash2, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
+import { CustomSelect } from '@/components/ui/custom-select'
 
 interface ClassItem {
   id: string
@@ -210,22 +211,12 @@ function AttendancePage() {
             {loadingClasses ? (
               <div className="text-sm text-gray-400 py-2">Yükleniyor...</div>
             ) : (
-              <select
+              <CustomSelect
+                options={classesForDay.map(cls => ({ value: cls.id, label: `${cls.name} — ${cls.start_time.slice(0, 5)}` }))}
                 value={selectedClassId}
-                onChange={e => setSelectedClassId(e.target.value)}
-                className="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                <option value="">Sınıf seçin...</option>
-                {classesForDay.length === 0 ? (
-                  <option disabled value="">Bu gün için sınıf yok</option>
-                ) : (
-                  classesForDay.map(cls => (
-                    <option key={cls.id} value={cls.id}>
-                      {cls.name} — {cls.start_time.slice(0, 5)}
-                    </option>
-                  ))
-                )}
-              </select>
+                onChange={v => setSelectedClassId(v)}
+                placeholder={classesForDay.length === 0 ? 'Bu gün için sınıf yok' : 'Sınıf seçin...'}
+              />
             )}
           </div>
         </div>
