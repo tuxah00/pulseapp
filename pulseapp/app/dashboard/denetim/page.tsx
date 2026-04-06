@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { Shield, Loader2, Search, Filter, ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { CustomSelect } from '@/components/ui/custom-select'
 
 interface AuditLog {
   id: string
@@ -283,36 +284,24 @@ export default function AuditPage() {
       <div className="card mb-4 space-y-3 p-3">
         <div className="flex flex-wrap gap-3 items-center">
           <Filter className="h-4 w-4 text-gray-400 flex-shrink-0" />
-          <select
+          <CustomSelect
+            options={Object.entries(RESOURCE_LABELS).map(([k, v]) => ({ value: k, label: v }))}
             value={resourceFilter}
-            onChange={(e) => { setResourceFilter(e.target.value); setPage(0) }}
-            className="input py-1.5 text-sm w-auto"
-          >
-            <option value="">Tüm Kaynaklar</option>
-            {Object.entries(RESOURCE_LABELS).map(([k, v]) => (
-              <option key={k} value={k}>{v}</option>
-            ))}
-          </select>
-          <select
+            onChange={v => { setResourceFilter(v); setPage(0) }}
+            placeholder="Tüm Kaynaklar"
+          />
+          <CustomSelect
+            options={Object.entries(ACTION_LABELS).map(([k, v]) => ({ value: k, label: v }))}
             value={actionFilter}
-            onChange={(e) => { setActionFilter(e.target.value); setPage(0) }}
-            className="input py-1.5 text-sm w-auto"
-          >
-            <option value="">Tüm Eylemler</option>
-            {Object.entries(ACTION_LABELS).map(([k, v]) => (
-              <option key={k} value={k}>{v}</option>
-            ))}
-          </select>
-          <select
+            onChange={v => { setActionFilter(v); setPage(0) }}
+            placeholder="Tüm Eylemler"
+          />
+          <CustomSelect
+            options={staffList.map(s => ({ value: s.id, label: s.name }))}
             value={staffFilter}
-            onChange={(e) => { setStaffFilter(e.target.value); setPage(0) }}
-            className="input py-1.5 text-sm w-auto"
-          >
-            <option value="">Tüm Personel</option>
-            {staffList.map(s => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
-          </select>
+            onChange={v => { setStaffFilter(v); setPage(0) }}
+            placeholder="Tüm Personel"
+          />
           <span className="text-sm text-gray-500 ml-auto">Toplam {total} kayıt</span>
         </div>
         <div className="flex flex-wrap gap-3 items-center">

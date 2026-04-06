@@ -11,6 +11,7 @@ import type { Service } from '@/types'
 import { logAudit } from '@/lib/utils/audit'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import { ToolbarPopover, SortPopoverContent } from '@/components/ui/toolbar-popover'
+import { CustomSelect } from '@/components/ui/custom-select'
 
 export default function ServicesPage() {
   const { businessId, staffId: currentStaffId, staffName: currentStaffName, loading: ctxLoading, permissions } = useBusinessContext()
@@ -321,18 +322,14 @@ export default function ServicesPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="duration" className="label">Süre (dakika)</label>
-                  <select
-                    id="duration"
-                    value={durationMinutes}
-                    onChange={(e) => setDurationMinutes(Number(e.target.value))}
-                    className="input"
-                  >
-                    {[15, 20, 30, 45, 60, 75, 90, 120, 150, 180].map((d) => (
-                      <option key={d} value={d}>
-                        {d} dk {d >= 60 ? `(${d / 60} saat)` : ''}
-                      </option>
-                    ))}
-                  </select>
+                  <CustomSelect
+                    options={[15, 20, 30, 45, 60, 75, 90, 120, 150, 180].map((d) => ({
+                      value: String(d),
+                      label: `${d} dk${d >= 60 ? ` (${d / 60} saat)` : ''}`,
+                    }))}
+                    value={String(durationMinutes)}
+                    onChange={v => setDurationMinutes(Number(v))}
+                  />
                 </div>
 
                 <div>

@@ -15,6 +15,7 @@ import type {
 import { cn } from '@/lib/utils'
 import { PROTOCOL_STATUS_LABELS, SESSION_STATUS_LABELS } from '@/types'
 import { formatCurrency } from '@/lib/utils'
+import { CustomSelect } from '@/components/ui/custom-select'
 
 const STATUS_CONFIG: Record<ProtocolStatus, { bg: string; text: string }> = {
   active: { bg: 'bg-blue-50 dark:bg-blue-900/20', text: 'text-blue-600 dark:text-blue-400' },
@@ -309,10 +310,12 @@ export default function ProtocolsPage() {
             <div className="p-6 space-y-4">
               <div>
                 <label className="label">Hasta *</label>
-                <select className="input w-full" value={formCustomerId} onChange={e => setFormCustomerId(e.target.value)}>
-                  <option value="">Hasta seçin</option>
-                  {customers.map(c => <option key={c.id} value={c.id}>{c.name} — {c.phone}</option>)}
-                </select>
+                <CustomSelect
+                  options={customers.map(c => ({ value: c.id, label: `${c.name} — ${c.phone}` }))}
+                  value={formCustomerId}
+                  onChange={v => setFormCustomerId(v)}
+                  placeholder="Hasta seçin"
+                />
               </div>
               <div>
                 <label className="label">Protokol Adı *</label>
@@ -320,10 +323,12 @@ export default function ProtocolsPage() {
               </div>
               <div>
                 <label className="label">Hizmet</label>
-                <select className="input w-full" value={formServiceId} onChange={e => setFormServiceId(e.target.value)}>
-                  <option value="">Hizmet seçin (opsiyonel)</option>
-                  {services.map(s => <option key={s.id} value={s.id}>{s.name}{s.price ? ` — ${formatCurrency(s.price)}` : ''}</option>)}
-                </select>
+                <CustomSelect
+                  options={services.map(s => ({ value: s.id, label: `${s.name}${s.price ? ` — ${formatCurrency(s.price)}` : ''}` }))}
+                  value={formServiceId}
+                  onChange={v => setFormServiceId(v)}
+                  placeholder="Hizmet seçin (opsiyonel)"
+                />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>

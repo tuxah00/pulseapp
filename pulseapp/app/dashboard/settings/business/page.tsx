@@ -14,6 +14,7 @@ import {
   type Business, type SectorType, type WorkingHours, type DayHours, type BusinessSettings,
 } from '@/types'
 import { formatCurrency } from '@/lib/utils'
+import { CustomSelect } from '@/components/ui/custom-select'
 import { logAudit } from '@/lib/utils/audit'
 
 const DAY_LABELS: Record<string, string> = {
@@ -351,15 +352,11 @@ export default function BusinessSettingsPage() {
                 </div>
                 <div>
                   <label className="label">Sektör</label>
-                  <select
+                  <CustomSelect
+                    options={(Object.entries(SECTOR_LABELS) as [SectorType, string][]).map(([value, label]) => ({ value, label }))}
                     value={sector}
-                    onChange={(e) => setSector(e.target.value as SectorType)}
-                    className="input"
-                  >
-                    {(Object.entries(SECTOR_LABELS) as [SectorType, string][]).map(([value, label]) => (
-                      <option key={value} value={value}>{label}</option>
-                    ))}
-                  </select>
+                    onChange={v => setSector(v as SectorType)}
+                  />
                   <p className="mt-1 text-xs text-amber-600">Sektör değişikliği sidebar menüsünü etkiler. Kaydet sonrası sayfa yenilenir.</p>
                 </div>
                 <div>
@@ -502,16 +499,16 @@ export default function BusinessSettingsPage() {
                 {settings.auto_review_request && (
                   <div className="ml-14">
                     <label className="label">Gönderim gecikmesi</label>
-                    <select
-                      value={settings.review_request_delay_minutes}
-                      onChange={(e) => setSettings(prev => ({ ...prev, review_request_delay_minutes: Number(e.target.value) }))}
-                      className="input w-48"
-                    >
-                      <option value={30}>30 dakika sonra</option>
-                      <option value={60}>1 saat sonra</option>
-                      <option value={120}>2 saat sonra</option>
-                      <option value={1440}>1 gün sonra</option>
-                    </select>
+                    <CustomSelect
+                      options={[
+                        { value: '30', label: '30 dakika sonra' },
+                        { value: '60', label: '1 saat sonra' },
+                        { value: '120', label: '2 saat sonra' },
+                        { value: '1440', label: '1 gün sonra' },
+                      ]}
+                      value={String(settings.review_request_delay_minutes)}
+                      onChange={v => setSettings(prev => ({ ...prev, review_request_delay_minutes: Number(v) }))}
+                    />
                   </div>
                 )}
               </div>
@@ -525,18 +522,18 @@ export default function BusinessSettingsPage() {
 
               <div>
                 <label className="label">Gelmeme süresi eşiği</label>
-                <select
-                  value={settings.winback_days}
-                  onChange={(e) => setSettings(prev => ({ ...prev, winback_days: Number(e.target.value) }))}
-                  className="input w-48"
-                >
-                  <option value={14}>14 gün</option>
-                  <option value={21}>21 gün</option>
-                  <option value={30}>30 gün</option>
-                  <option value={45}>45 gün</option>
-                  <option value={60}>60 gün</option>
-                  <option value={90}>90 gün</option>
-                </select>
+                <CustomSelect
+                  options={[
+                    { value: '14', label: '14 gün' },
+                    { value: '21', label: '21 gün' },
+                    { value: '30', label: '30 gün' },
+                    { value: '45', label: '45 gün' },
+                    { value: '60', label: '60 gün' },
+                    { value: '90', label: '90 gün' },
+                  ]}
+                  value={String(settings.winback_days)}
+                  onChange={v => setSettings(prev => ({ ...prev, winback_days: Number(v) }))}
+                />
                 <p className="mt-1.5 text-xs text-gray-400">
                   Bu süreden uzun süre gelmeyen müşteriler &quot;riskli&quot; olarak işaretlenir.
                 </p>
@@ -579,17 +576,17 @@ export default function BusinessSettingsPage() {
                     </div>
                     <div>
                       <label className="label">Gönderim Saati</label>
-                      <select
-                        value={settings.birthday_sms_hour}
-                        onChange={(e) => setSettings(prev => ({ ...prev, birthday_sms_hour: Number(e.target.value) }))}
-                        className="input w-48"
-                      >
-                        <option value={8}>08:00</option>
-                        <option value={9}>09:00</option>
-                        <option value={10}>10:00</option>
-                        <option value={11}>11:00</option>
-                        <option value={12}>12:00</option>
-                      </select>
+                      <CustomSelect
+                        options={[
+                          { value: '8', label: '08:00' },
+                          { value: '9', label: '09:00' },
+                          { value: '10', label: '10:00' },
+                          { value: '11', label: '11:00' },
+                          { value: '12', label: '12:00' },
+                        ]}
+                        value={String(settings.birthday_sms_hour)}
+                        onChange={v => setSettings(prev => ({ ...prev, birthday_sms_hour: Number(v) }))}
+                      />
                     </div>
                   </div>
                 )}
@@ -604,18 +601,18 @@ export default function BusinessSettingsPage() {
 
               <div>
                 <label className="label">Rezervasyon Süresi</label>
-                <select
-                  value={settings.reservation_duration_minutes}
-                  onChange={(e) => setSettings(prev => ({ ...prev, reservation_duration_minutes: Number(e.target.value) }))}
-                  className="input w-48"
-                >
-                  <option value={30}>30 dakika</option>
-                  <option value={60}>60 dakika</option>
-                  <option value={90}>90 dakika</option>
-                  <option value={120}>120 dakika</option>
-                  <option value={150}>150 dakika</option>
-                  <option value={180}>180 dakika</option>
-                </select>
+                <CustomSelect
+                  options={[
+                    { value: '30', label: '30 dakika' },
+                    { value: '60', label: '60 dakika' },
+                    { value: '90', label: '90 dakika' },
+                    { value: '120', label: '120 dakika' },
+                    { value: '150', label: '150 dakika' },
+                    { value: '180', label: '180 dakika' },
+                  ]}
+                  value={String(settings.reservation_duration_minutes)}
+                  onChange={v => setSettings(prev => ({ ...prev, reservation_duration_minutes: Number(v) }))}
+                />
                 <p className="mt-1.5 text-xs text-gray-400">
                   Her rezervasyonun varsayılan süresi. Aynı masaya bu süre içinde çakışan rezervasyon yapılamaz.
                 </p>

@@ -18,6 +18,7 @@ import { logAudit } from '@/lib/utils/audit'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
 import CompactBoxCard from '@/components/ui/compact-box-card'
 import type { ServicePackage, CustomerPackage, Service, PackageStatus, Customer, StaffMember } from '@/types'
+import { CustomSelect } from '@/components/ui/custom-select'
 
 type PageTab = 'templates' | 'customer'
 type StatusFilter = PackageStatus | 'all'
@@ -818,10 +819,12 @@ export default function PaketlerPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Hizmet (opsiyonel)</label>
-                <select value={tServiceId} onChange={e => setTServiceId(e.target.value)} className="input w-full text-sm">
-                  <option value="">— Seçin —</option>
-                  {services.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
+                <CustomSelect
+                  options={services.map(s => ({ value: s.id, label: s.name }))}
+                  value={tServiceId}
+                  onChange={v => setTServiceId(v)}
+                  placeholder="— Seçin —"
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -905,17 +908,12 @@ export default function PaketlerPage() {
             <form onSubmit={handleSellPackage} className="space-y-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Paket Şablonu *</label>
-                <select
+                <CustomSelect
+                  options={templates.map(t => ({ value: t.id, label: `${t.name} — ${t.sessions_total} seans — ${formatCurrency(t.price)}` }))}
                   value={sTemplateId}
-                  onChange={e => setSTemplateId(e.target.value)}
-                  className="input w-full text-sm"
-                  required
-                >
-                  <option value="">— Seçin —</option>
-                  {templates.map(t => (
-                    <option key={t.id} value={t.id}>{t.name} — {t.sessions_total} seans — {formatCurrency(t.price)}</option>
-                  ))}
-                </select>
+                  onChange={v => setSTemplateId(v)}
+                  placeholder="— Seçin —"
+                />
               </div>
 
               {activeTemplate && (
@@ -928,10 +926,10 @@ export default function PaketlerPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Müşteri Seç</label>
-                <select
+                <CustomSelect
+                  options={sellCustomers.map(c => ({ value: c.id, label: `${c.name}${c.phone ? ` — ${c.phone}` : ''}` }))}
                   value={sCustomerId}
-                  onChange={e => {
-                    const id = e.target.value
+                  onChange={id => {
                     setSCustomerId(id)
                     if (id) {
                       const found = sellCustomers.find(c => c.id === id)
@@ -944,13 +942,8 @@ export default function PaketlerPage() {
                       setSCustomerPhone('')
                     }
                   }}
-                  className="input w-full text-sm"
-                >
-                  <option value="">— Müşteri Seç —</option>
-                  {sellCustomers.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}{c.phone ? ` — ${c.phone}` : ''}</option>
-                  ))}
-                </select>
+                  placeholder="— Müşteri Seç —"
+                />
               </div>
 
               <div>
@@ -1124,20 +1117,24 @@ export default function PaketlerPage() {
               {aptCustomers.length > 0 && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Müşteri</label>
-                  <select value={aptCustomerId} onChange={e => setAptCustomerId(e.target.value)} className="input w-full text-sm">
-                    <option value="">— Seçin —</option>
-                    {aptCustomers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
+                  <CustomSelect
+                    options={aptCustomers.map(c => ({ value: c.id, label: c.name }))}
+                    value={aptCustomerId}
+                    onChange={v => setAptCustomerId(v)}
+                    placeholder="— Seçin —"
+                  />
                 </div>
               )}
 
               {aptStaffMembers.length > 0 && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Personel (opsiyonel)</label>
-                  <select value={aptStaffId} onChange={e => setAptStaffId(e.target.value)} className="input w-full text-sm">
-                    <option value="">— Seçin —</option>
-                    {aptStaffMembers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                  </select>
+                  <CustomSelect
+                    options={aptStaffMembers.map(s => ({ value: s.id, label: s.name }))}
+                    value={aptStaffId}
+                    onChange={v => setAptStaffId(v)}
+                    placeholder="— Seçin —"
+                  />
                 </div>
               )}
 

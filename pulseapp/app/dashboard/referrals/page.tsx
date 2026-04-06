@@ -289,7 +289,6 @@ export default function ReferralsPage() {
                   value={formReferrerId}
                   onChange={v => setFormReferrerId(v)}
                   placeholder="Müşteri seçin"
-                  className="input"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -310,7 +309,6 @@ export default function ReferralsPage() {
                     value={formRewardType}
                     onChange={v => setFormRewardType(v as RewardType)}
                     placeholder="Seçin (opsiyonel)"
-                    className="input"
                   />
                 </div>
                 <div>

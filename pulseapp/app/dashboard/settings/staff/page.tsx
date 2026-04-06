@@ -12,6 +12,7 @@ import type { StaffMember, StaffRole, StaffPermissions } from '@/types'
 import { logAudit } from '@/lib/utils/audit'
 import { DEFAULT_PERMISSIONS, getEffectivePermissions } from '@/types'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
+import { CustomSelect } from '@/components/ui/custom-select'
 
 const ROLE_LABELS: Record<StaffRole, string> = {
   owner: 'İşletme Sahibi',
@@ -603,11 +604,11 @@ export default function StaffPage() {
               </div>
               <div>
                 <label htmlFor="staffRole" className="label">Rol</label>
-                <select id="staffRole" value={role} onChange={(e) => setRole(e.target.value as StaffRole)} className="input">
-                  {availableRoles.map(r => (
-                    <option key={r} value={r}>{ROLE_LABELS[r]}</option>
-                  ))}
-                </select>
+                <CustomSelect
+                  options={availableRoles.map(r => ({ value: r, label: ROLE_LABELS[r] }))}
+                  value={role}
+                  onChange={v => setRole(v as StaffRole)}
+                />
               </div>
               <div>
                 <label htmlFor="staffPhone" className="label">Telefon (opsiyonel)</label>
@@ -734,10 +735,14 @@ export default function StaffPage() {
               <div className="space-y-4">
                 <div>
                   <label className="label">Rol</label>
-                  <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value as 'manager' | 'staff')} className="input">
-                    <option value="staff">Personel</option>
-                    {currentUserRole === 'owner' && <option value="manager">Yönetici</option>}
-                  </select>
+                  <CustomSelect
+                    options={[
+                      { value: 'staff', label: 'Personel' },
+                      ...(currentUserRole === 'owner' ? [{ value: 'manager', label: 'Yönetici' }] : []),
+                    ]}
+                    value={inviteRole}
+                    onChange={v => setInviteRole(v as 'manager' | 'staff')}
+                  />
                 </div>
                 <div>
                   <label className="label">E-posta (opsiyonel)</label>
