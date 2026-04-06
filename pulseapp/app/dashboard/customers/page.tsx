@@ -407,7 +407,7 @@ export default function CustomersPage() {
             <span className="hidden sm:inline">Dışa Aktar</span>
           </button>
           <button onClick={openNewModal} className="btn-primary">
-            <Plus className="mr-2 h-4 w-4" />Yeni {customerLabel.endsWith('lar') || customerLabel.endsWith('ler') ? customerLabel.slice(0, -3) : customerLabel}
+            <Plus className="mr-2 h-4 w-4" />{`Yeni ${singularLabel}`}
           </button>
         </div>
       </div>
