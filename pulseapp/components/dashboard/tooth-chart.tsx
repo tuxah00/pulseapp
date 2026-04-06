@@ -18,6 +18,24 @@ const UPPER_LEFT  = [21, 22, 23, 24, 25, 26, 27, 28]
 const LOWER_LEFT  = [31, 32, 33, 34, 35, 36, 37, 38]
 const LOWER_RIGHT = [48, 47, 46, 45, 44, 43, 42, 41]
 
+// FDI 2. rakamına göre diş türü
+const TOOTH_TYPE_LABELS: Record<number, string> = {
+  1: 'Kesici', 2: 'Kesici', 3: 'Köpek', 4: 'K.Azı', 5: 'K.Azı',
+  6: 'B.Azı', 7: 'B.Azı', 8: 'Yirmilik',
+}
+const TOOTH_TYPE_SHORT: Record<number, string> = {
+  1: 'Ke', 2: 'Ke', 3: 'Kö', 4: 'KA', 5: 'KA', 6: 'BA', 7: 'BA', 8: 'Y',
+}
+
+function getToothType(num: number): string {
+  const pos = num % 10
+  return TOOTH_TYPE_LABELS[pos] ?? ''
+}
+function getToothTypeShort(num: number): string {
+  const pos = num % 10
+  return TOOTH_TYPE_SHORT[pos] ?? ''
+}
+
 const CONDITIONS: ToothCondition[] = [
   'healthy', 'caries', 'filled', 'crown', 'extracted',
   'implant', 'root_canal', 'bridge', 'missing',
@@ -126,24 +144,34 @@ export default function ToothChart({ businessId, customerId, staffId }: Props) {
     const condition = rec?.condition ?? 'healthy'
     const colors = TOOTH_CONDITION_COLORS[condition]
     const isEditing = editTooth?.toothNumber === num
+    const typeLabel = getToothType(num)
+    const typeShort = getToothTypeShort(num)
 
     return (
       <button
         type="button"
         onClick={() => openTooth(num)}
-        title={`${num} — ${TOOTH_CONDITION_LABELS[condition]}`}
+        title={`${num} — ${typeLabel} — ${TOOTH_CONDITION_LABELS[condition]}`}
         className={cn(
-          'flex flex-col items-center justify-center w-8 h-10 rounded border-2 text-[9px] font-bold transition-all hover:scale-110 hover:z-10 relative',
-          colors.bg, colors.border, colors.text,
+          'flex flex-col items-center justify-center w-8 h-11 rounded border-2 transition-all hover:scale-110 hover:z-10 relative',
+          colors.bg, colors.border,
           isEditing && 'ring-2 ring-pulse-900 scale-110 z-10',
-          condition === 'extracted' && 'line-through opacity-60',
+          condition === 'extracted' && 'opacity-50',
         )}
       >
-        <span className="text-[8px] text-gray-500 leading-none">{num}</span>
+        {/* Diş numarası */}
+        <span className="text-[8px] font-bold text-gray-600 dark:text-gray-700 leading-none">{num}</span>
+        {/* Diş türü kısaltması */}
+        <span className="text-[7px] text-gray-400 dark:text-gray-500 leading-none mt-0.5">{typeShort}</span>
+        {/* Durum (sağlıklı değilse) */}
         {condition !== 'healthy' && (
-          <span className={cn('text-[7px] leading-none mt-0.5', colors.text)}>
+          <span className={cn('text-[7px] font-semibold leading-none mt-0.5', colors.text)}>
             {TOOTH_CONDITION_LABELS[condition].slice(0, 3)}
           </span>
+        )}
+        {/* Çekilmiş işareti */}
+        {condition === 'extracted' && (
+          <span className="absolute inset-0 flex items-center justify-center text-red-500 font-bold text-xs pointer-events-none">✕</span>
         )}
       </button>
     )
@@ -197,9 +225,12 @@ export default function ToothChart({ businessId, customerId, staffId }: Props) {
       {editTooth && (
         <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-3 space-y-3">
           <div className="flex items-center justify-between">
-            <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-              Diş #{editTooth.toothNumber}
-            </h4>
+            <div>
+              <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                Diş #{editTooth.toothNumber}
+              </h4>
+              <p className="text-[11px] text-gray-400 dark:text-gray-500">{getToothType(editTooth.toothNumber)}</p>
+            </div>
             <button onClick={() => setEditTooth(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded p-0.5">
               <X className="h-4 w-4" />
             </button>
@@ -288,6 +319,22 @@ export default function ToothChart({ businessId, customerId, staffId }: Props) {
           </div>
         </div>
       )}
+
+      {/* Diş Türü Açıklaması */}
+      <div className="rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 p-2.5">
+        <p className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 mb-1.5">FDI Numaralama</p>
+        <div className="grid grid-cols-4 gap-1 text-[10px] text-gray-600 dark:text-gray-400">
+          <div><span className="font-semibold">1, 2</span> — Kesici</div>
+          <div><span className="font-semibold">3</span> — Köpek dişi</div>
+          <div><span className="font-semibold">4, 5</span> — Küçük azı</div>
+          <div><span className="font-semibold">6, 7</span> — Büyük azı</div>
+          <div><span className="font-semibold">8</span> — Yirmilik</div>
+          <div><span className="font-semibold">1x</span> — Üst sağ</div>
+          <div><span className="font-semibold">2x</span> — Üst sol</div>
+          <div><span className="font-semibold">3x</span> — Alt sol</div>
+          <div className="col-span-1"><span className="font-semibold">4x</span> — Alt sağ</div>
+        </div>
+      </div>
 
       {/* Özet */}
       {records.length > 0 && (
