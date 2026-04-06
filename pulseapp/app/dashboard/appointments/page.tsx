@@ -807,7 +807,7 @@ export default function AppointmentsPage() {
           const toMinutes = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
 
           return (
-            <div className="card overflow-hidden !p-0 min-h-[calc(100vh-220px)]">
+            <div className="card overflow-hidden !p-0">
               <div className="overflow-x-auto overflow-y-auto">
                 <div className="min-w-[800px] relative">
 
@@ -1296,7 +1296,12 @@ export default function AppointmentsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="label">Tarih</label>
-                  <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="input" required />
+                  <input type="date" value={date} onChange={(e) => {
+                    const newDate = e.target.value
+                    setDate(newDate)
+                    const slots = generateTimeSlots(newDate, workingHours)
+                    setStartTime(slots.length > 0 ? slots[0] : '09:00')
+                  }} className="input" required />
                 </div>
                 <div>
                   <label className="label">Saat</label>
@@ -1400,7 +1405,12 @@ export default function AppointmentsPage() {
             <form onSubmit={handleRescheduleSave} className="space-y-4">
               <div>
                 <label className="label">Yeni Tarih</label>
-                <input type="date" value={rescheduleDate} onChange={(e) => setRescheduleDate(e.target.value)} className="input" required />
+                <input type="date" value={rescheduleDate} onChange={(e) => {
+                    const newDate = e.target.value
+                    setRescheduleDate(newDate)
+                    const slots = generateTimeSlots(newDate, workingHours)
+                    setRescheduleTime(slots.length > 0 ? slots[0] : '09:00')
+                  }} className="input" required />
               </div>
               <div>
                 <label className="label">Yeni Saat</label>

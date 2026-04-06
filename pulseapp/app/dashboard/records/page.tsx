@@ -48,6 +48,7 @@ interface FileMetadataItem {
   size: number
   type: string
   uploadedAt: string
+  description?: string
 }
 
 interface TypeConfig {
@@ -379,8 +380,10 @@ function RecordsPageInner() {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('')
   const [uploadFiles, setUploadFiles] = useState<File[]>([])
+  const [fileDescriptions, setFileDescriptions] = useState<string[]>([])
   const [uploading, setUploading] = useState(false)
   const [lightbox, setLightbox] = useState<{ images: string[]; index: number } | null>(null)
+  const [fileDescEditor, setFileDescEditor] = useState<{ index: number; value: string } | null>(null)
 
   // Dynamic form state: one string per field key
   const [formData, setFormData] = useState<Record<string, string>>({})
@@ -486,6 +489,7 @@ function RecordsPageInner() {
     setFormError(null)
     setSelectedCustomerId('')
     setUploadFiles([])
+    setFileDescriptions([])
     setShowModal(true)
   }
 
@@ -501,6 +505,7 @@ function RecordsPageInner() {
     setFormError(null)
     setSelectedCustomerId(record.customer_id || '')
     setUploadFiles([])
+    setFileDescriptions([])
     setShowModal(true)
   }
 
@@ -561,6 +566,7 @@ function RecordsPageInner() {
             size: file.size,
             type: file.type,
             uploadedAt: new Date().toISOString(),
+            description: fileDescriptions[i] || '',
           }))
           if (fileUrls.length > 0) {
             const existingMetadata: FileMetadataItem[] = dataPayload.file_metadata || []
@@ -614,6 +620,7 @@ function RecordsPageInner() {
             size: file.size,
             type: file.type,
             uploadedAt: new Date().toISOString(),
+            description: fileDescriptions[i] || '',
           }))
           if (fileUrls.length > 0) {
             await fetch(`/api/records?id=${json.record.id}`, {
@@ -689,6 +696,25 @@ function RecordsPageInner() {
 
     fetchRecords()
     logAudit({ businessId: businessId!, staffId, staffName, action: 'delete', resource: 'patient_record_file', resourceId: recordId, details: { deletedFileUrl: fileUrl } })
+  }
+
+  // ── Save file description ─────────────────────────────────────────────────
+
+  async function handleSaveFileDescription(fileIndex: number, newDescription: string) {
+    if (!selectedRecord) return
+    const currentMeta: FileMetadataItem[] = selectedRecord.data.file_metadata || []
+    const updatedMeta = currentMeta.map((m, idx) =>
+      idx === fileIndex ? { ...m, description: newDescription } : m
+    )
+    const res = await fetch(`/api/records?id=${selectedRecord.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: { ...selectedRecord.data, file_metadata: updatedMeta } }),
+    })
+    if (!res.ok) return
+    setSelectedRecord({ ...selectedRecord, data: { ...selectedRecord.data, file_metadata: updatedMeta } })
+    setFileDescEditor(null)
+    fetchRecords()
   }
 
   // ── Delete ────────────────────────────────────────────────────────────────
@@ -1050,6 +1076,48 @@ function RecordsPageInner() {
                                   </span>
                                 </a>
                               )}
+                              {/* Description */}
+                              <div className="px-2 pb-1.5">
+                                {fileDescEditor?.index === i ? (
+                                  <div className="flex gap-1 mt-1">
+                                    <input
+                                      type="text"
+                                      className="input text-xs flex-1 py-0.5 px-1.5"
+                                      value={fileDescEditor.value}
+                                      onChange={(e) => setFileDescEditor({ index: i, value: e.target.value })}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') handleSaveFileDescription(i, fileDescEditor.value)
+                                        if (e.key === 'Escape') setFileDescEditor(null)
+                                      }}
+                                      autoFocus
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => handleSaveFileDescription(i, fileDescEditor.value)}
+                                      className="text-xs text-pulse-600 dark:text-pulse-400 hover:underline px-1"
+                                    >
+                                      Kaydet
+                                    </button>
+                                  </div>
+                                ) : meta?.description ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => setFileDescEditor({ index: i, value: meta.description || '' })}
+                                    className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-left w-full truncate mt-0.5"
+                                    title="Açıklamayı düzenlemek için tıklayın"
+                                  >
+                                    {meta.description}
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => setFileDescEditor({ index: i, value: '' })}
+                                    className="text-xs text-gray-300 dark:text-gray-600 hover:text-pulse-500 dark:hover:text-pulse-400 mt-0.5"
+                                  >
+                                    + Açıklama ekle
+                                  </button>
+                                )}
+                              </div>
                             </div>
                           )
                         })}
@@ -1184,15 +1252,27 @@ function RecordsPageInner() {
                   </label>
                 </div>
                 {uploadFiles.length > 0 && (
-                  <div className="mt-2 space-y-1">
+                  <div className="mt-2 space-y-2">
                     {uploadFiles.map((file, i) => (
-                      <div key={i} className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-1.5">
-                        {file.type.startsWith('image/') ? <ImageIcon className="h-3.5 w-3.5" /> : <FileText className="h-3.5 w-3.5" />}
-                        <span className="truncate flex-1">{file.name}</span>
-                        <span className="text-xs text-gray-400">{(file.size / 1024).toFixed(0)} KB</span>
-                        <button type="button" onClick={() => setUploadFiles(prev => prev.filter((_, idx) => idx !== i))} className="text-gray-400 hover:text-red-500">
-                          <X className="h-3.5 w-3.5" />
-                        </button>
+                      <div key={i} className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
+                        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                          {file.type.startsWith('image/') ? <ImageIcon className="h-3.5 w-3.5 flex-shrink-0" /> : <FileText className="h-3.5 w-3.5 flex-shrink-0" />}
+                          <span className="truncate flex-1">{file.name}</span>
+                          <span className="text-xs text-gray-400">{(file.size / 1024).toFixed(0)} KB</span>
+                          <button type="button" onClick={() => {
+                            setUploadFiles(prev => prev.filter((_, idx) => idx !== i))
+                            setFileDescriptions(prev => { const n = [...prev]; n.splice(i, 1); return n })
+                          }} className="text-gray-400 hover:text-red-500 flex-shrink-0">
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                        <input
+                          type="text"
+                          placeholder="Açıklama ekle (opsiyonel)"
+                          className="input text-xs mt-1 w-full"
+                          value={fileDescriptions[i] || ''}
+                          onChange={(e) => setFileDescriptions(prev => { const n = [...prev]; n[i] = e.target.value; return n })}
+                        />
                       </div>
                     ))}
                   </div>
