@@ -56,7 +56,6 @@ const TurkishLiraIcon = ({ className, ...props }: React.SVGProps<SVGSVGElement>)
   </svg>
 )
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const ICON_MAP: Record<string, any> = {
   LayoutDashboard, Calendar, CalendarCheck, Users, UserPlus,
   MessageSquare, MessageCircle, Star, BarChart3, TrendingUp,
