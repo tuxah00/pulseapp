@@ -427,14 +427,13 @@ export default function CustomersPage() {
         {/* Birleşik toolbar: Filtre + Sırala + Görünüm */}
         <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 shrink-0">
           <ToolbarPopover icon={<Filter className="h-4 w-4" />} label="Filtre" active={hasActiveFilters}>
-            <div className="p-3 w-64 space-y-3">
+            <div className="p-3 w-56 space-y-3">
               <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Gelişmiş Filtreler</p>
-              <div className="space-y-1">
+              <div className="space-y-2">
                 <label className="text-xs text-gray-500 dark:text-gray-400">Kayıt tarihi</label>
-                <div className="flex items-center gap-1">
-                  <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="input py-1 text-xs flex-1" />
-                  <span className="text-gray-400 text-xs">—</span>
-                  <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="input py-1 text-xs flex-1" />
+                <div className="space-y-1.5">
+                  <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="input py-1 text-xs w-full" placeholder="Başlangıç" />
+                  <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="input py-1 text-xs w-full" placeholder="Bitiş" />
                 </div>
               </div>
               <div className="space-y-1">

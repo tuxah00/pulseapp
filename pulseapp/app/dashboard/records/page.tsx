@@ -910,6 +910,7 @@ function RecordsPageInner() {
                   key={record.id}
                   initials={record.title?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || 'D'}
                   title={record.title}
+                  colorClass="bg-pulse-500 text-white"
                   onClick={() => setSelectedRecord(record)}
                 />
               ))}

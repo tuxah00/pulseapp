@@ -62,6 +62,51 @@ export function ToolbarPopover({ icon, label, active, children, className }: Too
   )
 }
 
+/* ── Filter list popover content ── */
+
+interface FilterPopoverListProps {
+  label: string
+  options: { value: string; label: string }[]
+  value: string
+  onChange: (v: string) => void
+  allLabel?: string
+}
+
+export function FilterPopoverList({ label, options, value, onChange, allLabel = 'Tümü' }: FilterPopoverListProps) {
+  return (
+    <div>
+      <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">{label}</p>
+      <div className="space-y-0.5 max-h-36 overflow-y-auto">
+        <button
+          onClick={() => onChange('')}
+          className={cn(
+            'w-full text-left px-3 py-1.5 rounded-lg text-sm transition-colors',
+            value === ''
+              ? 'bg-pulse-50 text-pulse-700 dark:bg-pulse-900/30 dark:text-pulse-300 font-medium'
+              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+          )}
+        >
+          {allLabel}
+        </button>
+        {options.map(opt => (
+          <button
+            key={opt.value}
+            onClick={() => onChange(opt.value)}
+            className={cn(
+              'w-full text-left px-3 py-1.5 rounded-lg text-sm transition-colors',
+              value === opt.value
+                ? 'bg-pulse-50 text-pulse-700 dark:bg-pulse-900/30 dark:text-pulse-300 font-medium'
+                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+            )}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 /* ── Sort helper popover content ── */
 
 interface SortOption {

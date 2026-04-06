@@ -30,7 +30,7 @@ import { STATUS_LABELS, type AppointmentStatus, type Customer, type Service, typ
 import { logAudit } from '@/lib/utils/audit'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
-import { ToolbarPopover, SortPopoverContent } from '@/components/ui/toolbar-popover'
+import { ToolbarPopover, SortPopoverContent, FilterPopoverList } from '@/components/ui/toolbar-popover'
 
 export default function AppointmentsPage() {
   const { businessId, staffId: currentStaffId, staffName: currentStaffName, loading: ctxLoading } = useBusinessContext()
@@ -697,22 +697,27 @@ export default function AppointmentsPage() {
         <div className="flex justify-end">
           <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
             <ToolbarPopover icon={<Filter className="h-4 w-4" />} label="Filtre" active={hasActiveFilters}>
-              <div className="p-3 w-56 space-y-3">
-                <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Personel</p>
-                <select value={staffIdFilter} onChange={e => setStaffIdFilter(e.target.value)} className="input text-sm w-full">
-                  <option value="">Tümü</option>
-                  {staffMembers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
-                <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider pt-1">Hizmet</p>
-                <select value={serviceIdFilter} onChange={e => setServiceIdFilter(e.target.value)} className="input text-sm w-full">
-                  <option value="">Tümü</option>
-                  {services.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
+              <div className="p-3 w-52 space-y-3">
+                <FilterPopoverList
+                  label="Personel"
+                  options={staffMembers.map(s => ({ value: s.id, label: s.name }))}
+                  value={staffIdFilter}
+                  onChange={setStaffIdFilter}
+                />
+                <div className="border-t border-gray-100 dark:border-gray-700" />
+                <FilterPopoverList
+                  label="Hizmet"
+                  options={services.map(s => ({ value: s.id, label: s.name }))}
+                  value={serviceIdFilter}
+                  onChange={setServiceIdFilter}
+                />
                 {hasActiveFilters && (
-                  <button onClick={() => { setStaffIdFilter(''); setServiceIdFilter('') }}
-                    className="w-full text-xs text-center py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-center gap-1">
-                    <X className="h-3 w-3" /> Temizle
-                  </button>
+                  <div className="border-t border-gray-100 dark:border-gray-700 pt-2">
+                    <button onClick={() => { setStaffIdFilter(''); setServiceIdFilter('') }}
+                      className="w-full text-xs text-center py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-center gap-1">
+                      <X className="h-3 w-3" /> Temizle
+                    </button>
+                  </div>
                 )}
               </div>
             </ToolbarPopover>
