@@ -327,16 +327,16 @@ export default function ToothChart({ businessId, customerId, staffId }: Props) {
       {/* Diş Türü Açıklaması */}
       <div className="rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 p-2.5">
         <p className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 mb-1.5">FDI Numaralama</p>
-        <div className="grid grid-cols-4 gap-1 text-[10px] text-gray-600 dark:text-gray-400">
-          <div><span className="font-semibold">1, 2</span> — Kesici</div>
-          <div><span className="font-semibold">3</span> — Köpek dişi</div>
-          <div><span className="font-semibold">4, 5</span> — Küçük azı</div>
-          <div><span className="font-semibold">6, 7</span> — Büyük azı</div>
-          <div><span className="font-semibold">8</span> — Yirmilik</div>
+        <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-[10px] text-gray-600 dark:text-gray-400">
+          <div><span className="font-semibold">x1, x2</span> — Kesici</div>
+          <div><span className="font-semibold">x3</span> — Köpek dişi</div>
+          <div><span className="font-semibold">x4, x5</span> — Küçük azı</div>
+          <div><span className="font-semibold">x6, x7</span> — Büyük azı</div>
+          <div><span className="font-semibold">x8</span> — Yirmilik</div>
           <div><span className="font-semibold">1x</span> — Üst sağ</div>
           <div><span className="font-semibold">2x</span> — Üst sol</div>
           <div><span className="font-semibold">3x</span> — Alt sol</div>
-          <div className="col-span-1"><span className="font-semibold">4x</span> — Alt sağ</div>
+          <div><span className="font-semibold">4x</span> — Alt sağ</div>
         </div>
       </div>
 
