@@ -658,7 +658,7 @@ export default function StoklarPage() {
       {/* ── Ürün Detay Slide-Over Paneli ── */}
       {selectedProduct && (
         <>
-          <div className="fixed inset-0 z-40 bg-black/30 dark:bg-black/50" onClick={closePanelAnimated} />
+          <div className="fixed inset-x-0 bottom-0 top-14 z-[54] bg-black/30 dark:bg-black/50" onClick={closePanelAnimated} />
           <div
             className={`slide-panel border-l border-gray-200 dark:border-gray-700 ${panelClosing ? 'closing' : ''}`}
             onAnimationEnd={() => { if (panelClosing) { setSelectedProduct(null); setPanelClosing(false) } }}
