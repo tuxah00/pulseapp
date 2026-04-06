@@ -660,7 +660,7 @@ export default function StoklarPage() {
         <>
           <div className="fixed inset-x-0 bottom-0 top-14 z-[54] bg-black/30 dark:bg-black/50" onClick={closePanelAnimated} />
           <div
-            className={`slide-panel border-l border-gray-200 dark:border-gray-700 ${panelClosing ? 'closing' : ''}`}
+            className={`slide-panel !top-14 border-l border-gray-200 dark:border-gray-700 ${panelClosing ? 'closing' : ''}`}
             onAnimationEnd={() => { if (panelClosing) { setSelectedProduct(null); setPanelClosing(false) } }}
           >
             <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-5 py-4">
