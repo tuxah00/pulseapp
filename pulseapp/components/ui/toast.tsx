@@ -26,6 +26,7 @@ const TYPE_CONFIG: Record<string, { icon: any; bgColor: string; borderColor: str
   customer: { icon: Users, bgColor: 'bg-purple-50 dark:bg-purple-900/30', borderColor: 'border-purple-200 dark:border-purple-800', iconColor: 'text-purple-500' },
   system: { icon: Settings, bgColor: 'bg-gray-50 dark:bg-gray-800', borderColor: 'border-gray-200 dark:border-gray-700', iconColor: 'text-gray-500' },
   stock_alert: { icon: Package, bgColor: 'bg-red-50 dark:bg-red-900/30', borderColor: 'border-red-200 dark:border-red-800', iconColor: 'text-red-500' },
+  error: { icon: X, bgColor: 'bg-red-50 dark:bg-red-900/30', borderColor: 'border-red-300 dark:border-red-700', iconColor: 'text-red-600 dark:text-red-400' },
 }
 
 const RELATED_ROUTES: Record<string, string> = {

@@ -23,6 +23,7 @@ import {
   Trash2,
   Repeat,
   CalendarDays,
+  CalendarRange,
   Search, Filter, ArrowUpDown,
 } from 'lucide-react'
 import { formatTime, formatDate, getStatusColor, formatCurrency, cn } from '@/lib/utils'
@@ -105,6 +106,27 @@ export default function AppointmentsPage() {
     })
   }
 
+  // Aylık takvim için: ayın ilk gününü kapsayan haftanın Pazartesi'sinden,
+  // ayın son gününü kapsayan haftanın Pazar'ına kadar 6×7=42 gün döndürür
+  function getMonthGridDays(dateStr: string): string[] {
+    const [y, m] = dateStr.split('-').map(Number)
+    const firstOfMonth = new Date(y, m - 1, 1)
+    const day = firstOfMonth.getDay() // 0=Pazar
+    const mondayOffset = day === 0 ? -6 : 1 - day
+    const gridStart = new Date(firstOfMonth)
+    gridStart.setDate(firstOfMonth.getDate() + mondayOffset)
+    return Array.from({ length: 42 }, (_, i) => {
+      const dt = new Date(gridStart)
+      dt.setDate(gridStart.getDate() + i)
+      return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`
+    })
+  }
+
+  function getMonthRange(dateStr: string): { start: string; end: string } {
+    const days = getMonthGridDays(dateStr)
+    return { start: days[0], end: days[days.length - 1] }
+  }
+
   const fetchAppointments = useCallback(async () => {
     if (!businessId) return
     setLoading(true)
@@ -118,6 +140,9 @@ export default function AppointmentsPage() {
 
     if (viewMode === 'week') {
       const { start, end } = getWeekRange(selectedDate)
+      query = query.gte('appointment_date', start).lte('appointment_date', end)
+    } else if (viewMode === 'month') {
+      const { start, end } = getMonthRange(selectedDate)
       query = query.gte('appointment_date', start).lte('appointment_date', end)
     } else {
       query = query.eq('appointment_date', selectedDate)
@@ -161,8 +186,20 @@ export default function AppointmentsPage() {
 
   function changeDate(days: number) {
     const d = new Date(selectedDate + 'T12:00:00')
-    d.setDate(d.getDate() + (viewMode === 'week' ? days * 7 : days))
+    if (viewMode === 'month') {
+      d.setMonth(d.getMonth() + days)
+    } else if (viewMode === 'week') {
+      d.setDate(d.getDate() + days * 7)
+    } else {
+      d.setDate(d.getDate() + days)
+    }
     setSelectedDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`)
+  }
+
+  function formatMonthLabel() {
+    const [y, m] = selectedDate.split('-').map(Number)
+    const months = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık']
+    return `${months[m - 1]} ${y}`
   }
 
   function goToday() { setSelectedDate(new Date().toISOString().split('T')[0]) }
@@ -371,6 +408,65 @@ export default function AppointmentsPage() {
         recurring: isRecurring && !editingAppointment ? recurrenceCount : null,
       },
     })
+  }
+
+  // Drag-drop ile randevuyu yeni tarihe taşı (aylık/haftalık takvim)
+  const [draggingId, setDraggingId] = useState<string | null>(null)
+  async function handleDragMove(appointmentId: string, newDate: string, newStartTime?: string) {
+    if (!businessId) return
+    const apt = appointments.find(a => a.id === appointmentId)
+    if (!apt) return
+    // Aynı tarih + saat ise işlem yapma
+    if (apt.appointment_date === newDate && (!newStartTime || apt.start_time === newStartTime)) return
+
+    try {
+      const res = await fetch(`/api/appointments/${appointmentId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          businessId,
+          appointment_date: newDate,
+          ...(newStartTime ? { start_time: newStartTime } : {}),
+        }),
+      })
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}))
+        window.dispatchEvent(new CustomEvent('pulse-toast', {
+          detail: {
+            type: 'error',
+            title: 'Randevu Taşınamadı',
+            body: j.error || 'Bir hata oluştu, lütfen tekrar deneyin.',
+          },
+        }))
+        return
+      }
+      await fetchAppointments()
+      await logAudit({
+        businessId: businessId!,
+        staffId: currentStaffId,
+        staffName: currentStaffName,
+        action: 'update',
+        resource: 'appointment',
+        resourceId: appointmentId,
+        details: {
+          customer_name: apt.customers?.name || null,
+          service_name: apt.services?.name || null,
+          from_date: apt.appointment_date,
+          to_date: newDate,
+          ...(newStartTime ? { from_time: apt.start_time, to_time: newStartTime } : {}),
+          via: 'drag-drop',
+        },
+      })
+    } catch (err) {
+      console.error('drag-drop hatası:', err)
+      window.dispatchEvent(new CustomEvent('pulse-toast', {
+        detail: {
+          type: 'error',
+          title: 'Randevu Taşınamadı',
+          body: 'Bir hata oluştu, lütfen tekrar deneyin.',
+        },
+      }))
+    }
   }
 
   async function handleRescheduleSave(e: React.FormEvent) {
@@ -664,6 +760,11 @@ export default function AppointmentsPage() {
                   <p className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">{formatWeekRange()}</p>
                   <button onClick={goToday} className="text-xs text-pulse-900 dark:text-pulse-400 hover:underline mt-0.5">Bu Haftaya Dön</button>
                 </>
+              ) : viewMode === 'month' ? (
+                <>
+                  <p className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">{formatMonthLabel()}</p>
+                  <button onClick={goToday} className="text-xs text-pulse-900 dark:text-pulse-400 hover:underline mt-0.5">Bu Aya Dön</button>
+                </>
               ) : (
                 <>
                   <p className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">{formatSelectedDate()}</p>
@@ -735,13 +836,14 @@ export default function AppointmentsPage() {
             <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-0.5" />
             <button type="button" onClick={() => setViewMode('list')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'list' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Liste görünüm"><LayoutList className="h-4 w-4" /></button>
             <button type="button" onClick={() => setViewMode('week')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'week' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Haftalık takvim"><CalendarDays className="h-4 w-4" /></button>
+            <button type="button" onClick={() => setViewMode('month')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'month' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Aylık takvim"><CalendarRange className="h-4 w-4" /></button>
             <button type="button" onClick={() => setViewMode('box')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'box' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Kutu görünüm"><LayoutGrid className="h-4 w-4" /></button>
           </div>
         </div>
       </div>
 
       {/* Arama (liste/kutu modunda) */}
-      {viewMode !== 'week' && (
+      {viewMode !== 'week' && viewMode !== 'month' && (
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <input type="text" value={search} onChange={e => setSearch(e.target.value)} className="input pl-10" placeholder="Müşteri, hizmet veya personel ara..." />
@@ -898,6 +1000,18 @@ export default function AppointmentsPage() {
                             top: topPad,
                             height: `calc(100% - ${topPad}px)`,
                           }}
+                          onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }}
+                          onDrop={(e) => {
+                            e.preventDefault()
+                            const id = e.dataTransfer.getData('text/plain')
+                            if (!id) return
+                            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                            const dropY = e.clientY - rect.top
+                            // En yakın saate snap (30 dk yerine 1 saat)
+                            const dropHour = Math.max(startHour, Math.min(endHour - 1, Math.round(dropY / hourHeight) + startHour))
+                            const timeStr = `${String(dropHour).padStart(2, '0')}:00`
+                            handleDragMove(id, day, timeStr)
+                          }}
                           onClick={(e) => {
                             const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
                             const clickY = e.clientY - rect.top
@@ -930,9 +1044,17 @@ export default function AppointmentsPage() {
                             return (
                               <div
                                 key={apt.id}
+                                draggable
+                                onDragStart={(e) => {
+                                  e.dataTransfer.setData('text/plain', apt.id)
+                                  e.dataTransfer.effectAllowed = 'move'
+                                  setDraggingId(apt.id)
+                                }}
+                                onDragEnd={() => setDraggingId(null)}
                                 className={cn(
-                                  'absolute rounded-md px-1.5 py-0.5 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity border border-white/20',
-                                  staffColors[colorIdx]
+                                  'absolute rounded-md px-1.5 py-0.5 overflow-hidden cursor-grab active:cursor-grabbing hover:opacity-90 transition-opacity border border-white/20',
+                                  staffColors[colorIdx],
+                                  draggingId === apt.id && 'opacity-50'
                                 )}
                                 style={{ top, height, left: `${colLeft}%`, width: `${colWidth - 1}%` }}
                                 onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
@@ -968,6 +1090,117 @@ export default function AppointmentsPage() {
                     })}
                   </div>
                 </div>
+              </div>
+            </div>
+          )
+        })()
+      ) : viewMode === 'month' ? (
+        /* ── Aylık Takvim Görünümü ── */
+        (() => {
+          const gridDays = getMonthGridDays(selectedDate)
+          const [curY, curM] = selectedDate.split('-').map(Number)
+          const dayNames = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz']
+          const staffColors = ['bg-blue-200 dark:bg-blue-800', 'bg-green-200 dark:bg-green-800', 'bg-purple-200 dark:bg-purple-800', 'bg-amber-200 dark:bg-amber-800', 'bg-pink-200 dark:bg-pink-800', 'bg-cyan-200 dark:bg-cyan-800', 'bg-orange-200 dark:bg-orange-800', 'bg-rose-200 dark:bg-rose-800']
+          const staffTextColors = ['text-blue-800 dark:text-blue-200', 'text-green-800 dark:text-green-200', 'text-purple-800 dark:text-purple-200', 'text-amber-800 dark:text-amber-200', 'text-pink-800 dark:text-pink-200', 'text-cyan-800 dark:text-cyan-200', 'text-orange-800 dark:text-orange-200', 'text-rose-800 dark:text-rose-200']
+
+          function getStaffColorIndex(sId: string | null): number {
+            if (!sId) return 0
+            const idx = staffMembers.findIndex(s => s.id === sId)
+            return idx >= 0 ? idx % staffColors.length : 0
+          }
+
+          const MAX_VISIBLE_PER_DAY = 3
+
+          return (
+            <div className="card !p-0 overflow-hidden">
+              {/* Gün başlıkları */}
+              <div className="grid grid-cols-7 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+                {dayNames.map((name) => (
+                  <div key={name} className="p-2 text-center text-xs font-semibold text-gray-500 dark:text-gray-400">
+                    {name}
+                  </div>
+                ))}
+              </div>
+              {/* 6 hafta × 7 gün */}
+              <div className="grid grid-cols-7 grid-rows-6">
+                {gridDays.map((day) => {
+                  const [dy, dm, dd] = day.split('-').map(Number)
+                  const isOtherMonth = dy !== curY || dm !== curM
+                  const isDayToday = day === todayStr
+                  const dayApts = appointments
+                    .filter(a => a.appointment_date === day)
+                    .sort((a, b) => a.start_time.localeCompare(b.start_time))
+                  const visible = dayApts.slice(0, MAX_VISIBLE_PER_DAY)
+                  const extra = dayApts.length - visible.length
+
+                  return (
+                    <div
+                      key={day}
+                      className={cn(
+                        'min-h-[110px] border-b border-r border-gray-100 dark:border-gray-800 p-1.5 flex flex-col gap-1 transition-colors',
+                        isOtherMonth && 'bg-gray-50/50 dark:bg-gray-900/30',
+                        isDayToday && 'bg-pulse-50/40 dark:bg-pulse-900/20',
+                        'hover:bg-gray-50 dark:hover:bg-gray-800/40 cursor-pointer'
+                      )}
+                      onClick={() => {
+                        setSelectedDate(day)
+                        setViewMode('list')
+                      }}
+                      onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }}
+                      onDrop={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        const id = e.dataTransfer.getData('text/plain')
+                        if (!id) return
+                        handleDragMove(id, day)
+                      }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className={cn(
+                          'inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold',
+                          isDayToday ? 'bg-pulse-900 text-white' : isOtherMonth ? 'text-gray-400 dark:text-gray-600' : 'text-gray-700 dark:text-gray-300'
+                        )}>
+                          {dd}
+                        </span>
+                        {dayApts.length > 0 && (
+                          <span className="text-[10px] text-gray-400 tabular-nums">{dayApts.length}</span>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-1 overflow-hidden">
+                        {visible.map((apt) => {
+                          const colorIdx = getStaffColorIndex(apt.staff_id)
+                          return (
+                            <div
+                              key={apt.id}
+                              draggable
+                              onDragStart={(e) => {
+                                e.stopPropagation()
+                                e.dataTransfer.setData('text/plain', apt.id)
+                                e.dataTransfer.effectAllowed = 'move'
+                                setDraggingId(apt.id)
+                              }}
+                              onDragEnd={() => setDraggingId(null)}
+                              onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
+                              className={cn(
+                                'rounded px-1.5 py-0.5 text-[10px] font-medium truncate cursor-grab active:cursor-grabbing border border-white/20 hover:opacity-90',
+                                staffColors[colorIdx],
+                                staffTextColors[colorIdx],
+                                draggingId === apt.id && 'opacity-50'
+                              )}
+                            >
+                              {formatTime(apt.start_time)} {apt.customers?.name || 'İsimsiz'}
+                            </div>
+                          )
+                        })}
+                        {extra > 0 && (
+                          <div className="text-[10px] text-gray-500 dark:text-gray-400 px-1">
+                            +{extra} daha
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             </div>
           )
@@ -1011,7 +1244,7 @@ export default function AppointmentsPage() {
         </div>
       )}
 
-      {!loading && viewMode !== 'week' ? (filteredAppointments.length === 0 ? (
+      {!loading && viewMode !== 'week' && viewMode !== 'month' ? (filteredAppointments.length === 0 ? (
         <div className="card flex flex-col items-center justify-center py-16">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 dark:bg-gray-800 mb-4">
             <Calendar className="h-7 w-7 text-gray-300 dark:text-gray-600" />

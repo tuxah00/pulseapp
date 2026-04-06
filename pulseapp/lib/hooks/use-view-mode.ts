@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from 'react'
 
-type ViewMode = 'list' | 'box' | 'week'
+type ViewMode = 'list' | 'box' | 'week' | 'month'
 
 export function useViewMode(key: string, defaultMode: ViewMode = 'list') {
   const [viewMode, setViewMode] = useState<ViewMode>(defaultMode)
 
   useEffect(() => {
     const stored = localStorage.getItem(`viewMode_${key}`) as ViewMode | null
-    if (stored === 'list' || stored === 'box' || stored === 'week') setViewMode(stored)
+    if (stored === 'list' || stored === 'box' || stored === 'week' || stored === 'month') setViewMode(stored)
   }, [key])
 
   function updateViewMode(mode: ViewMode) {
