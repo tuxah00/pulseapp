@@ -53,9 +53,9 @@ export default function ReferralsPage() {
       const supabase = createClient()
       const { data } = await supabase
         .from('customers')
-        .select('*')
+        .select('id, name, phone')
         .eq('business_id', businessId)
-        .is('deleted_at', null)
+        .eq('is_active', true)
         .order('name')
       setCustomers((data as Customer[]) || [])
     } catch { /* ignore */ }
