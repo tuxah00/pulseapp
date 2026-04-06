@@ -321,7 +321,7 @@ export default function KasaPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-pulse-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-pulse-900" />
       </div>
     )
   }
@@ -331,7 +331,7 @@ export default function KasaPage() {
       {/* ── Header ── */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
-          <Wallet className="h-6 w-6 text-pulse-600" />
+          <Wallet className="h-6 w-6 text-pulse-900" />
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Kasa</h1>
           {session && (
             <span className="badge bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
@@ -404,7 +404,7 @@ export default function KasaPage() {
                     className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left disabled:opacity-40"
                   >
                     <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{svc.name}</span>
-                    <span className="text-sm text-pulse-600 font-semibold flex-shrink-0 ml-2">
+                    <span className="text-sm text-pulse-900 font-semibold flex-shrink-0 ml-2">
                       {svc.price ? formatCurrency(svc.price) : '—'}
                     </span>
                   </button>
@@ -429,7 +429,7 @@ export default function KasaPage() {
                       <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate block">{prod.name}</span>
                       <span className="text-xs text-gray-400">Stok: {prod.stock_quantity}</span>
                     </div>
-                    <span className="text-sm text-pulse-600 font-semibold flex-shrink-0 ml-2">
+                    <span className="text-sm text-pulse-900 font-semibold flex-shrink-0 ml-2">
                       {prod.price ? formatCurrency(prod.price) : '—'}
                     </span>
                   </button>
@@ -596,7 +596,7 @@ export default function KasaPage() {
                 )}
                 <div className="flex justify-between text-lg font-bold pt-1">
                   <span className="text-gray-900 dark:text-gray-100">Toplam</span>
-                  <span className="text-pulse-600">{formatCurrency(grandTotal)}</span>
+                  <span className="text-pulse-900">{formatCurrency(grandTotal)}</span>
                 </div>
               </div>
             </div>

@@ -240,7 +240,7 @@ export default function AnalyticsPage() {
   }
 
   if (loading || ctxLoading) {
-    return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-pulse-500" /></div>
+    return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-pulse-900" /></div>
   }
 
   // ── Hesaplamalar ──────────────────────────────────────────────────────────
@@ -430,7 +430,7 @@ export default function AnalyticsPage() {
           <button key={key} onClick={() => setActiveTab(key as any)}
             className={cn('flex-shrink-0 flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors',
               activeTab === key
-                ? 'border-pulse-500 text-pulse-600 dark:text-pulse-400'
+                ? 'border-pulse-900 text-pulse-900 dark:text-pulse-400'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             )}>
             {icon}{label}
@@ -476,7 +476,7 @@ export default function AnalyticsPage() {
                             </div>
                           )}
                           <div className="flex-1 w-full flex items-end">
-                            <div className={cn('w-full bg-pulse-400 dark:bg-pulse-500 rounded-t-sm transition-all hover:bg-pulse-500 dark:hover:bg-pulse-400', opacity)}
+                            <div className={cn('w-full bg-pulse-400 dark:bg-pulse-900 rounded-t-sm transition-all hover:bg-pulse-900 dark:hover:bg-pulse-400', opacity)}
                               style={{ height: `${pct}%`, minHeight: revenue > 0 ? '4px' : '0' }} />
                           </div>
                           <span className="text-[9px] text-gray-400 truncate w-full text-center flex-shrink-0">{label}</span>
@@ -617,7 +617,7 @@ export default function AnalyticsPage() {
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Net Kâr</p>
               {(() => {
                 const net = totalRevenue - totalExpenses
-                return <p className={cn('text-xl font-bold', net >= 0 ? 'text-pulse-600 dark:text-pulse-400' : 'text-red-600')}>{formatCurrency(net)}</p>
+                return <p className={cn('text-xl font-bold', net >= 0 ? 'text-pulse-900 dark:text-pulse-400' : 'text-red-600')}>{formatCurrency(net)}</p>
               })()}
             </div>
           </div>
@@ -647,9 +647,9 @@ export default function AnalyticsPage() {
                         </span>
                       </div>
                       <div className="flex items-center gap-3 mb-2">
-                        <div className="flex-1 h-2 bg-pulse-500/20 dark:bg-pulse-500/10 rounded-full overflow-hidden">
+                        <div className="flex-1 h-2 bg-pulse-900/20 dark:bg-pulse-900/10 rounded-full overflow-hidden">
                           <div
-                            className={cn('h-full rounded-full transition-all', isTop ? 'bg-amber-500 dark:bg-amber-400' : 'bg-pulse-500')}
+                            className={cn('h-full rounded-full transition-all', isTop ? 'bg-amber-500 dark:bg-amber-400' : 'bg-pulse-900')}
                             style={{ width: `${pct}%` }}
                           />
                         </div>
@@ -863,7 +863,7 @@ export default function AnalyticsPage() {
 
           {/* Gider Listesi */}
           {expensesLoading ? (
-            <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-pulse-500" /></div>
+            <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-pulse-900" /></div>
           ) : expenses.length === 0 ? (
             <div className="card flex flex-col items-center justify-center py-16 text-center">
               <Wallet className="mb-3 h-12 w-12 text-gray-200 dark:text-gray-600" />
@@ -914,7 +914,7 @@ export default function AnalyticsPage() {
 
           {/* Gelir Listesi */}
           {incomesLoading ? (
-            <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-pulse-500" /></div>
+            <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-pulse-900" /></div>
           ) : incomes.length > 0 && (
             <div>
               <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">{periodLabel} Gelirleri</h3>

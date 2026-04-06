@@ -82,7 +82,7 @@ export default function InvitePage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-pulse-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-pulse-900" />
       </div>
     )
   }
@@ -117,7 +117,7 @@ export default function InvitePage() {
     <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-900">
       <div className="card max-w-md w-full p-8">
         <div className="text-center mb-6">
-          <UserPlus className="mx-auto h-12 w-12 text-pulse-500 mb-3" />
+          <UserPlus className="mx-auto h-12 w-12 text-pulse-900 mb-3" />
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Sisteme Katıl</h1>
           <p className="text-sm text-gray-500 mt-1">
             <strong>{invitation?.business_name}</strong> işletmesine{' '}

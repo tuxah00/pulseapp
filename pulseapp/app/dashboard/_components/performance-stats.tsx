@@ -102,7 +102,7 @@ export default function PerformanceStats() {
                 <span className="text-xs font-mono text-gray-500 w-12">{hour}</span>
                 <div className="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full h-2">
                   <div
-                    className="bg-pulse-500 h-2 rounded-full transition-all"
+                    className="bg-pulse-900 h-2 rounded-full transition-all"
                     style={{ width: `${(count / maxHour) * 100}%` }}
                   />
                 </div>

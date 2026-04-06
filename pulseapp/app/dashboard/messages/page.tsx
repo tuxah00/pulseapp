@@ -313,7 +313,7 @@ export default function MessagesPage() {
   if (ctxLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-pulse-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-pulse-900" />
       </div>
     )
   }
@@ -331,7 +331,7 @@ export default function MessagesPage() {
           <div className="flex-shrink-0 border-b border-gray-200 dark:border-gray-700 p-4">
             <div className="flex items-center justify-between mb-3">
               <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Mesajlar</h1>
-              <span className="badge bg-pulse-100 text-pulse-700">
+              <span className="badge bg-pulse-100 text-pulse-900">
                 {conversations.length} konuşma
               </span>
             </div>
@@ -383,7 +383,7 @@ export default function MessagesPage() {
           <div className="flex-1 overflow-y-auto bg-white dark:!bg-gray-950">
             {loading ? (
               <div className="flex items-center justify-center py-20">
-                <Loader2 className="h-6 w-6 animate-spin text-pulse-500" />
+                <Loader2 className="h-6 w-6 animate-spin text-pulse-900" />
               </div>
             ) : filteredConversations.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
@@ -421,7 +421,7 @@ export default function MessagesPage() {
                         {conv.customer.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                       </div>
                       {conv.unreadCount > 0 && (
-                        <div className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-pulse-500 text-[10px] font-bold text-white">
+                        <div className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-pulse-900 text-[10px] font-bold text-white">
                           {conv.unreadCount > 9 ? '9+' : conv.unreadCount}
                         </div>
                       )}
@@ -489,7 +489,7 @@ export default function MessagesPage() {
                   <ChevronLeft className="h-5 w-5 text-gray-600" />
                 </button>
 
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-pulse-100 text-pulse-700 font-semibold text-sm flex-shrink-0">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-pulse-100 text-pulse-900 font-semibold text-sm flex-shrink-0">
                   {selectedCustomer.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                 </div>
 
@@ -513,7 +513,7 @@ export default function MessagesPage() {
               <div className="flex-1 overflow-y-auto px-4 py-4">
                 {messagesLoading ? (
                   <div className="flex items-center justify-center py-20">
-                    <Loader2 className="h-6 w-6 animate-spin text-pulse-500" />
+                    <Loader2 className="h-6 w-6 animate-spin text-pulse-900" />
                   </div>
                 ) : messages.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -544,7 +544,7 @@ export default function MessagesPage() {
                             <div className={cn(
                               'max-w-[75%] rounded-2xl px-4 py-2.5 shadow-sm',
                               msg.direction === 'outbound'
-                                ? 'bg-pulse-500 text-white rounded-br-md'
+                                ? 'bg-pulse-900 text-white rounded-br-md'
                                 : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-100 dark:border-gray-700 rounded-bl-md'
                             )}>
                               {/* AI sınıflandırma */}
@@ -681,7 +681,7 @@ export default function MessagesPage() {
                     className={cn(
                       'flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl transition-all',
                       newMessage.trim()
-                        ? 'bg-pulse-500 text-white hover:bg-pulse-600 shadow-sm'
+                        ? 'bg-pulse-900 text-white hover:bg-pulse-800 shadow-sm'
                         : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                     )}
                   >
@@ -701,7 +701,7 @@ export default function MessagesPage() {
             /* Boş durum — henüz konuşma seçilmedi */
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
               <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-pulse-100 to-purple-100 dark:from-pulse-900/40 dark:to-purple-900/30">
-                <MessageSquare className="h-10 w-10 text-pulse-600 dark:text-pulse-400" />
+                <MessageSquare className="h-10 w-10 text-pulse-900 dark:text-pulse-400" />
               </div>
               <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Mesajlarınız</h2>
               <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm">

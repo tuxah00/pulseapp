@@ -29,7 +29,7 @@ const ROLE_ORDER: Record<StaffRole, number> = {
 const ROLE_COLORS: Record<StaffRole, string> = {
   owner: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
   manager: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
-  staff: 'bg-pulse-100 text-pulse-700 dark:bg-pulse-900/30 dark:text-pulse-300',
+  staff: 'bg-pulse-100 text-pulse-900 dark:bg-pulse-900/30 dark:text-pulse-300',
 }
 
 const PERMISSION_LABELS: Record<keyof StaffPermissions, string> = {
@@ -336,7 +336,7 @@ export default function StaffPage() {
   }
 
   if (loading) {
-    return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-pulse-500" /></div>
+    return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-pulse-900" /></div>
   }
 
   const availableRoles: StaffRole[] = currentUserRole === 'owner'
@@ -358,7 +358,7 @@ export default function StaffPage() {
           key={member.id}
           initials={member.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
           title={member.name}
-          colorClass={member.role === 'owner' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-pulse-100 text-pulse-700'}
+          colorClass={member.role === 'owner' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-pulse-100 text-pulse-900'}
           selected={selectedStaff?.id === member.id}
           onClick={() => { setSelectedStaff(member); setLocalPerms(getEffectivePermissions(member.role, member.permissions)); setPermsSaved(false) }}
           className={cn(
@@ -375,7 +375,7 @@ export default function StaffPage() {
         onClick={() => setSelectedStaff(member)}
         className={cn(
           'card p-4 hover:shadow-md transition-all cursor-pointer',
-          selectedStaff?.id === member.id && 'ring-2 ring-pulse-500',
+          selectedStaff?.id === member.id && 'ring-2 ring-pulse-900',
           isMe && 'bg-blue-50/50 dark:bg-blue-900/10',
           member.role === 'owner' && 'border-amber-200 dark:border-amber-800/50',
         )}
@@ -384,7 +384,7 @@ export default function StaffPage() {
         <div className="flex items-center gap-4">
             <div className={cn(
               'flex h-10 w-10 items-center justify-center rounded-full font-semibold text-sm flex-shrink-0',
-              member.role === 'owner' ? 'bg-amber-100 text-amber-700' : 'bg-pulse-100 text-pulse-700'
+              member.role === 'owner' ? 'bg-amber-100 text-amber-700' : 'bg-pulse-100 text-pulse-900'
             )}>
               {member.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
             </div>
@@ -499,7 +499,7 @@ export default function StaffPage() {
               <div className="text-center">
                 <div className={cn(
                   'mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full font-bold text-lg',
-                  selectedStaff.role === 'owner' ? 'bg-amber-100 text-amber-700' : 'bg-pulse-100 text-pulse-700'
+                  selectedStaff.role === 'owner' ? 'bg-amber-100 text-amber-700' : 'bg-pulse-100 text-pulse-900'
                 )}>
                   {selectedStaff.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                 </div>
@@ -512,7 +512,7 @@ export default function StaffPage() {
                 {selectedStaff.phone && (
                   <div className="flex items-center gap-3 text-sm">
                     <Phone className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                    <a href={`tel:${selectedStaff.phone}`} className="text-pulse-600 hover:underline">{selectedStaff.phone}</a>
+                    <a href={`tel:${selectedStaff.phone}`} className="text-pulse-900 hover:underline">{selectedStaff.phone}</a>
                   </div>
                 )}
                 {selectedStaff.email && (
@@ -564,7 +564,7 @@ export default function StaffPage() {
                                   onChange={(e) => setLocalPerms(prev => prev ? { ...prev, [key]: e.target.checked } : prev)}
                                   className="peer sr-only"
                                 />
-                                <div className="h-5 w-9 rounded-full bg-gray-300 dark:bg-gray-600 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-pulse-500 peer-checked:after:translate-x-4 peer-disabled:opacity-50" />
+                                <div className="h-5 w-9 rounded-full bg-gray-300 dark:bg-gray-600 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-pulse-900 peer-checked:after:translate-x-4 peer-disabled:opacity-50" />
                               </div>
                             </label>
                           )
@@ -690,7 +690,7 @@ export default function StaffPage() {
                               }}
                               className="peer sr-only"
                             />
-                            <div className="h-5 w-9 rounded-full bg-gray-300 dark:bg-gray-600 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-pulse-500 peer-checked:after:translate-x-4 peer-disabled:opacity-50" />
+                            <div className="h-5 w-9 rounded-full bg-gray-300 dark:bg-gray-600 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-pulse-900 peer-checked:after:translate-x-4 peer-disabled:opacity-50" />
                           </div>
                         </label>
                       )

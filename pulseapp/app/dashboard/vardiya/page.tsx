@@ -410,7 +410,7 @@ export default function VardiyePage() {
         {activeTab === 'shifts' && (
           <button
             onClick={() => setShowAutoPanel(p => !p)}
-            className="flex items-center gap-2 rounded-lg bg-pulse-600 px-4 py-2 text-sm font-medium text-white hover:bg-pulse-700"
+            className="flex items-center gap-2 rounded-lg bg-pulse-800 px-4 py-2 text-sm font-medium text-white hover:bg-pulse-800"
           >
             <Zap className="h-4 w-4" /> Otomatik Dağıt
           </button>
@@ -504,7 +504,7 @@ export default function VardiyePage() {
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setShiftDefs(prev => [...prev, { name: '', start: '08:00', end: '14:00' }])}
-                className="flex items-center gap-1.5 text-sm font-medium text-pulse-600 dark:text-pulse-400 hover:text-pulse-700 dark:hover:text-pulse-300 transition-colors"
+                className="flex items-center gap-1.5 text-sm font-medium text-pulse-900 dark:text-pulse-400 hover:text-pulse-900 dark:hover:text-pulse-300 transition-colors"
               >
                 <Plus className="h-4 w-4" />
                 Mesai Tanımı Ekle
@@ -538,7 +538,7 @@ export default function VardiyePage() {
                       closed
                         ? 'bg-gray-100 dark:bg-gray-800 text-gray-300 dark:text-gray-600 border-gray-200 dark:border-gray-700 cursor-not-allowed'
                         : autoSelectedDays[i]
-                          ? 'bg-pulse-600 text-white border-pulse-600'
+                          ? 'bg-pulse-800 text-white border-pulse-900'
                           : 'bg-white dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-600 hover:border-gray-400'
                     )}
                   >
@@ -562,7 +562,7 @@ export default function VardiyePage() {
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {shiftDefs.map((def, i) => (
-                    <span key={i} className="inline-flex items-center gap-1 bg-pulse-100 dark:bg-pulse-900/30 text-pulse-700 dark:text-pulse-300 px-2 py-0.5 rounded-full text-xs font-medium">
+                    <span key={i} className="inline-flex items-center gap-1 bg-pulse-100 dark:bg-pulse-900/30 text-pulse-900 dark:text-pulse-300 px-2 py-0.5 rounded-full text-xs font-medium">
                       {def.name || `Tanım ${i + 1}`}: {def.start}–{def.end}
                     </span>
                   ))}
@@ -593,7 +593,7 @@ export default function VardiyePage() {
             <button
               onClick={handleAutoDist}
               disabled={autoSaving || autoSelectedDays.every(d => !d) || shiftDefs.length === 0}
-              className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-pulse-600 px-4 py-2 text-sm font-medium text-white hover:bg-pulse-700 disabled:opacity-50"
+              className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-pulse-800 px-4 py-2 text-sm font-medium text-white hover:bg-pulse-800 disabled:opacity-50"
             >
               {autoSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
               Dağıt ({staff.length} personel)
@@ -814,7 +814,7 @@ export default function VardiyePage() {
                       className={cn(
                         'py-1.5 px-3 rounded-lg text-xs font-medium border transition-colors',
                         modalStart === def.start && modalEnd === def.end
-                          ? 'bg-pulse-50 border-pulse-300 text-pulse-700 dark:bg-pulse-900/30 dark:border-pulse-600 dark:text-pulse-300'
+                          ? 'bg-pulse-50 border-pulse-300 text-pulse-900 dark:bg-pulse-900/30 dark:border-pulse-900 dark:text-pulse-300'
                           : 'border-gray-200 dark:border-gray-600 text-gray-500 hover:border-gray-300'
                       )}
                     >
@@ -860,7 +860,7 @@ export default function VardiyePage() {
               <button
                 onClick={saveShift}
                 disabled={saving}
-                className="flex-1 rounded-lg bg-pulse-600 px-4 py-2 text-sm font-medium text-white hover:bg-pulse-700 disabled:opacity-50"
+                className="flex-1 rounded-lg bg-pulse-800 px-4 py-2 text-sm font-medium text-white hover:bg-pulse-800 disabled:opacity-50"
               >
                 {saving ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : 'Kaydet'}
               </button>
@@ -905,7 +905,7 @@ export default function VardiyePage() {
                         onChange={() => toggleDay(day as keyof WorkingHours)}
                         className="peer sr-only"
                       />
-                      <div className="h-6 w-11 rounded-full bg-gray-300 dark:bg-gray-600 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-pulse-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:ring-2 peer-focus:ring-pulse-300" />
+                      <div className="h-6 w-11 rounded-full bg-gray-300 dark:bg-gray-600 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-pulse-900 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:ring-2 peer-focus:ring-pulse-300" />
                     </label>
 
                     {isOpen ? (
@@ -937,7 +937,7 @@ export default function VardiyePage() {
             )}
 
             <div className="mt-6 flex justify-end">
-              <button type="submit" disabled={saving} className="flex items-center gap-2 rounded-lg bg-pulse-600 px-4 py-2 text-sm font-medium text-white hover:bg-pulse-700 disabled:opacity-50">
+              <button type="submit" disabled={saving} className="flex items-center gap-2 rounded-lg bg-pulse-800 px-4 py-2 text-sm font-medium text-white hover:bg-pulse-800 disabled:opacity-50">
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                 Saatleri Kaydet
               </button>

@@ -172,7 +172,7 @@ export default function NotificationsPage() {
             className={cn(
               'px-3 py-1.5 rounded-full text-sm font-medium border transition-colors',
               filter === opt.value
-                ? 'bg-pulse-600 text-white border-pulse-600'
+                ? 'bg-pulse-800 text-white border-pulse-900'
                 : 'bg-white dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-600 hover:border-gray-400'
             )}
           >

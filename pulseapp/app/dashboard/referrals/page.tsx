@@ -137,7 +137,7 @@ export default function ReferralsPage() {
   })
 
   if (ctxLoading) {
-    return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-pulse-500" /></div>
+    return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-pulse-900" /></div>
   }
 
   return (
@@ -169,7 +169,7 @@ export default function ReferralsPage() {
         </div>
         <div className="card p-4">
           <p className="text-xs text-gray-500 dark:text-gray-400">Dönüşüm Oranı</p>
-          <p className="text-2xl font-bold text-pulse-600">%{conversionRate}</p>
+          <p className="text-2xl font-bold text-pulse-900">%{conversionRate}</p>
         </div>
       </div>
 
@@ -196,7 +196,7 @@ export default function ReferralsPage() {
 
       {/* List */}
       {loading ? (
-        <div className="flex items-center justify-center h-32"><Loader2 className="h-6 w-6 animate-spin text-pulse-500" /></div>
+        <div className="flex items-center justify-center h-32"><Loader2 className="h-6 w-6 animate-spin text-pulse-900" /></div>
       ) : filtered.length === 0 ? (
         <div className="card p-8 text-center">
           <UserCheck className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />

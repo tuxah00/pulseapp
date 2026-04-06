@@ -132,9 +132,9 @@ export default function RegisterPage() {
             <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold
               transition-colors duration-200
               ${step === n
-                ? 'bg-pulse-600 text-white shadow-sm shadow-pulse-300'
+                ? 'bg-pulse-800 text-white shadow-sm shadow-pulse-300'
                 : step > n
-                  ? 'bg-pulse-100 text-pulse-600'
+                  ? 'bg-pulse-100 text-pulse-900'
                   : 'bg-gray-100 text-gray-400'
               }`}
             >
@@ -289,7 +289,7 @@ export default function RegisterPage() {
 
       <p className="mt-6 text-center text-sm text-gray-500">
         Zaten hesabınız var mı?{' '}
-        <Link href="/auth/login" className="font-semibold text-pulse-600 hover:text-pulse-700">
+        <Link href="/auth/login" className="font-semibold text-pulse-900 hover:text-pulse-900">
           Giriş yapın
         </Link>
       </p>

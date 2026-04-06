@@ -127,7 +127,7 @@ export default function ReviewsPage() {
   }
 
   if (loading || ctxLoading) {
-    return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-pulse-500" /></div>
+    return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-pulse-900" /></div>
   }
 
   return (
@@ -193,7 +193,7 @@ export default function ReviewsPage() {
           ))}
         </div>
         {filterRating && (
-          <button onClick={() => setFilterRating(null)} className="mt-2 text-sm text-pulse-600 hover:text-pulse-700">
+          <button onClick={() => setFilterRating(null)} className="mt-2 text-sm text-pulse-900 hover:text-pulse-900">
             Filtreyi kaldır ×
           </button>
         )}
@@ -287,7 +287,7 @@ export default function ReviewsPage() {
                       <div className="mt-2 flex items-center gap-3">
                         <button
                           onClick={() => setRespondingTo(review.id)}
-                          className="text-sm text-pulse-600 hover:text-pulse-700 flex items-center gap-1"
+                          className="text-sm text-pulse-900 hover:text-pulse-900 flex items-center gap-1"
                         >
                           <MessageSquare className="h-3.5 w-3.5" />Yanıtla
                         </button>

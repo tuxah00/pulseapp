@@ -97,7 +97,7 @@ export function CustomSelect({
                 className={cn(
                   'w-full text-left px-3 py-2 text-sm transition-colors flex items-center justify-between gap-2',
                   !value
-                    ? 'bg-pulse-50 text-pulse-700 dark:bg-pulse-900/30 dark:text-pulse-300 font-medium'
+                    ? 'bg-pulse-50 text-pulse-900 dark:bg-pulse-900/30 dark:text-pulse-300 font-medium'
                     : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
                 )}
               >
@@ -115,7 +115,7 @@ export function CustomSelect({
                 className={cn(
                   'w-full text-left px-3 py-2 text-sm transition-colors flex items-center justify-between gap-2',
                   value === opt.value
-                    ? 'bg-pulse-50 text-pulse-700 dark:bg-pulse-900/30 dark:text-pulse-300 font-medium'
+                    ? 'bg-pulse-50 text-pulse-900 dark:bg-pulse-900/30 dark:text-pulse-300 font-medium'
                     : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                 )}
               >

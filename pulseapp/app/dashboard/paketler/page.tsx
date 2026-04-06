@@ -383,7 +383,7 @@ export default function PaketlerPage() {
   if (ctxLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-6 w-6 animate-spin text-pulse-500" />
+        <Loader2 className="h-6 w-6 animate-spin text-pulse-900" />
       </div>
     )
   }
@@ -418,7 +418,7 @@ export default function PaketlerPage() {
                   <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Durum</p>
                   {(['all', 'active', 'completed', 'expired', 'cancelled'] as StatusFilter[]).map(s => (
                     <button key={s} onClick={() => setStatusFilter(s)}
-                      className={cn('w-full text-left px-3 py-2 rounded-lg text-sm transition-colors', statusFilter === s ? 'bg-pulse-50 text-pulse-700 dark:bg-pulse-900/30 dark:text-pulse-300 font-medium' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700')}>
+                      className={cn('w-full text-left px-3 py-2 rounded-lg text-sm transition-colors', statusFilter === s ? 'bg-pulse-50 text-pulse-900 dark:bg-pulse-900/30 dark:text-pulse-300 font-medium' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700')}>
                       {s === 'all' ? 'Tümü' : STATUS_CONFIG[s as PackageStatus].label}
                     </button>
                   ))}
@@ -466,7 +466,7 @@ export default function PaketlerPage() {
               className={cn(
                 'px-4 py-2.5 text-sm font-medium border-b-2 transition-colors',
                 pageTab === tab.key
-                  ? 'border-pulse-500 text-pulse-600 dark:text-pulse-400'
+                  ? 'border-pulse-900 text-pulse-900 dark:text-pulse-400'
                   : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
               )}
             >
@@ -485,7 +485,7 @@ export default function PaketlerPage() {
       {pageTab === 'templates' && (
         <div>
           {templatesLoading ? (
-            <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-pulse-500" /></div>
+            <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-pulse-900" /></div>
           ) : templates.length === 0 ? (
             <div className="card flex flex-col items-center justify-center py-16 text-center">
               <Package className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-3" />
@@ -502,7 +502,7 @@ export default function PaketlerPage() {
                   <div className="card hover:shadow-md transition-shadow">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-pulse-50 dark:bg-pulse-900/30 text-pulse-600 dark:text-pulse-400 flex-shrink-0">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-pulse-50 dark:bg-pulse-900/30 text-pulse-900 dark:text-pulse-400 flex-shrink-0">
                           <Package className="h-5 w-5" />
                         </div>
                         <div className="min-w-0">
@@ -541,12 +541,12 @@ export default function PaketlerPage() {
                           </span>
                         )}
                       </div>
-                      <span className="font-bold text-pulse-600 dark:text-pulse-400">{formatCurrency(t.price)}</span>
+                      <span className="font-bold text-pulse-900 dark:text-pulse-400">{formatCurrency(t.price)}</span>
                     </div>
 
                     <button
                       onClick={() => openSellModal(t.id)}
-                      className="mt-3 w-full text-xs text-center py-1.5 rounded-lg border border-pulse-200 dark:border-pulse-800 text-pulse-600 dark:text-pulse-400 hover:bg-pulse-50 dark:hover:bg-pulse-900/20 transition-colors"
+                      className="mt-3 w-full text-xs text-center py-1.5 rounded-lg border border-pulse-200 dark:border-pulse-800 text-pulse-900 dark:text-pulse-400 hover:bg-pulse-50 dark:hover:bg-pulse-900/20 transition-colors"
                     >
                       Bu Paketi Sat
                     </button>
@@ -582,7 +582,7 @@ export default function PaketlerPage() {
 
             {/* List / Box */}
             {cpLoading ? (
-              <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-pulse-500" /></div>
+              <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-pulse-900" /></div>
             ) : customerPackages.length === 0 ? (
               <div className="card flex flex-col items-center justify-center py-16 text-center">
                 <Users className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-3" />
@@ -600,7 +600,7 @@ export default function PaketlerPage() {
                       <CompactBoxCard
                         initials={cp.customer_name.slice(0, 2).toUpperCase()}
                         title={cp.customer_name}
-                        colorClass="bg-pulse-100 text-pulse-700 dark:bg-pulse-900/30 dark:text-pulse-400"
+                        colorClass="bg-pulse-100 text-pulse-900 dark:bg-pulse-900/30 dark:text-pulse-400"
                         badge={<span className={cn('text-[10px] px-1.5 py-0.5 rounded-full font-medium', cfg.color)}>{cfg.label}</span>}
                         meta={`${cp.sessions_used}/${cp.sessions_total} seans`}
                         selected={selectedCp?.id === cp.id}
@@ -624,13 +624,13 @@ export default function PaketlerPage() {
                       <div
                         className={cn(
                           'card cursor-pointer hover:shadow-md transition-all',
-                          isSelected && 'ring-2 ring-pulse-500'
+                          isSelected && 'ring-2 ring-pulse-900'
                         )}
                         onClick={() => setSelectedCp(isSelected ? null : cp)}
                       >
                         <div className="flex items-center gap-3">
                           {/* Avatar */}
-                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-pulse-100 dark:bg-pulse-900/30 text-pulse-600 dark:text-pulse-400 font-bold text-sm flex-shrink-0">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-pulse-100 dark:bg-pulse-900/30 text-pulse-900 dark:text-pulse-400 font-bold text-sm flex-shrink-0">
                             {cp.customer_name.slice(0, 2).toUpperCase()}
                           </div>
 
@@ -647,7 +647,7 @@ export default function PaketlerPage() {
                             <div className="flex items-center gap-3 mt-1">
                               <div className="flex-1 bg-gray-100 dark:bg-gray-800 rounded-full h-1.5 max-w-[120px]">
                                 <div
-                                  className={cn('h-1.5 rounded-full transition-all', cp.status === 'completed' ? 'bg-blue-500' : 'bg-pulse-500')}
+                                  className={cn('h-1.5 rounded-full transition-all', cp.status === 'completed' ? 'bg-blue-500' : 'bg-pulse-900')}
                                   style={{ width: `${pct}%` }}
                                 />
                               </div>
@@ -716,7 +716,7 @@ export default function PaketlerPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500 dark:text-gray-400">Ödenen</span>
-                  <span className="font-semibold text-pulse-600 dark:text-pulse-400">{formatCurrency(selectedCp.price_paid)}</span>
+                  <span className="font-semibold text-pulse-900 dark:text-pulse-400">{formatCurrency(selectedCp.price_paid)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500 dark:text-gray-400">Satın Alım</span>
@@ -743,7 +743,7 @@ export default function PaketlerPage() {
                 </div>
                 <div className="bg-gray-100 dark:bg-gray-800 rounded-full h-2">
                   <div
-                    className={cn('h-2 rounded-full transition-all', selectedCp.status === 'completed' ? 'bg-blue-500' : 'bg-pulse-500')}
+                    className={cn('h-2 rounded-full transition-all', selectedCp.status === 'completed' ? 'bg-blue-500' : 'bg-pulse-900')}
                     style={{ width: `${detailPct}%` }}
                   />
                 </div>
@@ -917,7 +917,7 @@ export default function PaketlerPage() {
               </div>
 
               {activeTemplate && (
-                <div className="flex items-center gap-2 p-2 rounded-lg bg-pulse-50 dark:bg-pulse-900/20 text-xs text-pulse-700 dark:text-pulse-300">
+                <div className="flex items-center gap-2 p-2 rounded-lg bg-pulse-50 dark:bg-pulse-900/20 text-xs text-pulse-900 dark:text-pulse-300">
                   <Package className="h-3.5 w-3.5 flex-shrink-0" />
                   {activeTemplate.sessions_total} seans
                   {activeTemplate.validity_days && ` · ${activeTemplate.validity_days} gün geçerli`}
@@ -1019,7 +1019,7 @@ export default function PaketlerPage() {
                     type="checkbox"
                     checked={sCreateCustomer}
                     onChange={e => setSCreateCustomer(e.target.checked)}
-                    className="h-4 w-4 accent-pulse-600"
+                    className="h-4 w-4 accent-pulse-900"
                   />
                   <span className="text-sm text-gray-700 dark:text-gray-300">Yeni müşteri olarak ekle</span>
                 </label>
@@ -1057,7 +1057,7 @@ export default function PaketlerPage() {
             <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800 space-y-1 text-sm">
               <p className="font-medium text-gray-900 dark:text-gray-100">{selectedCp.customer_name}</p>
               <p className="text-gray-500 dark:text-gray-400">{selectedCp.package_name}</p>
-              <p className="text-pulse-600 dark:text-pulse-400 font-medium">
+              <p className="text-pulse-900 dark:text-pulse-400 font-medium">
                 {selectedCp.sessions_used} / {selectedCp.sessions_total} seans kullanıldı →{' '}
                 <span className="text-green-600 dark:text-green-400">{selectedCp.sessions_used + 1} / {selectedCp.sessions_total}</span>
               </p>

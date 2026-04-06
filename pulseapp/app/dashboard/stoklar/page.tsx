@@ -401,7 +401,7 @@ export default function StoklarPage() {
   }
 
   if (loading) {
-    return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-pulse-500" /></div>
+    return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-pulse-900" /></div>
   }
 
   return (
@@ -427,7 +427,7 @@ export default function StoklarPage() {
                     <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Stok Durumu</p>
                     {([['low', 'Az Stok'], ['out', 'Stok Yok']] as ['low'|'out', string][]).map(([val, lbl]) => (
                       <button key={val} onClick={() => setStockFilter(stockFilter === val ? null : val)}
-                        className={cn('w-full text-left px-3 py-2 rounded-lg text-sm transition-colors', stockFilter === val ? 'bg-pulse-50 text-pulse-700 dark:bg-pulse-900/30 dark:text-pulse-300 font-medium' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700')}>
+                        className={cn('w-full text-left px-3 py-2 rounded-lg text-sm transition-colors', stockFilter === val ? 'bg-pulse-50 text-pulse-900 dark:bg-pulse-900/30 dark:text-pulse-300 font-medium' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700')}>
                         {lbl}
                       </button>
                     ))}
@@ -436,7 +436,7 @@ export default function StoklarPage() {
                         <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider pt-1 border-t dark:border-gray-700">Kategori</p>
                         {categories.map(cat => (
                           <button key={cat} onClick={() => setCategoryFilter(categoryFilter === cat ? '' : cat)}
-                            className={cn('w-full text-left px-3 py-2 rounded-lg text-sm transition-colors', categoryFilter === cat ? 'bg-pulse-50 text-pulse-700 dark:bg-pulse-900/30 dark:text-pulse-300 font-medium' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700')}>
+                            className={cn('w-full text-left px-3 py-2 rounded-lg text-sm transition-colors', categoryFilter === cat ? 'bg-pulse-50 text-pulse-900 dark:bg-pulse-900/30 dark:text-pulse-300 font-medium' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700')}>
                             {cat}
                           </button>
                         ))}
@@ -474,13 +474,13 @@ export default function StoklarPage() {
         <div className="mb-6 flex gap-1 border-b border-gray-200 dark:border-gray-700">
           <button
             onClick={() => setPageTab('products')}
-            className={cn('flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors', pageTab === 'products' ? 'border-pulse-500 text-pulse-600 dark:text-pulse-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200')}
+            className={cn('flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors', pageTab === 'products' ? 'border-pulse-900 text-pulse-900 dark:text-pulse-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200')}
           >
             <Package className="h-4 w-4" />Ürünler
           </button>
           <button
             onClick={() => setPageTab('suppliers')}
-            className={cn('flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors', pageTab === 'suppliers' ? 'border-pulse-500 text-pulse-600 dark:text-pulse-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200')}
+            className={cn('flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors', pageTab === 'suppliers' ? 'border-pulse-900 text-pulse-900 dark:text-pulse-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200')}
           >
             <Truck className="h-4 w-4" />Tedarikçiler
           </button>
@@ -568,7 +568,7 @@ export default function StoklarPage() {
                 <AnimatedItem
                   key={product.id}
                   onClick={() => { setSelectedProduct(product); setDetailTab('info') }}
-                  className={cn('card flex items-center gap-4 p-4 cursor-pointer transition-all hover:shadow-md', selectedProduct?.id === product.id && 'ring-2 ring-pulse-500')}
+                  className={cn('card flex items-center gap-4 p-4 cursor-pointer transition-all hover:shadow-md', selectedProduct?.id === product.id && 'ring-2 ring-pulse-900')}
                 >
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700 flex-shrink-0">
                     <Package className="h-5 w-5 text-gray-500 dark:text-gray-400" />
@@ -621,7 +621,7 @@ export default function StoklarPage() {
       {!dbError && pageTab === 'suppliers' && (
         <>
           {suppliersLoading ? (
-            <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-pulse-500" /></div>
+            <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-pulse-900" /></div>
           ) : suppliers.length === 0 ? (
             <div className="card flex flex-col items-center justify-center py-24 text-center">
               <Truck className="mb-4 h-16 w-16 text-gray-200 dark:text-gray-600" />
@@ -634,7 +634,7 @@ export default function StoklarPage() {
               {suppliers.map((supplier) => (
                 <div key={supplier.id} className="card flex items-center gap-4 p-4">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-pulse-100 dark:bg-pulse-900/30 flex-shrink-0">
-                    <Truck className="h-5 w-5 text-pulse-600 dark:text-pulse-400" />
+                    <Truck className="h-5 w-5 text-pulse-900 dark:text-pulse-400" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-gray-900 dark:text-gray-100">{supplier.name}</p>
@@ -674,14 +674,14 @@ export default function StoklarPage() {
             <div className="flex border-b border-gray-200 dark:border-gray-700">
               <button
                 onClick={() => setDetailTab('info')}
-                className={cn('flex-1 px-4 py-2.5 text-sm font-medium transition-colors', detailTab === 'info' ? 'border-b-2 border-pulse-500 text-pulse-600 dark:text-pulse-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700')}
+                className={cn('flex-1 px-4 py-2.5 text-sm font-medium transition-colors', detailTab === 'info' ? 'border-b-2 border-pulse-900 text-pulse-900 dark:text-pulse-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700')}
               >Bilgiler</button>
               <button
                 onClick={() => {
                   setDetailTab('movements')
                   fetchMovements(selectedProduct.id)
                 }}
-                className={cn('flex-1 px-4 py-2.5 text-sm font-medium transition-colors flex items-center justify-center gap-1', detailTab === 'movements' ? 'border-b-2 border-pulse-500 text-pulse-600 dark:text-pulse-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700')}
+                className={cn('flex-1 px-4 py-2.5 text-sm font-medium transition-colors flex items-center justify-center gap-1', detailTab === 'movements' ? 'border-b-2 border-pulse-900 text-pulse-900 dark:text-pulse-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700')}
               ><History className="h-3.5 w-3.5" />Hareketler</button>
             </div>
 
@@ -749,7 +749,7 @@ export default function StoklarPage() {
               ) : (
                 <>
                   {movementsLoading ? (
-                    <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-pulse-500" /></div>
+                    <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-pulse-900" /></div>
                   ) : movements.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-16 text-center">
                       <History className="mb-3 h-12 w-12 text-gray-200 dark:text-gray-600" />
@@ -871,7 +871,7 @@ export default function StoklarPage() {
                       type="checkbox"
                       checked={addAsExpense}
                       onChange={(e) => setAddAsExpense(e.target.checked)}
-                      className="h-4 w-4 accent-pulse-600"
+                      className="h-4 w-4 accent-pulse-900"
                     />
                     <span className="text-sm text-gray-700 dark:text-gray-300">Gider olarak ekle</span>
                   </label>

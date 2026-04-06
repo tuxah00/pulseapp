@@ -7,11 +7,11 @@ export default function HomePage() {
       {/* Nav */}
       <nav className="flex items-center justify-between px-6 py-4 max-w-6xl mx-auto">
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-pulse-500">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-pulse-900">
             <Zap className="h-4 w-4 text-white" />
           </div>
           <span className="text-xl font-bold">
-            Pulse<span className="text-pulse-600">App</span>
+            Pulse<span className="text-pulse-900">App</span>
           </span>
         </div>
         <div className="flex items-center gap-4">
@@ -26,12 +26,12 @@ export default function HomePage() {
 
       {/* Hero */}
       <section className="px-6 py-20 text-center max-w-4xl mx-auto">
-        <div className="mb-4 inline-flex items-center rounded-full bg-pulse-50 px-4 py-1.5 text-sm font-medium text-pulse-700">
+        <div className="mb-4 inline-flex items-center rounded-full bg-pulse-50 px-4 py-1.5 text-sm font-medium text-pulse-900">
           🚀 14 gün ücretsiz deneyin
         </div>
         <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl lg:text-6xl">
           İşletmenizin
-          <span className="text-pulse-600"> dijital asistanı</span>
+          <span className="text-pulse-900"> dijital asistanı</span>
         </h1>
         <p className="mt-6 text-lg text-gray-500 max-w-2xl mx-auto">
           Akıllı randevu yönetimi, otomatik hatırlatıcılar,
@@ -89,7 +89,7 @@ export default function HomePage() {
 function FeatureCard({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: string }) {
   return (
     <div className="card text-center">
-      <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-pulse-50 text-pulse-600">
+      <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-pulse-50 text-pulse-900">
         {icon}
       </div>
       <h3 className="text-base font-semibold text-gray-900">{title}</h3>

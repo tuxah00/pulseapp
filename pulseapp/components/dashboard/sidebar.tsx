@@ -48,11 +48,8 @@ import { getSidebarSections } from '@/lib/config/sector-modules'
 
 // Custom Turkish Lira icon (₺) — Lucide'da bulunmadığı için özel SVG
 const TurkishLiraIcon = ({ className, ...props }: React.SVGProps<SVGSVGElement>) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true" {...props}>
-    <line x1="7" y1="4" x2="7" y2="20" />
-    <line x1="7" y1="4" x2="13" y2="4" />
-    <line x1="7" y1="11" x2="12" y2="11" />
-    <path d="M7 20 C 9 20 16 19 16 13" />
+  <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" className={className} aria-hidden="true" {...props}>
+    <text x="50%" y="50%" dominantBaseline="central" textAnchor="middle" fontSize="14" fontWeight="700" fontFamily="system-ui,-apple-system,sans-serif">₺</text>
   </svg>
 )
 
@@ -150,7 +147,7 @@ export default function Sidebar({ businessName, userName, sector, plan, permissi
       )}>
         <div className="flex items-center gap-3 min-w-0">
           <div className="relative flex-shrink-0">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-pulse-500 shadow-sm shadow-pulse-500/20">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-pulse-900 shadow-sm shadow-pulse-900/20">
               <Zap className="h-5 w-5 text-white" />
             </div>
             <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-green-400 ring-2 ring-white dark:ring-gray-900" />

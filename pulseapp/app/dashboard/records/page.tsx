@@ -763,7 +763,7 @@ function RecordsPageInner() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-pulse-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-pulse-900" />
       </div>
     )
   }
@@ -866,11 +866,11 @@ function RecordsPageInner() {
                   onClick={() => setSelectedRecord(record)}
                   className={cn(
                     'card flex items-center gap-4 p-4 cursor-pointer transition-all hover:shadow-md',
-                    selectedRecord?.id === record.id && 'ring-2 ring-pulse-500'
+                    selectedRecord?.id === record.id && 'ring-2 ring-pulse-900'
                   )}
                 >
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-pulse-50 dark:bg-pulse-900/20 flex-shrink-0">
-                    <Icon className="h-5 w-5 text-pulse-600 dark:text-pulse-400" />
+                    <Icon className="h-5 w-5 text-pulse-900 dark:text-pulse-400" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <span className="font-medium text-gray-900 dark:text-gray-100 truncate block">
@@ -911,7 +911,7 @@ function RecordsPageInner() {
                   key={record.id}
                   initials={record.title?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || 'D'}
                   title={record.title}
-                  colorClass="bg-pulse-500 text-white"
+                  colorClass="bg-pulse-900 text-white"
                   onClick={() => setSelectedRecord(record)}
                 />
               ))}
@@ -948,7 +948,7 @@ function RecordsPageInner() {
                   <div className="flex items-start justify-between">
                     <div className="flex items-start gap-4">
                       <div className="flex h-12 w-12 items-center justify-center rounded-full bg-pulse-50 dark:bg-pulse-900/20 flex-shrink-0">
-                        <Icon className="h-6 w-6 text-pulse-600 dark:text-pulse-400" />
+                        <Icon className="h-6 w-6 text-pulse-900 dark:text-pulse-400" />
                       </div>
                       <div className="min-w-0">
                         <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100 truncate">
@@ -1087,7 +1087,7 @@ function RecordsPageInner() {
                                   {fileSize && (
                                     <span className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{fileSize}</span>
                                   )}
-                                  <span className="flex items-center gap-1 text-xs text-pulse-500 mt-1.5">
+                                  <span className="flex items-center gap-1 text-xs text-pulse-900 mt-1.5">
                                     <Download className="h-3 w-3" /> Aç
                                   </span>
                                 </a>
@@ -1107,7 +1107,7 @@ function RecordsPageInner() {
                                   <button
                                     type="button"
                                     onClick={() => setFileDescPopup({ index: i, value: '', fileName })}
-                                    className="text-xs text-gray-300 dark:text-gray-600 hover:text-pulse-500 dark:hover:text-pulse-400 mt-0.5"
+                                    className="text-xs text-gray-300 dark:text-gray-600 hover:text-pulse-900 dark:hover:text-pulse-400 mt-0.5"
                                   >
                                     + Açıklama ekle
                                   </button>
@@ -1323,7 +1323,7 @@ export default function RecordsPage() {
   return (
     <Suspense fallback={
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-pulse-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-pulse-900" />
       </div>
     }>
       <RecordsPageInner />

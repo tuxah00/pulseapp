@@ -229,7 +229,7 @@ export default function BusinessSettingsPage() {
   if (loading || ctxLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-pulse-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-pulse-900" />
       </div>
     )
   }
@@ -304,7 +304,7 @@ export default function BusinessSettingsPage() {
                       className="h-20 w-20 rounded-2xl object-cover border border-gray-200 dark:border-gray-700"
                     />
                   ) : (
-                    <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-pulse-100 dark:bg-pulse-900/30 text-pulse-600 dark:text-pulse-400 text-2xl font-bold border-2 border-dashed border-pulse-300 dark:border-pulse-700">
+                    <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-pulse-100 dark:bg-pulse-900/30 text-pulse-900 dark:text-pulse-400 text-2xl font-bold border-2 border-dashed border-pulse-300 dark:border-pulse-700">
                       {name.charAt(0).toUpperCase() || '?'}
                     </div>
                   )}
@@ -664,7 +664,7 @@ export default function BusinessSettingsPage() {
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Mevcut Abonelik</h2>
             <div className="flex items-center gap-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-pulse-100 dark:bg-pulse-900/30">
-                <CreditCard className="h-6 w-6 text-pulse-600" />
+                <CreditCard className="h-6 w-6 text-pulse-900" />
               </div>
               <div className="flex-1">
                 <p className="font-semibold text-gray-900">
@@ -773,7 +773,7 @@ function ToggleSetting({
           onChange={(e) => onChange(e.target.checked)}
           className="peer sr-only"
         />
-        <div className="h-6 w-11 rounded-full bg-gray-300 dark:bg-gray-600 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-pulse-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:ring-2 peer-focus:ring-pulse-300" />
+        <div className="h-6 w-11 rounded-full bg-gray-300 dark:bg-gray-600 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-pulse-900 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:ring-2 peer-focus:ring-pulse-300" />
       </label>
       <div>
         <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{label}</p>
@@ -800,7 +800,7 @@ function PlanCard({
     <div
       className={`relative flex flex-col rounded-xl border p-6 ${
         current
-          ? 'border-pulse-500 bg-pulse-50/30 dark:bg-gray-700/50 ring-1 ring-pulse-500'
+          ? 'border-pulse-900 bg-pulse-50/30 dark:bg-gray-700/50 ring-1 ring-pulse-900'
           : popular
           ? 'border-purple-200 dark:border-purple-800 bg-white dark:bg-gray-800'
           : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'
@@ -815,7 +815,7 @@ function PlanCard({
       )}
       {current && (
         <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-          <span className="rounded-full bg-pulse-600 px-3 py-1 text-xs font-medium text-white">
+          <span className="rounded-full bg-pulse-800 px-3 py-1 text-xs font-medium text-white">
             Mevcut Plan
           </span>
         </div>

@@ -165,7 +165,7 @@ function LoginForm() {
       {/* Kayıt linki */}
       <p className="mt-6 text-center text-sm text-gray-500">
         Hesabınız yok mu?{' '}
-        <Link href="/auth/register" className="font-semibold text-pulse-600 hover:text-pulse-700">
+        <Link href="/auth/register" className="font-semibold text-pulse-900 hover:text-pulse-900">
           Ücretsiz deneyin →
         </Link>
       </p>

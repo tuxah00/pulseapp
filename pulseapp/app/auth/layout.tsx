@@ -57,7 +57,7 @@ export default function AuthLayout({
                       bg-gray-50 px-6 py-12 sm:px-12">
         {/* Sadece mobilde görünen logo */}
         <div className="mb-8 text-center md:hidden">
-          <h1 className="text-3xl font-bold text-pulse-600">
+          <h1 className="text-3xl font-bold text-pulse-900">
             Pulse<span className="text-gray-900">App</span>
           </h1>
           <p className="mt-1 text-sm text-gray-500">İşletmenizin dijital asistanı</p>

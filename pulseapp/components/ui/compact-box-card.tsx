@@ -7,7 +7,7 @@ interface CompactBoxCardProps {
   initials: string
   /** Kart başlığı / isim */
   title: string
-  /** Avatar arka plan ve yazı rengi (ör: "bg-pulse-100 text-pulse-700") */
+  /** Avatar arka plan ve yazı rengi (ör: "bg-pulse-100 text-pulse-900") */
   colorClass?: string
   /** Rozet (rol etiketi vb.) */
   badge?: React.ReactNode
@@ -29,7 +29,7 @@ interface CompactBoxCardProps {
 export default function CompactBoxCard({
   initials,
   title,
-  colorClass = 'bg-pulse-100 text-pulse-700',
+  colorClass = 'bg-pulse-100 text-pulse-900',
   badge,
   meta,
   selected,
@@ -42,7 +42,7 @@ export default function CompactBoxCard({
       onClick={onClick}
       className={cn(
         'card p-2 cursor-pointer hover:shadow-md transition-all aspect-square flex flex-col items-center justify-center text-center',
-        selected && 'ring-2 ring-pulse-500',
+        selected && 'ring-2 ring-pulse-900',
         className
       )}
     >

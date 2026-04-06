@@ -335,7 +335,7 @@ export default function CustomersPage() {
   }
 
   if (loading) {
-    return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-pulse-500" /></div>
+    return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-pulse-900" /></div>
   }
 
   const hasActiveFilters = !!(dateFrom || dateTo || minVisits)
@@ -481,7 +481,7 @@ export default function CustomersPage() {
                 'rounded-2xl border px-4 py-3 cursor-pointer transition-all',
                 'border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900/50',
                 'hover:border-gray-200 dark:hover:border-gray-700 hover:shadow-sm',
-                selectedCustomer?.id === customer.id && 'ring-2 ring-pulse-500 border-pulse-300 dark:border-pulse-700',
+                selectedCustomer?.id === customer.id && 'ring-2 ring-pulse-900 border-pulse-300 dark:border-pulse-700',
               )}>
                 <div className="flex items-center gap-3">
                   <div className={cn('flex h-10 w-10 items-center justify-center rounded-xl text-white font-semibold text-sm flex-shrink-0', avatarColor)}>
@@ -543,7 +543,7 @@ export default function CustomersPage() {
                 className={cn(
                   'flex-1 py-2.5 text-sm font-medium text-center transition-colors',
                   panelTab === 'info'
-                    ? 'text-pulse-600 border-b-2 border-pulse-500'
+                    ? 'text-pulse-900 border-b-2 border-pulse-900'
                     : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
                 )}
               >
@@ -554,7 +554,7 @@ export default function CustomersPage() {
                 className={cn(
                   'flex-1 py-2.5 text-sm font-medium text-center transition-colors',
                   panelTab === 'history'
-                    ? 'text-pulse-600 border-b-2 border-pulse-500'
+                    ? 'text-pulse-900 border-b-2 border-pulse-900'
                     : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
                 )}
               >
@@ -578,7 +578,7 @@ export default function CustomersPage() {
                   <div className="space-y-3">
                     <div className="flex items-center gap-3 text-sm">
                       <Phone className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                      <a href={`tel:${selectedCustomer.phone}`} className="text-pulse-600 hover:underline">{formatPhone(selectedCustomer.phone)}</a>
+                      <a href={`tel:${selectedCustomer.phone}`} className="text-pulse-900 hover:underline">{formatPhone(selectedCustomer.phone)}</a>
                     </div>
                     {selectedCustomer.email && (
                       <div className="flex items-center gap-3 text-sm">
@@ -630,7 +630,7 @@ export default function CustomersPage() {
                 /* ── Geçmiş / Zaman Çizelgesi ── */
                 timelineLoading ? (
                   <div className="flex items-center justify-center py-12">
-                    <Loader2 className="h-6 w-6 animate-spin text-pulse-500" />
+                    <Loader2 className="h-6 w-6 animate-spin text-pulse-900" />
                   </div>
                 ) : timeline.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-gray-400">

@@ -285,7 +285,7 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
               {/* Input */}
               <div className="flex items-center gap-3 border-b border-gray-100 dark:border-white/10 px-4 py-3.5">
                 {loading
-                  ? <Loader2 className="h-4 w-4 flex-shrink-0 text-pulse-500 animate-spin" />
+                  ? <Loader2 className="h-4 w-4 flex-shrink-0 text-pulse-900 animate-spin" />
                   : <Search className="h-4 w-4 flex-shrink-0 text-gray-400 dark:text-gray-500" />
                 }
                 <input
@@ -334,14 +334,14 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
                             onMouseEnter={() => setSelectedIndex(globalIdx)}
                             className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
                               isSelected
-                                ? 'bg-pulse-50 dark:bg-pulse-500/10'
+                                ? 'bg-pulse-50 dark:bg-pulse-900/10'
                                 : 'hover:bg-gray-50 dark:hover:bg-white/5'
                             }`}
                           >
                             {/* İkon */}
                             <span className={`flex-shrink-0 p-1.5 rounded-lg ${
                               isSelected
-                                ? 'bg-pulse-100 dark:bg-pulse-900/40 text-pulse-600 dark:text-pulse-400'
+                                ? 'bg-pulse-100 dark:bg-pulse-900/40 text-pulse-900 dark:text-pulse-400'
                                 : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600'
                             }`}>
                               {item.icon}
@@ -351,7 +351,7 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-2">
                                 <span className={`text-sm font-medium truncate ${
-                                  isSelected ? 'text-pulse-700 dark:text-pulse-300' : 'text-gray-900 dark:text-gray-100'
+                                  isSelected ? 'text-pulse-900 dark:text-pulse-300' : 'text-gray-900 dark:text-gray-100'
                                 }`}>
                                   {item.label}
                                 </span>
@@ -372,7 +372,7 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
                               )}
                             </div>
 
-                            {isSelected && <ArrowRight className="h-3.5 w-3.5 flex-shrink-0 text-pulse-500" />}
+                            {isSelected && <ArrowRight className="h-3.5 w-3.5 flex-shrink-0 text-pulse-900" />}
                           </button>
                         )
                       })}

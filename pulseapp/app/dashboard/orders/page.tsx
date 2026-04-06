@@ -209,7 +209,7 @@ export default function OrdersPage() {
         </div>
         <button
           onClick={() => { setShowModal(true); fetchProducts() }}
-          className="flex items-center gap-2 rounded-lg bg-pulse-600 px-4 py-2 text-sm font-medium text-white hover:bg-pulse-700"
+          className="flex items-center gap-2 rounded-lg bg-pulse-800 px-4 py-2 text-sm font-medium text-white hover:bg-pulse-800"
         >
           <Plus className="h-4 w-4" /> Yeni Sipariş
         </button>
@@ -224,7 +224,7 @@ export default function OrdersPage() {
             className={cn(
               'px-3 py-1.5 rounded-full text-sm font-medium border transition-colors',
               filter === opt.value
-                ? 'bg-pulse-600 text-white border-pulse-600'
+                ? 'bg-pulse-800 text-white border-pulse-900'
                 : 'bg-white dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-600 hover:border-gray-400'
             )}
           >
@@ -300,7 +300,7 @@ export default function OrdersPage() {
                   {nextStatus && (
                     <button
                       onClick={() => updateStatus(order.id, nextStatus)}
-                      className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-pulse-600 px-3 py-2 text-xs font-medium text-white hover:bg-pulse-700 transition-colors"
+                      className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-pulse-800 px-3 py-2 text-xs font-medium text-white hover:bg-pulse-800 transition-colors"
                     >
                       <ArrowRight className="h-3.5 w-3.5" />
                       {STATUS_CONFIG[nextStatus]?.label}
@@ -428,7 +428,7 @@ export default function OrdersPage() {
               <button
                 onClick={createOrder}
                 disabled={saving || orderItems.length === 0}
-                className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-pulse-600 px-4 py-2 text-sm font-medium text-white hover:bg-pulse-700 disabled:opacity-50"
+                className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-pulse-800 px-4 py-2 text-sm font-medium text-white hover:bg-pulse-800 disabled:opacity-50"
               >
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                 Sipariş Oluştur

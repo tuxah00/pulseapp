@@ -174,7 +174,7 @@ export default function ProtocolsPage() {
   })
 
   if (ctxLoading) {
-    return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-pulse-500" /></div>
+    return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-pulse-900" /></div>
   }
 
   return (
@@ -217,7 +217,7 @@ export default function ProtocolsPage() {
         {/* Protocol List */}
         <div className={`${selectedProtocol ? 'lg:col-span-1' : 'lg:col-span-3'} space-y-3`}>
           {loading ? (
-            <div className="flex items-center justify-center h-32"><Loader2 className="h-6 w-6 animate-spin text-pulse-500" /></div>
+            <div className="flex items-center justify-center h-32"><Loader2 className="h-6 w-6 animate-spin text-pulse-900" /></div>
           ) : filtered.length === 0 ? (
             <div className="card p-8 text-center">
               <ClipboardCheck className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
@@ -240,7 +240,7 @@ export default function ProtocolsPage() {
                   key={p.id}
                   onClick={() => setSelectedProtocol(p)}
                   className={`card p-4 cursor-pointer transition-all ${
-                    isSelected ? 'ring-2 ring-pulse-500 shadow-md' : 'hover:shadow-sm'
+                    isSelected ? 'ring-2 ring-pulse-900 shadow-md' : 'hover:shadow-sm'
                   }`}>
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex-1 min-w-0">
@@ -264,7 +264,7 @@ export default function ProtocolsPage() {
                   <div className="flex items-center gap-2">
                     <div className="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full h-2">
                       <div
-                        className="bg-pulse-500 h-2 rounded-full transition-all"
+                        className="bg-pulse-900 h-2 rounded-full transition-all"
                         style={{ width: `${progress}%` }}
                       />
                     </div>
@@ -407,7 +407,7 @@ function DetailPanel({
           <span className="font-medium text-gray-900 dark:text-white">{protocol.completed_sessions}/{protocol.total_sessions} seans</span>
         </div>
         <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-3">
-          <div className="bg-pulse-500 h-3 rounded-full transition-all" style={{ width: `${progress}%` }} />
+          <div className="bg-pulse-900 h-3 rounded-full transition-all" style={{ width: `${progress}%` }} />
         </div>
       </div>
 

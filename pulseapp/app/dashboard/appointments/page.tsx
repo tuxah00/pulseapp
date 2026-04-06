@@ -662,14 +662,14 @@ export default function AppointmentsPage() {
               {viewMode === 'week' ? (
                 <>
                   <p className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">{formatWeekRange()}</p>
-                  <button onClick={goToday} className="text-xs text-pulse-600 dark:text-pulse-400 hover:underline mt-0.5">Bu Haftaya Dön</button>
+                  <button onClick={goToday} className="text-xs text-pulse-900 dark:text-pulse-400 hover:underline mt-0.5">Bu Haftaya Dön</button>
                 </>
               ) : (
                 <>
                   <p className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">{formatSelectedDate()}</p>
                   {!isToday
-                    ? <button onClick={goToday} className="text-xs text-pulse-600 dark:text-pulse-400 hover:underline mt-0.5">Bugüne Dön</button>
-                    : <p className="text-xs text-pulse-600 dark:text-pulse-400 mt-0.5">Bugün</p>}
+                    ? <button onClick={goToday} className="text-xs text-pulse-900 dark:text-pulse-400 hover:underline mt-0.5">Bugüne Dön</button>
+                    : <p className="text-xs text-pulse-900 dark:text-pulse-400 mt-0.5">Bugün</p>}
                 </>
               )}
             </div>
@@ -751,7 +751,7 @@ export default function AppointmentsPage() {
       {/* Randevu Listesi / Takvim */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-pulse-500" />
+          <Loader2 className="h-8 w-8 animate-spin text-pulse-900" />
         </div>
       ) : viewMode === 'week' ? (
         /* ── Haftalık Takvim Görünümü ── */
@@ -851,7 +851,7 @@ export default function AppointmentsPage() {
                           <p className="text-xs text-gray-500 dark:text-gray-400">{dayNames[i]}</p>
                           <p className={cn(
                             'text-lg font-bold',
-                            isDayToday ? 'text-pulse-600' : 'text-gray-900 dark:text-gray-100'
+                            isDayToday ? 'text-pulse-900' : 'text-gray-900 dark:text-gray-100'
                           )}>{dd}</p>
                         </div>
                       )
@@ -1035,7 +1035,7 @@ export default function AppointmentsPage() {
                   'hover:border-gray-200 dark:hover:border-gray-700 hover:shadow-sm',
                   timeState === 'past' && 'opacity-60',
                   timeState === 'current' && 'border-green-400 dark:border-green-600 ring-1 ring-green-400 dark:ring-green-600',
-                  selectedAppointment?.id === apt.id && 'ring-2 ring-pulse-500 border-pulse-300 dark:border-pulse-700',
+                  selectedAppointment?.id === apt.id && 'ring-2 ring-pulse-900 border-pulse-300 dark:border-pulse-700',
                 )}
               >
                 <div className="flex items-center gap-3">
@@ -1085,7 +1085,7 @@ export default function AppointmentsPage() {
                   'border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900/50',
                   timeState === 'past' && 'opacity-60',
                   timeState === 'current' && 'border-green-400 ring-1 ring-green-400',
-                  selectedAppointment?.id === apt.id && 'ring-2 ring-pulse-500',
+                  selectedAppointment?.id === apt.id && 'ring-2 ring-pulse-900',
                 )}
               >
                 {/* Delete button */}
@@ -1165,7 +1165,7 @@ export default function AppointmentsPage() {
                 <DetailRow label="Müşteri" value={selectedAppointment.customers?.name || 'İsimsiz'} />
                 {selectedAppointment.customers?.phone && (
                   <DetailRow label="Telefon" value={
-                    <a href={`tel:${selectedAppointment.customers.phone}`} className="text-pulse-600 hover:underline flex items-center gap-1">
+                    <a href={`tel:${selectedAppointment.customers.phone}`} className="text-pulse-900 hover:underline flex items-center gap-1">
                       <Phone className="h-3 w-3" />{selectedAppointment.customers.phone}
                     </a>
                   } />
@@ -1203,7 +1203,7 @@ export default function AppointmentsPage() {
                 {selectedAppointment.status === 'completed' && (
                   <button
                     onClick={() => { window.location.href = `/dashboard/kasa?appointmentId=${selectedAppointment.id}` }}
-                    className="w-full flex items-center gap-2 rounded-lg border border-pulse-200 dark:border-pulse-800 bg-pulse-50 dark:bg-pulse-900/20 px-4 py-2.5 text-sm font-medium text-pulse-700 dark:text-pulse-300 hover:bg-pulse-100 dark:hover:bg-pulse-800/30 transition-colors"
+                    className="w-full flex items-center gap-2 rounded-lg border border-pulse-200 dark:border-pulse-800 bg-pulse-50 dark:bg-pulse-900/20 px-4 py-2.5 text-sm font-medium text-pulse-900 dark:text-pulse-300 hover:bg-pulse-100 dark:hover:bg-pulse-800/30 transition-colors"
                   >
                     <CheckCircle className="h-4 w-4" /> Tahsilat Al
                   </button>

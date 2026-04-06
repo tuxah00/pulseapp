@@ -395,7 +395,7 @@ export default function InvoicesPage() {
   }
 
   if (loading && invoices.length === 0) {
-    return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-pulse-500" /></div>
+    return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-pulse-900" /></div>
   }
 
   const paidAmountSafe = (inv: Invoice) => inv.paid_amount || 0
@@ -465,17 +465,17 @@ export default function InvoicesPage() {
               <button
                 key={s}
                 onClick={() => setStatusFilter(s)}
-                className={cn('px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors', statusFilter === s ? 'bg-pulse-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600')}
+                className={cn('px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors', statusFilter === s ? 'bg-pulse-900 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600')}
               >
                 {s === 'all' ? 'Tümü' : STATUS_CONFIG[s as InvoiceStatus]?.label}
               </button>
             ))}
           </div>
           <div className="flex items-center gap-2 ml-auto">
-            <button onClick={() => setShowFilters(!showFilters)} className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors', showFilters || hasActiveFilters ? 'bg-pulse-100 text-pulse-700 dark:bg-pulse-900/30 dark:text-pulse-400' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600')}>
+            <button onClick={() => setShowFilters(!showFilters)} className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors', showFilters || hasActiveFilters ? 'bg-pulse-100 text-pulse-900 dark:bg-pulse-900/30 dark:text-pulse-400' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600')}>
               <Filter className="h-3.5 w-3.5" />
               Filtre
-              {hasActiveFilters && <span className="ml-1 h-1.5 w-1.5 rounded-full bg-pulse-500" />}
+              {hasActiveFilters && <span className="ml-1 h-1.5 w-1.5 rounded-full bg-pulse-900" />}
             </button>
             <div className="relative flex-1 min-w-[180px] max-w-xs">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -578,7 +578,7 @@ export default function InvoicesPage() {
               <AnimatedItem
                 key={invoice.id}
                 onClick={() => setSelectedInvoice(invoice)}
-                className={cn('card flex items-center gap-4 p-4 cursor-pointer transition-all hover:shadow-md', selectedInvoice?.id === invoice.id && 'ring-2 ring-pulse-500')}
+                className={cn('card flex items-center gap-4 p-4 cursor-pointer transition-all hover:shadow-md', selectedInvoice?.id === invoice.id && 'ring-2 ring-pulse-900')}
               >
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700 flex-shrink-0">
                   <Receipt className="h-5 w-5 text-gray-500 dark:text-gray-400" />
@@ -732,7 +732,7 @@ export default function InvoicesPage() {
                 )}
                 <div className="flex justify-between font-bold text-base border-t border-gray-200 dark:border-gray-600 pt-2">
                   <span className="text-gray-900 dark:text-gray-100">TOPLAM</span>
-                  <span className="text-pulse-600 dark:text-pulse-400">{formatCurrency(selectedInvoice.total)}</span>
+                  <span className="text-pulse-900 dark:text-pulse-400">{formatCurrency(selectedInvoice.total)}</span>
                 </div>
               </div>
 
@@ -741,7 +741,7 @@ export default function InvoicesPage() {
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Ödeme Geçmişi</p>
                   {(selectedInvoice.status === 'pending' || selectedInvoice.status === 'partial' || selectedInvoice.status === 'overdue') && (
-                    <button onClick={() => { setShowPaymentForm(!showPaymentForm); setPayAmount(String(remainingAmount > 0 ? remainingAmount : '')); }} className="text-xs text-pulse-600 dark:text-pulse-400 hover:underline flex items-center gap-1">
+                    <button onClick={() => { setShowPaymentForm(!showPaymentForm); setPayAmount(String(remainingAmount > 0 ? remainingAmount : '')); }} className="text-xs text-pulse-900 dark:text-pulse-400 hover:underline flex items-center gap-1">
                       <Plus className="h-3 w-3" />Ödeme Kaydet
                     </button>
                   )}
@@ -910,7 +910,7 @@ export default function InvoicesPage() {
                       key={pt.value}
                       type="button"
                       onClick={() => setFormPaymentType(pt.value)}
-                      className={cn('rounded-xl border p-3 text-left transition-all', formPaymentType === pt.value ? 'border-pulse-500 bg-pulse-50 dark:bg-pulse-900/20 ring-1 ring-pulse-500' : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600')}
+                      className={cn('rounded-xl border p-3 text-left transition-all', formPaymentType === pt.value ? 'border-pulse-900 bg-pulse-50 dark:bg-pulse-900/20 ring-1 ring-pulse-900' : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600')}
                     >
                       <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{pt.label}</p>
                       <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">{pt.desc}</p>
@@ -977,7 +977,7 @@ export default function InvoicesPage() {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="label mb-0">Hizmet / Ürün Kalemleri</label>
-                  <button type="button" onClick={addItem} className="text-xs text-pulse-600 dark:text-pulse-400 hover:underline flex items-center gap-1">
+                  <button type="button" onClick={addItem} className="text-xs text-pulse-900 dark:text-pulse-400 hover:underline flex items-center gap-1">
                     <Plus className="h-3 w-3" />Kalem Ekle
                   </button>
                 </div>

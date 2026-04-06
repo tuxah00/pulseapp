@@ -87,7 +87,7 @@ export default function TodayAppointments({ appointments }: TodayAppointmentsPro
         </div>
         <a
           href="/dashboard/appointments"
-          className="flex items-center gap-1 text-sm font-medium text-pulse-600 dark:text-pulse-400 hover:text-pulse-700 dark:hover:text-pulse-300 transition-colors"
+          className="flex items-center gap-1 text-sm font-medium text-pulse-900 dark:text-pulse-400 hover:text-pulse-900 dark:hover:text-pulse-300 transition-colors"
         >
           Tümünü gör <ArrowRight className="h-3.5 w-3.5" />
         </a>
@@ -183,7 +183,7 @@ export default function TodayAppointments({ appointments }: TodayAppointmentsPro
           {appointments.length > MAX_VISIBLE && (
             <a
               href="/dashboard/appointments"
-              className="flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-gray-200 dark:border-gray-700 px-3 py-2.5 text-sm font-medium text-pulse-600 dark:text-pulse-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:border-pulse-300 dark:hover:border-pulse-600 transition-all"
+              className="flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-gray-200 dark:border-gray-700 px-3 py-2.5 text-sm font-medium text-pulse-900 dark:text-pulse-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:border-pulse-300 dark:hover:border-pulse-900 transition-all"
             >
               + {appointments.length - MAX_VISIBLE} randevu daha
               <ArrowRight className="h-3.5 w-3.5" />

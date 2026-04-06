@@ -43,7 +43,7 @@ export function ToolbarPopover({ icon, label, active, children, className }: Too
           'flex items-center justify-center rounded-lg transition-colors gap-1.5',
           label ? 'px-3 h-9 text-xs font-medium' : 'h-9 w-9',
           active
-            ? 'bg-pulse-50 text-pulse-600 dark:bg-pulse-900/40 dark:text-pulse-300'
+            ? 'bg-pulse-50 text-pulse-900 dark:bg-pulse-900/40 dark:text-pulse-300'
             : open
               ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
               : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
@@ -82,7 +82,7 @@ export function FilterPopoverList({ label, options, value, onChange, allLabel = 
           className={cn(
             'w-full text-left px-3 py-1.5 rounded-lg text-sm transition-colors',
             value === ''
-              ? 'bg-pulse-50 text-pulse-700 dark:bg-pulse-900/30 dark:text-pulse-300 font-medium'
+              ? 'bg-pulse-50 text-pulse-900 dark:bg-pulse-900/30 dark:text-pulse-300 font-medium'
               : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
           )}
         >
@@ -95,7 +95,7 @@ export function FilterPopoverList({ label, options, value, onChange, allLabel = 
             className={cn(
               'w-full text-left px-3 py-1.5 rounded-lg text-sm transition-colors',
               value === opt.value
-                ? 'bg-pulse-50 text-pulse-700 dark:bg-pulse-900/30 dark:text-pulse-300 font-medium'
+                ? 'bg-pulse-50 text-pulse-900 dark:bg-pulse-900/30 dark:text-pulse-300 font-medium'
                 : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
             )}
           >
@@ -133,7 +133,7 @@ export function SortPopoverContent({ options, sortField, sortDir, onSortField, o
           className={cn(
             'w-full text-left px-3 py-2 rounded-lg text-sm transition-colors',
             sortField === opt.value
-              ? 'bg-pulse-50 text-pulse-700 dark:bg-pulse-900/30 dark:text-pulse-300 font-medium'
+              ? 'bg-pulse-50 text-pulse-900 dark:bg-pulse-900/30 dark:text-pulse-300 font-medium'
               : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
           )}
         >
@@ -146,7 +146,7 @@ export function SortPopoverContent({ options, sortField, sortDir, onSortField, o
           className={cn(
             'flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
             sortDir === 'asc'
-              ? 'bg-pulse-50 text-pulse-700 dark:bg-pulse-900/30 dark:text-pulse-300'
+              ? 'bg-pulse-50 text-pulse-900 dark:bg-pulse-900/30 dark:text-pulse-300'
               : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'
           )}
         >
@@ -157,7 +157,7 @@ export function SortPopoverContent({ options, sortField, sortDir, onSortField, o
           className={cn(
             'flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
             sortDir === 'desc'
-              ? 'bg-pulse-50 text-pulse-700 dark:bg-pulse-900/30 dark:text-pulse-300'
+              ? 'bg-pulse-50 text-pulse-900 dark:bg-pulse-900/30 dark:text-pulse-300'
               : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'
           )}
         >

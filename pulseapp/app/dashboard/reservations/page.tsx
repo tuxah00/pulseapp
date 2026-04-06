@@ -278,7 +278,7 @@ export default function ReservationsPage() {
           </div>
           <button
             onClick={openNewModal}
-            className="flex items-center gap-2 rounded-lg bg-pulse-600 px-4 py-2 text-sm font-medium text-white hover:bg-pulse-700 transition-colors"
+            className="flex items-center gap-2 rounded-lg bg-pulse-800 px-4 py-2 text-sm font-medium text-white hover:bg-pulse-800 transition-colors"
           >
             <Plus className="h-4 w-4" />
             Yeni Rezervasyon
@@ -297,7 +297,7 @@ export default function ReservationsPage() {
         <div className="flex-1 text-center">
           <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{formatDateTR(selectedDate)}</span>
           {isToday && (
-            <span className="ml-2 inline-flex items-center rounded-full bg-pulse-100 px-2 py-0.5 text-xs font-medium text-pulse-700 dark:bg-pulse-900/30 dark:text-pulse-300">
+            <span className="ml-2 inline-flex items-center rounded-full bg-pulse-100 px-2 py-0.5 text-xs font-medium text-pulse-900 dark:bg-pulse-900/30 dark:text-pulse-300">
               Bugün
             </span>
           )}
@@ -342,7 +342,7 @@ export default function ReservationsPage() {
       {loading ? (
         <div className="rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 overflow-hidden">
           <div className="flex items-center justify-center py-16">
-            <Loader2 className="h-6 w-6 animate-spin text-pulse-500" />
+            <Loader2 className="h-6 w-6 animate-spin text-pulse-900" />
           </div>
         </div>
       ) : reservations.length === 0 ? (
@@ -502,7 +502,7 @@ export default function ReservationsPage() {
                     value={formCustomerName}
                     onChange={e => setFormCustomerName(e.target.value)}
                     placeholder="Ad Soyad"
-                    className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:border-pulse-500 focus:outline-none focus:ring-1 focus:ring-pulse-500"
+                    className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:border-pulse-900 focus:outline-none focus:ring-1 focus:ring-pulse-900"
                   />
                 </div>
 
@@ -515,7 +515,7 @@ export default function ReservationsPage() {
                     value={formCustomerPhone}
                     onChange={e => setFormCustomerPhone(e.target.value)}
                     placeholder="05XX XXX XX XX"
-                    className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:border-pulse-500 focus:outline-none focus:ring-1 focus:ring-pulse-500"
+                    className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:border-pulse-900 focus:outline-none focus:ring-1 focus:ring-pulse-900"
                   />
                 </div>
 
@@ -527,7 +527,7 @@ export default function ReservationsPage() {
                     type="date"
                     value={formDate}
                     onChange={e => setFormDate(e.target.value)}
-                    className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-pulse-500 focus:outline-none focus:ring-1 focus:ring-pulse-500"
+                    className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-pulse-900 focus:outline-none focus:ring-1 focus:ring-pulse-900"
                   />
                 </div>
 
@@ -539,7 +539,7 @@ export default function ReservationsPage() {
                     type="time"
                     value={formTime}
                     onChange={e => setFormTime(e.target.value)}
-                    className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-pulse-500 focus:outline-none focus:ring-1 focus:ring-pulse-500"
+                    className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-pulse-900 focus:outline-none focus:ring-1 focus:ring-pulse-900"
                   />
                 </div>
 
@@ -553,7 +553,7 @@ export default function ReservationsPage() {
                     max={99}
                     value={formPartySize}
                     onChange={e => setFormPartySize(parseInt(e.target.value) || 1)}
-                    className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-pulse-500 focus:outline-none focus:ring-1 focus:ring-pulse-500"
+                    className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-pulse-900 focus:outline-none focus:ring-1 focus:ring-pulse-900"
                   />
                 </div>
 
@@ -566,7 +566,7 @@ export default function ReservationsPage() {
                     value={formTableNumber}
                     onChange={e => setFormTableNumber(e.target.value)}
                     placeholder="Örn: 5, A3"
-                    className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:border-pulse-500 focus:outline-none focus:ring-1 focus:ring-pulse-500"
+                    className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:border-pulse-900 focus:outline-none focus:ring-1 focus:ring-pulse-900"
                   />
                 </div>
 
@@ -579,7 +579,7 @@ export default function ReservationsPage() {
                     value={formNotes}
                     onChange={e => setFormNotes(e.target.value)}
                     placeholder="Özel istek, alerji vb."
-                    className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:border-pulse-500 focus:outline-none focus:ring-1 focus:ring-pulse-500 resize-none"
+                    className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:border-pulse-900 focus:outline-none focus:ring-1 focus:ring-pulse-900 resize-none"
                   />
                 </div>
               </div>
@@ -595,7 +595,7 @@ export default function ReservationsPage() {
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="flex items-center gap-2 rounded-lg bg-pulse-600 px-4 py-2 text-sm font-medium text-white hover:bg-pulse-700 disabled:opacity-60 transition-colors"
+                className="flex items-center gap-2 rounded-lg bg-pulse-800 px-4 py-2 text-sm font-medium text-white hover:bg-pulse-800 disabled:opacity-60 transition-colors"
               >
                 {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                 {editingReservation ? 'Kaydet' : 'Rezervasyon Ekle'}

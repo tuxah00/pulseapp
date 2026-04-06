@@ -227,7 +227,7 @@ export default async function DashboardPage() {
       )}
 
       {/* ── Online booking banner ── */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-pulse-600 to-indigo-600 px-5 py-4 shadow-lg shadow-pulse-500/20">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-pulse-900 to-indigo-600 px-5 py-4 shadow-lg shadow-pulse-900/20">
         <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
         <div className="relative flex items-center gap-4">
           <div className="flex-1 min-w-0">
@@ -268,7 +268,7 @@ export default async function DashboardPage() {
                   </span>
                 )}
               </div>
-              <a href="/dashboard/notifications" className="text-xs font-medium text-pulse-600 dark:text-pulse-400 hover:underline">
+              <a href="/dashboard/notifications" className="text-xs font-medium text-pulse-900 dark:text-pulse-400 hover:underline">
                 Tümünü gör →
               </a>
             </div>
@@ -355,8 +355,8 @@ function OnboardingCard({ bookingUrl }: { bookingUrl: string }) {
   const steps = [
     {
       icon: <Scissors className="h-5 w-5" />,
-      iconBg: 'bg-pulse-500/10',
-      iconColor: 'text-pulse-600 dark:text-pulse-400',
+      iconBg: 'bg-pulse-900/10',
+      iconColor: 'text-pulse-900 dark:text-pulse-400',
       title: 'Hizmetlerini Ekle',
       desc: 'Sunduğun hizmetleri ve fiyatları tanımla',
       href: '/dashboard/hizmetler',
@@ -410,7 +410,7 @@ function OnboardingCard({ bookingUrl }: { bookingUrl: string }) {
               <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{step.title}</p>
               <p className="text-xs text-gray-400 dark:text-gray-500 truncate mt-0.5">{step.desc}</p>
             </div>
-            <ArrowRight className="h-4 w-4 text-gray-300 dark:text-gray-600 flex-shrink-0 group-hover:text-pulse-500 transition-colors" />
+            <ArrowRight className="h-4 w-4 text-gray-300 dark:text-gray-600 flex-shrink-0 group-hover:text-pulse-900 transition-colors" />
           </a>
         ))}
       </div>

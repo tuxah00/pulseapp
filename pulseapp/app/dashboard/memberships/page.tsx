@@ -303,7 +303,7 @@ export default function MembershipsPage() {
   if (loading && !memberships.length) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-pulse-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-pulse-900" />
       </div>
     )
   }
@@ -330,7 +330,7 @@ export default function MembershipsPage() {
                     className={cn(
                       'w-full text-left px-3 py-2 rounded-lg text-sm transition-colors',
                       statusFilter === tab.key
-                        ? 'bg-pulse-50 text-pulse-600 dark:bg-pulse-900/40 dark:text-pulse-300 font-medium'
+                        ? 'bg-pulse-50 text-pulse-900 dark:bg-pulse-900/40 dark:text-pulse-300 font-medium'
                         : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
                     )}
                   >
