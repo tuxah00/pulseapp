@@ -46,10 +46,15 @@ import {
 import type { SectorType, PlanType, StaffPermissions } from '@/types'
 import { getSidebarSections } from '@/lib/config/sector-modules'
 
-// Custom Turkish Lira icon (₺) — Lucide'da bulunmadığı için özel SVG
+// Custom Turkish Lira icon (₺) — Lucide'da bulunmadığı için özel SVG (path tabanlı)
 const TurkishLiraIcon = ({ className, ...props }: React.SVGProps<SVGSVGElement>) => (
-  <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" className={className} aria-hidden="true" {...props}>
-    <text x="50%" y="50%" dominantBaseline="central" textAnchor="middle" fontSize="14" fontWeight="700" fontFamily="system-ui,-apple-system,sans-serif">₺</text>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true" {...props}>
+    {/* Dikey çizgi + alt kıvrım */}
+    <line x1="10" y1="3" x2="10" y2="18" />
+    <path d="M10 18 Q10 21 7 21" />
+    {/* İki yatay çizgi */}
+    <line x1="10" y1="9" x2="17" y2="9" />
+    <line x1="10" y1="14" x2="17" y2="14" />
   </svg>
 )
 
