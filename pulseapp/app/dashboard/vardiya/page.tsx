@@ -734,7 +734,7 @@ export default function VardiyePage() {
 
       {/* Reset Confirmation Modal */}
       {resetConfirm && (
-        <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
+        <div className="modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40">
           <div className="modal-content bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
             <h3 className="font-semibold text-gray-900 dark:text-gray-100">Tabloyu Sıfırla</h3>
             <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -752,7 +752,7 @@ export default function VardiyePage() {
 
       {/* Modal */}
       {modal && (
-        <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
+        <div className="modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40">
           <div className="modal-content bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="font-semibold text-gray-900 dark:text-gray-100">

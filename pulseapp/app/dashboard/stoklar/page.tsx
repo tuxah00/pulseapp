@@ -791,7 +791,7 @@ export default function StoklarPage() {
 
       {/* Ürün Ekle / Düzenleme Modal */}
       {showModal && (
-        <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
           <div className="modal-content card w-full max-w-md max-h-[90vh] overflow-y-auto dark:bg-gray-900">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -901,7 +901,7 @@ export default function StoklarPage() {
 
       {/* Tedarikçi Ekle / Düzenle Modal */}
       {showSupplierModal && (
-        <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
           <div className="modal-content card w-full max-w-md">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">

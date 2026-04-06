@@ -324,7 +324,7 @@ export default function OrdersPage() {
 
       {/* New Order Modal */}
       {showModal && (
-        <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
+        <div className="modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40">
           <div className="modal-content bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Yeni Sipariş</h3>

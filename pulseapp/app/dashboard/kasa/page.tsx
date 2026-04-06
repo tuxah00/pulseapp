@@ -739,8 +739,8 @@ export default function KasaPage() {
       {/* ── Kasa Oturumu Modal ── */}
       {showSessionModal && (
         <>
-          <div className="fixed inset-0 z-50 bg-black/30 dark:bg-black/50" onClick={() => setShowSessionModal(false)} />
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[60] bg-black/30 dark:bg-black/50" onClick={() => setShowSessionModal(false)} />
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
             <div className="modal-content bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-md p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
                 {!session ? 'Kasayı Aç' : 'Kasayı Kapat'}

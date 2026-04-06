@@ -360,7 +360,7 @@ export default function ClassesPage() {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 modal-overlay">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4 modal-overlay">
           <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-md p-6 modal-content">
             <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
               {editingClass ? 'Sınıfı Düzenle' : 'Yeni Sınıf Ekle'}

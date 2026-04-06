@@ -471,7 +471,7 @@ export default function ReservationsPage() {
 
       {/* Modal */}
       {showModal && (
-        <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+        <div className="modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50">
           <div className="modal-content w-full max-w-md rounded-2xl bg-white dark:bg-gray-900 shadow-2xl">
             <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-6 py-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">

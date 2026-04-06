@@ -275,10 +275,11 @@ function getFileTypeIcon(url: string, fileType?: string) {
 
 // ─── ImageLightbox ────────────────────────────────────────────────────────────
 
-function ImageLightbox({ images, initialIndex, onClose }: {
+function ImageLightbox({ images, initialIndex, onClose, metadata }: {
   images: string[]
   initialIndex: number
   onClose: () => void
+  metadata?: FileMetadataItem[]
 }) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex)
 
@@ -342,6 +343,14 @@ function ImageLightbox({ images, initialIndex, onClose }: {
         </button>
       )}
 
+      {/* Description */}
+      {metadata?.[currentIndex]?.description && (
+        <div className="absolute bottom-16 left-1/2 -translate-x-1/2 max-w-lg px-4 py-2 bg-black/70 backdrop-blur-sm rounded-xl text-white text-sm text-center"
+             onClick={e => e.stopPropagation()}>
+          {metadata[currentIndex].description}
+        </div>
+      )}
+
       {/* Counter */}
       {images.length > 1 && (
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-black/60 text-white text-sm px-4 py-1.5 rounded-full">
@@ -382,7 +391,7 @@ function RecordsPageInner() {
   const [uploadFiles, setUploadFiles] = useState<File[]>([])
   const [fileDescriptions, setFileDescriptions] = useState<string[]>([])
   const [uploading, setUploading] = useState(false)
-  const [lightbox, setLightbox] = useState<{ images: string[]; index: number } | null>(null)
+  const [lightbox, setLightbox] = useState<{ images: string[]; index: number; metadata?: FileMetadataItem[] } | null>(null)
   const [fileDescEditor, setFileDescEditor] = useState<{ index: number; value: string } | null>(null)
 
   // Dynamic form state: one string per field key
@@ -913,7 +922,12 @@ function RecordsPageInner() {
       {selectedRecord && (() => {
         const fileUrls: string[] = selectedRecord.data.file_urls || []
         const fileMetadata: FileMetadataItem[] = selectedRecord.data.file_metadata || []
-        const imageUrls = fileUrls.filter(isImageUrl)
+        const imageIndices: number[] = []
+        const imageUrls = fileUrls.filter((url: string, idx: number) => {
+          if (isImageUrl(url)) { imageIndices.push(idx); return true }
+          return false
+        })
+        const imageMetadata = imageIndices.map(idx => fileMetadata[idx] as FileMetadataItem | undefined).filter(Boolean) as FileMetadataItem[]
         const tags = selectedRecord.data.tags ? String(selectedRecord.data.tags).split(',').map((t: string) => t.trim()).filter(Boolean) : []
 
         return (
@@ -1047,7 +1061,7 @@ function RecordsPageInner() {
                                   <button
                                     onClick={() => {
                                       const imageIdx = imageUrls.indexOf(url)
-                                      setLightbox({ images: imageUrls, index: imageIdx >= 0 ? imageIdx : 0 })
+                                      setLightbox({ images: imageUrls, index: imageIdx >= 0 ? imageIdx : 0, metadata: imageMetadata })
                                     }}
                                     className="block w-full aspect-square overflow-hidden hover:opacity-80 transition-opacity relative"
                                   >
@@ -1153,6 +1167,7 @@ function RecordsPageInner() {
           images={lightbox.images}
           initialIndex={lightbox.index}
           onClose={() => setLightbox(null)}
+          metadata={lightbox.metadata}
         />
       )}
 
