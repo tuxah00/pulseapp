@@ -20,6 +20,7 @@ import { exportToCSV } from '@/lib/utils/export'
 import { CustomSelect } from '@/components/ui/custom-select'
 
 import { getCustomerLabel, getCustomerLabelSingular } from '@/lib/config/sector-modules'
+import ToothChart from '@/components/dashboard/tooth-chart'
 
 function isBirthdayToday(birthday: string | null): boolean {
   if (!birthday) return false
@@ -69,7 +70,7 @@ export default function CustomersPage() {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
 
   // Timeline state
-  const [panelTab, setPanelTab] = useState<'info' | 'history'>('info')
+  const [panelTab, setPanelTab] = useState<'info' | 'history' | 'teeth'>('info')
   const [timeline, setTimeline] = useState<any[]>([])
   const [timelineLoading, setTimelineLoading] = useState(false)
 
@@ -247,7 +248,8 @@ export default function CustomersPage() {
     }
   }, [panelTab, selectedCustomer?.id])
 
-  // Müşteri değiştiğinde tab'ı sıfırla
+  // Müşteri değiştiğinde tab'ı sıfırla (dental_clinic'te teeth tab'ı kalabilir)
+
   useEffect(() => {
     setPanelTab('info')
     setTimeline([])
@@ -560,6 +562,19 @@ export default function CustomersPage() {
               >
                 Geçmiş
               </button>
+              {sector === 'dental_clinic' && (
+                <button
+                  onClick={() => setPanelTab('teeth')}
+                  className={cn(
+                    'flex-1 py-2.5 text-sm font-medium text-center transition-colors',
+                    panelTab === 'teeth'
+                      ? 'text-pulse-900 border-b-2 border-pulse-900'
+                      : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                  )}
+                >
+                  Diş Haritası
+                </button>
+              )}
             </div>
 
             <div className="flex-1 overflow-y-auto p-5 space-y-5">
@@ -626,6 +641,15 @@ export default function CustomersPage() {
                     </button>
                   </div>
                 </>
+              ) : panelTab === 'teeth' && sector === 'dental_clinic' ? (
+                /* ── Diş Haritası ── */
+                businessId && selectedCustomer ? (
+                  <ToothChart
+                    businessId={businessId}
+                    customerId={selectedCustomer.id}
+                    staffId={staffId ?? null}
+                  />
+                ) : null
               ) : (
                 /* ── Geçmiş / Zaman Çizelgesi ── */
                 timelineLoading ? (

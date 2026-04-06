@@ -372,10 +372,12 @@ Tüm analytics endpoint'leri `?businessId=&from=&to=` parametresi alır:
 
 ## Gerçek Zamanlı Bildirim (Toast)
 - **Bileşen:** `components/ui/toast.tsx` — sağ alt köşe toast stack
-- **Tetikleme:** `top-bar.tsx` Supabase Realtime INSERT event → `window.dispatchEvent(new CustomEvent('pulse-toast', { detail }))`
+- **Tetikleme:** `window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type, title, body } }))`
 - **Container:** `app/dashboard/layout.tsx` içinde `<ToastContainer />` render
 - **Animasyon:** `globals.css` → `@keyframes toast-slide-in`, `.toast-enter` class
 - 5 saniye otomatik kapanma, max 3 toast, bildirim tipine göre renk/ikon
+- **Desteklenen type'lar:** `appointment | review | payment | customer | system | stock_alert | error`
+- **error tipi:** Kırmızı arka plan, X ikonu — `alert()` yerine hata bildirimi için kullan
 
 ## Tekrarlayan Randevular
 - `appointments` tablosunda `recurrence_group_id` (uuid) ve `recurrence_pattern` (jsonb) alanları
@@ -389,14 +391,17 @@ Tüm analytics endpoint'leri `?businessId=&from=&to=` parametresi alır:
 - Geçmiş: appointments + messages + reviews birleştirilip kronolojik sıra
 - Lazy loading: sadece tab açıldığında fetch
 
-## Haftalık Takvim Görünümü
-- `appointments/page.tsx` → `viewMode === 'week'`
-- `useViewMode` hook: `'list' | 'box' | 'week'` destekler
+## Haftalık & Aylık Takvim Görünümü
+- `appointments/page.tsx` → `viewMode === 'week'` veya `viewMode === 'month'`
+- `useViewMode` hook: `'list' | 'box' | 'week' | 'month'` destekler
 - CSS Grid: 08:00-21:00 saat dilimleri × 7 gün (Pazartesi-Pazar)
 - Personel renk kodu ile randevu blokları
 - Bugün sütunu vurgulanır + kırmızı saat çizgisi (topPad=12px ile 08:00 satırından boşluk)
 - **Çakışma tespiti:** `computeOverlapLayout()` fonksiyonu → aynı saatte birden fazla randevu varsa yan yana kolon olarak gösterilir (greedy column assignment algoritması)
 - **Saat dilimi popup:** Randevusu olan saate tıklanınca floating popup açılır → o saatteki tüm randevuları listeler; `slotPopup` state ile yönetilir
+- **Aylık görünüm:** 6×7 grid, `getMonthGridDays()` ile hesaplanır; gün tıklanınca liste view'a geçer; 3'ten fazla randevu varsa "+N daha" gösterilir
+- **Drag-Drop:** Hem haftalık hem aylık view'da HTML5 native drag-drop ile randevu taşıma; `PATCH /api/appointments/[id]` endpoint çağrılır; çakışma varsa `pulse-toast` error toast gösterilir
+- **PATCH /api/appointments/[id]:** `appointment_date`, `start_time`, `end_time` günceller; personel çakışması kontrol edilir (409 → toast)
 
 ## Box Görünüm Kartları — Standart Bileşen
 - **Paylaşımlı bileşen:** `components/ui/compact-box-card.tsx` → `CompactBoxCard`
