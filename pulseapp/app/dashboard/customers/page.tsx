@@ -18,7 +18,7 @@ import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import { ToolbarPopover, SortPopoverContent } from '@/components/ui/toolbar-popover'
 import { exportToCSV } from '@/lib/utils/export'
 
-import { getCustomerLabel } from '@/lib/config/sector-modules'
+import { getCustomerLabel, getCustomerLabelSingular } from '@/lib/config/sector-modules'
 
 function isBirthdayToday(birthday: string | null): boolean {
   if (!birthday) return false
@@ -36,6 +36,7 @@ export default function CustomersPage() {
   const { businessId, staffId, staffName, loading: ctxLoading, sector } = useBusinessContext()
   const { confirm } = useConfirm()
   const customerLabel = sector ? getCustomerLabel(sector) : 'Müşteriler'
+  const singularLabel = getCustomerLabelSingular(sector ?? undefined)
   const [customers, setCustomers] = useState<Customer[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -467,8 +468,8 @@ export default function CustomersPage() {
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 dark:bg-gray-800 mb-4">
             <User className="h-7 w-7 text-gray-300 dark:text-gray-600" />
           </div>
-          <p className="font-medium text-gray-500 dark:text-gray-400 mb-4">{search || dateFrom || dateTo || minVisits ? 'Filtreye uygun müşteri bulunamadı' : 'Henüz müşteri eklenmemiş'}</p>
-          {!search && !dateFrom && !dateTo && !minVisits && <button onClick={openNewModal} className="btn-primary"><Plus className="mr-2 h-4 w-4" />İlk Müşteriyi Ekle</button>}
+          <p className="font-medium text-gray-500 dark:text-gray-400 mb-4">{search || dateFrom || dateTo || minVisits ? 'Filtreye uygun müşteri bulunamadı' : `Henüz ${singularLabel.toLowerCase()} eklenmemiş`}</p>
+          {!search && !dateFrom && !dateTo && !minVisits && <button onClick={openNewModal} className="btn-primary"><Plus className="mr-2 h-4 w-4" />{`İlk ${singularLabel} Ekle`}</button>}
         </div>
       ) : viewMode === 'list' ? (
         <AnimatedList className="space-y-2">
@@ -529,7 +530,7 @@ export default function CustomersPage() {
             onAnimationEnd={() => { if (panelClosing) { setSelectedCustomer(null); setPanelClosing(false) } }}
           >
             <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-5 py-4">
-              <h3 className="font-semibold text-gray-900 dark:text-gray-100">Müşteri Detayı</h3>
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100">{`${singularLabel} Detayı`}</h3>
               <button onClick={closePanelAnimated} className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600">
                 <X className="h-4 w-4" />
               </button>
@@ -669,7 +670,7 @@ export default function CustomersPage() {
         <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="modal-content card w-full max-w-md dark:bg-gray-900">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-              {editingCustomer ? 'Müşteriyi Düzenle' : 'Yeni Müşteri Ekle'}
+              {editingCustomer ? `${singularLabel} Düzenle` : `Yeni ${singularLabel} Ekle`}
             </h2>
             <form onSubmit={handleSave} className="space-y-4">
               <div><label htmlFor="custName" className="label">Ad Soyad</label><input id="custName" type="text" value={name} onChange={(e) => setName(e.target.value)} className="input" placeholder="Ayşe Yılmaz" required autoFocus /></div>

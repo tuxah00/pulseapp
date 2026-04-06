@@ -158,6 +158,22 @@ export function getCustomerLabel(sector: SectorType): string {
   return CUSTOMER_LABELS[sector] ?? 'Müşteriler'
 }
 
+const CUSTOMER_LABELS_SINGULAR: Record<string, string> = {
+  dental_clinic: 'Hasta',
+  medical_aesthetic: 'Hasta',
+  physiotherapy: 'Hasta',
+  psychologist: 'Danışan',
+  veterinary: 'Hasta',
+  lawyer: 'Müvekkil',
+  fitness: 'Üye',
+  yoga_pilates: 'Üye',
+  tutoring: 'Öğrenci',
+}
+
+export function getCustomerLabelSingular(sector?: string): string {
+  return CUSTOMER_LABELS_SINGULAR[sector || ''] || 'Müşteri'
+}
+
 export function getSidebarSections(sector: SectorType, _plan: PlanType): SidebarSection[] {
   const sectorItems = SECTOR_ITEMS[sector] ?? []
 

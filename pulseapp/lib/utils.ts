@@ -116,6 +116,5 @@ export function getInitials(name?: string | null): string {
 }
 
 export function getAvatarColor(name?: string | null): string {
-  if (!name) return AVATAR_COLORS[0]
-  return AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length]
+  return 'bg-pulse-500'
 }
