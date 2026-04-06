@@ -49,7 +49,7 @@ export default function AnalyticsPage() {
   const { confirm } = useConfirm()
   const [loading, setLoading] = useState(true)
   const [period, setPeriod] = useState<'week' | 'month' | 'year'>('month')
-  const [activeTab, setActiveTab] = useState<'overview' | 'staff' | 'customers' | 'sources' | 'expenses'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'staff' | 'customers' | 'sources' | 'services' | 'expenses'>('overview')
 
   const [appointments, setAppointments] = useState<any[]>([])
   const [prevAppointments, setPrevAppointments] = useState<any[]>([])
@@ -384,7 +384,13 @@ export default function AnalyticsPage() {
     return acc
   }, {} as Record<string, { name: string; count: number; revenue: number }>)
   const serviceRevenueList = Object.values(serviceRevenueMap).sort((a, b) => b.revenue - a.revenue)
-  const maxServiceRevenue = serviceRevenueList.length > 0 ? serviceRevenueList[0].revenue : 0
+
+  const periodMultiplier = period === 'week' ? 30 / 7 : period === 'month' ? 1 : 1 / 12
+  const serviceRevenueWithEstimates = serviceRevenueList.map(svc => ({
+    ...svc,
+    monthlyEstimate: Math.round(svc.revenue * periodMultiplier),
+    pctOfTotal: totalRevenue > 0 ? Math.round((svc.revenue / totalRevenue) * 100) : 0,
+  }))
 
   const periodLabel = period === 'week' ? 'Son 7 Gün' : period === 'month' ? 'Son 30 Gün' : 'Son 1 Yıl'
 
@@ -425,6 +431,7 @@ export default function AnalyticsPage() {
           ['staff', 'Personel', <Users key="s" className="h-3.5 w-3.5" />],
           ['customers', 'Müşteriler', <UserCheck key="c" className="h-3.5 w-3.5" />],
           ['sources', 'Kaynak', <PieChart key="sr" className="h-3.5 w-3.5" />],
+          ['services', 'Hizmet', <Layers key="sv" className="h-3.5 w-3.5" />],
           ['expenses', 'Gelir-Gider', <Wallet key="e" className="h-3.5 w-3.5" />],
         ] as const).map(([key, label, icon]) => (
           <button key={key} onClick={() => setActiveTab(key as any)}
@@ -441,6 +448,17 @@ export default function AnalyticsPage() {
       {/* Genel Bakış Sekmesi */}
       {activeTab === 'overview' && (
         <div className="space-y-6">
+          {/* İkinci KPI satırı */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <KPICard icon={<TrendingUp className="h-5 w-5" />} label="Tahmini Aylık Gelir"
+              value={formatCurrency(Math.round(totalRevenue * periodMultiplier))} color="green" currency />
+            <KPICard icon={<Star className="h-5 w-5" />} label="Müşteri Memnuniyeti"
+              value={avgRating !== '—' ? `${avgRating} / 5` : '—'} color="amber" />
+            <KPICard icon={<Clock className="h-5 w-5" />} label="Tamamlanma Oranı"
+              value={`%${completionRate}`} color="blue" />
+            <KPICard icon={<AlertTriangle className="h-5 w-5" />} label="Risk Müşteriler"
+              value={riskCustomers.length} color="amber" />
+          </div>
           {/* Gelir Trendi */}
           <div className="card p-4">
             <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
@@ -493,36 +511,55 @@ export default function AnalyticsPage() {
 
       {/* Personel Sekmesi */}
       {activeTab === 'staff' && (
-        <div className="card p-0 overflow-hidden">
+        <div>
           {staffStats.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-12">Bu dönem için personel randevu verisi yok</p>
+            <div className="card flex flex-col items-center justify-center py-16 text-center">
+              <Users className="mb-3 h-12 w-12 text-gray-200 dark:text-gray-600" />
+              <p className="text-sm text-gray-500 dark:text-gray-400">Bu dönem için personel randevu verisi yok</p>
+            </div>
           ) : (
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 dark:bg-gray-700/50">
-                <tr>
-                  <th className="px-4 py-3 text-left font-medium text-gray-500">Personel</th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-500">Toplam</th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-500">Tamamlandı</th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-500">Gelmeme %</th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-500">Gelir</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                {staffStats.map(s => (
-                  <tr key={s.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                    <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{s.name}</td>
-                    <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-300">{s.total}</td>
-                    <td className="px-4 py-3 text-right text-green-600 font-medium">{s.completed}</td>
-                    <td className="px-4 py-3 text-right">
-                      <span className={cn('font-medium', s.noShowRate <= 5 ? 'text-green-600' : s.noShowRate <= 15 ? 'text-amber-600' : 'text-red-600')}>
-                        %{s.noShowRate}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right text-gray-900 dark:text-gray-100 font-medium text-price">{formatCurrency(s.revenue)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {staffStats.map(s => {
+                const cRate = s.total > 0 ? Math.round((s.completed / s.total) * 100) : 0
+                const monthlyEst = Math.round(s.revenue * periodMultiplier)
+                const initials = s.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
+                return (
+                  <div key={s.id} className="card p-5">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-sm font-bold flex-shrink-0">
+                        {initials}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{s.name}</p>
+                        <p className="text-xs text-gray-400">Personel</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2.5 mb-3">
+                      <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-2.5">
+                        <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-0.5">Toplam Randevu</p>
+                        <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{s.total}</p>
+                      </div>
+                      <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-2.5">
+                        <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-0.5">Tamamlama</p>
+                        <p className={cn('text-xl font-bold', cRate >= 80 ? 'text-green-600' : cRate >= 60 ? 'text-amber-600' : 'text-red-600')}>%{cRate}</p>
+                      </div>
+                      <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-2.5">
+                        <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-0.5">Dönem Geliri</p>
+                        <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{formatCurrency(s.revenue)}</p>
+                      </div>
+                      <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-2.5">
+                        <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-0.5">Tahmini Aylık</p>
+                        <p className="text-sm font-bold text-green-600">~{formatCurrency(monthlyEst)}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between text-xs pt-2 border-t border-gray-100 dark:border-gray-700">
+                      <span className="text-gray-500 dark:text-gray-400">Gelmeme Oranı</span>
+                      <span className={cn('font-semibold', s.noShowRate <= 5 ? 'text-green-600' : s.noShowRate <= 15 ? 'text-amber-600' : 'text-red-600')}>%{s.noShowRate}</span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           )}
         </div>
       )}
@@ -621,58 +658,6 @@ export default function AnalyticsPage() {
               })()}
             </div>
           </div>
-
-          {/* Hizmet Bazlı Gelir Kırılımı */}
-          {serviceRevenueList.length > 0 && (
-            <div className="card p-4">
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
-                <Layers className="h-4 w-4" /> Hizmet Bazlı Gelir
-              </h3>
-              <div className="space-y-3">
-                {serviceRevenueList.map((svc, idx) => {
-                  const pct = maxServiceRevenue > 0 ? (svc.revenue / maxServiceRevenue) * 100 : 0
-                  const avg = svc.count > 0 ? svc.revenue / svc.count : 0
-                  const isTop = idx === 0
-                  return (
-                    <div key={idx} className={cn('rounded-lg p-3 transition-colors', isTop ? 'bg-amber-50/60 dark:bg-amber-900/15 ring-1 ring-amber-200/50 dark:ring-amber-700/30' : 'bg-gray-50/50 dark:bg-gray-800/30')}>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <div className="flex items-center gap-2">
-                          {isTop && <span className="text-amber-500 text-xs font-semibold">★</span>}
-                          <span className={cn('text-sm font-medium', isTop ? 'text-amber-800 dark:text-amber-300' : 'text-gray-900 dark:text-gray-100')}>
-                            {svc.name}
-                          </span>
-                        </div>
-                        <span className={cn('text-sm font-bold', isTop ? 'text-amber-700 dark:text-amber-400' : 'text-gray-900 dark:text-gray-100')}>
-                          {formatCurrency(svc.revenue)}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="flex-1 h-2 bg-pulse-900/20 dark:bg-pulse-900/10 rounded-full overflow-hidden">
-                          <div
-                            className={cn('h-full rounded-full transition-all', isTop ? 'bg-amber-500 dark:bg-amber-400' : 'bg-pulse-900')}
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
-                        <span>{svc.count} randevu</span>
-                        <span>Ort. {formatCurrency(avg)}</span>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-              {/* Toplam satırı */}
-              <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
-                <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                  Toplam ({serviceRevenueList.reduce((s, r) => s + r.count, 0)} randevu)
-                </span>
-                <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                  {formatCurrency(serviceRevenueList.reduce((s, r) => s + r.revenue, 0))}
-                </span>
-              </div>
-            </div>
-          )}
 
           {/* Gider Listesi Başlığı */}
           <div className="flex items-center justify-between">
@@ -959,6 +944,78 @@ export default function AnalyticsPage() {
                 </table>
               </div>
             </div>
+          )}
+        </div>
+      )}
+
+      {/* Hizmet Sekmesi */}
+      {activeTab === 'services' && (
+        <div className="space-y-5">
+          {serviceRevenueWithEstimates.length === 0 ? (
+            <div className="card flex flex-col items-center justify-center py-16 text-center">
+              <Layers className="mb-3 h-12 w-12 text-gray-200 dark:text-gray-600" />
+              <p className="text-sm text-gray-500 dark:text-gray-400">Bu dönem için hizmet verisi bulunmuyor</p>
+            </div>
+          ) : (
+            <>
+              {/* Özet kartları */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="card p-4">
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-1">En Çok Kazandıran</p>
+                  <p className="text-sm font-semibold text-amber-600 dark:text-amber-400 truncate">{serviceRevenueWithEstimates[0]?.name}</p>
+                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{formatCurrency(serviceRevenueWithEstimates[0]?.revenue || 0)}</p>
+                </div>
+                <div className="card p-4">
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-1">Ort. Hizmet Başına</p>
+                  <p className="text-lg font-bold text-purple-600">{formatCurrency(serviceRevenueWithEstimates.length > 0 ? Math.round(serviceRevenueWithEstimates.reduce((s, sv) => s + sv.revenue, 0) / serviceRevenueWithEstimates.length) : 0)}</p>
+                </div>
+                <div className="card p-4">
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-1">Aktif Hizmet Sayısı</p>
+                  <p className="text-lg font-bold text-blue-600">{serviceRevenueWithEstimates.length}</p>
+                </div>
+                <div className="card p-4">
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-1">Tahmini Aylık Gelir</p>
+                  <p className="text-lg font-bold text-green-600">{formatCurrency(Math.round(serviceRevenueWithEstimates.reduce((s, sv) => s + sv.monthlyEstimate, 0)))}</p>
+                </div>
+              </div>
+
+              {/* Hizmet listesi */}
+              <div className="space-y-3">
+                {serviceRevenueWithEstimates.map((svc, idx) => {
+                  const isTop = idx === 0
+                  const avgPerApt = svc.count > 0 ? Math.round(svc.revenue / svc.count) : 0
+                  return (
+                    <div key={idx} className={cn(
+                      'card p-4',
+                      isTop && 'ring-1 ring-amber-200/60 dark:ring-amber-700/30 bg-amber-50/40 dark:bg-amber-900/10'
+                    )}>
+                      <div className="flex items-start justify-between gap-3 mb-2.5">
+                        <div className="flex items-center gap-2 min-w-0">
+                          {isTop && <Star className="h-4 w-4 text-amber-500 flex-shrink-0" />}
+                          <span className={cn('text-sm font-semibold truncate', isTop ? 'text-amber-800 dark:text-amber-300' : 'text-gray-900 dark:text-gray-100')}>{svc.name}</span>
+                        </div>
+                        <span className={cn('text-base font-bold flex-shrink-0', isTop ? 'text-amber-700 dark:text-amber-400' : 'text-gray-900 dark:text-gray-100')}>{formatCurrency(svc.revenue)}</span>
+                      </div>
+                      <div className="h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden mb-2.5">
+                        <div className={cn('h-full rounded-full transition-all', isTop ? 'bg-amber-500' : 'bg-pulse-900 dark:bg-pulse-400')} style={{ width: `${svc.pctOfTotal}%` }} />
+                      </div>
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
+                        <span>{svc.count} randevu</span>
+                        <span>Ort. {formatCurrency(avgPerApt)}</span>
+                        <span className="text-green-600 dark:text-green-400 font-medium">~{formatCurrency(svc.monthlyEstimate)}/ay</span>
+                        <span>Toplam payı %{svc.pctOfTotal}</span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Toplam satırı */}
+              <div className="flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl text-sm">
+                <span className="font-semibold text-gray-700 dark:text-gray-300">Toplam ({serviceRevenueWithEstimates.reduce((s, r) => s + r.count, 0)} randevu)</span>
+                <span className="font-bold text-gray-900 dark:text-gray-100">{formatCurrency(serviceRevenueWithEstimates.reduce((s, r) => s + r.revenue, 0))}</span>
+              </div>
+            </>
           )}
         </div>
       )}

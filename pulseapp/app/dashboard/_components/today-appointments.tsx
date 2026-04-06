@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Calendar, Clock, CheckCircle2, XCircle, AlertCircle, CircleDot, ArrowRight } from 'lucide-react'
-import { formatTime, getInitials, getAvatarColor } from '@/lib/utils'
+import { formatTime } from '@/lib/utils'
 import { STATUS_LABELS } from '@/types'
 import { cn } from '@/lib/utils'
 
@@ -115,14 +115,6 @@ export default function TodayAppointments({ appointments }: TodayAppointmentsPro
                   !active && 'bg-gray-200 dark:bg-gray-700'
                 )} />
 
-                {/* Avatar */}
-                <div className={cn(
-                  'flex-shrink-0 flex h-9 w-9 items-center justify-center rounded-xl',
-                  'text-white text-xs font-bold shadow-sm',
-                  getAvatarColor(apt.customers?.name)
-                )}>
-                  {getInitials(apt.customers?.name)}
-                </div>
 
                 {/* Info */}
                 <div className="flex-1 min-w-0">

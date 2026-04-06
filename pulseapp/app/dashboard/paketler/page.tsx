@@ -496,19 +496,19 @@ export default function PaketlerPage() {
               </button>
             </div>
           ) : (
-            <AnimatedList className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <AnimatedList className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {templates.map(t => (
                 <AnimatedItem key={t.id}>
-                  <div className="card hover:shadow-md transition-shadow">
+                  <div className="card p-5 hover:shadow-md transition-shadow">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-pulse-50 dark:bg-pulse-900/30 text-pulse-900 dark:text-pulse-400 flex-shrink-0">
-                          <Package className="h-5 w-5" />
+                        <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-pulse-50 dark:bg-pulse-900/30 text-pulse-900 dark:text-pulse-400 flex-shrink-0">
+                          <Package className="h-6 w-6" />
                         </div>
                         <div className="min-w-0">
-                          <p className="font-semibold text-gray-900 dark:text-gray-100 truncate">{t.name}</p>
+                          <p className="text-base font-bold text-gray-900 dark:text-gray-100 truncate">{t.name}</p>
                           {t.service && (
-                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{t.service.name}</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{t.service.name}</p>
                           )}
                         </div>
                       </div>
@@ -525,36 +525,36 @@ export default function PaketlerPage() {
                     </div>
 
                     {t.description && (
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 line-clamp-2">{t.description}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-3 line-clamp-2">{t.description}</p>
                     )}
 
-                    <div className="mt-3 flex items-center justify-between">
-                      <div className="flex items-center gap-3 text-sm">
-                        <span className="flex items-center gap-1 text-gray-600 dark:text-gray-300">
-                          <Tag className="h-3.5 w-3.5 text-gray-400" />
+                    <div className="mt-4 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <span className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300">
+                          <Tag className="h-4 w-4 text-gray-400" />
                           {t.sessions_total} seans
                         </span>
                         {t.validity_days && (
-                          <span className="flex items-center gap-1 text-gray-500 dark:text-gray-400 text-xs">
-                            <Clock className="h-3 w-3" />
+                          <span className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
+                            <Clock className="h-3.5 w-3.5" />
                             {t.validity_days} gün
                           </span>
                         )}
                       </div>
-                      <span className="font-bold text-pulse-900 dark:text-pulse-400">{formatCurrency(t.price)}</span>
+                      <span className="text-lg font-bold text-pulse-900 dark:text-pulse-400">{formatCurrency(t.price)}</span>
                     </div>
 
                     <button
                       onClick={() => openSellModal(t.id)}
-                      className="mt-3 w-full text-xs text-center py-1.5 rounded-lg border border-pulse-200 dark:border-pulse-800 text-pulse-900 dark:text-pulse-400 hover:bg-pulse-50 dark:hover:bg-pulse-900/20 transition-colors"
+                      className="mt-4 w-full text-sm font-medium text-center py-2 rounded-lg border border-pulse-200 dark:border-pulse-800 text-pulse-900 dark:text-pulse-400 hover:bg-pulse-50 dark:hover:bg-pulse-900/20 transition-colors"
                     >
                       Bu Paketi Sat
                     </button>
                     <button
                       onClick={() => openAptModalFromTemplate(t)}
-                      className="mt-2 w-full text-xs text-center py-1.5 rounded-lg border border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors flex items-center justify-center gap-1"
+                      className="mt-2 w-full text-sm font-medium text-center py-2 rounded-lg border border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors flex items-center justify-center gap-1.5"
                     >
-                      <CalendarPlus className="h-3.5 w-3.5" /> Randevu Oluştur
+                      <CalendarPlus className="h-4 w-4" /> Randevu Oluştur
                     </button>
                   </div>
                 </AnimatedItem>

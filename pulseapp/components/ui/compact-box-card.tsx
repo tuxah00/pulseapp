@@ -29,7 +29,7 @@ interface CompactBoxCardProps {
 export default function CompactBoxCard({
   initials,
   title,
-  colorClass = 'bg-pulse-100 text-pulse-900',
+  colorClass = 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300',
   badge,
   meta,
   selected,

@@ -387,7 +387,7 @@ export default function StaffPage() {
         <div className="flex items-center gap-4">
             <div className={cn(
               'flex h-10 w-10 items-center justify-center rounded-full font-semibold text-sm flex-shrink-0',
-              member.role === 'owner' ? 'bg-amber-100 text-amber-700' : 'bg-pulse-100 text-pulse-900'
+              'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
             )}>
               {member.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
             </div>
@@ -508,7 +508,7 @@ export default function StaffPage() {
               <div className="text-center">
                 <div className={cn(
                   'mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full font-bold text-lg',
-                  selectedStaff.role === 'owner' ? 'bg-amber-100 text-amber-700' : 'bg-pulse-100 text-pulse-900'
+                  'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
                 )}>
                   {selectedStaff.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                 </div>

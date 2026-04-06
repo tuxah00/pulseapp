@@ -25,7 +25,7 @@ import {
   CalendarDays,
   Search, Filter, ArrowUpDown,
 } from 'lucide-react'
-import { formatTime, formatDate, getStatusColor, formatCurrency, cn, getInitials, getAvatarColor } from '@/lib/utils'
+import { formatTime, formatDate, getStatusColor, formatCurrency, cn } from '@/lib/utils'
 import { STATUS_LABELS, type AppointmentStatus, type Customer, type Service, type StaffMember, type WorkingHours } from '@/types'
 import { logAudit } from '@/lib/utils/audit'
 import { useConfirm } from '@/lib/hooks/use-confirm'
@@ -1023,8 +1023,6 @@ export default function AppointmentsPage() {
         <AnimatedList className="space-y-2">
           {filteredAppointments.map((apt) => {
             const timeState = getTimeState(apt)
-            const initials = getInitials(apt.customers?.name || 'İ')
-            const avatarColor = getAvatarColor(apt.customers?.name)
             return (
               <AnimatedItem
                 key={apt.id}
@@ -1039,10 +1037,6 @@ export default function AppointmentsPage() {
                 )}
               >
                 <div className="flex items-center gap-3">
-                  {/* Avatar */}
-                  <div className={cn('flex-shrink-0 flex h-10 w-10 items-center justify-center rounded-xl text-white text-sm font-bold', avatarColor)}>
-                    {initials}
-                  </div>
                   {/* Time */}
                   <div className="flex flex-col items-center w-14 flex-shrink-0">
                     <span className="text-sm font-bold text-gray-900 dark:text-gray-100 tabular-nums">{formatTime(apt.start_time)}</span>
@@ -1074,8 +1068,6 @@ export default function AppointmentsPage() {
         <AnimatedList className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
           {filteredAppointments.map((apt) => {
             const timeState = getTimeState(apt)
-            const initials = getInitials(apt.customers?.name || 'İ')
-            const avatarColor = getAvatarColor(apt.customers?.name)
             return (
               <AnimatedItem
                 key={apt.id}
@@ -1098,15 +1090,10 @@ export default function AppointmentsPage() {
                     <X className="h-4 w-4" />
                   </button>
                 )}
-                {/* Avatar + time */}
-                <div className="flex items-center gap-2 mb-3">
-                  <div className={cn('flex h-9 w-9 items-center justify-center rounded-xl text-white text-xs font-bold flex-shrink-0', avatarColor)}>
-                    {initials}
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-gray-900 dark:text-gray-100 tabular-nums">{formatTime(apt.start_time)}</p>
-                    <p className="text-[10px] text-gray-400 tabular-nums">{formatTime(apt.end_time)}</p>
-                  </div>
+                {/* Time */}
+                <div className="mb-3">
+                  <p className="text-base font-bold text-gray-900 dark:text-gray-100 tabular-nums">{formatTime(apt.start_time)}</p>
+                  <p className="text-xs text-gray-400 tabular-nums">{formatTime(apt.end_time)}</p>
                 </div>
                 <div className="flex items-center gap-1 mb-2 flex-wrap">
                   <span className={`badge text-xs ${getStatusColor(apt.status)}`}>{STATUS_LABELS[apt.status as keyof typeof STATUS_LABELS]}</span>
