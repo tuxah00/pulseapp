@@ -319,12 +319,12 @@ export default function MessagesPage() {
   }
 
   return (
-    <div className="fixed inset-0 lg:left-64 top-14 z-30 bg-white dark:bg-gray-950">
+    <div className="fixed inset-0 lg:left-64 top-14 z-30 bg-white dark:!bg-gray-950">
       <div className="flex h-full">
 
         {/* Sol Panel — Konuşma Listesi */}
         <div className={cn(
-          'flex flex-col border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 w-full lg:w-96 lg:flex-shrink-0',
+          'flex flex-col border-r border-gray-200 dark:border-gray-700 bg-white dark:!bg-gray-950 w-full lg:w-96 lg:flex-shrink-0',
           mobileShowChat ? 'hidden lg:flex' : 'flex'
         )}>
           {/* Başlık */}
@@ -380,7 +380,7 @@ export default function MessagesPage() {
           </div>
 
           {/* Konuşma Listesi */}
-          <div className="flex-1 overflow-y-auto bg-white dark:bg-gray-950">
+          <div className="flex-1 overflow-y-auto bg-white dark:!bg-gray-950">
             {loading ? (
               <div className="flex items-center justify-center py-20">
                 <Loader2 className="h-6 w-6 animate-spin text-pulse-500" />
@@ -406,7 +406,7 @@ export default function MessagesPage() {
                     key={conv.customer.id}
                     onClick={() => selectConversation(conv)}
                     className={cn(
-                      'w-full flex items-start gap-3 px-4 py-3 text-left transition-colors bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900 border-b border-gray-100 dark:border-gray-800',
+                      'w-full flex items-start gap-3 px-4 py-3 text-left transition-colors bg-white dark:!bg-gray-950 hover:bg-gray-50 dark:hover:!bg-gray-900 border-b border-gray-100 dark:border-gray-800',
                       selectedCustomer?.id === conv.customer.id && 'bg-pulse-50 hover:bg-pulse-50 dark:bg-pulse-900/20 dark:hover:bg-pulse-900/20'
                     )}
                   >
@@ -475,7 +475,7 @@ export default function MessagesPage() {
 
         {/* Sağ Panel — Chat Görünümü */}
         <div className={cn(
-          'flex-1 flex flex-col bg-gray-50 dark:bg-gray-950',
+          'flex-1 flex flex-col bg-gray-50 dark:!bg-gray-950',
           mobileShowChat ? 'flex' : 'hidden lg:flex'
         )}>
           {selectedCustomer ? (
