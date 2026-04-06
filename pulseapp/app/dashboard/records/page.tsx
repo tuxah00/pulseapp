@@ -8,7 +8,7 @@ import {
   Plus, Loader2, X, Pencil, Trash2, Search, AlertTriangle,
   ClipboardList, UserCheck, Briefcase, PawPrint, Car, BookOpen,
   ChevronRight, LayoutList, LayoutGrid, Upload, FileText, Image as ImageIcon, ArrowUpDown,
-  Calendar, User, Tag, ChevronLeft, Download, ZoomIn,
+  Calendar, User, Tag, ChevronLeft, Download, ZoomIn, Info, Clock, UserCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
@@ -49,6 +49,7 @@ interface FileMetadataItem {
   size: number
   type: string
   uploadedAt: string
+  uploadedBy?: string
   description?: string
 }
 
@@ -394,6 +395,7 @@ function RecordsPageInner() {
   const [uploading, setUploading] = useState(false)
   const [lightbox, setLightbox] = useState<{ images: string[]; index: number; metadata?: FileMetadataItem[] } | null>(null)
   const [fileDescPopup, setFileDescPopup] = useState<{ index: number; value: string; fileName: string; fileSize: string | null; editing: boolean } | null>(null)
+  const [fileInfoPopup, setFileInfoPopup] = useState<{ index: number; url: string; meta: FileMetadataItem } | null>(null)
 
   // Dynamic form state: one string per field key
   const [formData, setFormData] = useState<Record<string, string>>({})
@@ -577,6 +579,7 @@ function RecordsPageInner() {
             size: file.size,
             type: file.type,
             uploadedAt: new Date().toISOString(),
+            uploadedBy: staffName || undefined,
             description: fileDescriptions[i] || '',
           }))
           if (fileUrls.length > 0) {
@@ -631,6 +634,7 @@ function RecordsPageInner() {
             size: file.size,
             type: file.type,
             uploadedAt: new Date().toISOString(),
+            uploadedBy: staffName || undefined,
             description: fileDescriptions[i] || '',
           }))
           if (fileUrls.length > 0) {
@@ -1073,14 +1077,22 @@ function RecordsPageInner() {
                                       <ZoomIn className="h-5 w-5 text-white drop-shadow-lg" />
                                     </div>
                                   </button>
-                                  {/* Image info bar */}
-                                  <div className="px-2 py-1.5 border-t border-gray-200 dark:border-gray-600">
+                                  {/* Image info bar — click opens detail popup */}
+                                  <button
+                                    type="button"
+                                    onClick={() => meta && setFileInfoPopup({ index: i, url, meta })}
+                                    className="w-full px-2 py-1.5 border-t border-gray-200 dark:border-gray-600 text-left hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
+                                  >
                                     <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{fileName.slice(0, 25)}</p>
                                     {fileSize && <p className="text-xs text-gray-400 dark:text-gray-500">{fileSize}</p>}
-                                  </div>
+                                  </button>
                                 </>
                               ) : (
-                                <a href={url} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-center p-4 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors aspect-square">
+                                <button
+                                  type="button"
+                                  onClick={() => meta && setFileInfoPopup({ index: i, url, meta })}
+                                  className="flex flex-col items-center justify-center p-4 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors aspect-square w-full"
+                                >
                                   {getFileTypeIcon(url, meta?.type)}
                                   <span className="text-xs text-gray-600 dark:text-gray-400 truncate w-full text-center mt-2">
                                     {fileName.slice(0, 20)}
@@ -1089,30 +1101,19 @@ function RecordsPageInner() {
                                     <span className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{fileSize}</span>
                                   )}
                                   <span className="flex items-center gap-1 text-xs text-pulse-900 mt-1.5">
-                                    <Download className="h-3 w-3" /> Aç
+                                    <Info className="h-3 w-3" /> Detay
                                   </span>
-                                </a>
+                                </button>
                               )}
                               {/* Description */}
                               <div className="px-2 pb-1.5">
-                                {meta?.description ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => setFileDescPopup({ index: i, value: meta.description || '', fileName, fileSize, editing: false })}
-                                    className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-left w-full truncate mt-0.5"
-                                    title="Açıklamayı görüntülemek için tıklayın"
-                                  >
-                                    {meta.description}
-                                  </button>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    onClick={() => setFileDescPopup({ index: i, value: '', fileName, fileSize, editing: true })}
-                                    className="text-xs text-gray-300 dark:text-gray-600 hover:text-pulse-900 dark:hover:text-pulse-400 mt-0.5"
-                                  >
-                                    + Açıklama ekle
-                                  </button>
-                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => meta && setFileInfoPopup({ index: i, url, meta })}
+                                  className="text-xs text-left w-full truncate mt-0.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                                >
+                                  {meta?.description || <span className="text-gray-300 dark:text-gray-600">+ Açıklama ekle</span>}
+                                </button>
                               </div>
                             </div>
                           )
@@ -1152,6 +1153,103 @@ function RecordsPageInner() {
           metadata={lightbox.metadata}
         />
       )}
+
+      {/* ── File Info Popup ── */}
+      {fileInfoPopup && (() => {
+        const { index, url, meta } = fileInfoPopup
+        const isImg = isImageUrl(url)
+        const displayName = meta.name || decodeURIComponent(url.split('/').pop() || 'Dosya')
+        const uploadDate = meta.uploadedAt
+          ? new Date(meta.uploadedAt).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+          : null
+        return (
+          <div className="modal-overlay fixed inset-0 z-[85] flex items-center justify-center bg-black/50 p-4" onClick={() => setFileInfoPopup(null)}>
+            <div className="modal-content card w-full max-w-sm dark:bg-gray-900" onClick={e => e.stopPropagation()}>
+              {/* Header */}
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="shrink-0 text-gray-400">{getFileTypeIcon(url, meta.type)}</div>
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 break-all leading-snug">{displayName}</h3>
+                    {meta.size > 0 && (
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{formatFileSize(meta.size)}</p>
+                    )}
+                  </div>
+                </div>
+                <button onClick={() => setFileInfoPopup(null)} className="text-gray-400 hover:text-gray-600 shrink-0 ml-2"><X className="h-4 w-4" /></button>
+              </div>
+
+              {/* Meta rows */}
+              <div className="space-y-2.5 mb-4">
+                {uploadDate && (
+                  <div className="flex items-center gap-2 text-xs">
+                    <Clock className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                    <span className="text-gray-500 dark:text-gray-400 shrink-0">Yüklenme tarihi:</span>
+                    <span className="text-gray-700 dark:text-gray-200">{uploadDate}</span>
+                  </div>
+                )}
+                {meta.uploadedBy && (
+                  <div className="flex items-center gap-2 text-xs">
+                    <UserCircle className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                    <span className="text-gray-500 dark:text-gray-400 shrink-0">Yükleyen:</span>
+                    <span className="text-gray-700 dark:text-gray-200">{meta.uploadedBy}</span>
+                  </div>
+                )}
+                {meta.type && (
+                  <div className="flex items-center gap-2 text-xs">
+                    <Info className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                    <span className="text-gray-500 dark:text-gray-400 shrink-0">Dosya türü:</span>
+                    <span className="text-gray-700 dark:text-gray-200 break-all">{meta.type}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Description */}
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2.5 mb-4 min-h-[48px]">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Açıklama</p>
+                {meta.description
+                  ? <p className="text-sm text-gray-800 dark:text-gray-100">{meta.description}</p>
+                  : <p className="text-sm text-gray-400 dark:text-gray-600 italic">Henüz açıklama eklenmedi</p>
+                }
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-2">
+                {isImg ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const imgUrls = (selectedRecord?.data?.file_urls as string[] || []).filter(isImageUrl)
+                      const imageIdx = imgUrls.indexOf(url)
+                      const imgMeta = (selectedRecord?.data?.file_metadata as FileMetadataItem[] || []).filter((_, i2) => isImageUrl((selectedRecord?.data?.file_urls as string[] || [])[i2]))
+                      setLightbox({ images: imgUrls, index: imageIdx >= 0 ? imageIdx : 0, metadata: imgMeta })
+                      setFileInfoPopup(null)
+                    }}
+                    className="btn-secondary flex-1 text-sm"
+                  >
+                    <ZoomIn className="mr-1.5 h-3.5 w-3.5" />Görüntüle
+                  </button>
+                ) : (
+                  <a href={url} target="_blank" rel="noopener noreferrer" className="btn-secondary flex-1 text-sm flex items-center justify-center gap-1.5">
+                    <Download className="h-3.5 w-3.5" />Aç / İndir
+                  </a>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const fs = meta.size > 0 ? formatFileSize(meta.size) : null
+                    setFileInfoPopup(null)
+                    setFileDescPopup({ index, value: meta.description || '', fileName: displayName, fileSize: fs, editing: true })
+                  }}
+                  className="btn-primary flex-1 text-sm"
+                >
+                  <Pencil className="mr-1.5 h-3.5 w-3.5" />Düzenle
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* ── File Description Popup ── */}
       {fileDescPopup && (
