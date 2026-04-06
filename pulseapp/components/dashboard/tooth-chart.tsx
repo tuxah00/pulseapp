@@ -13,10 +13,14 @@ import {
 // FDI numaralarına göre diş düzeni
 // Üst sağ: 18-11 | Üst sol: 21-28
 // Alt sol: 31-38 | Alt sağ: 41-48
-const UPPER_RIGHT = [18, 17, 16, 15, 14, 13, 12, 11]
-const UPPER_LEFT  = [21, 22, 23, 24, 25, 26, 27, 28]
-const LOWER_LEFT  = [31, 32, 33, 34, 35, 36, 37, 38]
-const LOWER_RIGHT = [48, 47, 46, 45, 44, 43, 42, 41]
+// FDI görünümü: klinisyenin bakış açısı (hasta karşısında)
+// Üst: sol=hasta sağı (1x), sağ=hasta solu (2x)
+// Alt: sol=hasta sağı (4x), sağ=hasta solu (3x)
+// Kesici dişler her iki çenede de tam ortada buluşur
+const UPPER_RIGHT = [18, 17, 16, 15, 14, 13, 12, 11] // sol→orta
+const UPPER_LEFT  = [21, 22, 23, 24, 25, 26, 27, 28] // orta→sağ
+const LOWER_RIGHT = [48, 47, 46, 45, 44, 43, 42, 41] // sol→orta (reverse YOK)
+const LOWER_LEFT  = [31, 32, 33, 34, 35, 36, 37, 38] // orta→sağ
 
 // FDI 2. rakamına göre diş türü
 const TOOTH_TYPE_LABELS: Record<number, string> = {
@@ -214,7 +218,7 @@ export default function ToothChart({ businessId, customerId, staffId }: Props) {
 
         {/* Alt çene */}
         <div className="flex justify-center gap-0.5 mt-1">
-          {LOWER_RIGHT.reverse().map(n => <ToothCell key={n} num={n} />)}
+          {LOWER_RIGHT.map(n => <ToothCell key={n} num={n} />)}
           <div className="w-px bg-gray-300 dark:bg-gray-600 mx-1" />
           {LOWER_LEFT.map(n => <ToothCell key={n} num={n} />)}
         </div>
