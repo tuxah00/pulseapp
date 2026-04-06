@@ -12,6 +12,7 @@ import {
 import type {
   TreatmentProtocol, ProtocolSession, Customer, Service, ProtocolStatus, SessionStatus
 } from '@/types'
+import { cn } from '@/lib/utils'
 import { PROTOCOL_STATUS_LABELS, SESSION_STATUS_LABELS } from '@/types'
 import { formatCurrency } from '@/lib/utils'
 
@@ -197,15 +198,13 @@ export default function ProtocolsPage() {
             className="input pl-10 w-full" value={search} onChange={e => setSearch(e.target.value)}
           />
         </div>
-        <div className="flex gap-1">
+        <div className="flex gap-2 flex-wrap">
           {(['all', 'active', 'paused', 'completed', 'cancelled'] as const).map(s => (
             <button key={s}
               onClick={() => setStatusFilter(s)}
-              className={`px-3 py-1.5 text-xs rounded-full transition-colors ${
-                statusFilter === s
-                  ? 'bg-pulse-500 text-white'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-              }`}>
+              className={cn('badge px-3 py-1.5 cursor-pointer transition-colors', statusFilter === s
+                ? 'bg-gray-900 dark:bg-gray-700 text-white'
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600')}>
               {s === 'all' ? 'Tümü' : PROTOCOL_STATUS_LABELS[s]}
             </button>
           ))}
