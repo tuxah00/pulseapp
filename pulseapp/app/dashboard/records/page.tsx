@@ -20,6 +20,7 @@ import type { Customer } from '@/types'
 import CompactBoxCard from '@/components/ui/compact-box-card'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import { CustomSelect } from '@/components/ui/custom-select'
+import { Portal } from '@/components/ui/portal'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -938,12 +939,8 @@ function RecordsPageInner() {
         const tags = selectedRecord.data.tags ? String(selectedRecord.data.tags).split(',').map((t: string) => t.trim()).filter(Boolean) : []
 
         return (
-          <>
-            <div
-              className="fixed inset-0 z-40 bg-black/30 dark:bg-black/50"
-              onClick={() => setSelectedRecord(null)}
-            />
-            <div className="modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={() => setSelectedRecord(null)}>
+          <Portal>
+            <div className="modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 dark:bg-black/70" onClick={() => setSelectedRecord(null)}>
               <div
                 className="modal-content bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
                 onClick={(e) => e.stopPropagation()}
@@ -1140,7 +1137,7 @@ function RecordsPageInner() {
                 </div>
               </div>
             </div>
-          </>
+          </Portal>
         )
       })()}
 
@@ -1253,7 +1250,8 @@ function RecordsPageInner() {
 
       {/* ── File Description Popup ── */}
       {fileDescPopup && (
-        <div className="modal-overlay fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4" onClick={() => setFileDescPopup(null)}>
+        <Portal>
+        <div className="modal-overlay fixed inset-0 z-[105] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4" onClick={() => setFileDescPopup(null)}>
           <div className="modal-content card w-full max-w-sm dark:bg-gray-900" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-1">
               <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate pr-4">{fileDescPopup.fileName}</h3>
@@ -1292,11 +1290,13 @@ function RecordsPageInner() {
             )}
           </div>
         </div>
+        </Portal>
       )}
 
       {/* ── Create / Edit Modal ── */}
       {showModal && (
-        <div className="modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+        <Portal>
+        <div className="modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4">
           <div className="modal-content card w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -1429,6 +1429,7 @@ function RecordsPageInner() {
             </form>
           </div>
         </div>
+        </Portal>
       )}
     </div>
   )
