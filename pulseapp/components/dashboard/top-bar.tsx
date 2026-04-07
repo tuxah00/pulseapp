@@ -99,7 +99,7 @@ export default function TopBar({ businessName, userName, onOpenCommand }: TopBar
   const initials = userName.charAt(0).toUpperCase()
 
   return (
-    <header className="sticky top-0 z-[45] flex h-14 items-center gap-4
+    <header className="sticky top-0 z-30 isolate flex h-14 items-center gap-4
                        border-b border-gray-200/80 dark:border-white/[0.06]
                        bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl
                        px-4 sm:px-6">

@@ -361,7 +361,7 @@ export default function Sidebar({ businessName, userName, sector, plan, permissi
       <motion.aside
         animate={{ width: collapsed ? 72 : 256 }}
         transition={{ type: 'spring', stiffness: 400, damping: 40 }}
-        className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:flex lg:flex-col
+        className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:flex lg:flex-col
                    bg-white/95 dark:bg-gray-950/95 backdrop-blur-xl
                    border-r border-gray-200/80 dark:border-white/[0.06]
                    shadow-[1px_0_20px_rgba(0,0,0,0.06)]"

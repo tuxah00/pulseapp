@@ -976,9 +976,9 @@ export default function AppointmentsPage() {
 
       {/* Saat dilimi popup (çakışan randevular) */}
       {slotPopup && (
-        <div className="fixed inset-0 z-40" onClick={() => setSlotPopup(null)}>
+        <div className="fixed inset-0 z-[60]" onClick={() => setSlotPopup(null)}>
           <div
-            className="absolute z-50 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 p-3 w-72 modal-content"
+            className="absolute z-[61] bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 p-3 w-72 modal-content"
             style={{
               top: typeof window !== 'undefined' ? Math.min(slotPopup.y - 10, window.innerHeight - 300) : slotPopup.y - 10,
               left: typeof window !== 'undefined' ? Math.min(slotPopup.x - 10, window.innerWidth - 300) : slotPopup.x - 10,
