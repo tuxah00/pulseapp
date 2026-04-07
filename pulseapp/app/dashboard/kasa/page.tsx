@@ -10,6 +10,7 @@ import { logAudit } from '@/lib/utils/audit'
 import { formatCurrency, formatDateTime, cn } from '@/lib/utils'
 import type { Service, POSItem, POSPayment, POSTransaction, POSSession, PaymentMethod } from '@/types'
 import { CustomSelect } from '@/components/ui/custom-select'
+import { Portal } from '@/components/ui/portal'
 import {
   Loader2, Search, Plus, Minus, Trash2, X, Wallet,
   CreditCard, Banknote, ArrowRightLeft, ShoppingBag,
@@ -739,9 +740,9 @@ export default function KasaPage() {
 
       {/* ── Kasa Oturumu Modal ── */}
       {showSessionModal && (
-        <>
-          <div className="fixed inset-0 z-[60] bg-black/30 dark:bg-black/50" onClick={() => setShowSessionModal(false)} />
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+        <Portal>
+          <div className="fixed inset-0 z-[100] bg-black/60 dark:bg-black/70" onClick={() => setShowSessionModal(false)} />
+          <div className="fixed inset-0 z-[101] flex items-center justify-center p-4">
             <div className="modal-content bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-md p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
                 {!session ? 'Kasayı Aç' : 'Kasayı Kapat'}
@@ -802,7 +803,7 @@ export default function KasaPage() {
               )}
             </div>
           </div>
-        </>
+        </Portal>
       )}
     </div>
   )

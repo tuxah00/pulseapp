@@ -18,6 +18,7 @@ import { logAudit } from '@/lib/utils/audit'
 import type { Invoice, InvoiceItem, InvoiceStatus, PaymentMethod, InvoicePayment, InvoicePaymentType, InstallmentFrequency } from '@/types'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import { CustomSelect } from '@/components/ui/custom-select'
+import { Portal } from '@/components/ui/portal'
 
 interface SimpleCustomer {
   id: string
@@ -624,8 +625,8 @@ export default function InvoicesPage() {
 
       {/* ── Fatura Detay Slide-Over ── */}
       {selectedInvoice && (
-        <>
-          <div className="fixed inset-0 z-[65] bg-black/30 dark:bg-black/50" onClick={closePanelAnimated} />
+        <Portal>
+          <div className="fixed inset-0 z-[100] bg-black/50 dark:bg-black/70" onClick={closePanelAnimated} />
           <div
             className={`slide-panel border-l border-gray-200 dark:border-gray-700 ${panelClosing ? 'closing' : ''}`}
             onAnimationEnd={() => { if (panelClosing) { setSelectedInvoice(null); setPanelClosing(false) } }}
@@ -873,12 +874,13 @@ export default function InvoicesPage() {
               </div>
             </div>
           </div>
-        </>
+        </Portal>
       )}
 
       {/* Fatura Oluştur Modal */}
       {showCreateModal && (
-        <div className="modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+        <Portal>
+        <div className="modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4">
           <div className="modal-content card w-full max-w-lg max-h-[90vh] overflow-y-auto dark:bg-gray-900">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Yeni Fatura Oluştur</h2>
@@ -1061,6 +1063,7 @@ export default function InvoicesPage() {
             </form>
           </div>
         </div>
+        </Portal>
       )}
     </div>
   )
