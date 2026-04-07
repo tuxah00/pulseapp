@@ -524,7 +524,7 @@ export default function CustomersPage() {
       {/* ── Müşteri Detay Slide-Over Paneli ── */}
       {selectedCustomer && (
         <>
-          <div className="fixed inset-0 z-40 bg-black/30 dark:bg-black/50" onClick={closePanelAnimated} />
+          <div className="fixed inset-0 z-[65] bg-black/30 dark:bg-black/50" onClick={closePanelAnimated} />
           <div
             className={`slide-panel border-l border-gray-200 dark:border-gray-700 ${panelClosing ? 'closing' : ''}`}
             onAnimationEnd={() => { if (panelClosing) { setSelectedCustomer(null); setPanelClosing(false) } }}

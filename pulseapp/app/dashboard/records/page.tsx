@@ -935,7 +935,7 @@ function RecordsPageInner() {
         return (
           <>
             <div
-              className="fixed inset-0 z-40 bg-black/30 dark:bg-black/50"
+              className="fixed inset-0 z-[65] bg-black/30 dark:bg-black/50"
               onClick={() => setSelectedRecord(null)}
             />
             <div className="modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={() => setSelectedRecord(null)}>
