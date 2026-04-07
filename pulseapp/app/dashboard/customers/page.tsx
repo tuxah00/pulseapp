@@ -18,6 +18,7 @@ import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import { ToolbarPopover, SortPopoverContent } from '@/components/ui/toolbar-popover'
 import { exportToCSV } from '@/lib/utils/export'
 import { CustomSelect } from '@/components/ui/custom-select'
+import { Portal } from '@/components/ui/portal'
 
 import { getCustomerLabel, getCustomerLabelSingular } from '@/lib/config/sector-modules'
 
@@ -523,8 +524,8 @@ export default function CustomersPage() {
 
       {/* ── Müşteri Detay Slide-Over Paneli ── */}
       {selectedCustomer && (
-        <>
-          <div className="fixed inset-0 z-[65] bg-black/30 dark:bg-black/50" onClick={closePanelAnimated} />
+        <Portal>
+          <div className="fixed inset-0 z-[100] bg-black/50 dark:bg-black/70" onClick={closePanelAnimated} />
           <div
             className={`slide-panel border-l border-gray-200 dark:border-gray-700 ${panelClosing ? 'closing' : ''}`}
             onAnimationEnd={() => { if (panelClosing) { setSelectedCustomer(null); setPanelClosing(false) } }}
@@ -662,12 +663,13 @@ export default function CustomersPage() {
               )}
             </div>
           </div>
-        </>
+        </Portal>
       )}
 
       {/* Modal */}
       {showModal && (
-        <div className="modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+        <Portal>
+        <div className="modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4">
           <div className="modal-content card w-full max-w-md dark:bg-gray-900">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
               {editingCustomer ? `${singularLabel} Düzenle` : `Yeni ${singularLabel} Ekle`}
@@ -698,6 +700,7 @@ export default function CustomersPage() {
             </form>
           </div>
         </div>
+        </Portal>
       )}
     </div>
   )

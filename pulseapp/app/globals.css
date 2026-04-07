@@ -196,7 +196,7 @@
 
   /* ── Slide panel ── */
   .slide-panel {
-    @apply fixed inset-y-0 right-0 z-[70] flex w-full sm:w-96 flex-col
+    @apply fixed inset-y-0 right-0 z-[110] flex w-full sm:w-96 flex-col
            bg-white dark:bg-gray-900 shadow-2xl overflow-y-auto
            border-l border-gray-200 dark:border-gray-800;
   }
