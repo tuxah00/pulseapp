@@ -32,6 +32,7 @@ import { useConfirm } from '@/lib/hooks/use-confirm'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import { ToolbarPopover, SortPopoverContent, FilterPopoverList } from '@/components/ui/toolbar-popover'
 import { CustomSelect } from '@/components/ui/custom-select'
+import { Portal } from '@/components/ui/portal'
 
 export default function AppointmentsPage() {
   const { businessId, staffId: currentStaffId, staffName: currentStaffName, loading: ctxLoading } = useBusinessContext()
@@ -976,9 +977,10 @@ export default function AppointmentsPage() {
 
       {/* Saat dilimi popup (çakışan randevular) */}
       {slotPopup && (
-        <div className="fixed inset-0 z-[60]" onClick={() => setSlotPopup(null)}>
+        <Portal>
+        <div className="fixed inset-0 z-[100]" onClick={() => setSlotPopup(null)}>
           <div
-            className="absolute z-[61] bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 p-3 w-72 modal-content"
+            className="absolute z-[101] bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 p-3 w-72 modal-content"
             style={{
               top: typeof window !== 'undefined' ? Math.min(slotPopup.y - 10, window.innerHeight - 300) : slotPopup.y - 10,
               left: typeof window !== 'undefined' ? Math.min(slotPopup.x - 10, window.innerWidth - 300) : slotPopup.x - 10,
@@ -1009,6 +1011,7 @@ export default function AppointmentsPage() {
             </div>
           </div>
         </div>
+        </Portal>
       )}
 
       {!loading && viewMode !== 'week' ? (filteredAppointments.length === 0 ? (
@@ -1115,8 +1118,8 @@ export default function AppointmentsPage() {
 
       {/* ── Detay Slide-Over Paneli ── */}
       {selectedAppointment && (
-        <>
-          <div className="fixed inset-0 z-[65] bg-black/30 dark:bg-black/50" onClick={closePanelAnimated} />
+        <Portal>
+          <div className="fixed inset-0 z-[100] bg-black/50 dark:bg-black/70" onClick={closePanelAnimated} />
           <div
             className={`slide-panel border-l border-gray-200 dark:border-gray-700 ${panelClosing ? 'closing' : ''}`}
             onAnimationEnd={() => { if (panelClosing) { setSelectedAppointment(null); setPanelClosing(false) } }}
@@ -1248,12 +1251,13 @@ export default function AppointmentsPage() {
               </div>
             </div>
           </div>
-        </>
+        </Portal>
       )}
 
       {/* Yeni / Düzenleme Randevu Modal */}
       {showModal && (
-        <div className="modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+        <Portal>
+        <div className="modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4">
           <div className="modal-content card w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -1392,11 +1396,13 @@ export default function AppointmentsPage() {
             </form>
           </div>
         </div>
+        </Portal>
       )}
 
       {/* Erteleme Modal */}
       {rescheduleAppointment && (
-        <div className="modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+        <Portal>
+        <div className="modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4">
           <div className="modal-content card w-full max-w-sm">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Randevuyu Ertele</h2>
@@ -1437,11 +1443,13 @@ export default function AppointmentsPage() {
             </form>
           </div>
         </div>
+        </Portal>
       )}
 
       {/* İptal Onay Modal */}
       {cancelConfirmAppointment && (
-        <div className="modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+        <Portal>
+        <div className="modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4">
           <div className="modal-content card w-full max-w-sm">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Randevuyu İptal Et</h2>
@@ -1462,6 +1470,7 @@ export default function AppointmentsPage() {
             </div>
           </div>
         </div>
+        </Portal>
       )}
     </div>
   )

@@ -19,6 +19,7 @@ import { useViewMode } from '@/lib/hooks/use-view-mode'
 import CompactBoxCard from '@/components/ui/compact-box-card'
 import type { ServicePackage, CustomerPackage, Service, PackageStatus, Customer, StaffMember } from '@/types'
 import { CustomSelect } from '@/components/ui/custom-select'
+import { Portal } from '@/components/ui/portal'
 
 type PageTab = 'templates' | 'customer'
 type StatusFilter = PackageStatus | 'all'
@@ -793,7 +794,8 @@ export default function PaketlerPage() {
 
       {/* ── Template Modal ── */}
       {showTemplateModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50">
+        <Portal>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 dark:bg-black/70">
           <div className="w-full max-w-md card space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -892,11 +894,13 @@ export default function PaketlerPage() {
             </form>
           </div>
         </div>
+        </Portal>
       )}
 
       {/* ── Sell Package Modal ── */}
       {showSellModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50">
+        <Portal>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 dark:bg-black/70">
           <div className="w-full max-w-md card space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Paket Sat</h2>
@@ -1041,11 +1045,13 @@ export default function PaketlerPage() {
             </form>
           </div>
         </div>
+        </Portal>
       )}
 
       {/* ── Use Session Modal ── */}
       {showUseModal && selectedCp && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50">
+        <Portal>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 dark:bg-black/70">
           <div className="w-full max-w-sm card space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Seans Düş</h2>
@@ -1087,11 +1093,13 @@ export default function PaketlerPage() {
             </form>
           </div>
         </div>
+        </Portal>
       )}
 
       {/* ── Randevu Oluştur Modal ── */}
       {showAptModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50">
+        <Portal>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 dark:bg-black/70">
           <div className="w-full max-w-sm card space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -1166,6 +1174,7 @@ export default function PaketlerPage() {
             </form>
           </div>
         </div>
+        </Portal>
       )}
     </div>
   )
