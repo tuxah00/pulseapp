@@ -5,6 +5,10 @@
 
 # testing
 /coverage
+/playwright-report
+/test-results
+/.playwright
+.env.test.local
 
 # next.js
 /.next/
