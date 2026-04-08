@@ -10,6 +10,7 @@ import type { Referral, Customer, ReferralStatus, RewardType } from '@/types'
 import { REFERRAL_STATUS_LABELS, REWARD_TYPE_LABELS } from '@/types'
 import { formatCurrency } from '@/lib/utils'
 import { CustomSelect } from '@/components/ui/custom-select'
+import { Portal } from '@/components/ui/portal'
 
 const STATUS_CONFIG: Record<ReferralStatus, { bg: string; text: string; icon: typeof CheckCircle }> = {
   pending: { bg: 'bg-yellow-50 dark:bg-yellow-900/20', text: 'text-yellow-600 dark:text-yellow-400', icon: Clock },
@@ -284,7 +285,8 @@ export default function ReferralsPage() {
 
       {/* Create Modal */}
       {(showCreate || isClosingCreate) && (
-        <div className={`modal-overlay fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 ${isClosingCreate ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingCreate) { setShowCreate(false); setIsClosingCreate(false) } }}>
+        <Portal>
+        <div className={`modal-overlay fixed inset-0 z-[100] bg-black/60 dark:bg-black/70 flex items-center justify-center p-4 ${isClosingCreate ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingCreate) { setShowCreate(false); setIsClosingCreate(false) } }}>
           <div className={`modal-content bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-lg ${isClosingCreate ? 'closing' : ''}`}>
             <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
               <h2 className="text-lg font-bold text-gray-900 dark:text-white">Yeni Referans</h2>
@@ -335,6 +337,7 @@ export default function ReferralsPage() {
             </div>
           </div>
         </div>
+        </Portal>
       )}
     </div>
   )
