@@ -306,7 +306,7 @@ function ImageLightbox({ images, initialIndex, onClose, metadata }: {
 
   return (
     <div
-      className="fixed inset-0 z-[70] bg-black/90 flex items-center justify-center"
+      className="fixed inset-0 z-[150] bg-black/90 flex items-center justify-center"
       onClick={onClose}
     >
       {/* Close button */}
@@ -1148,12 +1148,14 @@ function RecordsPageInner() {
 
       {/* ── Image Lightbox ── */}
       {lightbox && (
-        <ImageLightbox
-          images={lightbox.images}
-          initialIndex={lightbox.index}
-          onClose={() => setLightbox(null)}
-          metadata={lightbox.metadata}
-        />
+        <Portal>
+          <ImageLightbox
+            images={lightbox.images}
+            initialIndex={lightbox.index}
+            onClose={() => setLightbox(null)}
+            metadata={lightbox.metadata}
+          />
+        </Portal>
       )}
 
       {/* ── File Info Popup ── */}
