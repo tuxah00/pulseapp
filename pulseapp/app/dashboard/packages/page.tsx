@@ -591,8 +591,8 @@ export default function PaketlerPage() {
 
       {/* ── CUSTOMER PACKAGES TAB ── */}
       {pageTab === 'customer' && (
-        <div className="flex gap-4 items-start">
-          <div className="flex-1 min-w-0 space-y-4">
+        <div className="relative">
+          <div className={cn('space-y-4 transition-[padding-right] duration-200', selectedCp && 'pr-[336px]')}>
             {/* Arama */}
             <div className="relative max-w-xs">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -713,11 +713,11 @@ export default function PaketlerPage() {
             return (
             <motion.div
               key={selectedCp.id}
-              initial={{ opacity: 0, x: -16 }}
+              initial={{ opacity: 0, x: 16 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -16 }}
+              exit={{ opacity: 0, x: 16 }}
               transition={{ duration: 0.18, ease: 'easeOut' }}
-              className="w-80 flex-shrink-0 card space-y-4"
+              className="absolute right-0 top-0 w-80 card space-y-4"
             >
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">{selectedCp.customer_name}</h3>
