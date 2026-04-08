@@ -114,6 +114,13 @@ export default function PaketlerPage() {
   const [aptStaffMembers, setAptStaffMembers] = useState<Pick<StaffMember, 'id' | 'name'>[]>([])
   const [aptStaffId, setAptStaffId] = useState('')
   const [aptTemplateName, setAptTemplateName] = useState('')
+  const [aptSessionCount, setAptSessionCount] = useState(1)
+  const [aptBulkCreate, setAptBulkCreate] = useState(true)
+  const [aptIntervalDays, setAptIntervalDays] = useState(7)
+  // Preview step: conflicts listesi
+  const [aptPreview, setAptPreview] = useState<{
+    planned: Array<{ date: string; time: string; conflict: string | null }>
+  } | null>(null)
 
   // ── Fetch templates ──
   const fetchTemplates = useCallback(async () => {
@@ -408,6 +415,11 @@ export default function PaketlerPage() {
   async function openAptModal(cp: CustomerPackage) {
     setAptDate(new Date().toISOString().split('T')[0])
     setAptTime('09:00'); setAptNotes(''); setAptError(null); setAptTemplateName('')
+    setAptPreview(null)
+    setAptBulkCreate(true)
+    setAptIntervalDays(7)
+    const remaining = Math.max(1, cp.sessions_total - cp.sessions_used)
+    setAptSessionCount(remaining)
     // Fetch customers and staff for dropdowns
     const [custRes, staffRes] = await Promise.all([
       supabase.from('customers').select('id, name').eq('business_id', businessId!).eq('is_active', true).order('name'),
@@ -427,6 +439,10 @@ export default function PaketlerPage() {
     setAptDate(new Date().toISOString().split('T')[0])
     setAptTime('09:00'); setAptNotes(''); setAptError(null)
     setAptTemplateName(t.name)
+    setAptPreview(null)
+    setAptBulkCreate(true)
+    setAptIntervalDays(7)
+    setAptSessionCount(Math.max(1, t.sessions_total))
     // Fetch customers and staff for dropdowns
     const [custRes, staffRes] = await Promise.all([
       supabase.from('customers').select('id, name').eq('business_id', businessId!).eq('is_active', true).order('name'),
@@ -446,32 +462,168 @@ export default function PaketlerPage() {
     return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`
   }
 
+  // Başlangıçtan itibaren aralıkla N tarih planlar (YYYY-MM-DD)
+  function buildPlannedDates(startDate: string, count: number, intervalDays: number): string[] {
+    const dates: string[] = []
+    const [y, m, d] = startDate.split('-').map(Number)
+    for (let i = 0; i < count; i++) {
+      const dt = new Date(y, m - 1, d + i * intervalDays)
+      const yy = dt.getFullYear()
+      const mm = String(dt.getMonth() + 1).padStart(2, '0')
+      const dd = String(dt.getDate()).padStart(2, '0')
+      dates.push(`${yy}-${mm}-${dd}`)
+    }
+    return dates
+  }
+
+  function timeToMinutes(t: string): number {
+    const [h, m] = t.split(':').map(Number)
+    return h * 60 + m
+  }
+
+  // Plan tarihleri için çakışma kontrolü
+  async function checkConflicts(
+    dates: string[],
+    startTime: string,
+    endTime: string,
+  ): Promise<Record<string, string | null>> {
+    const result: Record<string, string | null> = {}
+    dates.forEach(d => { result[d] = null })
+    if (dates.length === 0) return result
+
+    const { data } = await supabase
+      .from('appointments')
+      .select('appointment_date, start_time, end_time, status, customer:customers(name)')
+      .eq('business_id', businessId!)
+      .in('appointment_date', dates)
+      .is('deleted_at', null)
+      .neq('status', 'cancelled')
+
+    const newStart = timeToMinutes(startTime)
+    const newEnd = timeToMinutes(endTime)
+
+    ;(data || []).forEach((row: any) => {
+      const existStart = timeToMinutes(row.start_time)
+      const existEnd = timeToMinutes(row.end_time)
+      if (newStart < existEnd && newEnd > existStart) {
+        if (!result[row.appointment_date]) {
+          result[row.appointment_date] = row.customer?.name || 'Başka randevu'
+        }
+      }
+    })
+
+    return result
+  }
+
   async function handleCreateApt(e: React.FormEvent) {
     e.preventDefault()
     if (!aptDate) return
     setSavingApt(true); setAptError(null)
 
-    const notesFallback = selectedCp ? `Paket: ${selectedCp.package_name}` : (aptTemplateName ? `Şablon: ${aptTemplateName}` : '')
     const linkedService = services.find(s => s.id === (selectedCp?.service_id || null))
     const duration = linkedService?.duration_minutes || 30
     const endTime = calculateEndTime(aptTime, duration)
 
-    const { error } = await supabase.from('appointments').insert({
+    if (!aptBulkCreate || aptSessionCount <= 1) {
+      await insertAppointments([{ date: aptDate, time: aptTime }], endTime, duration)
+      return
+    }
+
+    const planned = buildPlannedDates(aptDate, aptSessionCount, aptIntervalDays)
+    const conflictMap = await checkConflicts(planned, aptTime, endTime)
+    const hasConflict = Object.values(conflictMap).some(v => v !== null)
+
+    if (hasConflict) {
+      setSavingApt(false)
+      setAptPreview({
+        planned: planned.map(d => ({ date: d, time: aptTime, conflict: conflictMap[d] })),
+      })
+      return
+    }
+
+    await insertAppointments(
+      planned.map(d => ({ date: d, time: aptTime })),
+      endTime,
+      duration,
+    )
+  }
+
+  async function insertAppointments(
+    items: Array<{ date: string; time: string }>,
+    endTime: string,
+    _duration: number,
+  ) {
+    if (items.length === 0) { setSavingApt(false); return }
+
+    const notesFallback = selectedCp
+      ? `Paket: ${selectedCp.package_name}`
+      : (aptTemplateName ? `Şablon: ${aptTemplateName}` : '')
+
+    const groupId = items.length > 1
+      ? (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`)
+      : null
+
+    const rows = items.map((it, idx) => ({
       business_id: businessId,
       customer_id: aptCustomerId || null,
       service_id: selectedCp?.service_id || null,
       staff_id: aptStaffId || null,
-      appointment_date: aptDate,
-      start_time: aptTime,
+      appointment_date: it.date,
+      start_time: it.time,
       end_time: endTime,
       status: 'confirmed',
       notes: aptNotes.trim() || notesFallback || null,
+      recurrence_group_id: groupId,
+      recurrence_pattern: groupId
+        ? { source: 'package', interval_days: aptIntervalDays, session_index: idx + 1, total_sessions: items.length, package_id: selectedCp?.id || null }
+        : null,
+    }))
+
+    const { error } = await supabase.from('appointments').insert(rows)
+
+    if (error) {
+      setAptError(error.message)
+      setSavingApt(false)
+      return
+    }
+
+    await logAudit({
+      businessId: businessId!,
+      staffId,
+      staffName,
+      action: 'create',
+      resource: 'appointment',
+      details: {
+        package_name: selectedCp?.package_name || aptTemplateName,
+        count: items.length,
+        bulk: items.length > 1,
+      },
     })
 
-    if (error) { setAptError(error.message); setSavingApt(false); return }
+    setSavingApt(false)
+    setAptPreview(null)
+    closeAptModal()
+  }
 
-    await logAudit({ businessId: businessId!, staffId, staffName, action: 'create', resource: 'appointment', details: { package_name: selectedCp?.package_name || aptTemplateName } })
-    setSavingApt(false); closeAptModal()
+  async function confirmPreviewAndCreate() {
+    if (!aptPreview) return
+    setSavingApt(true); setAptError(null)
+
+    const linkedService = services.find(s => s.id === (selectedCp?.service_id || null))
+    const duration = linkedService?.duration_minutes || 30
+    const endTime = calculateEndTime(aptTime, duration)
+
+    const nonConflicting = aptPreview.planned
+      .filter(p => p.conflict === null)
+      .map(p => ({ date: p.date, time: p.time }))
+
+    if (nonConflicting.length === 0) {
+      setAptError('Tüm seanslar çakışıyor, oluşturulacak randevu yok.')
+      setSavingApt(false)
+      return
+    }
+
+    await insertAppointments(nonConflicting, endTime, duration)
   }
 
   if (ctxLoading) {
@@ -1252,28 +1404,35 @@ export default function PaketlerPage() {
       {/* ── Randevu Oluştur Modal ── */}
       {(showAptModal || isClosingAptModal) && (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 dark:bg-black/70 ${isClosingAptModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingAptModal) { setShowAptModal(false); setIsClosingAptModal(false) } }}>
-          <div className={`modal-content w-full max-w-sm card space-y-4 ${isClosingAptModal ? 'closing' : ''}`}>
+        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 dark:bg-black/70 ${isClosingAptModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingAptModal) { setShowAptModal(false); setIsClosingAptModal(false); setAptPreview(null) } }}>
+          <div className={`modal-content w-full max-w-md card space-y-4 max-h-[90vh] overflow-y-auto ${isClosingAptModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                {selectedCp
-                  ? `${selectedCp.customer_name} — Randevu Oluştur`
-                  : aptTemplateName
-                    ? `${aptTemplateName} için Randevu Oluştur`
-                    : 'Randevu Oluştur'}
+                {aptPreview
+                  ? 'Çakışma Uyarısı'
+                  : selectedCp
+                    ? `${selectedCp.customer_name} — Randevu Oluştur`
+                    : aptTemplateName
+                      ? `${aptTemplateName} için Randevu Oluştur`
+                      : 'Randevu Oluştur'}
               </h2>
               <button onClick={() => closeAptModal()} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400">
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            {selectedCp && (
+            {selectedCp && !aptPreview && (
               <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800 text-sm">
                 <p className="font-medium text-gray-900 dark:text-gray-100">{selectedCp.customer_name}</p>
                 <p className="text-gray-500 dark:text-gray-400">{selectedCp.package_name}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Kalan: {selectedCp.sessions_total - selectedCp.sessions_used} / {selectedCp.sessions_total}
+                </p>
               </div>
             )}
 
+            {/* ── Adım 1: Form ── */}
+            {!aptPreview && (
             <form onSubmit={handleCreateApt} className="space-y-3">
               {aptCustomers.length > 0 && (
                 <div>
@@ -1301,7 +1460,7 @@ export default function PaketlerPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tarih</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{aptBulkCreate && aptSessionCount > 1 ? 'İlk Tarih' : 'Tarih'}</label>
                   <input type="date" value={aptDate} onChange={e => setAptDate(e.target.value)} className="input w-full text-sm" required />
                 </div>
                 <div>
@@ -1309,6 +1468,40 @@ export default function PaketlerPage() {
                   <input type="time" value={aptTime} onChange={e => setAptTime(e.target.value)} className="input w-full text-sm" required />
                 </div>
               </div>
+
+              {aptSessionCount > 1 && (
+                <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-2 bg-gray-50/50 dark:bg-gray-800/30">
+                  <label className="flex items-start gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={aptBulkCreate}
+                      onChange={e => setAptBulkCreate(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-pulse-900 focus:ring-pulse-900"
+                    />
+                    <div className="text-sm">
+                      <div className="font-medium text-gray-900 dark:text-gray-100">
+                        Tüm seanslar için randevu oluştur ({aptSessionCount} adet)
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        Kapatırsan yalnızca tek randevu oluşur.
+                      </div>
+                    </div>
+                  </label>
+                  {aptBulkCreate && (
+                    <div className="pl-6">
+                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Seans Aralığı (gün)</label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={180}
+                        value={aptIntervalDays}
+                        onChange={e => setAptIntervalDays(Math.max(1, Number(e.target.value) || 1))}
+                        className="input w-full text-sm"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Not (opsiyonel)</label>
@@ -1321,10 +1514,72 @@ export default function PaketlerPage() {
                 <button type="button" onClick={() => closeAptModal()} className="flex-1 btn-secondary text-sm">İptal</button>
                 <button type="submit" disabled={savingApt} className="flex-1 btn-primary text-sm flex items-center justify-center gap-2">
                   {savingApt && <Loader2 className="h-4 w-4 animate-spin" />}
-                  Randevu Oluştur
+                  {aptBulkCreate && aptSessionCount > 1 ? `${aptSessionCount} Randevu Oluştur` : 'Randevu Oluştur'}
                 </button>
               </div>
             </form>
+            )}
+
+            {/* ── Adım 2: Çakışma Preview ── */}
+            {aptPreview && (() => {
+              const conflicts = aptPreview.planned.filter(p => p.conflict !== null)
+              const ok = aptPreview.planned.filter(p => p.conflict === null)
+              return (
+                <div className="space-y-3">
+                  <div className="rounded-lg border border-amber-200 dark:border-amber-900/40 bg-amber-50 dark:bg-amber-900/20 p-3 text-sm">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                      <div className="text-amber-900 dark:text-amber-200">
+                        <div className="font-medium">
+                          {conflicts.length} / {aptPreview.planned.length} seans başka bir randevuyla çakışıyor.
+                        </div>
+                        <div className="text-xs mt-0.5 text-amber-800 dark:text-amber-300">
+                          Devam edersen yalnızca çakışmayan <b>{ok.length}</b> randevu oluşturulacak.
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="max-h-64 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-800">
+                    {aptPreview.planned.map((p, i) => {
+                      const isConflict = p.conflict !== null
+                      const dt = new Date(`${p.date}T${p.time}`)
+                      const label = dt.toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: 'numeric', weekday: 'short' })
+                      return (
+                        <div key={i} className={cn('flex items-center justify-between px-3 py-2 text-xs', isConflict ? 'bg-red-50/50 dark:bg-red-900/10' : 'bg-white dark:bg-gray-900/50')}>
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className={cn('inline-flex items-center justify-center h-5 w-5 rounded-full text-[10px] font-semibold flex-shrink-0', isConflict ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300' : 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300')}>
+                              {i + 1}
+                            </span>
+                            <div className="min-w-0">
+                              <div className="font-medium text-gray-900 dark:text-gray-100 truncate">{label}</div>
+                              <div className="text-gray-500 dark:text-gray-400">{p.time}</div>
+                            </div>
+                          </div>
+                          {isConflict ? (
+                            <span className="text-red-600 dark:text-red-400 font-medium truncate max-w-[140px]" title={p.conflict!}>
+                              Çakışma: {p.conflict}
+                            </span>
+                          ) : (
+                            <span className="text-green-600 dark:text-green-400 font-medium">Uygun</span>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  {aptError && <p className="text-sm text-red-600">{aptError}</p>}
+
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => setAptPreview(null)} className="flex-1 btn-secondary text-sm">Geri</button>
+                    <button type="button" disabled={savingApt || ok.length === 0} onClick={confirmPreviewAndCreate} className="flex-1 btn-primary text-sm flex items-center justify-center gap-2 disabled:opacity-50">
+                      {savingApt && <Loader2 className="h-4 w-4 animate-spin" />}
+                      {ok.length} Randevu Oluştur
+                    </button>
+                  </div>
+                </div>
+              )
+            })()}
           </div>
         </div>
         </Portal>
