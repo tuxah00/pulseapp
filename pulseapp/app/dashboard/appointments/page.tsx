@@ -47,9 +47,15 @@ export default function AppointmentsPage() {
   const [panelClosing, setPanelClosing] = useState(false)
   const closePanelAnimated = useCallback(() => setPanelClosing(true), [])
   const [showModal, setShowModal] = useState(false)
+  const [isClosingModal, setIsClosingModal] = useState(false)
+  const closeModal = () => setIsClosingModal(true)
   const [editingAppointment, setEditingAppointment] = useState<any | null>(null)
   const [rescheduleAppointment, setRescheduleAppointment] = useState<any | null>(null)
+  const [isClosingReschedule, setIsClosingReschedule] = useState(false)
+  const closeReschedule = () => setIsClosingReschedule(true)
   const [cancelConfirmAppointment, setCancelConfirmAppointment] = useState<any | null>(null)
+  const [isClosingCancelConfirm, setIsClosingCancelConfirm] = useState(false)
+  const closeCancelConfirm = () => setIsClosingCancelConfirm(true)
   const [cancelNotifyCustomer, setCancelNotifyCustomer] = useState(true)
   const [slotPopup, setSlotPopup] = useState<{ day: string; hour: number; apts: any[]; x: number; y: number } | null>(null)
   const [saving, setSaving] = useState(false)
@@ -180,7 +186,7 @@ export default function AppointmentsPage() {
 
   useEffect(() => {
     if (!showModal) return
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowModal(false) }
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') closeModal() }
     document.addEventListener('keydown', h)
     return () => document.removeEventListener('keydown', h)
   }, [showModal])
@@ -388,7 +394,7 @@ export default function AppointmentsPage() {
       const { error } = await supabase.from('appointments').insert({ business_id: businessId, ...payload, status: 'confirmed', source: 'manual' })
       if (error) { setError(error.message.includes('başka bir randevusu var') ? 'Bu personelin bu saatte başka bir randevusu var.' : error.message); setSaving(false); return }
     }
-    setSaving(false); setShowModal(false)
+    setSaving(false); closeModal()
     await fetchAppointments()
     const auditCustomer = customers.find(c => c.id === customerId)
     const auditService = services.find(s => s.id === serviceId)
@@ -481,7 +487,7 @@ export default function AppointmentsPage() {
     if (conflict) { setError('Bu personelin bu saatte başka bir randevusu var.'); setSaving(false); return }
     const { error } = await supabase.from('appointments').update({ appointment_date: rescheduleDate, start_time: rescheduleTime, end_time: endTime }).eq('id', rescheduleAppointment.id)
     if (error) { setError(error.message); setSaving(false); return }
-    setSaving(false); setRescheduleAppointment(null); fetchAppointments()
+    setSaving(false); closeReschedule(); fetchAppointments()
   }
 
   async function handleCancelConfirm() {
@@ -489,7 +495,7 @@ export default function AppointmentsPage() {
     setSaving(true)
     const apt = cancelConfirmAppointment
     const { error } = await supabase.from('appointments').update({ status: 'cancelled' }).eq('id', apt.id)
-    if (error) { alert('İptal güncellenemedi: ' + error.message); setSaving(false); setCancelConfirmAppointment(null); return }
+    if (error) { alert('İptal güncellenemedi: ' + error.message); setSaving(false); closeCancelConfirm(); return }
     if (cancelNotifyCustomer && apt.customer_id) {
       try {
         await fetch('/api/messages/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ businessId, customerId: apt.customer_id, content: 'Merhaba, randevunuz iptal edilmiştir. Sorularınız için bizi arayabilirsiniz.' }) })
@@ -505,7 +511,7 @@ export default function AppointmentsPage() {
         is_read: false,
       })
     } catch { /* */ }
-    setSaving(false); setCancelConfirmAppointment(null)
+    setSaving(false); closeCancelConfirm()
     if (selectedAppointment?.id === apt.id) setSelectedAppointment(null)
     fetchAppointments()
   }
@@ -1490,13 +1496,13 @@ export default function AppointmentsPage() {
       {/* Yeni / Düzenleme Randevu Modal */}
       {showModal && (
         <Portal>
-        <div className="modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4">
-          <div className="modal-content card w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
+          <div className={`modal-content card w-full max-w-md max-h-[90vh] overflow-y-auto ${isClosingModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 {editingAppointment ? 'Randevu Düzenle' : 'Yeni Randevu'}
               </h2>
-              <button onClick={() => { setShowModal(false); setEditingAppointment(null) }} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => { closeModal(); setEditingAppointment(null) }} className="text-gray-400 hover:text-gray-600">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -1620,7 +1626,7 @@ export default function AppointmentsPage() {
 
               {error && <div className="rounded-lg bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-400">{error}</div>}
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => { setShowModal(false); setEditingAppointment(null) }} className="btn-secondary flex-1">İptal</button>
+                <button type="button" onClick={() => { closeModal(); setEditingAppointment(null) }} className="btn-secondary flex-1">İptal</button>
                 <button type="submit" disabled={saving || !customerId} className="btn-primary flex-1">
                   {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   {editingAppointment ? 'Güncelle' : isRecurring ? `${recurrenceCount} Randevu Oluştur` : 'Randevu Oluştur'}
@@ -1633,13 +1639,13 @@ export default function AppointmentsPage() {
       )}
 
       {/* Erteleme Modal */}
-      {rescheduleAppointment && (
+      {(rescheduleAppointment || isClosingReschedule) && (
         <Portal>
-        <div className="modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4">
-          <div className="modal-content card w-full max-w-sm">
+        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4 ${isClosingReschedule ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingReschedule) { setRescheduleAppointment(null); setIsClosingReschedule(false) } }}>
+          <div className={`modal-content card w-full max-w-sm ${isClosingReschedule ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Randevuyu Ertele</h2>
-              <button onClick={() => setRescheduleAppointment(null)} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
+              <button onClick={() => closeReschedule()} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
             </div>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
               {rescheduleAppointment.customers?.name} — {formatTime(rescheduleAppointment.start_time)}
@@ -1668,7 +1674,7 @@ export default function AppointmentsPage() {
               </div>
               {error && <div className="rounded-lg bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-400">{error}</div>}
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setRescheduleAppointment(null)} className="btn-secondary flex-1">Vazgeç</button>
+                <button type="button" onClick={() => closeReschedule()} className="btn-secondary flex-1">Vazgeç</button>
                 <button type="submit" disabled={saving} className="btn-primary flex-1">
                   {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Ertele
                 </button>
@@ -1680,13 +1686,13 @@ export default function AppointmentsPage() {
       )}
 
       {/* İptal Onay Modal */}
-      {cancelConfirmAppointment && (
+      {(cancelConfirmAppointment || isClosingCancelConfirm) && (
         <Portal>
-        <div className="modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4">
-          <div className="modal-content card w-full max-w-sm">
+        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4 ${isClosingCancelConfirm ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingCancelConfirm) { setCancelConfirmAppointment(null); setIsClosingCancelConfirm(false) } }}>
+          <div className={`modal-content card w-full max-w-sm ${isClosingCancelConfirm ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Randevuyu İptal Et</h2>
-              <button onClick={() => setCancelConfirmAppointment(null)} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
+              <button onClick={() => closeCancelConfirm()} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
             </div>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
               {cancelConfirmAppointment.customers?.name} — {formatTime(cancelConfirmAppointment.start_time)} randevusunu iptal etmek istediğinize emin misiniz?
@@ -1696,7 +1702,7 @@ export default function AppointmentsPage() {
               <span className="text-sm text-gray-700 dark:text-gray-300">Müşteriye iptal bildirimi gönder</span>
             </label>
             <div className="flex gap-3">
-              <button type="button" onClick={() => setCancelConfirmAppointment(null)} className="btn-secondary flex-1">Vazgeç</button>
+              <button type="button" onClick={() => closeCancelConfirm()} className="btn-secondary flex-1">Vazgeç</button>
               <button type="button" onClick={handleCancelConfirm} disabled={saving} className="flex-1 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50">
                 {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin inline" />}İptal Et
               </button>

@@ -81,6 +81,8 @@ export default function KasaPage() {
 
   // Session modal
   const [showSessionModal, setShowSessionModal] = useState(false)
+  const [isClosingSessionModal, setIsClosingSessionModal] = useState(false)
+  const closeSessionModal = () => setIsClosingSessionModal(true)
   const [openingCash, setOpeningCash] = useState('')
   const [closingCash, setClosingCash] = useState('')
   const [closingNote, setClosingNote] = useState('')
@@ -739,11 +741,11 @@ export default function KasaPage() {
       )}
 
       {/* ── Kasa Oturumu Modal ── */}
-      {showSessionModal && (
+      {(showSessionModal || isClosingSessionModal) && (
         <Portal>
-          <div className="fixed inset-0 z-[100] bg-black/60 dark:bg-black/70" onClick={() => setShowSessionModal(false)} />
-          <div className="fixed inset-0 z-[101] flex items-center justify-center p-4">
-            <div className="modal-content bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-md p-6">
+          <div className={`modal-overlay fixed inset-0 z-[100] bg-black/60 dark:bg-black/70 ${isClosingSessionModal ? 'closing' : ''}`} onClick={() => closeSessionModal()} onAnimationEnd={() => { if (isClosingSessionModal) { setShowSessionModal(false); setIsClosingSessionModal(false) } }} />
+          <div className="fixed inset-0 z-[101] flex items-center justify-center p-4 pointer-events-none">
+            <div className={`modal-content bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-md p-6 pointer-events-auto ${isClosingSessionModal ? 'closing' : ''}`}>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
                 {!session ? 'Kasayı Aç' : 'Kasayı Kapat'}
               </h3>
@@ -765,7 +767,7 @@ export default function KasaPage() {
                     <p className="mt-1.5 text-xs text-gray-400">Kasadaki mevcut nakit miktarını girin.</p>
                   </div>
                   <div className="flex gap-3">
-                    <button onClick={() => setShowSessionModal(false)} className="btn-secondary flex-1">İptal</button>
+                    <button onClick={() => closeSessionModal()} className="btn-secondary flex-1">İptal</button>
                     <button onClick={openSession} className="btn-primary flex-1">Kasayı Aç</button>
                   </div>
                 </div>
@@ -796,7 +798,7 @@ export default function KasaPage() {
                     />
                   </div>
                   <div className="flex gap-3">
-                    <button onClick={() => setShowSessionModal(false)} className="btn-secondary flex-1">İptal</button>
+                    <button onClick={() => closeSessionModal()} className="btn-secondary flex-1">İptal</button>
                     <button onClick={closeSession} className="btn-primary flex-1 bg-orange-500 hover:bg-orange-600">Kasayı Kapat</button>
                   </div>
                 </div>

@@ -46,6 +46,8 @@ export default function CustomersPage() {
   const debouncedSearch = useDebounce(search, 300)
   const [filterSegment, setFilterSegment] = useState<CustomerSegment | 'all'>('all')
   const [showModal, setShowModal] = useState(false)
+  const [isClosingModal, setIsClosingModal] = useState(false)
+  const closeModal = () => setIsClosingModal(true)
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null)
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
   const [panelClosing, setPanelClosing] = useState(false)
@@ -258,7 +260,7 @@ export default function CustomersPage() {
 
   useEffect(() => {
     if (!showModal) return
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowModal(false) }
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') closeModal() }
     document.addEventListener('keydown', h)
     return () => document.removeEventListener('keydown', h)
   }, [showModal])
@@ -691,10 +693,10 @@ export default function CustomersPage() {
       )}
 
       {/* Modal */}
-      {showModal && (
+      {(showModal || isClosingModal) && (
         <Portal>
-        <div className="modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4">
-          <div className="modal-content card w-full max-w-md dark:bg-gray-900">
+        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
+          <div className={`modal-content card w-full max-w-md dark:bg-gray-900 ${isClosingModal ? 'closing' : ''}`}>
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
               {editingCustomer ? `${singularLabel} Düzenle` : `Yeni ${singularLabel} Ekle`}
             </h2>
@@ -715,7 +717,7 @@ export default function CustomersPage() {
               </div>
               {error && <div className="rounded-lg bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-400">{error}</div>}
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setShowModal(false)} className="btn-secondary flex-1">İptal</button>
+                <button type="button" onClick={() => closeModal()} className="btn-secondary flex-1">İptal</button>
                 <button type="submit" disabled={saving} className="btn-primary flex-1">
                   {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   {editingCustomer ? 'Güncelle' : 'Ekle'}

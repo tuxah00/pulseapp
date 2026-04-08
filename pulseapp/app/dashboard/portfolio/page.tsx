@@ -47,12 +47,15 @@ export default function PortfolioPage() {
   const [loading, setLoading] = useState(true)
   const [activeCategory, setActiveCategory] = useState('all')
   const [showModal, setShowModal] = useState(false)
+  const [isClosingModal, setIsClosingModal] = useState(false)
   const [form, setForm] = useState<UploadForm>(INITIAL_FORM)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [isClosingDeleteConfirm, setIsClosingDeleteConfirm] = useState(false)
+  const closeDeleteConfirm = () => setIsClosingDeleteConfirm(true)
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -87,7 +90,11 @@ export default function PortfolioPage() {
   }
 
   function closeModal() {
+    setIsClosingModal(true)
+  }
+  function onModalClosed() {
     setShowModal(false)
+    setIsClosingModal(false)
     setSelectedFile(null)
     setPreviewUrl(null)
     setUploadError(null)
@@ -198,7 +205,7 @@ export default function PortfolioPage() {
     const res = await fetch(`/api/portfolio?id=${id}`, { method: 'DELETE' })
     if (res.ok) {
       setItems((prev) => prev.filter((i) => i.id !== id))
-      setDeleteConfirm(null)
+      closeDeleteConfirm()
       logAudit({ businessId: businessId!, staffId: staffId || null, staffName: staffName || null, action: 'delete', resource: 'portfolio', details: { title: item?.title || null } })
     }
   }
@@ -339,8 +346,8 @@ export default function PortfolioPage() {
 
       {/* Upload Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 modal-overlay">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-md modal-content">
+        <div className={`fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 modal-overlay ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) onModalClosed() }}>
+          <div className={`bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-md modal-content ${isClosingModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Yeni Görsel Ekle</h2>
               <button onClick={closeModal} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
@@ -483,8 +490,8 @@ export default function PortfolioPage() {
 
       {/* Delete confirm dialog */}
       {deleteConfirm && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 modal-overlay">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-sm p-6 modal-content">
+        <div className={`fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 modal-overlay ${isClosingDeleteConfirm ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingDeleteConfirm) { setDeleteConfirm(null); setIsClosingDeleteConfirm(false) } }}>
+          <div className={`bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-sm p-6 modal-content ${isClosingDeleteConfirm ? 'closing' : ''}`}>
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
                 <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />
@@ -496,7 +503,7 @@ export default function PortfolioPage() {
             </div>
             <div className="flex gap-3">
               <button
-                onClick={() => setDeleteConfirm(null)}
+                onClick={() => closeDeleteConfirm()}
                 className="flex-1 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
               >
                 İptal

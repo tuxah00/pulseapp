@@ -76,6 +76,8 @@ export default function MembershipsPage() {
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounce(search, 300)
   const [showModal, setShowModal] = useState(false)
+  const [isClosingModal, setIsClosingModal] = useState(false)
+  const closeModal = () => setIsClosingModal(true)
   const [editingMembership, setEditingMembership] = useState<Membership | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -127,7 +129,7 @@ export default function MembershipsPage() {
 
   useEffect(() => {
     if (!showModal) return
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowModal(false) }
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') closeModal() }
     document.addEventListener('keydown', h)
     return () => document.removeEventListener('keydown', h)
   }, [showModal])
@@ -202,7 +204,7 @@ export default function MembershipsPage() {
         return
       }
 
-      setShowModal(false)
+      closeModal()
       fetchMemberships()
     } catch {
       setError('Sunucu hatası')
@@ -469,13 +471,13 @@ export default function MembershipsPage() {
 
       {/* Modal */}
       {showModal && (
-        <div className="modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
-          <div className="modal-content card w-full max-w-lg max-h-[90vh] overflow-y-auto dark:bg-gray-900">
+        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
+          <div className={`modal-content card w-full max-w-lg max-h-[90vh] overflow-y-auto dark:bg-gray-900 ${isClosingModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 {editingMembership ? 'Üyeliği Düzenle' : 'Yeni Üyelik Ekle'}
               </h2>
-              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+              <button onClick={() => closeModal()} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -586,7 +588,7 @@ export default function MembershipsPage() {
               <div className="flex gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => setShowModal(false)}
+                  onClick={() => closeModal()}
                   className="btn-secondary flex-1"
                 >
                   İptal

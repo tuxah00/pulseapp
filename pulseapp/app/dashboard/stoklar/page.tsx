@@ -45,6 +45,8 @@ export default function StoklarPage() {
   const [loading, setLoading] = useState(true)
   const [dbError, setDbError] = useState<string | null>(null)
   const [showModal, setShowModal] = useState(false)
+  const [isClosingModal, setIsClosingModal] = useState(false)
+  const closeModal = () => setIsClosingModal(true)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [panelClosing, setPanelClosing] = useState(false)
@@ -70,6 +72,8 @@ export default function StoklarPage() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [suppliersLoading, setSuppliersLoading] = useState(false)
   const [showSupplierModal, setShowSupplierModal] = useState(false)
+  const [isClosingSupplierModal, setIsClosingSupplierModal] = useState(false)
+  const closeSupplierModal = () => setIsClosingSupplierModal(true)
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null)
   const [supplierName, setSupplierName] = useState('')
   const [supplierPhone, setSupplierPhone] = useState('')
@@ -137,7 +141,7 @@ export default function StoklarPage() {
 
   useEffect(() => {
     if (!showModal) return
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowModal(false) }
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') closeModal() }
     document.addEventListener('keydown', h)
     return () => document.removeEventListener('keydown', h)
   }, [showModal])
@@ -219,7 +223,7 @@ export default function StoklarPage() {
       }
     }
 
-    setSaving(false); setShowModal(false); fetchProducts()
+    setSaving(false); closeModal(); fetchProducts()
     logAudit({ businessId: businessId!, staffId, staffName, action: editingProduct ? 'update' : 'create', resource: 'inventory', resourceId: editingProduct?.id, details: { name } })
   }
 
@@ -292,7 +296,7 @@ export default function StoklarPage() {
     } else {
       await supabase.from('suppliers').insert({ ...payload, business_id: businessId })
     }
-    setSavingSupplier(false); setShowSupplierModal(false); fetchSuppliers()
+    setSavingSupplier(false); closeSupplierModal(); fetchSuppliers()
   }
 
   async function handleDeleteSupplier(supplier: Supplier) {
@@ -792,13 +796,13 @@ export default function StoklarPage() {
 
       {/* Ürün Ekle / Düzenleme Modal */}
       {showModal && (
-        <div className="modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
-          <div className="modal-content card w-full max-w-md max-h-[90vh] overflow-y-auto dark:bg-gray-900">
+        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
+          <div className={`modal-content card w-full max-w-md max-h-[90vh] overflow-y-auto dark:bg-gray-900 ${isClosingModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 {editingProduct ? 'Ürünü Düzenle' : 'Yeni Ürün Ekle'}
               </h2>
-              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
+              <button onClick={() => closeModal()} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
             </div>
 
             <form onSubmit={handleSave} className="space-y-4">
@@ -895,7 +899,7 @@ export default function StoklarPage() {
               {error && <div className="rounded-lg bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-400">{error}</div>}
 
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setShowModal(false)} className="btn-secondary flex-1">İptal</button>
+                <button type="button" onClick={() => closeModal()} className="btn-secondary flex-1">İptal</button>
                 <button type="submit" disabled={saving} className="btn-primary flex-1">
                   {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   {editingProduct ? 'Güncelle' : 'Ekle'}
@@ -908,13 +912,13 @@ export default function StoklarPage() {
 
       {/* Tedarikçi Ekle / Düzenle Modal */}
       {showSupplierModal && (
-        <div className="modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
-          <div className="modal-content card w-full max-w-md">
+        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 ${isClosingSupplierModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingSupplierModal) { setShowSupplierModal(false); setIsClosingSupplierModal(false) } }}>
+          <div className={`modal-content card w-full max-w-md ${isClosingSupplierModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 {editingSupplier ? 'Tedarikçiyi Düzenle' : 'Yeni Tedarikçi'}
               </h2>
-              <button onClick={() => setShowSupplierModal(false)} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
+              <button onClick={() => closeSupplierModal()} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
             </div>
             <form onSubmit={handleSaveSupplier} className="space-y-4">
               <div>
@@ -936,7 +940,7 @@ export default function StoklarPage() {
                 <textarea value={supplierNotes} onChange={(e) => setSupplierNotes(e.target.value)} className="input" rows={2} />
               </div>
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setShowSupplierModal(false)} className="btn-secondary flex-1">İptal</button>
+                <button type="button" onClick={() => closeSupplierModal()} className="btn-secondary flex-1">İptal</button>
                 <button type="submit" disabled={savingSupplier} className="btn-primary flex-1">
                   {savingSupplier && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   {editingSupplier ? 'Güncelle' : 'Ekle'}
