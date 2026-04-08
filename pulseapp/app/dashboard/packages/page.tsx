@@ -717,7 +717,7 @@ export default function PaketlerPage() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 16 }}
               transition={{ duration: 0.18, ease: 'easeOut' }}
-              className="absolute right-0 top-0 w-80 card space-y-4"
+              className="absolute right-0 top-0 w-80 card space-y-4 overflow-y-auto max-h-[calc(100vh-10rem)]"
             >
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">{selectedCp.customer_name}</h3>
