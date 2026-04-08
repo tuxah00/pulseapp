@@ -822,15 +822,16 @@ export default function PaketlerPage() {
 
               {/* Desktop floating popover — tıklanan kartın yanında belirir, diğer kartların üstünde */}
               {!isMobile && (
-                <AnimatePresence>
+                <AnimatePresence mode="wait">
                   {selectedCp && panelPosition && (
                     <motion.div
-                      key="package-popover"
+                      key={`package-popover-${selectedCp.id}`}
                       ref={panelRef}
-                      initial={{ opacity: 0, scale: 0.96 }}
-                      animate={{ opacity: 1, scale: 1, left: panelPosition.left, top: panelPosition.top }}
-                      exit={{ opacity: 0, scale: 0.96 }}
-                      transition={{ duration: 0.18, ease: 'easeOut' }}
+                      initial={{ opacity: 0, x: panelPosition.flip ? 6 : -6 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: panelPosition.flip ? 6 : -6 }}
+                      transition={{ duration: 0.16, ease: 'easeOut' }}
+                      style={{ left: panelPosition.left, top: panelPosition.top }}
                       className="absolute z-30 w-80 card space-y-4 max-h-[calc(100vh-10rem)] overflow-y-auto shadow-2xl"
                     >
                       {renderPackageDetail(selectedCp)}
