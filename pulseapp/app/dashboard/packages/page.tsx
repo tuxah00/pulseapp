@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
@@ -68,6 +68,13 @@ export default function PaketlerPage() {
   const [selectedCp, setSelectedCp] = useState<CustomerPackage | null>(null)
   const [sortField, setSortField] = useState<string | null>(null)
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+
+  // ── Floating panel (box görünüm) için ref ve konum state'i ──
+  const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map())
+  const gridContainerRef = useRef<HTMLDivElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
+  const [panelPosition, setPanelPosition] = useState<{ left: number; top: number; flip: boolean } | null>(null)
+  const [isMobile, setIsMobile] = useState(false)
 
   // Sell package form
   const [showSellModal, setShowSellModal] = useState(false)
@@ -336,6 +343,68 @@ export default function PaketlerPage() {
     setSelectedCp(null)
   }
 
+  // ── Mobile breakpoint takibi (lg = 1024px altı) ──
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const mq = window.matchMedia('(max-width: 1023px)')
+    const update = () => setIsMobile(mq.matches)
+    update()
+    mq.addEventListener('change', update)
+    return () => mq.removeEventListener('change', update)
+  }, [])
+
+  // ── Floating panel konum hesaplama (akıllı flip) ──
+  const computePanelPosition = useCallback(() => {
+    if (!selectedCp || isMobile || viewMode !== 'box') {
+      setPanelPosition(null)
+      return
+    }
+    const cardEl = cardRefs.current.get(selectedCp.id)
+    const containerEl = gridContainerRef.current
+    if (!cardEl || !containerEl) return
+
+    const PANEL_WIDTH = 320
+    const GAP = 8
+    const VIEWPORT_PADDING = 16
+    const cardRect = cardEl.getBoundingClientRect()
+    const containerRect = containerEl.getBoundingClientRect()
+    const spaceRight = window.innerWidth - cardRect.right - GAP - VIEWPORT_PADDING
+    const flip = spaceRight < PANEL_WIDTH
+
+    const left = flip
+      ? cardRect.left - containerRect.left - PANEL_WIDTH - GAP
+      : cardRect.right - containerRect.left + GAP
+    const top = cardRect.top - containerRect.top
+
+    setPanelPosition({ left, top, flip })
+  }, [selectedCp, isMobile, viewMode])
+
+  useEffect(() => {
+    computePanelPosition()
+  }, [computePanelPosition])
+
+  useEffect(() => {
+    if (!selectedCp || isMobile || viewMode !== 'box') return
+    const handler = () => computePanelPosition()
+    window.addEventListener('resize', handler)
+    return () => window.removeEventListener('resize', handler)
+  }, [computePanelPosition, selectedCp, isMobile, viewMode])
+
+  // ── Dışarı tıklayınca paneli kapat (sadece desktop floating panel) ──
+  useEffect(() => {
+    if (!selectedCp || isMobile || viewMode !== 'box') return
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as Node
+      if (panelRef.current?.contains(target)) return
+      for (const cardEl of cardRefs.current.values()) {
+        if (cardEl?.contains(target)) return
+      }
+      setSelectedCp(null)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [selectedCp, isMobile, viewMode])
+
   async function openAptModal(cp: CustomerPackage) {
     setAptDate(new Date().toISOString().split('T')[0])
     setAptTime('09:00'); setAptNotes(''); setAptError(null); setAptTemplateName('')
@@ -410,6 +479,114 @@ export default function PaketlerPage() {
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-6 w-6 animate-spin text-pulse-900" />
       </div>
+    )
+  }
+
+  // ── Detay panel içeriği (floating popover ve slide-over tarafından paylaşılır) ──
+  function renderPackageDetail(cp: CustomerPackage) {
+    const detailPct = Math.round((cp.sessions_used / cp.sessions_total) * 100)
+    return (
+      <>
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">{cp.customer_name}</h3>
+          <button onClick={closePanel} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="space-y-2 text-sm">
+          <div className="flex justify-between">
+            <span className="text-gray-500 dark:text-gray-400">Paket</span>
+            <span className="font-medium text-gray-900 dark:text-gray-100 text-right truncate max-w-[180px]">{cp.package_name}</span>
+          </div>
+          {cp.customer_phone && (
+            <div className="flex justify-between">
+              <span className="text-gray-500 dark:text-gray-400">Telefon</span>
+              <span className="text-gray-900 dark:text-gray-100">{cp.customer_phone}</span>
+            </div>
+          )}
+          <div className="flex justify-between">
+            <span className="text-gray-500 dark:text-gray-400">Durum</span>
+            <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium', STATUS_CONFIG[cp.status].color)}>
+              {STATUS_CONFIG[cp.status].label}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-500 dark:text-gray-400">Seans</span>
+            <span className="font-medium text-gray-900 dark:text-gray-100">{cp.sessions_used} / {cp.sessions_total}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-500 dark:text-gray-400">Ödenen</span>
+            <span className="font-semibold text-pulse-900 dark:text-pulse-400">{formatCurrency(cp.price_paid)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-500 dark:text-gray-400">Satın Alım</span>
+            <span className="text-gray-900 dark:text-gray-100">{formatDate(cp.purchase_date)}</span>
+          </div>
+          {cp.expiry_date && (
+            <div className="flex justify-between">
+              <span className="text-gray-500 dark:text-gray-400">Bitiş</span>
+              <span className="text-orange-500">{formatDate(cp.expiry_date)}</span>
+            </div>
+          )}
+          {cp.notes && (
+            <div className="pt-1 border-t border-gray-100 dark:border-gray-800">
+              <p className="text-xs text-gray-500 dark:text-gray-400">{cp.notes}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Progress bar */}
+        <div>
+          <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
+            <span>İlerleme</span>
+            <span>{detailPct}%</span>
+          </div>
+          <div className="bg-gray-100 dark:bg-gray-800 rounded-full h-2">
+            <div
+              className={cn('h-2 rounded-full transition-all', cp.status === 'completed' ? 'bg-blue-500' : 'bg-pulse-900')}
+              style={{ width: `${detailPct}%` }}
+            />
+          </div>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+            {cp.sessions_total - cp.sessions_used} seans kaldı
+          </p>
+        </div>
+
+        {/* Actions */}
+        {cp.status === 'active' && permissions?.packages && (
+          <button
+            onClick={() => openUseModal(cp)}
+            className="w-full btn-primary flex items-center justify-center gap-2"
+          >
+            <Minus className="h-4 w-4" /> Seans Düş
+          </button>
+        )}
+
+        {cp.status === 'active' && (
+          <button
+            onClick={() => openAptModal(cp)}
+            className="w-full btn-secondary flex items-center justify-center gap-2 text-sm"
+          >
+            <CalendarPlus className="h-4 w-4" /> Randevu Oluştur
+          </button>
+        )}
+
+        {cp.status === 'active' && permissions?.packages && (
+          <button
+            onClick={async () => {
+              const ok = await confirm({ title: 'Paketi iptal et', message: 'Bu müşteri paketini iptal etmek istiyor musunuz?', confirmText: 'İptal Et', variant: 'danger' })
+              if (!ok) return
+              await supabase.from('customer_packages').update({ status: 'cancelled' }).eq('id', cp.id)
+              setSelectedCp(prev => prev ? { ...prev, status: 'cancelled' } : null)
+              fetchCustomerPackages()
+            }}
+            className="w-full text-sm text-red-500 hover:text-red-600 py-1.5 text-center hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+          >
+            Paketi İptal Et
+          </button>
+        )}
+      </>
     )
   }
 
@@ -591,237 +768,179 @@ export default function PaketlerPage() {
 
       {/* ── CUSTOMER PACKAGES TAB ── */}
       {pageTab === 'customer' && (
-        <div className="flex gap-4 items-start">
-          <div className="flex-1 min-w-0 space-y-4">
-            {/* Arama */}
-            <div className="relative max-w-xs">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Müşteri ara..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                className="input pl-9 text-sm w-full"
-              />
+        <div className="space-y-4">
+          {/* Arama */}
+          <div className="relative max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Müşteri ara..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="input pl-9 text-sm w-full"
+            />
+          </div>
+
+          {cpLoading ? (
+            <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-pulse-900" /></div>
+          ) : customerPackages.length === 0 ? (
+            <div className="card flex flex-col items-center justify-center py-16 text-center">
+              <Users className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-3" />
+              <p className="font-medium text-gray-900 dark:text-gray-100">Müşteri paketi bulunamadı</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                {templates.length === 0 ? 'Önce paket şablonu oluşturun' : 'Paket satmak için "Paket Sat" butonunu kullanın'}
+              </p>
             </div>
-
-            {/* List / Box */}
-            {cpLoading ? (
-              <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-pulse-900" /></div>
-            ) : customerPackages.length === 0 ? (
-              <div className="card flex flex-col items-center justify-center py-16 text-center">
-                <Users className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-3" />
-                <p className="font-medium text-gray-900 dark:text-gray-100">Müşteri paketi bulunamadı</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  {templates.length === 0 ? 'Önce paket şablonu oluşturun' : 'Paket satmak için "Paket Sat" butonunu kullanın'}
-                </p>
-              </div>
-            ) : viewMode === 'box' ? (
-              <AnimatedList className="grid grid-cols-[repeat(auto-fill,minmax(100px,1fr))] gap-2 p-1">
+          ) : viewMode === 'box' ? (
+            // ── BOX MODE: Hastalar sayfasıyla aynı grid + tıklanan kartın yanında floating panel ──
+            <div ref={gridContainerRef} className="relative">
+              <AnimatedList className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 gap-2">
                 {sortedPackages.map(cp => {
                   const cfg = STATUS_CONFIG[cp.status]
-                  return (
-                    <AnimatedItem key={cp.id}>
-                      <CompactBoxCard
-                        initials={cp.customer_name.slice(0, 2).toUpperCase()}
-                        title={cp.customer_name}
-                        colorClass="bg-pulse-100 text-pulse-900 dark:bg-pulse-900/30 dark:text-pulse-400"
-                        badge={<span className={cn('text-[10px] px-1.5 py-0.5 rounded-full font-medium', cfg.color)}>{cfg.label}</span>}
-                        meta={`${cp.sessions_used}/${cp.sessions_total} seans`}
-                        selected={selectedCp?.id === cp.id}
-                        onClick={() => setSelectedCp(selectedCp?.id === cp.id ? null : cp)}
-                      />
-                    </AnimatedItem>
-                  )
-                })}
-              </AnimatedList>
-            ) : (
-              <AnimatedList className="space-y-2">
-                {sortedPackages.map(cp => {
-                  const pct = Math.round((cp.sessions_used / cp.sessions_total) * 100)
-                  const remaining = cp.sessions_total - cp.sessions_used
-                  const cfg = STATUS_CONFIG[cp.status]
-                  const StatusIcon = cfg.icon
-                  const isSelected = selectedCp?.id === cp.id
-
                   return (
                     <AnimatedItem key={cp.id}>
                       <div
-                        className={cn(
-                          'card cursor-pointer hover:shadow-md transition-all',
-                          isSelected && 'ring-2 ring-pulse-900'
-                        )}
-                        onClick={() => setSelectedCp(isSelected ? null : cp)}
+                        ref={el => {
+                          if (el) cardRefs.current.set(cp.id, el)
+                          else cardRefs.current.delete(cp.id)
+                        }}
                       >
-                        <div className="flex items-center gap-3">
-                          {/* Avatar */}
-                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-pulse-100 dark:bg-pulse-900/30 text-pulse-900 dark:text-pulse-400 font-bold text-sm flex-shrink-0">
-                            {cp.customer_name.slice(0, 2).toUpperCase()}
-                          </div>
-
-                          {/* Info */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-medium text-gray-900 dark:text-gray-100 truncate">{cp.customer_name}</span>
-                              <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium', cfg.color)}>
-                                <StatusIcon className="h-3 w-3" />
-                                {cfg.label}
-                              </span>
-                            </div>
-                            <p className="text-sm text-gray-600 dark:text-gray-300 truncate">{cp.package_name}</p>
-                            <div className="flex items-center gap-3 mt-1">
-                              <div className="flex-1 bg-gray-100 dark:bg-gray-800 rounded-full h-1.5 max-w-[120px]">
-                                <div
-                                  className={cn('h-1.5 rounded-full transition-all', cp.status === 'completed' ? 'bg-blue-500' : 'bg-pulse-900')}
-                                  style={{ width: `${pct}%` }}
-                                />
-                              </div>
-                              <span className="text-xs text-gray-500 dark:text-gray-400">
-                                {cp.sessions_used}/{cp.sessions_total} seans
-                              </span>
-                              {remaining > 0 && cp.status === 'active' && (
-                                <span className="text-xs text-green-600 dark:text-green-400 font-medium">{remaining} kaldı</span>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Right side */}
-                          <div className="flex flex-col items-end gap-1 flex-shrink-0 ml-2">
-                            <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{formatCurrency(cp.price_paid)}</span>
-                            <span className="text-xs text-gray-400">{formatDate(cp.purchase_date)}</span>
-                            {cp.expiry_date && (
-                              <span className="text-xs text-orange-500">
-                                Bitiş: {formatDate(cp.expiry_date)}
-                              </span>
-                            )}
-                          </div>
-
-                          <ChevronRight className={cn('h-4 w-4 text-gray-400 transition-transform flex-shrink-0', isSelected && 'rotate-90')} />
-                        </div>
+                        <CompactBoxCard
+                          initials={cp.customer_name.slice(0, 2).toUpperCase()}
+                          title={cp.customer_name}
+                          colorClass="bg-pulse-100 text-pulse-900 dark:bg-pulse-900/30 dark:text-pulse-400"
+                          badge={<span className={cn('text-[10px] px-1.5 py-0.5 rounded-full font-medium', cfg.color)}>{cfg.label}</span>}
+                          meta={`${cp.sessions_used}/${cp.sessions_total} seans`}
+                          selected={selectedCp?.id === cp.id}
+                          onClick={() => setSelectedCp(selectedCp?.id === cp.id ? null : cp)}
+                        />
                       </div>
                     </AnimatedItem>
                   )
                 })}
               </AnimatedList>
-            )}
-          </div>
 
-          {/* ── Detail Panel ── */}
-          <AnimatePresence>
-          {selectedCp && (() => {
-            const detailPct = Math.round((selectedCp.sessions_used / selectedCp.sessions_total) * 100)
-            return (
-            <motion.div
-              key={selectedCp.id}
-              initial={{ opacity: 0, x: 16 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 16 }}
-              transition={{ duration: 0.18, ease: 'easeOut' }}
-              className="w-80 flex-shrink-0 card space-y-4 overflow-y-auto max-h-[calc(100vh-10rem)]"
-            >
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">{selectedCp.customer_name}</h3>
-                <button onClick={closePanel} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400">
-                  <X className="h-4 w-4" />
-                </button>
+              {/* Desktop floating popover — tıklanan kartın yanında belirir, diğer kartların üstünde */}
+              {!isMobile && (
+                <AnimatePresence>
+                  {selectedCp && panelPosition && (
+                    <motion.div
+                      key="package-popover"
+                      ref={panelRef}
+                      initial={{ opacity: 0, scale: 0.96 }}
+                      animate={{ opacity: 1, scale: 1, left: panelPosition.left, top: panelPosition.top }}
+                      exit={{ opacity: 0, scale: 0.96 }}
+                      transition={{ duration: 0.18, ease: 'easeOut' }}
+                      className="absolute z-30 w-80 card space-y-4 max-h-[calc(100vh-10rem)] overflow-y-auto shadow-2xl"
+                    >
+                      {renderPackageDetail(selectedCp)}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              )}
+            </div>
+          ) : (
+            // ── LIST MODE: Mevcut sibling panel davranışı korundu ──
+            <div className="flex gap-4 items-start">
+              <div className="flex-1 min-w-0">
+                <AnimatedList className="space-y-2">
+                  {sortedPackages.map(cp => {
+                    const pct = Math.round((cp.sessions_used / cp.sessions_total) * 100)
+                    const remaining = cp.sessions_total - cp.sessions_used
+                    const cfg = STATUS_CONFIG[cp.status]
+                    const StatusIcon = cfg.icon
+                    const isSelected = selectedCp?.id === cp.id
+
+                    return (
+                      <AnimatedItem key={cp.id}>
+                        <div
+                          className={cn(
+                            'card cursor-pointer hover:shadow-md transition-all',
+                            isSelected && 'ring-2 ring-pulse-900'
+                          )}
+                          onClick={() => setSelectedCp(isSelected ? null : cp)}
+                        >
+                          <div className="flex items-center gap-3">
+                            {/* Avatar */}
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-pulse-100 dark:bg-pulse-900/30 text-pulse-900 dark:text-pulse-400 font-bold text-sm flex-shrink-0">
+                              {cp.customer_name.slice(0, 2).toUpperCase()}
+                            </div>
+
+                            {/* Info */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-medium text-gray-900 dark:text-gray-100 truncate">{cp.customer_name}</span>
+                                <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium', cfg.color)}>
+                                  <StatusIcon className="h-3 w-3" />
+                                  {cfg.label}
+                                </span>
+                              </div>
+                              <p className="text-sm text-gray-600 dark:text-gray-300 truncate">{cp.package_name}</p>
+                              <div className="flex items-center gap-3 mt-1">
+                                <div className="flex-1 bg-gray-100 dark:bg-gray-800 rounded-full h-1.5 max-w-[120px]">
+                                  <div
+                                    className={cn('h-1.5 rounded-full transition-all', cp.status === 'completed' ? 'bg-blue-500' : 'bg-pulse-900')}
+                                    style={{ width: `${pct}%` }}
+                                  />
+                                </div>
+                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                  {cp.sessions_used}/{cp.sessions_total} seans
+                                </span>
+                                {remaining > 0 && cp.status === 'active' && (
+                                  <span className="text-xs text-green-600 dark:text-green-400 font-medium">{remaining} kaldı</span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Right side */}
+                            <div className="flex flex-col items-end gap-1 flex-shrink-0 ml-2">
+                              <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{formatCurrency(cp.price_paid)}</span>
+                              <span className="text-xs text-gray-400">{formatDate(cp.purchase_date)}</span>
+                              {cp.expiry_date && (
+                                <span className="text-xs text-orange-500">
+                                  Bitiş: {formatDate(cp.expiry_date)}
+                                </span>
+                              )}
+                            </div>
+
+                            <ChevronRight className={cn('h-4 w-4 text-gray-400 transition-transform flex-shrink-0', isSelected && 'rotate-90')} />
+                          </div>
+                        </div>
+                      </AnimatedItem>
+                    )
+                  })}
+                </AnimatedList>
               </div>
 
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-500 dark:text-gray-400">Paket</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100 text-right truncate max-w-[180px]">{selectedCp.package_name}</span>
-                </div>
-                {selectedCp.customer_phone && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-500 dark:text-gray-400">Telefon</span>
-                    <span className="text-gray-900 dark:text-gray-100">{selectedCp.customer_phone}</span>
-                  </div>
+              {/* List mode için sidebar panel (mevcut davranış) */}
+              <AnimatePresence>
+                {selectedCp && (
+                  <motion.div
+                    key={selectedCp.id}
+                    initial={{ opacity: 0, x: 16 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 16 }}
+                    transition={{ duration: 0.18, ease: 'easeOut' }}
+                    className="w-80 flex-shrink-0 card space-y-4 overflow-y-auto max-h-[calc(100vh-10rem)]"
+                  >
+                    {renderPackageDetail(selectedCp)}
+                  </motion.div>
                 )}
-                <div className="flex justify-between">
-                  <span className="text-gray-500 dark:text-gray-400">Durum</span>
-                  <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium', STATUS_CONFIG[selectedCp.status].color)}>
-                    {STATUS_CONFIG[selectedCp.status].label}
-                  </span>
+              </AnimatePresence>
+            </div>
+          )}
+
+          {/* Mobile slide-over (sadece box mode için) */}
+          {viewMode === 'box' && isMobile && selectedCp && (
+            <Portal>
+              <div className="fixed inset-0 z-[100] bg-black/50 dark:bg-black/70" onClick={closePanel} />
+              <div className="slide-panel">
+                <div className="p-5 space-y-4">
+                  {renderPackageDetail(selectedCp)}
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500 dark:text-gray-400">Seans</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">{selectedCp.sessions_used} / {selectedCp.sessions_total}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500 dark:text-gray-400">Ödenen</span>
-                  <span className="font-semibold text-pulse-900 dark:text-pulse-400">{formatCurrency(selectedCp.price_paid)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500 dark:text-gray-400">Satın Alım</span>
-                  <span className="text-gray-900 dark:text-gray-100">{formatDate(selectedCp.purchase_date)}</span>
-                </div>
-                {selectedCp.expiry_date && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-500 dark:text-gray-400">Bitiş</span>
-                    <span className="text-orange-500">{formatDate(selectedCp.expiry_date)}</span>
-                  </div>
-                )}
-                {selectedCp.notes && (
-                  <div className="pt-1 border-t border-gray-100 dark:border-gray-800">
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{selectedCp.notes}</p>
-                  </div>
-                )}
               </div>
-
-              {/* Progress bar */}
-              <div>
-                <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
-                  <span>İlerleme</span>
-                  <span>{detailPct}%</span>
-                </div>
-                <div className="bg-gray-100 dark:bg-gray-800 rounded-full h-2">
-                  <div
-                    className={cn('h-2 rounded-full transition-all', selectedCp.status === 'completed' ? 'bg-blue-500' : 'bg-pulse-900')}
-                    style={{ width: `${detailPct}%` }}
-                  />
-                </div>
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                  {selectedCp.sessions_total - selectedCp.sessions_used} seans kaldı
-                </p>
-              </div>
-
-              {/* Actions */}
-              {selectedCp.status === 'active' && permissions?.packages && (
-                <button
-                  onClick={() => openUseModal(selectedCp)}
-                  className="w-full btn-primary flex items-center justify-center gap-2"
-                >
-                  <Minus className="h-4 w-4" /> Seans Düş
-                </button>
-              )}
-
-              {selectedCp.status === 'active' && (
-                <button
-                  onClick={() => openAptModal(selectedCp)}
-                  className="w-full btn-secondary flex items-center justify-center gap-2 text-sm"
-                >
-                  <CalendarPlus className="h-4 w-4" /> Randevu Oluştur
-                </button>
-              )}
-
-              {selectedCp.status === 'active' && permissions?.packages && (
-                <button
-                  onClick={async () => {
-                    const ok = await confirm({ title: 'Paketi iptal et', message: 'Bu müşteri paketini iptal etmek istiyor musunuz?', confirmText: 'İptal Et', variant: 'danger' })
-                    if (!ok) return
-                    await supabase.from('customer_packages').update({ status: 'cancelled' }).eq('id', selectedCp.id)
-                    setSelectedCp(prev => prev ? { ...prev, status: 'cancelled' } : null)
-                    fetchCustomerPackages()
-                  }}
-                  className="w-full text-sm text-red-500 hover:text-red-600 py-1.5 text-center hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                >
-                  Paketi İptal Et
-                </button>
-              )}
-            </motion.div>
-          )
-          })()}
-          </AnimatePresence>
+            </Portal>
+          )}
         </div>
       )}
 
