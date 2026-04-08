@@ -17,10 +17,27 @@ import {
 import { addDays, format } from 'date-fns'
 import { formatCurrency } from '@/lib/utils'
 import { SEGMENT_LABELS } from '@/types'
+import type {
+  AppointmentRow,
+  BusinessStatsView,
+  CustomerRow,
+  NotificationRow,
+} from '@/types/db'
 import TodayAppointments from './_components/today-appointments'
 import WeeklyInsights from './_components/weekly-insights'
 import PerformanceStats from './_components/performance-stats'
 import { Sparkline } from '@/components/ui/sparkline'
+
+type TodayAppointmentRow = AppointmentRow & {
+  customers: { name: string; phone: string | null } | null
+  services: { name: string; duration_minutes: number } | null
+  staff_members: { name: string } | null
+}
+
+type RiskCustomerRow = Pick<CustomerRow, 'id' | 'name' | 'segment' | 'last_visit_at'>
+type WeekAppointmentRow = Pick<AppointmentRow, 'appointment_date' | 'status'>
+type DateOnlyAppointment = Pick<AppointmentRow, 'appointment_date'>
+type ReviewSummary = { rating: number | null; created_at: string | null }
 
 export default async function DashboardPage() {
   const supabase = createServerSupabaseClient()
@@ -50,13 +67,13 @@ export default async function DashboardPage() {
   const weekStartStr = weekStart.toISOString().split('T')[0]
   const weekEndStr = weekEnd.toISOString().split('T')[0]
 
-  let todayAppointments: any[] = []
-  let stats: any = null
-  let notifications: any[] = []
-  let riskCustomers: any[] = []
+  let todayAppointments: TodayAppointmentRow[] = []
+  let stats: BusinessStatsView | null = null
+  let notifications: NotificationRow[] = []
+  let riskCustomers: RiskCustomerRow[] = []
   let aptTrend: number[] = []
   let ratingTrend: number[] = []
-  let weeklyAppointments: any[] = []
+  let weeklyAppointments: WeekAppointmentRow[] = []
 
   try {
     const results = await Promise.all([
@@ -115,14 +132,22 @@ export default async function DashboardPage() {
         .not('status', 'eq', 'cancelled'),
     ])
 
-    todayAppointments = results[0].data || []
-    stats = results[1].data
-    notifications = results[2].data || []
-    riskCustomers = results[3].data || []
+    todayAppointments = (results[0].data ?? []) as TodayAppointmentRow[]
+    stats = (results[1].data ?? null) as BusinessStatsView | null
+    notifications = (results[2].data ?? []) as NotificationRow[]
+    riskCustomers = (results[3].data ?? []) as RiskCustomerRow[]
 
-    aptTrend = dailyCounts((results[4].data || []).map((r: any) => r.appointment_date), d7)
-    ratingTrend = dailyAverages((results[5].data || []).map((r: any) => ({ day: r.created_at?.split('T')[0], value: r.rating })), d7)
-    weeklyAppointments = results[6].data || []
+    const dateRows = (results[4].data ?? []) as DateOnlyAppointment[]
+    const reviewRows = (results[5].data ?? []) as ReviewSummary[]
+    aptTrend = dailyCounts(dateRows.map((r) => r.appointment_date), d7)
+    ratingTrend = dailyAverages(
+      reviewRows.map((r) => ({
+        day: r.created_at?.split('T')[0],
+        value: r.rating ?? 0,
+      })),
+      d7,
+    )
+    weeklyAppointments = (results[6].data ?? []) as WeekAppointmentRow[]
   } catch (err) {
     console.error('Dashboard veri çekme hatası:', err)
   }
@@ -143,17 +168,17 @@ export default async function DashboardPage() {
     const d = new Date(weekStart)
     d.setDate(weekStart.getDate() + i)
     const ds = d.toISOString().split('T')[0]
-    return weeklyAppointments.filter((a: any) => a.appointment_date === ds).length
+    return weeklyAppointments.filter((a) => a.appointment_date === ds).length
   })
 
-  const s = stats || {
-    total_customers: 0,
-    today_appointments: 0,
-    today_completed: 0,
-    today_no_shows: 0,
-    total_reviews: 0,
-    avg_rating: null,
-    unread_notifications: 0,
+  const s = {
+    total_customers: stats?.total_customers ?? 0,
+    today_appointments: stats?.today_appointments ?? 0,
+    today_completed: stats?.today_completed ?? 0,
+    today_no_shows: stats?.today_no_shows ?? 0,
+    total_reviews: stats?.total_reviews ?? 0,
+    avg_rating: stats?.avg_rating ?? null,
+    unread_notifications: stats?.unread_notifications ?? 0,
   }
 
   const bookingUrl = `${process.env.NEXT_PUBLIC_APP_URL}/book/${businessId}`
@@ -279,7 +304,7 @@ export default async function DashboardPage() {
               </div>
             ) : (
               <div className="space-y-3">
-                {notifications.map((notif: any) => {
+                {notifications.map((notif) => {
                   const isNew = notif.created_at && (Date.now() - new Date(notif.created_at).getTime()) < 24 * 60 * 60 * 1000
                   const typeConfig = NOTIF_CONFIG[notif.type as keyof typeof NOTIF_CONFIG] || NOTIF_CONFIG.system
                   return (
@@ -323,7 +348,7 @@ export default async function DashboardPage() {
                 </h2>
               </div>
               <div className="space-y-2">
-                {riskCustomers.map((customer: any) => (
+                {riskCustomers.map((customer) => (
                   <div key={customer.id} className="flex items-center justify-between gap-2">
                     <span className="text-sm text-gray-700 dark:text-gray-300 truncate">{customer.name}</span>
                     <span className={`badge flex-shrink-0 text-xs ${

@@ -2,6 +2,56 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendSMS } from '@/lib/sms/send'
 import type { CustomerSegment } from '@/types'
+import type { BusinessRow } from '@/types/db'
+
+type ReminderCustomer = { id: string; name: string; phone: string | null }
+type ReminderBusiness = { id: string; name: string; settings: BusinessRow['settings'] }
+type ReminderAppointment = {
+  id: string
+  appointment_date: string | null
+  start_time: string | null
+  notes: string | null
+  customers: ReminderCustomer | null
+  services: { name: string } | null
+  businesses: ReminderBusiness | null
+}
+
+type ReviewBusiness = ReminderBusiness & { google_maps_url: string | null }
+type ReviewAppointment = {
+  id: string
+  updated_at: string | null
+  customers: ReminderCustomer | null
+  businesses: ReviewBusiness | null
+}
+
+type WinbackBusiness = Pick<BusinessRow, 'id' | 'name' | 'settings'>
+type WinbackCustomer = {
+  id: string
+  name: string
+  phone: string | null
+  total_visits: number | null
+  last_visit_at: string | null
+  segment: CustomerSegment | null
+}
+
+type CancelledAppointment = {
+  appointment_date: string
+  start_time: string
+  end_time: string
+  staff_id: string | null
+  service_id: string | null
+  business_id: string
+}
+
+type WaitlistEntry = {
+  id: string
+  customer_id: string | null
+  customer_name: string
+  customer_phone: string
+  preferred_date: string | null
+  is_notified: boolean
+  is_active: boolean
+}
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization')
@@ -33,13 +83,13 @@ export async function GET(request: NextRequest) {
     .in('status', ['confirmed', 'pending'])
     .eq('reminder_24h_sent', false)
 
-  for (const apt of appointments24h || []) {
-    const customer = apt.customers as any
-    const service = apt.services as any
-    const business = apt.businesses as any
+  for (const apt of (appointments24h || []) as unknown as ReminderAppointment[]) {
+    const customer = apt.customers
+    const business = apt.businesses
 
     if (!customer?.phone || !business?.id) continue
-    if (!business.settings?.reminder_24h) continue
+    const settings = business.settings as Record<string, unknown> | null
+    if (!settings?.reminder_24h) continue
 
     await supabase.from('appointments').update({ reminder_24h_sent: true }).eq('id', apt.id)
     reminders.sent24h++
@@ -65,13 +115,13 @@ export async function GET(request: NextRequest) {
     .in('status', ['confirmed', 'pending'])
     .eq('reminder_2h_sent', false)
 
-  for (const apt of appointments2h || []) {
-    const customer = apt.customers as any
-    const service = apt.services as any
-    const business = apt.businesses as any
+  for (const apt of (appointments2h || []) as unknown as ReminderAppointment[]) {
+    const customer = apt.customers
+    const business = apt.businesses
 
     if (!customer?.phone || !business?.id) continue
-    if (!business.settings?.reminder_2h) continue
+    const settings = business.settings as Record<string, unknown> | null
+    if (!settings?.reminder_2h) continue
 
     await supabase.from('appointments').update({ reminder_2h_sent: true }).eq('id', apt.id)
     reminders.sent2h++
@@ -90,15 +140,16 @@ export async function GET(request: NextRequest) {
     .eq('status', 'completed')
     .eq('review_requested', false)
 
-  for (const apt of completedApts || []) {
-    const customer = apt.customers as any
-    const business = apt.businesses as any
+  for (const apt of (completedApts || []) as unknown as ReviewAppointment[]) {
+    const customer = apt.customers
+    const business = apt.businesses
 
     if (!customer?.phone || !business?.id) continue
-    if (!business.settings?.auto_review_request) continue
+    const settings = business.settings as Record<string, unknown> | null
+    if (!settings?.auto_review_request) continue
 
-    const delayMinutes = business.settings.review_request_delay_minutes ?? 30
-    const readyAt = new Date(new Date(apt.updated_at).getTime() + delayMinutes * 60 * 1000)
+    const delayMinutes = (settings.review_request_delay_minutes as number | undefined) ?? 30
+    const readyAt = new Date(new Date(apt.updated_at ?? now).getTime() + delayMinutes * 60 * 1000)
     if (readyAt > now) continue
 
     const googleLink = business.google_maps_url
@@ -124,8 +175,9 @@ export async function GET(request: NextRequest) {
     .select('id, name, settings')
     .eq('is_active', true)
 
-  for (const business of businesses || []) {
-    const winbackDays: number = business.settings?.winback_days ?? 60
+  for (const business of (businesses || []) as WinbackBusiness[]) {
+    const settings = business.settings as Record<string, unknown> | null
+    const winbackDays: number = (settings?.winback_days as number | undefined) ?? 60
 
     const { data: customers } = await supabase
       .from('customers')
@@ -133,7 +185,7 @@ export async function GET(request: NextRequest) {
       .eq('business_id', business.id)
       .eq('is_active', true)
 
-    for (const customer of customers || []) {
+    for (const customer of (customers || []) as WinbackCustomer[]) {
       const visits = customer.total_visits ?? 0
       const lastVisit = customer.last_visit_at ? new Date(customer.last_visit_at) : null
 
@@ -177,7 +229,7 @@ export async function GET(request: NextRequest) {
     .in('status', ['cancelled', 'no_show'])
     .eq('appointment_date', todayStr)
 
-  for (const apt of cancelledToday || []) {
+  for (const apt of (cancelledToday || []) as CancelledAppointment[]) {
     // Aynı tarih/saat/personel için bekleme listesi kayıtlarını bul
     let wlQuery = supabase
       .from('waitlist_entries')
@@ -190,7 +242,7 @@ export async function GET(request: NextRequest) {
 
     const { data: waitlistItems } = await wlQuery
 
-    for (const item of waitlistItems || []) {
+    for (const item of (waitlistItems || []) as WaitlistEntry[]) {
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
       const message = `Merhaba ${item.customer_name}! 😊 Beklediğiniz randevu slotu uygun oldu. Hemen almak için: ${appUrl}/book/${apt.business_id}`
 

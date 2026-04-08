@@ -12,6 +12,20 @@ import {
 } from 'lucide-react'
 import { formatPhone, formatDate, formatTime, formatCurrency, getSegmentColor, cn, getInitials, getAvatarColor } from '@/lib/utils'
 import { SEGMENT_LABELS, STATUS_LABELS, type Customer, type CustomerSegment } from '@/types'
+import type { AppointmentRow, MessageRow, ReviewRow } from '@/types/db'
+
+type AppointmentTimelineData = Pick<
+  AppointmentRow,
+  'id' | 'appointment_date' | 'start_time' | 'end_time' | 'status' | 'notes'
+> & {
+  services: { name: string } | null
+  staff_members: { name: string } | null
+}
+
+type TimelineItem =
+  | { id: string; type: 'appointment'; date: string; sortDate: string; data: AppointmentTimelineData }
+  | { id: string; type: 'message'; date: string; sortDate: string; data: MessageRow }
+  | { id: string; type: 'review'; date: string; sortDate: string; data: ReviewRow }
 import { logAudit } from '@/lib/utils/audit'
 import CompactBoxCard from '@/components/ui/compact-box-card'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
@@ -72,7 +86,7 @@ export default function CustomersPage() {
 
   // Timeline state
   const [panelTab, setPanelTab] = useState<'info' | 'history' | 'teeth'>('info')
-  const [timeline, setTimeline] = useState<any[]>([])
+  const [timeline, setTimeline] = useState<TimelineItem[]>([])
   const [timelineLoading, setTimelineLoading] = useState(false)
 
   const supabase = createClient()
@@ -190,11 +204,11 @@ export default function CustomersPage() {
           .limit(20),
       ])
 
-      const items: any[] = []
+      const items: TimelineItem[] = []
 
       // Randevuları ekle
       if (aptsRes.data) {
-        aptsRes.data.forEach((apt: any) => {
+        ;(aptsRes.data as unknown as AppointmentTimelineData[]).forEach((apt) => {
           items.push({
             id: `apt-${apt.id}`,
             type: 'appointment',
@@ -207,12 +221,14 @@ export default function CustomersPage() {
 
       // Mesajları ekle
       if (msgsRes.data) {
-        msgsRes.data.forEach((msg: any) => {
+        ;(msgsRes.data as MessageRow[]).forEach((msg) => {
+          const createdAt = msg.created_at
+          if (!createdAt) return
           items.push({
             id: `msg-${msg.id}`,
             type: 'message',
-            date: msg.created_at.split('T')[0],
-            sortDate: msg.created_at,
+            date: createdAt.split('T')[0],
+            sortDate: createdAt,
             data: msg,
           })
         })
@@ -220,12 +236,14 @@ export default function CustomersPage() {
 
       // Yorumları ekle
       if (reviewsRes.data) {
-        reviewsRes.data.forEach((rev: any) => {
+        ;(reviewsRes.data as ReviewRow[]).forEach((rev) => {
+          const createdAt = rev.created_at
+          if (!createdAt) return
           items.push({
             id: `rev-${rev.id}`,
             type: 'review',
-            date: rev.created_at.split('T')[0],
-            sortDate: rev.created_at,
+            date: createdAt.split('T')[0],
+            sortDate: createdAt,
             data: rev,
           })
         })
@@ -274,7 +292,7 @@ export default function CustomersPage() {
     }
   }
 
-  function renderTimelineItem(item: any) {
+  function renderTimelineItem(item: TimelineItem) {
     if (item.type === 'appointment') {
       const apt = item.data
       const statusLabel = STATUS_LABELS[apt.status as keyof typeof STATUS_LABELS] || apt.status
@@ -308,7 +326,7 @@ export default function CustomersPage() {
               <span className="ml-1 text-xs font-normal text-gray-400">({msg.channel?.toUpperCase()})</span>
             </p>
             <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 line-clamp-2">{msg.content}</p>
-            <p className="text-xs text-gray-400 mt-0.5">{formatDate(msg.created_at)}</p>
+            <p className="text-xs text-gray-400 mt-0.5">{formatDate(item.sortDate)}</p>
           </div>
         </div>
       )
@@ -328,7 +346,7 @@ export default function CustomersPage() {
             {rev.comment && (
               <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 line-clamp-2">&ldquo;{rev.comment}&rdquo;</p>
             )}
-            <p className="text-xs text-gray-400 mt-0.5">{formatDate(rev.created_at)}</p>
+            <p className="text-xs text-gray-400 mt-0.5">{formatDate(item.sortDate)}</p>
           </div>
         </div>
       )
@@ -358,12 +376,15 @@ export default function CustomersPage() {
     })
     if (sortField) {
       list = [...list].sort((a, b) => {
-        const va = (a as any)[sortField]
-        const vb = (b as any)[sortField]
+        const va = a[sortField as keyof Customer]
+        const vb = b[sortField as keyof Customer]
         if (va == null && vb == null) return 0
         if (va == null) return 1
         if (vb == null) return -1
-        const cmp = typeof va === 'string' ? va.localeCompare(vb, 'tr') : (va as number) - (vb as number)
+        const cmp =
+          typeof va === 'string' && typeof vb === 'string'
+            ? va.localeCompare(vb, 'tr')
+            : (va as number) - (vb as number)
         return sortDir === 'asc' ? cmp : -cmp
       })
     }
