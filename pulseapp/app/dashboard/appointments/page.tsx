@@ -28,6 +28,13 @@ import {
 } from 'lucide-react'
 import { formatTime, formatDate, getStatusColor, formatCurrency, cn } from '@/lib/utils'
 import { STATUS_LABELS, type AppointmentStatus, type Customer, type Service, type StaffMember, type WorkingHours } from '@/types'
+import type { AppointmentRow } from '@/types/db'
+
+type AppointmentView = AppointmentRow & {
+  customers: { name: string; phone: string | null } | null
+  services: { name: string; price: number; duration_minutes: number } | null
+  staff_members: { name: string } | null
+}
 import { logAudit } from '@/lib/utils/audit'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
@@ -38,26 +45,26 @@ import { Portal } from '@/components/ui/portal'
 export default function AppointmentsPage() {
   const { businessId, staffId: currentStaffId, staffName: currentStaffName, loading: ctxLoading } = useBusinessContext()
   const { confirm } = useConfirm()
-  const [appointments, setAppointments] = useState<any[]>([])
+  const [appointments, setAppointments] = useState<AppointmentView[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
   const [now, setNow] = useState<Date | null>(null)
   const [viewMode, setViewMode] = useViewMode('appointments', 'list')
-  const [selectedAppointment, setSelectedAppointment] = useState<any | null>(null)
+  const [selectedAppointment, setSelectedAppointment] = useState<AppointmentView | null>(null)
   const [panelClosing, setPanelClosing] = useState(false)
   const closePanelAnimated = useCallback(() => setPanelClosing(true), [])
   const [showModal, setShowModal] = useState(false)
   const [isClosingModal, setIsClosingModal] = useState(false)
   const closeModal = () => setIsClosingModal(true)
-  const [editingAppointment, setEditingAppointment] = useState<any | null>(null)
-  const [rescheduleAppointment, setRescheduleAppointment] = useState<any | null>(null)
+  const [editingAppointment, setEditingAppointment] = useState<AppointmentView | null>(null)
+  const [rescheduleAppointment, setRescheduleAppointment] = useState<AppointmentView | null>(null)
   const [isClosingReschedule, setIsClosingReschedule] = useState(false)
   const closeReschedule = () => setIsClosingReschedule(true)
-  const [cancelConfirmAppointment, setCancelConfirmAppointment] = useState<any | null>(null)
+  const [cancelConfirmAppointment, setCancelConfirmAppointment] = useState<AppointmentView | null>(null)
   const [isClosingCancelConfirm, setIsClosingCancelConfirm] = useState(false)
   const closeCancelConfirm = () => setIsClosingCancelConfirm(true)
   const [cancelNotifyCustomer, setCancelNotifyCustomer] = useState(true)
-  const [slotPopup, setSlotPopup] = useState<{ day: string; hour: number; apts: any[]; x: number; y: number } | null>(null)
+  const [slotPopup, setSlotPopup] = useState<{ day: string; hour: number; apts: AppointmentView[]; x: number; y: number } | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [rescheduleDate, setRescheduleDate] = useState('')
@@ -216,7 +223,7 @@ export default function AppointmentsPage() {
   const isToday = selectedDate === todayStr
   const nowMinutes = now ? now.getHours() * 60 + now.getMinutes() : -1
 
-  function getTimeState(apt: any): 'past' | 'current' | 'future' {
+  function getTimeState(apt: AppointmentView): 'past' | 'current' | 'future' {
     if (selectedDate < todayStr) return 'past'
     if (selectedDate > todayStr) return 'future'
     const toMinutes = (time: string) => { const [h, m] = time.split(':').map(Number); return h * 60 + m }
@@ -251,7 +258,7 @@ export default function AppointmentsPage() {
     setError(null); setShowModal(true)
   }
 
-  function openEditModal(apt: any, e?: React.MouseEvent) {
+  function openEditModal(apt: AppointmentView, e?: React.MouseEvent) {
     e?.stopPropagation()
     setEditingAppointment(apt)
     setCustomerId(apt.customer_id); setServiceId(apt.service_id || ''); setStaffId(apt.staff_id || '')
@@ -260,7 +267,7 @@ export default function AppointmentsPage() {
     setError(null); setShowModal(true)
   }
 
-  function openRescheduleModal(apt: any, e?: React.MouseEvent) {
+  function openRescheduleModal(apt: AppointmentView, e?: React.MouseEvent) {
     e?.stopPropagation()
     setRescheduleAppointment(apt)
     setRescheduleDate(apt.appointment_date)
@@ -268,7 +275,7 @@ export default function AppointmentsPage() {
     setError(null)
   }
 
-  function openCancelConfirm(apt: any, e?: React.MouseEvent) {
+  function openCancelConfirm(apt: AppointmentView, e?: React.MouseEvent) {
     e?.stopPropagation()
     setCancelConfirmAppointment(apt)
     setCancelNotifyCustomer(true)
@@ -557,7 +564,7 @@ export default function AppointmentsPage() {
     }
     // Detay panelindeki randevuyu güncelle
     if (selectedAppointment?.id === appointmentId) {
-      setSelectedAppointment((prev: any) => prev ? { ...prev, status: newStatus } : null)
+      setSelectedAppointment((prev) => prev ? { ...prev, status: newStatus } : null)
     }
     const statusApt = appointments.find(a => a.id === appointmentId)
     await logAudit({
@@ -655,14 +662,21 @@ export default function AppointmentsPage() {
     })
     if (sortField) {
       list = [...list].sort((a, b) => {
-        let va: any, vb: any
+        let va: string | number | null | undefined
+        let vb: string | number | null | undefined
         if (sortField === 'customer_name') { va = a.customers?.name; vb = b.customers?.name }
         else if (sortField === 'service_name') { va = a.services?.name; vb = b.services?.name }
-        else { va = (a as any)[sortField]; vb = (b as any)[sortField] }
+        else {
+          va = a[sortField as keyof AppointmentView] as string | number | null | undefined
+          vb = b[sortField as keyof AppointmentView] as string | number | null | undefined
+        }
         if (va == null && vb == null) return 0
         if (va == null) return 1
         if (vb == null) return -1
-        const cmp = typeof va === 'string' ? va.localeCompare(vb, 'tr') : (va as number) - (vb as number)
+        const cmp =
+          typeof va === 'string' && typeof vb === 'string'
+            ? va.localeCompare(vb, 'tr')
+            : (va as number) - (vb as number)
         return sortDir === 'asc' ? cmp : -cmp
       })
     }
@@ -675,7 +689,7 @@ export default function AppointmentsPage() {
   const noShowCount = appointments.filter(a => a.status === 'no_show').length
 
   // Aksiyon butonları — hem liste hem kutu görünümünde kullanılır
-  function ActionButtons({ apt, size = 'md' }: { apt: any; size?: 'sm' | 'md' }) {
+  function ActionButtons({ apt, size = 'md' }: { apt: AppointmentView; size?: 'sm' | 'md' }) {
     const btnCls = size === 'sm'
       ? 'flex h-7 w-7 items-center justify-center rounded-lg transition-colors'
       : 'flex h-8 w-8 items-center justify-center rounded-lg transition-colors'
@@ -1431,7 +1445,7 @@ export default function AppointmentsPage() {
                 )}
                 {selectedAppointment.status === 'completed' && (
                   <button
-                    onClick={() => { window.location.href = `/dashboard/kasa?appointmentId=${selectedAppointment.id}` }}
+                    onClick={() => { window.location.href = `/dashboard/pos?appointmentId=${selectedAppointment.id}` }}
                     className="w-full flex items-center gap-2 rounded-lg border border-pulse-200 dark:border-pulse-800 bg-pulse-50 dark:bg-pulse-900/20 px-4 py-2.5 text-sm font-medium text-pulse-900 dark:text-pulse-300 hover:bg-pulse-100 dark:hover:bg-pulse-800/30 transition-colors"
                   >
                     <CheckCircle className="h-4 w-4" /> Tahsilat Al
@@ -1599,7 +1613,7 @@ export default function AppointmentsPage() {
                               { value: 'monthly', label: 'Her ay' },
                             ]}
                             value={recurrenceFrequency}
-                            onChange={v => setRecurrenceFrequency(v as any)}
+                            onChange={v => setRecurrenceFrequency(v as 'weekly' | 'biweekly' | 'monthly')}
                             className="input text-sm"
                           />
                         </div>
@@ -1648,7 +1662,7 @@ export default function AppointmentsPage() {
               <button onClick={() => closeReschedule()} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
             </div>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-              {rescheduleAppointment.customers?.name} — {formatTime(rescheduleAppointment.start_time)}
+              {rescheduleAppointment?.customers?.name} — {rescheduleAppointment ? formatTime(rescheduleAppointment.start_time) : ''}
             </p>
             <form onSubmit={handleRescheduleSave} className="space-y-4">
               <div>
@@ -1695,7 +1709,7 @@ export default function AppointmentsPage() {
               <button onClick={() => closeCancelConfirm()} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
             </div>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-              {cancelConfirmAppointment.customers?.name} — {formatTime(cancelConfirmAppointment.start_time)} randevusunu iptal etmek istediğinize emin misiniz?
+              {cancelConfirmAppointment?.customers?.name} — {cancelConfirmAppointment ? formatTime(cancelConfirmAppointment.start_time) : ''} randevusunu iptal etmek istediğinize emin misiniz?
             </p>
             <label className="flex items-center gap-2 cursor-pointer mb-4">
               <input type="checkbox" checked={cancelNotifyCustomer} onChange={(e) => setCancelNotifyCustomer(e.target.checked)} className="rounded border-gray-300" />

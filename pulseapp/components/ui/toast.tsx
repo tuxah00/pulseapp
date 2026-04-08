@@ -35,7 +35,7 @@ const RELATED_ROUTES: Record<string, string> = {
   customer: '/dashboard/customers',
   payment: '/dashboard/analytics',
   system: '/dashboard/notifications',
-  stock_alert: '/dashboard/stoklar',
+  stock_alert: '/dashboard/inventory',
 }
 
 const MAX_TOASTS = 3

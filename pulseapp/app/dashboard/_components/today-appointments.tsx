@@ -11,7 +11,7 @@ interface Appointment {
   start_time: string
   end_time: string
   status: string
-  customers?: { name: string; phone?: string } | null
+  customers?: { name: string; phone?: string | null } | null
   services?: { name: string } | null
   staff_members?: { name: string } | null
 }

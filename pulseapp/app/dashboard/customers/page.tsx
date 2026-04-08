@@ -12,6 +12,23 @@ import {
 } from 'lucide-react'
 import { formatPhone, formatDate, formatTime, formatCurrency, getSegmentColor, cn, getInitials, getAvatarColor } from '@/lib/utils'
 import { SEGMENT_LABELS, STATUS_LABELS, type Customer, type CustomerSegment } from '@/types'
+import type { AppointmentRow, MessageRow, ReviewRow } from '@/types/db'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { customerCreateSchema, type CustomerCreateInput } from '@/lib/schemas/customer'
+
+type AppointmentTimelineData = Pick<
+  AppointmentRow,
+  'id' | 'appointment_date' | 'start_time' | 'end_time' | 'status' | 'notes'
+> & {
+  services: { name: string } | null
+  staff_members: { name: string } | null
+}
+
+type TimelineItem =
+  | { id: string; type: 'appointment'; date: string; sortDate: string; data: AppointmentTimelineData }
+  | { id: string; type: 'message'; date: string; sortDate: string; data: MessageRow }
+  | { id: string; type: 'review'; date: string; sortDate: string; data: ReviewRow }
 import { logAudit } from '@/lib/utils/audit'
 import CompactBoxCard from '@/components/ui/compact-box-card'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
@@ -56,12 +73,16 @@ export default function CustomersPage() {
   const [error, setError] = useState<string | null>(null)
   const [viewMode, setViewMode] = useViewMode('customers', 'list')
 
-  const [name, setName] = useState('')
-  const [phone, setPhone] = useState('')
-  const [email, setEmail] = useState('')
-  const [birthday, setBirthday] = useState('')
-  const [notes, setNotes] = useState('')
   const [segment, setSegment] = useState<CustomerSegment>('new')
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<CustomerCreateInput>({
+    resolver: zodResolver(customerCreateSchema),
+    defaultValues: { name: '', phone: '', email: undefined, notes: undefined, birthday: undefined },
+  })
 
   // Advanced filters (popover tabanlı)
   const [dateFrom, setDateFrom] = useState('')
@@ -74,7 +95,7 @@ export default function CustomersPage() {
 
   // Timeline state
   const [panelTab, setPanelTab] = useState<'info' | 'history' | 'teeth'>('info')
-  const [timeline, setTimeline] = useState<any[]>([])
+  const [timeline, setTimeline] = useState<TimelineItem[]>([])
   const [timelineLoading, setTimelineLoading] = useState(false)
 
   const supabase = createClient()
@@ -101,35 +122,65 @@ export default function CustomersPage() {
 
   function openNewModal() {
     setEditingCustomer(null)
-    setName(''); setPhone(''); setEmail(''); setBirthday(''); setNotes(''); setSegment('new')
+    setSegment('new')
+    reset({ name: '', phone: '', email: undefined, notes: undefined, birthday: undefined })
     setError(null); setShowModal(true)
   }
 
   function openEditModal(customer: Customer) {
     setEditingCustomer(customer)
-    setName(customer.name); setPhone(customer.phone)
-    setEmail(customer.email || ''); setBirthday(customer.birthday || '')
-    setNotes(customer.notes || ''); setSegment(customer.segment || 'new')
+    setSegment(customer.segment || 'new')
+    reset({
+      name: customer.name,
+      phone: customer.phone,
+      email: customer.email || undefined,
+      birthday: customer.birthday || undefined,
+      notes: customer.notes || undefined,
+    })
     setError(null); setShowModal(true)
   }
 
-  async function handleSave(e: React.FormEvent) {
-    e.preventDefault(); setSaving(true); setError(null)
+  const onValidSubmit = async (values: CustomerCreateInput) => {
+    setSaving(true); setError(null)
     const customerData = {
-      name, phone: phone.replace(/\s/g, ''),
-      email: email || null, birthday: birthday || null, notes: notes || null,
-      segment, business_id: businessId,
+      name: values.name,
+      phone: values.phone, // schema 10 haneli "5XXXXXXXXX" formatına normalize etti
+      email: values.email ?? null,
+      birthday: values.birthday ?? null,
+      notes: values.notes ?? null,
+      segment,
+      business_id: businessId,
     }
     if (editingCustomer) {
       const { error } = await supabase.from('customers').update({
-        name, phone: phone.replace(/\s/g, ''),
-        email: email || null, birthday: birthday || null, notes: notes || null, segment,
+        name: customerData.name,
+        phone: customerData.phone,
+        email: customerData.email,
+        birthday: customerData.birthday,
+        notes: customerData.notes,
+        segment,
       }).eq('id', editingCustomer.id)
-      if (error) { setError(error.message.includes('idx_customers_business_phone') ? 'Bu telefon numarası zaten kayıtlı.' : error.message); setSaving(false); return }
-      setSelectedCustomer(prev => prev?.id === editingCustomer.id ? { ...prev, name, phone: phone.replace(/\s/g, ''), email: email || null, birthday: birthday || null, notes: notes || null, segment } as Customer : prev)
+      if (error) {
+        setError(error.message.includes('idx_customers_business_phone') ? 'Bu telefon numarası zaten kayıtlı.' : error.message)
+        setSaving(false)
+        return
+      }
+      setSelectedCustomer(prev => prev?.id === editingCustomer.id ? {
+        ...prev,
+        name: customerData.name,
+        phone: customerData.phone,
+        email: customerData.email,
+        birthday: customerData.birthday,
+        notes: customerData.notes,
+        segment,
+      } as Customer : prev)
     } else {
       const { error } = await supabase.from('customers').insert(customerData)
-      if (error) { setError(error.message.includes('idx_customers_business_phone') ? 'Bu telefon numarası zaten kayıtlı.' : error.message); setSaving(false); return }
+      if (error) {
+        setError(error.message.includes('idx_customers_business_phone') ? 'Bu telefon numarası zaten kayıtlı.' : error.message)
+        setSaving(false)
+        return
+      }
     }
     setSaving(false); setShowModal(false)
     await fetchCustomers()
@@ -140,7 +191,7 @@ export default function CustomersPage() {
       action: editingCustomer ? 'update' : 'create',
       resource: 'customer',
       resourceId: editingCustomer?.id,
-      details: { name },
+      details: { name: customerData.name },
     })
   }
 
@@ -192,11 +243,11 @@ export default function CustomersPage() {
           .limit(20),
       ])
 
-      const items: any[] = []
+      const items: TimelineItem[] = []
 
       // Randevuları ekle
       if (aptsRes.data) {
-        aptsRes.data.forEach((apt: any) => {
+        ;(aptsRes.data as unknown as AppointmentTimelineData[]).forEach((apt) => {
           items.push({
             id: `apt-${apt.id}`,
             type: 'appointment',
@@ -209,12 +260,14 @@ export default function CustomersPage() {
 
       // Mesajları ekle
       if (msgsRes.data) {
-        msgsRes.data.forEach((msg: any) => {
+        ;(msgsRes.data as MessageRow[]).forEach((msg) => {
+          const createdAt = msg.created_at
+          if (!createdAt) return
           items.push({
             id: `msg-${msg.id}`,
             type: 'message',
-            date: msg.created_at.split('T')[0],
-            sortDate: msg.created_at,
+            date: createdAt.split('T')[0],
+            sortDate: createdAt,
             data: msg,
           })
         })
@@ -222,12 +275,14 @@ export default function CustomersPage() {
 
       // Yorumları ekle
       if (reviewsRes.data) {
-        reviewsRes.data.forEach((rev: any) => {
+        ;(reviewsRes.data as ReviewRow[]).forEach((rev) => {
+          const createdAt = rev.created_at
+          if (!createdAt) return
           items.push({
             id: `rev-${rev.id}`,
             type: 'review',
-            date: rev.created_at.split('T')[0],
-            sortDate: rev.created_at,
+            date: createdAt.split('T')[0],
+            sortDate: createdAt,
             data: rev,
           })
         })
@@ -276,7 +331,7 @@ export default function CustomersPage() {
     }
   }
 
-  function renderTimelineItem(item: any) {
+  function renderTimelineItem(item: TimelineItem) {
     if (item.type === 'appointment') {
       const apt = item.data
       const statusLabel = STATUS_LABELS[apt.status as keyof typeof STATUS_LABELS] || apt.status
@@ -310,7 +365,7 @@ export default function CustomersPage() {
               <span className="ml-1 text-xs font-normal text-gray-400">({msg.channel?.toUpperCase()})</span>
             </p>
             <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 line-clamp-2">{msg.content}</p>
-            <p className="text-xs text-gray-400 mt-0.5">{formatDate(msg.created_at)}</p>
+            <p className="text-xs text-gray-400 mt-0.5">{formatDate(item.sortDate)}</p>
           </div>
         </div>
       )
@@ -330,7 +385,7 @@ export default function CustomersPage() {
             {rev.comment && (
               <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 line-clamp-2">&ldquo;{rev.comment}&rdquo;</p>
             )}
-            <p className="text-xs text-gray-400 mt-0.5">{formatDate(rev.created_at)}</p>
+            <p className="text-xs text-gray-400 mt-0.5">{formatDate(item.sortDate)}</p>
           </div>
         </div>
       )
@@ -360,12 +415,15 @@ export default function CustomersPage() {
     })
     if (sortField) {
       list = [...list].sort((a, b) => {
-        const va = (a as any)[sortField]
-        const vb = (b as any)[sortField]
+        const va = a[sortField as keyof Customer]
+        const vb = b[sortField as keyof Customer]
         if (va == null && vb == null) return 0
         if (va == null) return 1
         if (vb == null) return -1
-        const cmp = typeof va === 'string' ? va.localeCompare(vb, 'tr') : (va as number) - (vb as number)
+        const cmp =
+          typeof va === 'string' && typeof vb === 'string'
+            ? va.localeCompare(vb, 'tr')
+            : (va as number) - (vb as number)
         return sortDir === 'asc' ? cmp : -cmp
       })
     }
@@ -700,12 +758,32 @@ export default function CustomersPage() {
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
               {editingCustomer ? `${singularLabel} Düzenle` : `Yeni ${singularLabel} Ekle`}
             </h2>
-            <form onSubmit={handleSave} className="space-y-4">
-              <div><label htmlFor="custName" className="label">Ad Soyad</label><input id="custName" type="text" value={name} onChange={(e) => setName(e.target.value)} className="input" placeholder="Ayşe Yılmaz" required autoFocus /></div>
-              <div><label htmlFor="custPhone" className="label">Telefon</label><input id="custPhone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="input" placeholder="0532 123 45 67" required /></div>
-              <div><label htmlFor="custEmail" className="label">E-posta (opsiyonel)</label><input id="custEmail" type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="input" placeholder="ayse@email.com" /></div>
-              <div><label htmlFor="custBday" className="label">Doğum Tarihi (opsiyonel)</label><input id="custBday" type="date" value={birthday} onChange={(e) => setBirthday(e.target.value)} className="input" /></div>
-              <div><label htmlFor="custNotes" className="label">Notlar (opsiyonel)</label><textarea id="custNotes" value={notes} onChange={(e) => setNotes(e.target.value)} className="input" rows={3} placeholder="Tercihler, alerjiler, vb." /></div>
+            <form onSubmit={handleSubmit(onValidSubmit)} className="space-y-4" noValidate>
+              <div>
+                <label htmlFor="custName" className="label">Ad Soyad</label>
+                <input id="custName" type="text" {...register('name')} className="input" placeholder="Ayşe Yılmaz" autoFocus />
+                {errors.name && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.name.message}</p>}
+              </div>
+              <div>
+                <label htmlFor="custPhone" className="label">Telefon</label>
+                <input id="custPhone" type="tel" {...register('phone')} className="input" placeholder="0532 123 45 67" />
+                {errors.phone && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.phone.message}</p>}
+              </div>
+              <div>
+                <label htmlFor="custEmail" className="label">E-posta (opsiyonel)</label>
+                <input id="custEmail" type="email" {...register('email')} className="input" placeholder="ayse@email.com" />
+                {errors.email && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.email.message}</p>}
+              </div>
+              <div>
+                <label htmlFor="custBday" className="label">Doğum Tarihi (opsiyonel)</label>
+                <input id="custBday" type="date" {...register('birthday')} className="input" />
+                {errors.birthday && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.birthday.message}</p>}
+              </div>
+              <div>
+                <label htmlFor="custNotes" className="label">Notlar (opsiyonel)</label>
+                <textarea id="custNotes" {...register('notes')} className="input" rows={3} placeholder="Tercihler, alerjiler, vb." />
+                {errors.notes && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.notes.message}</p>}
+              </div>
               <div>
                 <label htmlFor="custSegment" className="label">Segment</label>
                 <CustomSelect

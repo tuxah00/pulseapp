@@ -25,12 +25,12 @@ const PAGES = [
   { id: 'analytics', label: 'Gelir-Gider', icon: <BarChart3 className="h-4 w-4" />, href: '/dashboard/analytics' },
   { id: 'reviews', label: 'Yorumlar', icon: <Star className="h-4 w-4" />, href: '/dashboard/reviews' },
   { id: 'invoices', label: 'Faturalar', icon: <Receipt className="h-4 w-4" />, href: '/dashboard/invoices' },
-  { id: 'kasa', label: 'Kasa', icon: <Wallet className="h-4 w-4" />, href: '/dashboard/kasa' },
-  { id: 'stoklar', label: 'Stoklar', icon: <Package className="h-4 w-4" />, href: '/dashboard/stoklar' },
-  { id: 'hizmetler', label: 'Hizmetler', icon: <Scissors className="h-4 w-4" />, href: '/dashboard/hizmetler' },
+  { id: 'pos', label: 'Kasa', icon: <Wallet className="h-4 w-4" />, href: '/dashboard/pos' },
+  { id: 'inventory', label: 'Stoklar', icon: <Package className="h-4 w-4" />, href: '/dashboard/inventory' },
+  { id: 'services', label: 'Hizmetler', icon: <Scissors className="h-4 w-4" />, href: '/dashboard/services' },
   { id: 'records', label: 'Dosyalar', icon: <FolderOpen className="h-4 w-4" />, href: '/dashboard/records' },
   { id: 'notifications', label: 'Bildirimler', icon: <Bell className="h-4 w-4" />, href: '/dashboard/notifications' },
-  { id: 'denetim', label: 'Denetim Kaydı', icon: <ClipboardList className="h-4 w-4" />, href: '/dashboard/denetim' },
+  { id: 'audit', label: 'Denetim Kaydı', icon: <ClipboardList className="h-4 w-4" />, href: '/dashboard/audit' },
   { id: 'settings', label: 'Ayarlar', icon: <Settings className="h-4 w-4" />, href: '/dashboard/settings/business' },
 ]
 

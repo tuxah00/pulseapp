@@ -1,2 +1,2 @@
 import { redirect } from 'next/navigation'
-export default function Page() { redirect('/dashboard/denetim') }
+export default function Page() { redirect('/dashboard/audit') }
