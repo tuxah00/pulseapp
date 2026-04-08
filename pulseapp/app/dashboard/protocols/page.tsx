@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils'
 import { PROTOCOL_STATUS_LABELS, SESSION_STATUS_LABELS } from '@/types'
 import { formatCurrency } from '@/lib/utils'
 import { CustomSelect } from '@/components/ui/custom-select'
+import { Portal } from '@/components/ui/portal'
 
 const STATUS_CONFIG: Record<ProtocolStatus, { bg: string; text: string }> = {
   active: { bg: 'bg-blue-50 dark:bg-blue-900/20', text: 'text-blue-600 dark:text-blue-400' },
@@ -46,6 +47,8 @@ export default function ProtocolsPage() {
 
   // Create modal
   const [showCreate, setShowCreate] = useState(false)
+  const [isClosingCreate, setIsClosingCreate] = useState(false)
+  const closeCreate = () => setIsClosingCreate(true)
   const [saving, setSaving] = useState(false)
   const [formCustomerId, setFormCustomerId] = useState('')
   const [formServiceId, setFormServiceId] = useState('')
@@ -81,6 +84,13 @@ export default function ProtocolsPage() {
   useEffect(() => { fetchProtocols() }, [fetchProtocols])
   useEffect(() => { fetchMeta() }, [fetchMeta])
 
+  useEffect(() => {
+    if (!showCreate) return
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') closeCreate() }
+    document.addEventListener('keydown', h)
+    return () => document.removeEventListener('keydown', h)
+  }, [showCreate])
+
   // Create protocol
   const handleCreate = async () => {
     if (!businessId || !formCustomerId || !formName || formSessions < 1) return
@@ -95,7 +105,7 @@ export default function ProtocolsPage() {
         }),
       })
       if (res.ok) {
-        setShowCreate(false)
+        closeCreate()
         resetForm()
         fetchProtocols()
       }
@@ -298,12 +308,14 @@ export default function ProtocolsPage() {
       </div>
 
       {/* Create Modal */}
-      {showCreate && (
-        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+      {(showCreate || isClosingCreate) && (
+        <Portal>
+          <div className={`modal-overlay fixed inset-0 z-[100] bg-black/60 dark:bg-black/70 ${isClosingCreate ? 'closing' : ''}`} onClick={() => { closeCreate(); resetForm() }} onAnimationEnd={() => { if (isClosingCreate) { setShowCreate(false); setIsClosingCreate(false) } }} />
+          <div className="fixed inset-0 z-[101] flex items-center justify-center p-4 pointer-events-none">
+          <div className={`modal-content bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto pointer-events-auto ${isClosingCreate ? 'closing' : ''}`}>
             <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
               <h2 className="text-lg font-bold text-gray-900 dark:text-white">Yeni Tedavi Protokolü</h2>
-              <button onClick={() => { setShowCreate(false); resetForm() }} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => { closeCreate(); resetForm() }} className="text-gray-400 hover:text-gray-600">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -346,14 +358,15 @@ export default function ProtocolsPage() {
               </div>
             </div>
             <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
-              <button onClick={() => { setShowCreate(false); resetForm() }} className="btn-secondary">İptal</button>
+              <button onClick={() => { closeCreate(); resetForm() }} className="btn-secondary">İptal</button>
               <button onClick={handleCreate} disabled={saving || !formCustomerId || !formName} className="btn-primary disabled:opacity-50">
                 {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1 inline" /> : <Plus className="h-4 w-4 mr-1 inline" />}
                 Oluştur
               </button>
             </div>
           </div>
-        </div>
+          </div>
+        </Portal>
       )}
     </div>
   )

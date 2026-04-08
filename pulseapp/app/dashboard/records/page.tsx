@@ -306,7 +306,7 @@ function ImageLightbox({ images, initialIndex, onClose, metadata }: {
 
   return (
     <div
-      className="fixed inset-0 z-[70] bg-black/90 flex items-center justify-center"
+      className="fixed inset-0 z-[150] bg-black/90 flex items-center justify-center"
       onClick={onClose}
     >
       {/* Close button */}
@@ -383,6 +383,10 @@ function RecordsPageInner() {
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounce(search, 300)
   const [showModal, setShowModal] = useState(false)
+  const [isClosingModal, setIsClosingModal] = useState(false)
+  const closeModal = () => setIsClosingModal(true)
+  const [isClosingRecord, setIsClosingRecord] = useState(false)
+  const closeRecord = () => setIsClosingRecord(true)
   const [editingRecord, setEditingRecord] = useState<BusinessRecord | null>(null)
   const [selectedRecord, setSelectedRecord] = useState<BusinessRecord | null>(null)
   const [saving, setSaving] = useState(false)
@@ -452,7 +456,7 @@ function RecordsPageInner() {
         if (lightbox) {
           setLightbox(null)
         } else {
-          setSelectedRecord(null)
+          closeRecord()
         }
       }
     }
@@ -651,7 +655,7 @@ function RecordsPageInner() {
         }
       }
 
-      setShowModal(false)
+      closeModal()
       fetchRecords()
       logAudit({ businessId: businessId!, staffId, staffName, action: editingRecord ? 'update' : 'create', resource: 'patient_record', resourceId: editingRecord?.id, details: { title: formData.title || '' } })
     } catch (err) {
@@ -927,7 +931,8 @@ function RecordsPageInner() {
       )}
 
       {/* ── Kayıt Detay Modal ── */}
-      {selectedRecord && (() => {
+      {(selectedRecord || isClosingRecord) && (() => {
+        if (!selectedRecord) return null
         const fileUrls: string[] = selectedRecord.data.file_urls || []
         const fileMetadata: FileMetadataItem[] = selectedRecord.data.file_metadata || []
         const imageIndices: number[] = []
@@ -940,9 +945,9 @@ function RecordsPageInner() {
 
         return (
           <Portal>
-            <div className="modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 dark:bg-black/70" onClick={() => setSelectedRecord(null)}>
+            <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 dark:bg-black/70 ${isClosingRecord ? 'closing' : ''}`} onClick={() => closeRecord()} onAnimationEnd={() => { if (isClosingRecord) { setSelectedRecord(null); setIsClosingRecord(false) } }}>
               <div
-                className="modal-content bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
+                className={`modal-content bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden ${isClosingRecord ? 'closing' : ''}`}
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* ── Section 1: Header ── */}
@@ -978,7 +983,7 @@ function RecordsPageInner() {
                     <div className="flex items-center gap-2 flex-shrink-0">
                       {getPriorityBadge(selectedRecord.data.priority)}
                       <button
-                        onClick={() => setSelectedRecord(null)}
+                        onClick={() => closeRecord()}
                         className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 transition-colors"
                       >
                         <X className="h-5 w-5" />
@@ -1143,12 +1148,14 @@ function RecordsPageInner() {
 
       {/* ── Image Lightbox ── */}
       {lightbox && (
-        <ImageLightbox
-          images={lightbox.images}
-          initialIndex={lightbox.index}
-          onClose={() => setLightbox(null)}
-          metadata={lightbox.metadata}
-        />
+        <Portal>
+          <ImageLightbox
+            images={lightbox.images}
+            initialIndex={lightbox.index}
+            onClose={() => setLightbox(null)}
+            metadata={lightbox.metadata}
+          />
+        </Portal>
       )}
 
       {/* ── File Info Popup ── */}
@@ -1294,15 +1301,15 @@ function RecordsPageInner() {
       )}
 
       {/* ── Create / Edit Modal ── */}
-      {showModal && (
+      {(showModal || isClosingModal) && (
         <Portal>
-        <div className="modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4">
-          <div className="modal-content card w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
+          <div className={`modal-content card w-full max-w-lg max-h-[90vh] overflow-y-auto ${isClosingModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 {editingRecord ? 'Kaydı Düzenle' : config.addLabel}
               </h2>
-              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => closeModal()} className="text-gray-400 hover:text-gray-600">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -1418,7 +1425,7 @@ function RecordsPageInner() {
               )}
 
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setShowModal(false)} className="btn-secondary flex-1">
+                <button type="button" onClick={() => closeModal()} className="btn-secondary flex-1">
                   İptal
                 </button>
                 <button type="submit" disabled={saving || uploading} className="btn-primary flex-1">

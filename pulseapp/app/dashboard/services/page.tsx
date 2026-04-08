@@ -18,6 +18,8 @@ export default function ServicesPage() {
   const [services, setServices] = useState<Service[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
+  const [isClosingModal, setIsClosingModal] = useState(false)
+  const closeModal = () => setIsClosingModal(true)
   const [editingService, setEditingService] = useState<Service | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -111,7 +113,7 @@ export default function ServicesPage() {
     }
 
     setSaving(false)
-    setShowModal(false)
+    closeModal()
     fetchServices()
     await logAudit({
       businessId: businessId!,
@@ -286,8 +288,8 @@ export default function ServicesPage() {
 
       {/* Modal */}
       {showModal && (
-        <div className="modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
-          <div className="modal-content card w-full max-w-md">
+        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
+          <div className={`modal-content card w-full max-w-md ${isClosingModal ? 'closing' : ''}`}>
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
               {editingService ? 'Hizmeti Düzenle' : 'Yeni Hizmet Ekle'}
             </h2>
@@ -356,7 +358,7 @@ export default function ServicesPage() {
               <div className="flex gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => setShowModal(false)}
+                  onClick={closeModal}
                   className="btn-secondary flex-1"
                 >
                   İptal

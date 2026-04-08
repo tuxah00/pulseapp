@@ -73,6 +73,8 @@ export default function ClassesPage() {
   const [weekOffset, setWeekOffset] = useState(0)
   const [weekDates, setWeekDates] = useState<Date[]>([])
   const [showModal, setShowModal] = useState(false)
+  const [isClosingModal, setIsClosingModal] = useState(false)
+  const closeModal = () => setIsClosingModal(true)
   const [editingClass, setEditingClass] = useState<ClassItem | null>(null)
   const [saving, setSaving] = useState(false)
 
@@ -159,7 +161,7 @@ export default function ClassesPage() {
           body: JSON.stringify({ ...form, business_id: businessId }),
         })
       }
-      setShowModal(false)
+      closeModal()
       fetchClasses()
     } catch {
       // ignore
@@ -360,8 +362,8 @@ export default function ClassesPage() {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4 modal-overlay">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-md p-6 modal-content">
+        <div className={`fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4 modal-overlay ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
+          <div className={`bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-md p-6 modal-content ${isClosingModal ? 'closing' : ''}`}>
             <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
               {editingClass ? 'Sınıfı Düzenle' : 'Yeni Sınıf Ekle'}
             </h2>
@@ -454,7 +456,7 @@ export default function ClassesPage() {
 
             <div className="flex gap-3 mt-6">
               <button
-                onClick={() => setShowModal(false)}
+                onClick={() => closeModal()}
                 className="flex-1 px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
               >
                 İptal

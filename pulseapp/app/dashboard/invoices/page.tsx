@@ -60,6 +60,8 @@ export default function InvoicesPage() {
   const [panelClosing, setPanelClosing] = useState(false)
   const closePanelAnimated = useCallback(() => setPanelClosing(true), [])
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [isClosingCreateModal, setIsClosingCreateModal] = useState(false)
+  const closeCreateModal = () => setIsClosingCreateModal(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -161,7 +163,7 @@ export default function InvoicesPage() {
 
   useEffect(() => {
     if (!showCreateModal) return
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowCreateModal(false) }
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') closeCreateModal() }
     document.addEventListener('keydown', h)
     return () => document.removeEventListener('keydown', h)
   }, [showCreateModal])
@@ -225,7 +227,7 @@ export default function InvoicesPage() {
     if (!res.ok) { setError(json.error); setSaving(false); return }
 
     setSaving(false)
-    setShowCreateModal(false)
+    closeCreateModal()
     resetForm()
     fetchInvoices()
     setSelectedInvoice(json.invoice)
@@ -878,13 +880,13 @@ export default function InvoicesPage() {
       )}
 
       {/* Fatura Oluştur Modal */}
-      {showCreateModal && (
+      {(showCreateModal || isClosingCreateModal) && (
         <Portal>
-        <div className="modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4">
-          <div className="modal-content card w-full max-w-lg max-h-[90vh] overflow-y-auto dark:bg-gray-900">
+        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4 ${isClosingCreateModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingCreateModal) { setShowCreateModal(false); setIsClosingCreateModal(false) } }}>
+          <div className={`modal-content card w-full max-w-lg max-h-[90vh] overflow-y-auto dark:bg-gray-900 ${isClosingCreateModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Yeni Fatura Oluştur</h2>
-              <button onClick={() => setShowCreateModal(false)} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
+              <button onClick={() => closeCreateModal()} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
             </div>
 
             <form onSubmit={handleCreate} className="space-y-4">
@@ -1054,7 +1056,7 @@ export default function InvoicesPage() {
               {error && <div className="rounded-lg bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-400">{error}</div>}
 
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setShowCreateModal(false)} className="btn-secondary flex-1">İptal</button>
+                <button type="button" onClick={() => closeCreateModal()} className="btn-secondary flex-1">İptal</button>
                 <button type="submit" disabled={saving} className="btn-primary flex-1">
                   {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Fatura Oluştur

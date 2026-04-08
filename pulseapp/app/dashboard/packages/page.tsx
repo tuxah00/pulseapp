@@ -46,6 +46,8 @@ export default function PaketlerPage() {
 
   // Template form
   const [showTemplateModal, setShowTemplateModal] = useState(false)
+  const [isClosingTemplateModal, setIsClosingTemplateModal] = useState(false)
+  const closeTemplateModal = () => setIsClosingTemplateModal(true)
   const [editingTemplate, setEditingTemplate] = useState<ServicePackage | null>(null)
   const [tName, setTName] = useState('')
   const [tDescription, setTDescription] = useState('')
@@ -68,6 +70,8 @@ export default function PaketlerPage() {
 
   // Sell package form
   const [showSellModal, setShowSellModal] = useState(false)
+  const [isClosingSellModal, setIsClosingSellModal] = useState(false)
+  const closeSellModal = () => setIsClosingSellModal(true)
   const [sTemplateId, setSTemplateId] = useState('')
   const [sCustomerName, setSCustomerName] = useState('')
   const [sCustomerPhone, setSCustomerPhone] = useState('')
@@ -83,11 +87,15 @@ export default function PaketlerPage() {
 
   // Use session modal
   const [showUseModal, setShowUseModal] = useState(false)
+  const [isClosingUseModal, setIsClosingUseModal] = useState(false)
+  const closeUseModal = () => setIsClosingUseModal(true)
   const [useNotes, setUseNotes] = useState('')
   const [savingUse, setSavingUse] = useState(false)
 
   // Create appointment from package modal
   const [showAptModal, setShowAptModal] = useState(false)
+  const [isClosingAptModal, setIsClosingAptModal] = useState(false)
+  const closeAptModal = () => setIsClosingAptModal(true)
   const [aptDate, setAptDate] = useState('')
   const [aptTime, setAptTime] = useState('09:00')
   const [aptNotes, setAptNotes] = useState('')
@@ -151,6 +159,21 @@ export default function PaketlerPage() {
     fetchCustomerPackages()
   }, [fetchCustomerPackages, ctxLoading, pageTab])
 
+  // ESC handlers
+  useEffect(() => {
+    const anyOpen = showTemplateModal || showSellModal || showUseModal || showAptModal
+    if (!anyOpen) return
+    const h = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      if (showAptModal) closeAptModal()
+      else if (showUseModal) closeUseModal()
+      else if (showSellModal) closeSellModal()
+      else if (showTemplateModal) closeTemplateModal()
+    }
+    document.addEventListener('keydown', h)
+    return () => document.removeEventListener('keydown', h)
+  }, [showTemplateModal, showSellModal, showUseModal, showAptModal])
+
   // ── Template CRUD ──
   function openNewTemplate() {
     setEditingTemplate(null)
@@ -190,7 +213,7 @@ export default function PaketlerPage() {
       await logAudit({ businessId: businessId!, staffId, staffName, action: 'create', resource: 'service_packages', details: { name: payload.name } })
     }
 
-    setSavingTemplate(false); setShowTemplateModal(false); fetchTemplates()
+    setSavingTemplate(false); closeTemplateModal(); fetchTemplates()
   }
 
   async function handleDeleteTemplate(t: ServicePackage) {
@@ -271,7 +294,7 @@ export default function PaketlerPage() {
     }
 
     await logAudit({ businessId: businessId!, staffId, staffName, action: 'create', resource: 'customer_packages', details: { customer_name: payload.customer_name, package_name: payload.package_name } })
-    setSavingSell(false); setShowSellModal(false); setPageTab('customer'); fetchCustomerPackages()
+    setSavingSell(false); closeSellModal(); setPageTab('customer'); fetchCustomerPackages()
   }
 
   // ── Use session ──
@@ -303,7 +326,7 @@ export default function PaketlerPage() {
     })
 
     await logAudit({ businessId: businessId!, staffId, staffName, action: 'update', resource: 'customer_packages', resourceId: selectedCp.id, details: { action: 'use_session', sessions_used: newUsed } })
-    setSavingUse(false); setShowUseModal(false)
+    setSavingUse(false); closeUseModal()
     setSelectedCp(prev => prev ? { ...prev, sessions_used: newUsed, status: newStatus } : null)
     fetchCustomerPackages()
   }
@@ -378,7 +401,7 @@ export default function PaketlerPage() {
     if (error) { setAptError(error.message); setSavingApt(false); return }
 
     await logAudit({ businessId: businessId!, staffId, staffName, action: 'create', resource: 'appointment', details: { package_name: selectedCp?.package_name || aptTemplateName } })
-    setSavingApt(false); setShowAptModal(false)
+    setSavingApt(false); closeAptModal()
   }
 
   if (ctxLoading) {
@@ -793,15 +816,15 @@ export default function PaketlerPage() {
       )}
 
       {/* ── Template Modal ── */}
-      {showTemplateModal && (
+      {(showTemplateModal || isClosingTemplateModal) && (
         <Portal>
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 dark:bg-black/70">
-          <div className="w-full max-w-md card space-y-4">
+        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 dark:bg-black/70 ${isClosingTemplateModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingTemplateModal) { setShowTemplateModal(false); setIsClosingTemplateModal(false) } }}>
+          <div className={`modal-content w-full max-w-md card space-y-4 ${isClosingTemplateModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 {editingTemplate ? 'Paketi Düzenle' : 'Yeni Paket Şablonu'}
               </h2>
-              <button onClick={() => setShowTemplateModal(false)} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400">
+              <button onClick={() => closeTemplateModal()} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -883,7 +906,7 @@ export default function PaketlerPage() {
               )}
 
               <div className="flex gap-2 pt-2">
-                <button type="button" onClick={() => setShowTemplateModal(false)} className="flex-1 btn-secondary text-sm">
+                <button type="button" onClick={() => closeTemplateModal()} className="flex-1 btn-secondary text-sm">
                   İptal
                 </button>
                 <button type="submit" disabled={savingTemplate} className="flex-1 btn-primary text-sm flex items-center justify-center gap-2">
@@ -898,13 +921,13 @@ export default function PaketlerPage() {
       )}
 
       {/* ── Sell Package Modal ── */}
-      {showSellModal && (
+      {(showSellModal || isClosingSellModal) && (
         <Portal>
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 dark:bg-black/70">
-          <div className="w-full max-w-md card space-y-4 max-h-[90vh] overflow-y-auto">
+        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 dark:bg-black/70 ${isClosingSellModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingSellModal) { setShowSellModal(false); setIsClosingSellModal(false) } }}>
+          <div className={`modal-content w-full max-w-md card space-y-4 max-h-[90vh] overflow-y-auto ${isClosingSellModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Paket Sat</h2>
-              <button onClick={() => setShowSellModal(false)} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400">
+              <button onClick={() => closeSellModal()} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -1034,7 +1057,7 @@ export default function PaketlerPage() {
               )}
 
               <div className="flex gap-2 pt-2">
-                <button type="button" onClick={() => setShowSellModal(false)} className="flex-1 btn-secondary text-sm">
+                <button type="button" onClick={() => closeSellModal()} className="flex-1 btn-secondary text-sm">
                   İptal
                 </button>
                 <button type="submit" disabled={savingSell} className="flex-1 btn-primary text-sm flex items-center justify-center gap-2">
@@ -1049,13 +1072,13 @@ export default function PaketlerPage() {
       )}
 
       {/* ── Use Session Modal ── */}
-      {showUseModal && selectedCp && (
+      {(showUseModal || isClosingUseModal) && selectedCp && (
         <Portal>
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 dark:bg-black/70">
-          <div className="w-full max-w-sm card space-y-4">
+        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 dark:bg-black/70 ${isClosingUseModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingUseModal) { setShowUseModal(false); setIsClosingUseModal(false) } }}>
+          <div className={`modal-content w-full max-w-sm card space-y-4 ${isClosingUseModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Seans Düş</h2>
-              <button onClick={() => setShowUseModal(false)} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400">
+              <button onClick={() => closeUseModal()} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -1082,7 +1105,7 @@ export default function PaketlerPage() {
               </div>
 
               <div className="flex gap-2">
-                <button type="button" onClick={() => setShowUseModal(false)} className="flex-1 btn-secondary text-sm">
+                <button type="button" onClick={() => closeUseModal()} className="flex-1 btn-secondary text-sm">
                   İptal
                 </button>
                 <button type="submit" disabled={savingUse} className="flex-1 btn-primary text-sm flex items-center justify-center gap-2">
@@ -1097,10 +1120,10 @@ export default function PaketlerPage() {
       )}
 
       {/* ── Randevu Oluştur Modal ── */}
-      {showAptModal && (
+      {(showAptModal || isClosingAptModal) && (
         <Portal>
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 dark:bg-black/70">
-          <div className="w-full max-w-sm card space-y-4">
+        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 dark:bg-black/70 ${isClosingAptModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingAptModal) { setShowAptModal(false); setIsClosingAptModal(false) } }}>
+          <div className={`modal-content w-full max-w-sm card space-y-4 ${isClosingAptModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 {selectedCp
@@ -1109,7 +1132,7 @@ export default function PaketlerPage() {
                     ? `${aptTemplateName} için Randevu Oluştur`
                     : 'Randevu Oluştur'}
               </h2>
-              <button onClick={() => setShowAptModal(false)} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400">
+              <button onClick={() => closeAptModal()} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -1165,7 +1188,7 @@ export default function PaketlerPage() {
               {aptError && <p className="text-sm text-red-600">{aptError}</p>}
 
               <div className="flex gap-2">
-                <button type="button" onClick={() => setShowAptModal(false)} className="flex-1 btn-secondary text-sm">İptal</button>
+                <button type="button" onClick={() => closeAptModal()} className="flex-1 btn-secondary text-sm">İptal</button>
                 <button type="submit" disabled={savingApt} className="flex-1 btn-primary text-sm flex items-center justify-center gap-2">
                   {savingApt && <Loader2 className="h-4 w-4 animate-spin" />}
                   Randevu Oluştur
