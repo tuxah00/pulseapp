@@ -7,20 +7,21 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
+import { getCustomerLabel } from '@/lib/config/sector-modules'
+import type { SectorType } from '@/types'
 import { useTheme } from '@/components/theme-provider'
 import { cn } from '@/lib/utils'
 
 const ROUTE_LABELS: Record<string, string> = {
   dashboard: 'Genel Bakış',
   appointments: 'Randevular',
-  customers: 'Müşteriler',
   messages: 'Mesajlar',
   analytics: 'Gelir-Gider Tablosu',
   audit: 'Denetim Kaydı',
   reservations: 'Rezervasyonlar',
   reviews: 'Yorumlar',
+  inventory: 'Stok Yönetimi',
   stoklar: 'Stoklar',
-  records: 'Dosyalar',
   memberships: 'Üyelikler',
   classes: 'Sınıf Programı',
   attendance: 'Devam Takibi',
@@ -29,17 +30,34 @@ const ROUTE_LABELS: Record<string, string> = {
   notifications: 'Bildirimler',
   settings: 'Ayarlar',
   business: 'İşletme',
+  shifts: 'Vardiya',
   vardiye: 'Vardiya',
-  vardiya: 'Vardiya',
   services: 'Hizmetler',
   hizmetler: 'Hizmetler',
   staff: 'Personeller',
   personeller: 'Personeller',
   denetim: 'Denetim Kaydı',
   invoices: 'Faturalar',
+  packages: 'Paket & Seans',
   paketler: 'Paket & Seans',
+  pos: 'Kasa',
   kasa: 'Kasa',
+  protocols: 'Tedavi Protokolleri',
+  referrals: 'Referanslar',
   new: 'Yeni',
+}
+
+const RECORDS_LABELS: Partial<Record<string, string>> = {
+  dental_clinic: 'Hasta Dosyaları',
+  medical_aesthetic: 'Hasta Dosyaları',
+  physiotherapy: 'Hasta Dosyaları',
+  veterinary: 'Hasta Dosyaları',
+  psychologist: 'Danışan Dosyaları',
+  lawyer: 'Müvekkil Dosyaları',
+  dietitian: 'Diyet Programları',
+  tutoring: 'Öğrenci Bilgileri',
+  car_service: 'Araç Kayıtları',
+  auto_rental: 'Araç Kayıtları',
 }
 
 interface TopBarProps {
@@ -50,7 +68,7 @@ interface TopBarProps {
 
 export default function TopBar({ businessName, userName, onOpenCommand }: TopBarProps) {
   const pathname = usePathname()
-  const { businessId } = useBusinessContext()
+  const { businessId, sector } = useBusinessContext()
   const { theme, toggleTheme } = useTheme()
   const [unreadCount, setUnreadCount] = useState(0)
 
@@ -92,7 +110,12 @@ export default function TopBar({ businessName, userName, onOpenCommand }: TopBar
   const segments = pathname.split('/').filter(Boolean)
   const crumbs = segments.map((seg, i) => {
     const href = '/' + segments.slice(0, i + 1).join('/')
-    const label = ROUTE_LABELS[seg] ?? seg
+    const sectorKey = sector as SectorType
+    const dynamicLabel =
+      seg === 'customers' ? getCustomerLabel(sectorKey) :
+      seg === 'records' ? (RECORDS_LABELS[sectorKey] ?? 'Dosyalar') :
+      undefined
+    const label = dynamicLabel ?? ROUTE_LABELS[seg] ?? seg
     return { href, label, isLast: i === segments.length - 1 }
   })
 
