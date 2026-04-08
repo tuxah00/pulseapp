@@ -35,6 +35,12 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 - `fix: haftalık takvimde 08:00 çizgisi çakışması giderildi`
 - `refactor: confirm() çağrıları useConfirm() ile değiştirildi`
 
+## Soru Sorma Kuralı
+- Kullanıcıya soru sorulması gerektiğinde **AskUserQuestion** tool formatında sorulmalı (düz metin değil).
+- Çoktan seçmeli, kısa, net seçenekler sun (her seçenek için 1-2 cümle açıklama).
+- "Devam edelim mi?" gibi onay soruları yerine somut çözüm yolları arasında seçim yaptır.
+- Sorun anlaşılmıyorsa: anlamak için sor. Çözüm yolları arasında karar veriliyorsa: alternatifleri sun.
+
 ## Türkçe UI Kuralı
 - **Tüm kullanıcıya görünen metinler Türkçe olmalı:** buton etiketleri, placeholder'lar, hata mesajları, boş durum mesajları, tooltip'ler
 - Kod içi değişken/fonksiyon isimleri İngilizce kalır

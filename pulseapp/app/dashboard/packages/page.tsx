@@ -398,13 +398,18 @@ export default function PaketlerPage() {
   }, [computePanelPosition, selectedCp, isMobile, viewMode])
 
   // ── Dışarı tıklayınca paneli kapat (sadece desktop floating panel) ──
+  // ÖNEMLİ: Modal/dialog/portal içine yapılan tıklamalar yok sayılır — aksi halde
+  // panele bağlı modal'lar (Seans Düş, Randevu Oluştur) tıklama anında unmount olur.
   useEffect(() => {
     if (!selectedCp || isMobile || viewMode !== 'box') return
     const handleClick = (e: MouseEvent) => {
-      const target = e.target as Node
-      if (panelRef.current?.contains(target)) return
+      const target = e.target as Element | null
+      if (!target) return
+      // Modal/dialog içine tıklama → paneli kapatma
+      if (target.closest?.('.modal-overlay, [role="dialog"], .slide-panel')) return
+      if (panelRef.current?.contains(target as Node)) return
       for (const cardEl of cardRefs.current.values()) {
-        if (cardEl?.contains(target)) return
+        if (cardEl?.contains(target as Node)) return
       }
       setSelectedCp(null)
     }
