@@ -932,6 +932,7 @@ function RecordsPageInner() {
 
       {/* ── Kayıt Detay Modal ── */}
       {(selectedRecord || isClosingRecord) && (() => {
+        if (!selectedRecord) return null
         const fileUrls: string[] = selectedRecord.data.file_urls || []
         const fileMetadata: FileMetadataItem[] = selectedRecord.data.file_metadata || []
         const imageIndices: number[] = []
