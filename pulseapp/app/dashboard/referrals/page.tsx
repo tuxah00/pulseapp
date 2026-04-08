@@ -29,6 +29,8 @@ export default function ReferralsPage() {
 
   // Create modal
   const [showCreate, setShowCreate] = useState(false)
+  const [isClosingCreate, setIsClosingCreate] = useState(false)
+  const closeCreate = () => setIsClosingCreate(true)
   const [saving, setSaving] = useState(false)
   const [formReferrerId, setFormReferrerId] = useState('')
   const [formReferredName, setFormReferredName] = useState('')
@@ -65,6 +67,13 @@ export default function ReferralsPage() {
   useEffect(() => { fetchReferrals() }, [fetchReferrals])
   useEffect(() => { fetchCustomers() }, [fetchCustomers])
 
+  useEffect(() => {
+    if (!showCreate) return
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') closeCreate() }
+    document.addEventListener('keydown', h)
+    return () => document.removeEventListener('keydown', h)
+  }, [showCreate])
+
   // Stats
   const totalReferrals = referrals.length
   const convertedCount = referrals.filter(r => r.status === 'converted').length
@@ -88,7 +97,7 @@ export default function ReferralsPage() {
         }),
       })
       if (res.ok) {
-        setShowCreate(false)
+        closeCreate()
         resetForm()
         fetchReferrals()
       }
@@ -274,12 +283,12 @@ export default function ReferralsPage() {
       )}
 
       {/* Create Modal */}
-      {showCreate && (
-        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-lg">
+      {(showCreate || isClosingCreate) && (
+        <div className={`modal-overlay fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 ${isClosingCreate ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingCreate) { setShowCreate(false); setIsClosingCreate(false) } }}>
+          <div className={`modal-content bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-lg ${isClosingCreate ? 'closing' : ''}`}>
             <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
               <h2 className="text-lg font-bold text-gray-900 dark:text-white">Yeni Referans</h2>
-              <button onClick={() => { setShowCreate(false); resetForm() }} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
+              <button onClick={() => { closeCreate(); resetForm() }} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
             </div>
             <div className="p-6 space-y-4">
               <div>
@@ -318,7 +327,7 @@ export default function ReferralsPage() {
               </div>
             </div>
             <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
-              <button onClick={() => { setShowCreate(false); resetForm() }} className="btn-secondary">İptal</button>
+              <button onClick={() => { closeCreate(); resetForm() }} className="btn-secondary">İptal</button>
               <button onClick={handleCreate} disabled={saving || !formReferrerId} className="btn-primary disabled:opacity-50">
                 {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1 inline" /> : <Plus className="h-4 w-4 mr-1 inline" />}
                 Oluştur
