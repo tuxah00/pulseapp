@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useConfirm } from '@/lib/hooks/use-confirm'
@@ -616,7 +617,7 @@ export default function PaketlerPage() {
                 </p>
               </div>
             ) : viewMode === 'box' ? (
-              <AnimatedList className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 gap-2">
+              <AnimatedList className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 gap-2 p-1">
                 {sortedPackages.map(cp => {
                   const cfg = STATUS_CONFIG[cp.status]
                   return (
@@ -706,10 +707,18 @@ export default function PaketlerPage() {
           </div>
 
           {/* ── Detail Panel ── */}
+          <AnimatePresence>
           {selectedCp && (() => {
             const detailPct = Math.round((selectedCp.sessions_used / selectedCp.sessions_total) * 100)
             return (
-            <div className="w-80 flex-shrink-0 card space-y-4 transition-all duration-200">
+            <motion.div
+              key={selectedCp.id}
+              initial={{ opacity: 0, x: -16 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -16 }}
+              transition={{ duration: 0.18, ease: 'easeOut' }}
+              className="w-80 flex-shrink-0 card space-y-4"
+            >
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">{selectedCp.customer_name}</h3>
                 <button onClick={closePanel} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400">
@@ -809,9 +818,10 @@ export default function PaketlerPage() {
                   Paketi İptal Et
                 </button>
               )}
-            </div>
+            </motion.div>
           )
           })()}
+          </AnimatePresence>
         </div>
       )}
 
