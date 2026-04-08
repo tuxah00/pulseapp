@@ -384,7 +384,7 @@ function OnboardingCard({ bookingUrl }: { bookingUrl: string }) {
       iconColor: 'text-pulse-900 dark:text-pulse-400',
       title: 'Hizmetlerini Ekle',
       desc: 'Sunduğun hizmetleri ve fiyatları tanımla',
-      href: '/dashboard/hizmetler',
+      href: '/dashboard/services',
     },
     {
       icon: <UserPlus className="h-5 w-5" />,

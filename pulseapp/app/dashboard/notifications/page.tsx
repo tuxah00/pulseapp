@@ -113,7 +113,7 @@ export default function NotificationsPage() {
     } else if (notif.related_type === 'customer' || notif.type === 'customer') {
       router.push('/dashboard/customers')
     } else if (notif.type === 'stock_alert') {
-      router.push('/dashboard/stoklar')
+      router.push('/dashboard/inventory')
     }
   }
 
