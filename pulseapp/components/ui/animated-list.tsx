@@ -1,29 +1,38 @@
 'use client'
 
-import { motion, AnimatePresence } from 'framer-motion'
-
-const containerVariants = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.04 } },
-}
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 12 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.2, ease: 'easeOut' as const } },
-}
+import React from 'react'
 
 export function AnimatedList({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <motion.div variants={containerVariants} initial="hidden" animate="visible" className={className}>
-      <AnimatePresence>{children}</AnimatePresence>
-    </motion.div>
+    <div className={className}>
+      {React.Children.map(children, (child, index) => {
+        if (!React.isValidElement(child)) return child
+        return React.cloneElement(child as React.ReactElement<{ index?: number }>, { index })
+      })}
+    </div>
   )
 }
 
-export function AnimatedItem({ children, className, ...props }: React.ComponentProps<typeof motion.div>) {
+export function AnimatedItem({
+  children,
+  className,
+  index = 0,
+  onClick,
+  ...props
+}: {
+  children: React.ReactNode
+  className?: string
+  index?: number
+  onClick?: React.MouseEventHandler<HTMLDivElement>
+} & Omit<React.HTMLAttributes<HTMLDivElement>, 'className' | 'onClick'>) {
   return (
-    <motion.div variants={itemVariants} {...props} className={className}>
+    <div
+      className={`animated-item ${className || ''}`}
+      style={{ animationDelay: `${index * 40}ms` }}
+      onClick={onClick}
+      {...props}
+    >
       {children}
-    </motion.div>
+    </div>
   )
 }

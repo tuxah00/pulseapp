@@ -386,6 +386,15 @@
 .modal-content.closing  { animation: scaleOut     0.2s  ease-in  forwards; }
 .slide-panel.closing    { animation: slideOutRight 0.15s ease-in forwards; }
 
+/* ── Liste öğesi animasyonu ── */
+@keyframes itemFadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animated-item {
+  animation: itemFadeIn 0.2s ease-out both;
+}
+
 /* ── Toast animasyonlar ── */
 @keyframes toast-slide-in {
   from { transform: translateX(110%); opacity: 0; }
