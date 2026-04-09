@@ -8,14 +8,15 @@ import { useDebounce } from '@/lib/hooks/use-debounce'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { logAudit } from '@/lib/utils/audit'
 import { formatCurrency, formatDateTime, cn } from '@/lib/utils'
-import type { Service, POSItem, POSPayment, POSTransaction, POSSession, PaymentMethod } from '@/types'
+import type { Service, POSItem, POSPayment, POSTransaction, POSSession, PaymentMethod, Referral, RewardType } from '@/types'
+import { REWARD_TYPE_LABELS } from '@/types'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { Portal } from '@/components/ui/portal'
 import {
   Loader2, Search, Plus, Minus, Trash2, X, Wallet,
   CreditCard, Banknote, ArrowRightLeft, ShoppingBag,
   Scissors, Package, User, Clock, Receipt,
-  DoorOpen, DoorClosed, ChevronDown, ShieldX,
+  DoorOpen, DoorClosed, ChevronDown, ShieldX, Gift,
 } from 'lucide-react'
 
 interface Product {
@@ -66,6 +67,11 @@ export default function KasaPage() {
   const [discountAmount, setDiscountAmount] = useState(0)
   const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('fixed')
   const [taxRate, setTaxRate] = useState(0)
+
+  // Referral rewards
+  const [availableRewards, setAvailableRewards] = useState<Referral[]>([])
+  const [appliedReferralId, setAppliedReferralId] = useState<string | null>(null)
+  const [freeServiceItemKey, setFreeServiceItemKey] = useState<string | null>(null)
 
   // Payment
   const [paymentRows, setPaymentRows] = useState<POSPayment[]>([])
@@ -140,6 +146,25 @@ export default function KasaPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appointmentId, businessId, services.length])
 
+  // Referans ödülü: müşteri seçildiğinde kullanılabilir ödüller
+  useEffect(() => {
+    if (!selectedCustomerId || !businessId) {
+      setAvailableRewards([])
+      setAppliedReferralId(null)
+      setFreeServiceItemKey(null)
+      return
+    }
+    const fetchRewards = async () => {
+      try {
+        const res = await fetch(`/api/referrals?referrerId=${selectedCustomerId}&status=converted&rewardClaimed=false`)
+        const json = await res.json()
+        const rewards = (json.referrals || []).filter((r: Referral) => r.reward_type && r.reward_value)
+        setAvailableRewards(rewards)
+      } catch { /* ignore */ }
+    }
+    fetchRewards()
+  }, [selectedCustomerId, businessId])
+
   // ── Cart Hesaplamaları ──
   const subtotal = useMemo(() => cart.reduce((sum, item) => sum + item.total, 0), [cart])
   const discountCalc = useMemo(() => {
@@ -186,6 +211,61 @@ export default function KasaPage() {
     setDiscountType('fixed')
     setTaxRate(0)
     setPaymentRows([])
+    setAppliedReferralId(null)
+    setAvailableRewards([])
+    setFreeServiceItemKey(null)
+  }
+
+  // ── Referans Ödülü ──
+  function applyReferralReward(ref: Referral) {
+    if (!ref.reward_type || ref.reward_value == null) return
+
+    switch (ref.reward_type) {
+      case 'discount_percent':
+        setDiscountType('percentage')
+        setDiscountAmount(ref.reward_value)
+        break
+      case 'discount_amount':
+        setDiscountType('fixed')
+        setDiscountAmount(ref.reward_value)
+        break
+      case 'free_service':
+        // For free_service, user picks which cart item to zero out
+        // We'll show a selector in the UI
+        break
+      case 'points':
+        // Convert points to fixed discount (1 point = 1₺)
+        setDiscountType('fixed')
+        setDiscountAmount(ref.reward_value)
+        break
+    }
+    setAppliedReferralId(ref.id)
+  }
+
+  function applyFreeService(itemKey: string) {
+    setFreeServiceItemKey(itemKey)
+    setCart(prev => prev.map(c => {
+      if (c._key === itemKey) return { ...c, unit_price: 0, total: 0 }
+      return c
+    }))
+  }
+
+  function removeReferralReward() {
+    if (freeServiceItemKey) {
+      // Restore original price of the free service item
+      const originalItem = services.find(s => cart.find(c => c._key === freeServiceItemKey && c.service_id === s.id))
+      if (originalItem && originalItem.price) {
+        setCart(prev => prev.map(c => {
+          if (c._key === freeServiceItemKey) return { ...c, unit_price: originalItem.price!, total: originalItem.price! * c.quantity }
+          return c
+        }))
+      }
+      setFreeServiceItemKey(null)
+    } else {
+      setDiscountAmount(0)
+      setDiscountType('fixed')
+    }
+    setAppliedReferralId(null)
   }
 
   // ── Ödeme ──
@@ -228,6 +308,7 @@ export default function KasaPage() {
           tax_rate: taxRate,
           payments: paymentRows,
           transaction_type: 'sale',
+          referral_id: appliedReferralId,
         }),
       })
 
@@ -508,6 +589,56 @@ export default function KasaPage() {
               </div>
             )}
           </div>
+
+          {/* Referans ödülü banner */}
+          {availableRewards.length > 0 && !appliedReferralId && (
+            <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <Gift className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                <span className="text-sm font-medium text-purple-700 dark:text-purple-300">Referans İndirimi Mevcut</span>
+              </div>
+              {availableRewards.map(ref => (
+                <div key={ref.id} className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-md px-3 py-2">
+                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                    {ref.reward_value}{ref.reward_type === 'discount_percent' ? '%' : ref.reward_type === 'discount_amount' ? '₺' : ref.reward_type === 'points' ? ' puan' : ''} {REWARD_TYPE_LABELS[ref.reward_type!]}
+                  </span>
+                  <button
+                    onClick={() => applyReferralReward(ref)}
+                    className="text-xs px-3 py-1 rounded-md bg-purple-600 text-white hover:bg-purple-700 transition-colors"
+                  >
+                    İndirimi Uygula
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Uygulanan referans ödülü */}
+          {appliedReferralId && (
+            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Gift className="h-4 w-4 text-green-600 dark:text-green-400" />
+                  <span className="text-sm font-medium text-green-700 dark:text-green-300">Referans İndirimi Uygulandı</span>
+                </div>
+                <button onClick={removeReferralReward} className="text-xs text-red-500 hover:text-red-600">Kaldır</button>
+              </div>
+              {appliedReferralId && availableRewards.find(r => r.id === appliedReferralId)?.reward_type === 'free_service' && !freeServiceItemKey && cart.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  <p className="text-xs text-gray-500">Ücretsiz yapılacak kalemi seçin:</p>
+                  {cart.map(item => (
+                    <button
+                      key={item._key}
+                      onClick={() => applyFreeService(item._key)}
+                      className="w-full text-left text-sm px-2 py-1.5 rounded hover:bg-green-100 dark:hover:bg-green-800/30 text-gray-700 dark:text-gray-300 transition-colors"
+                    >
+                      {item.name} — {formatCurrency(item.total)}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Sepet kalemleri */}
           {cart.length === 0 ? (
