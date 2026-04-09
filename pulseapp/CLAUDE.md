@@ -301,7 +301,12 @@ CREATE INDEX IF NOT EXISTS idx_customers_birthday ON customers (birthday) WHERE 
 -- invoices.deleted_at kolonu, partial index
 ```
 
-25. **Sektör enum genişletme** (yoga_pilates, spa_massage vb. için):
+25. **Bloklanmış zaman dilimleri** (`034_blocked_slots.sql`): ✅ Uygulandı (2026-04-09)
+```sql
+-- blocked_slots tablosu (randevu alınamayacak saatler), RLS, index'ler
+```
+
+26. **Sektör enum genişletme** (yoga_pilates, spa_massage vb. için):
 ```sql
 ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'spa_massage';
 ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'yoga_pilates';
