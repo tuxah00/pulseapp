@@ -39,6 +39,27 @@ export async function POST(
   const endTotal = sh * 60 + sm + service.duration_minutes
   const endTime = `${Math.floor(endTotal / 60).toString().padStart(2, '0')}:${(endTotal % 60).toString().padStart(2, '0')}`
 
+  // Çakışma kontrolü
+  let conflictQuery = supabase
+    .from('appointments')
+    .select('id')
+    .eq('business_id', params.id)
+    .eq('appointment_date', date)
+    .in('status', ['pending', 'confirmed'])
+    .is('deleted_at', null)
+    .lt('start_time', endTime)
+    .gt('end_time', startTime)
+
+  if (staffId) {
+    conflictQuery = conflictQuery.eq('staff_id', staffId)
+  }
+
+  const { data: conflicts } = await conflictQuery
+
+  if (conflicts && conflicts.length > 0) {
+    return NextResponse.json({ error: 'Bu saat dolu. Lütfen başka bir saat seçin.' }, { status: 409 })
+  }
+
   const normalizedPhone = normalizePhone(phone)
 
   // Müşteriyi bul veya oluştur
