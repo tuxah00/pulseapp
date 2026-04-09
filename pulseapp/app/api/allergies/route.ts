@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { validateBody } from '@/lib/api/validate'
-import { allergyCreateSchema } from '@/lib/schemas'
 
 async function verifyMembership(supabase: ReturnType<typeof createServerSupabaseClient>, userId: string, businessId: string) {
   const { data } = await supabase
@@ -48,9 +46,12 @@ export async function POST(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
 
-  const result = await validateBody(request, allergyCreateSchema)
-  if (!result.ok) return result.response
-  const { businessId, customerId, allergen, severity, reaction, notes } = result.data
+  const body = await request.json()
+  const { businessId, customerId, allergen, severity, reaction, notes } = body
+
+  if (!businessId || !customerId || !allergen) {
+    return NextResponse.json({ error: 'businessId, customerId, allergen zorunlu' }, { status: 400 })
+  }
 
   const staff = await verifyMembership(supabase, user.id, businessId)
   if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })

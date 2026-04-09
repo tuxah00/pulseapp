@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { validateBody } from '@/lib/api/validate'
-import { incomeCreateSchema } from '@/lib/schemas'
 
 // GET: Gelir listesi
 export async function GET(req: NextRequest) {
@@ -38,9 +36,12 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
 
-  const result = await validateBody(req, incomeCreateSchema)
-  if (!result.ok) return result.response
-  const { business_id, category, description, amount, income_date, is_recurring, recurring_period, custom_interval_days } = result.data
+  const body = await req.json()
+  const { business_id, category, description, amount, income_date, is_recurring, recurring_period, custom_interval_days } = body
+
+  if (!business_id || !category || amount === undefined || !income_date) {
+    return NextResponse.json({ error: 'business_id, category, amount, income_date gerekli' }, { status: 400 })
+  }
 
   const { data: income, error } = await supabase
     .from('income')
