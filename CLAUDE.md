@@ -141,6 +141,13 @@ Aşağıdaki özelliklerin kodu tamamlandı; aktif etmek için sadece ilgili hes
 
 ---
 
+## Aktif Geliştirme Odağı
+
+- **Öncelikli Sektörler:** Estetik Klinik (`medical_aesthetic`) ve Diş Kliniği (`dental_clinic`)
+- Tüm yeni özellikler öncelikle bu iki sektör için geliştirilecek
+
+---
+
 ## Bilinen Eksikler / Dikkat Edilecekler
 
 - **Form validasyonu zayıf**: `zod` veya `react-hook-form` yok; validasyon sayfadan sayfaya değişiyor

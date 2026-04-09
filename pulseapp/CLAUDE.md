@@ -515,9 +515,14 @@ Tüm analytics endpoint'leri `?businessId=&from=&to=` parametresi alır:
 - **Export:** CSV + PDF (jspdf + jspdf-autotable) + Excel (xlsx)
 - **Tipler:** `InvoicePayment`, `InvoicePaymentType`, `InstallmentFrequency`, `PaymentRecordType` — `types/index.ts`
 
+## Aktif Geliştirme Odağı
+- **Öncelikli Sektörler:** Estetik Klinik (`medical_aesthetic`) ve Diş Kliniği (`dental_clinic`)
+- Tüm yeni özellikler öncelikle bu iki sektör için geliştirilecek
+- Diğer sektörler mevcut haliyle desteklenmeye devam eder
+
 ## Sektör Odak Stratejisi
-Öncelikli sektörler: Kuaför, Berber, Güzellik Salonu, Diş Kliniği, Medikal Estetik, Psikolog, Veteriner, Fizyoterapi, Diyetisyen, Fitness, Yoga/Pilates, Spa/Masaj, Dövme/Piercing, Fotoğraf Stüdyosu, Oto Yıkama, Özel Ders.
-Odak: Medikal Estetik & Güzellik Kliniği — taksitli ödeme, kapora sistemi, paket satışı, hizmet+ürün birlikte faturalandırma.
+Odak: Estetik Klinik (medical_aesthetic) & Diş Kliniği (dental_clinic) — tedavi protokolleri, reçete yönetimi, laboratuvar takibi, post-care talimatları, diş haritası, hasta dosyaları.
+İkincil: Kuaför, Berber, Güzellik Salonu, Psikolog, Veteriner, Fizyoterapi, Diyetisyen, Fitness, Yoga/Pilates, Spa/Masaj.
 
 ## Personel Detay Popup
 - Personel detayı slide-over yerine ortada popup (centered modal) olarak açılır

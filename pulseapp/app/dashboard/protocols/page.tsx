@@ -7,9 +7,10 @@ import { createClient } from '@/lib/supabase/client'
 import {
   Plus, ClipboardCheck, Search, X, Calendar, User, Activity,
   ChevronRight, Loader2, Pause, Play, CheckCircle, XCircle, SkipForward,
-  Camera, FileText, Clock, Sparkles, ShieldX
+  Camera, FileText, Clock, Sparkles, ShieldX, Send
 } from 'lucide-react'
 import { PhotoAnalysisPanel } from '@/components/dashboard/photo-analysis-panel'
+import { PostCareModal } from '@/components/dashboard/post-care-modal'
 import type {
   TreatmentProtocol, ProtocolSession, Customer, Service, ProtocolStatus, SessionStatus
 } from '@/types'
@@ -404,10 +405,11 @@ function DetailPanel({
   onDelete: (id: string) => void
   onRefresh: () => void
 }) {
-  const { businessId } = useBusinessContext()
+  const { businessId, sector } = useBusinessContext()
   const [analysisSessionId, setAnalysisSessionId] = useState<string | null>(null)
   const [uploadingSession, setUploadingSession] = useState<string | null>(null)
   const [uploadingType, setUploadingType] = useState<'before' | 'after' | null>(null)
+  const [postCareSession, setPostCareSession] = useState<ProtocolSession | null>(null)
   const customer = Array.isArray(protocol.customer) ? protocol.customer[0] : protocol.customer
   const service = Array.isArray(protocol.service) ? protocol.service[0] : protocol.service
   const sessions = (protocol.sessions || []).sort((a, b) => a.session_number - b.session_number)
@@ -638,6 +640,18 @@ function DetailPanel({
                       </button>
                     </div>
                   )}
+                  {/* Post-care button for completed sessions */}
+                  {session.status === 'completed' && customer?.phone && (
+                    <div className="mt-2">
+                      <button
+                        onClick={() => setPostCareSession(session)}
+                        className="text-xs px-2 py-1 rounded bg-pulse-50 dark:bg-pulse-900/20 text-pulse-700 dark:text-pulse-400 hover:bg-pulse-100 dark:hover:bg-pulse-900/30 transition-colors flex items-center gap-1"
+                      >
+                        <Send className="h-3 w-3" />
+                        Bakım Talimatı Gönder
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             )
@@ -663,6 +677,22 @@ function DetailPanel({
           Protokolü sil
         </button>
       </div>
+
+      {/* Post-care modal */}
+      {postCareSession && customer && (
+        <PostCareModal
+          show={!!postCareSession}
+          onClose={() => setPostCareSession(null)}
+          sector={sector || 'medical_aesthetic'}
+          customerName={customer.name || ''}
+          customerPhone={customer.phone || ''}
+          businessName=""
+          serviceName={service?.name || protocol.name}
+          sessionDate={postCareSession.planned_date || ''}
+          businessId={businessId || ''}
+          customerId={customer.id || ''}
+        />
+      )}
     </>
   )
 }
