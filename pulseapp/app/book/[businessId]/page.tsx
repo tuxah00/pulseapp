@@ -106,10 +106,38 @@ export default function BookingPage() {
   const [submitError, setSubmitError] = useState<string | null>(null)
 
   const selectedService = services.find(s => s.id === selectedServiceId) || null
-  const timeSlots = business && selectedDate && selectedService
-    ? generateTimeSlots(business.working_hours, selectedDate, selectedService.duration_minutes)
-    : []
+  const [availableSlots, setAvailableSlots] = useState<string[]>([])
+  const [slotsLoading, setSlotsLoading] = useState(false)
   const isDayClosed = !!(business && selectedDate && !business.working_hours[getDayKey(selectedDate)])
+
+  // Tarih/personel/hizmet değiştiğinde müsait saatleri API'den çek
+  useEffect(() => {
+    if (!business || !selectedDate || !selectedService || isDayClosed) {
+      setAvailableSlots([])
+      return
+    }
+    let cancelled = false
+    async function fetchSlots() {
+      setSlotsLoading(true)
+      try {
+        const params = new URLSearchParams({
+          date: selectedDate,
+          duration: String(selectedService!.duration_minutes),
+        })
+        if (selectedStaffId) params.set('staffId', selectedStaffId)
+        const res = await fetch(`/api/public/business/${businessId}/slots?${params}`)
+        if (!cancelled && res.ok) {
+          const data = await res.json()
+          setAvailableSlots(data.slots || [])
+        }
+      } catch {
+        if (!cancelled) setAvailableSlots([])
+      }
+      if (!cancelled) setSlotsLoading(false)
+    }
+    fetchSlots()
+    return () => { cancelled = true }
+  }, [business, businessId, selectedDate, selectedService, selectedStaffId, isDayClosed])
 
   useEffect(() => {
     async function fetchData() {
@@ -376,7 +404,7 @@ export default function BookingPage() {
                 <label className="label">Personel (isteğe bağlı)</label>
                 <select
                   value={selectedStaffId}
-                  onChange={(e) => setSelectedStaffId(e.target.value)}
+                  onChange={(e) => { setSelectedStaffId(e.target.value); setSelectedTime(null) }}
                   className="input"
                 >
                   <option value="">Fark etmez</option>
@@ -413,13 +441,19 @@ export default function BookingPage() {
                     <p className="text-sm text-gray-500 font-medium">Bu gün kapalı</p>
                     <p className="text-xs text-gray-400 mt-1">Lütfen farklı bir gün seçin</p>
                   </div>
-                ) : timeSlots.length === 0 ? (
+                ) : slotsLoading ? (
                   <div className="text-center py-8 bg-gray-50 rounded-xl border border-gray-100">
-                    <p className="text-sm text-gray-500">Uygun saat bulunamadı</p>
+                    <Loader2 className="h-5 w-5 animate-spin text-blue-500 mx-auto mb-2" />
+                    <p className="text-sm text-gray-500">Müsait saatler yükleniyor...</p>
+                  </div>
+                ) : availableSlots.length === 0 ? (
+                  <div className="text-center py-8 bg-gray-50 rounded-xl border border-gray-100">
+                    <p className="text-sm text-gray-500 font-medium">Bu gün için uygun saat bulunamadı</p>
+                    <p className="text-xs text-gray-400 mt-1">Tüm saatler dolu. Farklı bir gün veya personel deneyin.</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
-                    {timeSlots.map((time) => (
+                    {availableSlots.map((time) => (
                       <button
                         key={time}
                         onClick={() => setSelectedTime(time)}
@@ -477,7 +511,9 @@ export default function BookingPage() {
                       className="input mt-1"
                     >
                       <option value="">Saat seçin</option>
-                      {timeSlots.map(t => <option key={t} value={t}>{t}</option>)}
+                      {(business && selectedDate && selectedService
+                        ? generateTimeSlots(business.working_hours, selectedDate, selectedService.duration_minutes)
+                        : []).map(t => <option key={t} value={t}>{t}</option>)}
                     </select>
                   </div>
                   <div>
