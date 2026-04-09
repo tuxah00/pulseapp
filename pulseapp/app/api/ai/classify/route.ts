@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { getAnthropicClient, AI_MODEL, MAX_TOKENS } from '@/lib/ai/client'
 import { getClassifySystemPrompt } from '@/lib/ai/prompts'
+import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
 import type { AiClassification } from '@/types'
 
 const VALID_CLASSIFICATIONS: AiClassification[] = [
@@ -10,6 +11,10 @@ const VALID_CLASSIFICATIONS: AiClassification[] = [
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit kontrolü (AI endpoint'ler: 10 req/min)
+    const rl = checkRateLimit(request, RATE_LIMITS.ai)
+    if (rl.limited) return rl.response
+
     const supabase = createServerSupabaseClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {

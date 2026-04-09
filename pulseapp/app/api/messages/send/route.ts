@@ -1,22 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { sendSMS } from '@/lib/sms/send'
+import { sendMessage } from '@/lib/messaging/send'
+import { withPermission } from '@/lib/api/with-permission'
+import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
+import type { MessageChannel } from '@/types'
 
-export async function POST(request: NextRequest) {
+export const POST = withPermission('messages', async (req: NextRequest, ctx) => {
+  // Rate limit kontrolü
+  const rl = checkRateLimit(req, RATE_LIMITS.messaging)
+  if (rl.limited) return rl.response
+
   try {
-    const supabase = createServerSupabaseClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
-    }
+    const body = await req.json()
+    const { customerId, content, messageType = 'text', channel = 'auto' } = body
 
-    const body = await request.json()
-    const { customerId, businessId, content, messageType = 'text' } = body
-
-    if (!customerId || !businessId || !content) {
+    if (!customerId || !content) {
       return NextResponse.json(
-        { error: 'customerId, businessId ve content gerekli' },
+        { error: 'customerId ve content gerekli' },
         { status: 400 },
       )
     }
@@ -25,48 +25,44 @@ export async function POST(request: NextRequest) {
 
     const { data: customer } = await admin
       .from('customers')
-      .select('id, phone, name')
+      .select('id, phone, name, whatsapp_opted_in, preferred_channel')
       .eq('id', customerId)
-      .eq('business_id', businessId)
+      .eq('business_id', ctx.businessId)
       .single()
 
     if (!customer) {
       return NextResponse.json({ error: 'Müşteri bulunamadı' }, { status: 404 })
     }
 
-    // Gönderen personel bilgisini çek
-    const { data: staffMember } = await admin
-      .from('staff_members')
-      .select('id, name')
-      .eq('user_id', user.id)
-      .eq('business_id', businessId)
-      .maybeSingle()
-
-    // SMS göndermeyi dene
+    // Birleşik mesaj gönderim — kanal otomatik veya manuel seçilebilir
     if (customer.phone) {
-      const result = await sendSMS({
+      const result = await sendMessage({
         to: customer.phone,
         body: content,
-        businessId,
+        businessId: ctx.businessId,
         customerId,
         messageType: messageType as any,
+        channel: channel as MessageChannel | 'auto',
       })
 
-      if (result.success) {
-        return NextResponse.json({ success: true, channel: 'sms', messageSid: result.messageSid, staffName: staffMember?.name })
-      }
+      return NextResponse.json({
+        success: result.success,
+        channel: result.channel,
+        messageSid: result.messageSid,
+        staffName: ctx.staffId,
+        error: result.error,
+      })
     }
 
-    // SMS başarısız olursa web kanalına düş
+    // Telefon yoksa web kanalına kaydet
     const { error: dbError } = await admin.from('messages').insert({
-      business_id: businessId,
+      business_id: ctx.businessId,
       customer_id: customerId,
       direction: 'outbound',
       channel: 'web',
       message_type: messageType,
       content,
-      staff_id: staffMember?.id || null,
-      staff_name: staffMember?.name || null,
+      staff_id: ctx.staffId,
     })
 
     if (dbError) {
@@ -84,4 +80,4 @@ export async function POST(request: NextRequest) {
       { status: 500 },
     )
   }
-}
+})

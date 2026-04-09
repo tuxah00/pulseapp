@@ -83,7 +83,7 @@ export type AppointmentSource = 'web' | 'manual' | 'phone'
 export type CustomerSegment = 'new' | 'regular' | 'vip' | 'risk' | 'lost'
 
 export type MessageDirection = 'inbound' | 'outbound'
-export type MessageChannel = 'sms' | 'web'
+export type MessageChannel = 'sms' | 'web' | 'whatsapp'
 export type MessageType = 'text' | 'template' | 'ai_generated' | 'system'
 export type AiClassification =
   | 'appointment' | 'question' | 'complaint' | 'cancellation' | 'greeting' | 'other'
