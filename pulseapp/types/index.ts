@@ -980,3 +980,16 @@ export interface Room {
   created_at: string
   updated_at: string
 }
+
+export interface BlockedSlot {
+  id: string
+  business_id: string
+  staff_id: string | null
+  room_id: string | null
+  date: string
+  start_time: string
+  end_time: string
+  reason: string | null
+  created_by: string | null
+  created_at: string
+}
