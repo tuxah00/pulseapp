@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
-import { Shield, Loader2, Search, Filter, ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { Shield, ShieldX, Loader2, Search, Filter, ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { CustomSelect } from '@/components/ui/custom-select'
 
@@ -216,7 +216,7 @@ const ACTION_COLORS: Record<string, string> = {
 }
 
 export default function AuditPage() {
-  const { staffRole, businessId, loading: ctxLoading } = useBusinessContext()
+  const { staffRole, businessId, loading: ctxLoading, permissions } = useBusinessContext()
   const supabase = createClient()
   const [logs, setLogs] = useState<AuditLog[]>([])
   const [loading, setLoading] = useState(true)
@@ -260,12 +260,13 @@ export default function AuditPage() {
     if (!ctxLoading) fetchLogs()
   }, [fetchLogs, ctxLoading])
 
-  if (!ctxLoading && staffRole !== 'owner') {
+  if (permissions && !permissions.settings) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="text-center">
-          <Shield className="mx-auto h-12 w-12 text-gray-300 mb-3" />
-          <p className="text-lg font-medium text-gray-500 dark:text-gray-400">Bu sayfaya erişim yetkiniz yok.</p>
+        <div className="text-center space-y-3">
+          <ShieldX className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto" />
+          <p className="text-lg font-medium text-gray-500 dark:text-gray-400">Bu sayfaya erişim yetkiniz bulunmamaktadır.</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500">İşletme sahibinizle iletişime geçin.</p>
         </div>
       </div>
     )

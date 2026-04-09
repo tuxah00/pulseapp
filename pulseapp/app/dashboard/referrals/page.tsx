@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { createClient } from '@/lib/supabase/client'
 import {
-  Plus, UserCheck, Search, X, Loader2, Gift, Phone, ArrowRight, CheckCircle, Clock
+  Plus, UserCheck, Search, X, Loader2, Gift, Phone, ArrowRight, CheckCircle, Clock, ShieldX
 } from 'lucide-react'
 import type { Referral, Customer, ReferralStatus, RewardType } from '@/types'
 import { REFERRAL_STATUS_LABELS, REWARD_TYPE_LABELS } from '@/types'
@@ -20,7 +20,7 @@ const STATUS_CONFIG: Record<ReferralStatus, { bg: string; text: string; icon: ty
 
 
 export default function ReferralsPage() {
-  const { businessId, loading: ctxLoading } = useBusinessContext()
+  const { businessId, loading: ctxLoading, permissions } = useBusinessContext()
 
   const [referrals, setReferrals] = useState<Referral[]>([])
   const [customers, setCustomers] = useState<Customer[]>([])
@@ -145,6 +145,18 @@ export default function ReferralsPage() {
       r.referred_phone?.includes(q)
     )
   })
+
+  if (permissions && !permissions.referrals) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="text-center space-y-3">
+          <ShieldX className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto" />
+          <p className="text-lg font-medium text-gray-500 dark:text-gray-400">Bu sayfaya erişim yetkiniz bulunmamaktadır.</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500">İşletme sahibinizle iletişime geçin.</p>
+        </div>
+      </div>
+    )
+  }
 
   if (ctxLoading) {
     return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-pulse-900" /></div>

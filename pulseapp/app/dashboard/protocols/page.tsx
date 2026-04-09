@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import {
   Plus, ClipboardCheck, Search, X, Calendar, User, Activity,
   ChevronRight, Loader2, Pause, Play, CheckCircle, XCircle, SkipForward,
-  Camera, FileText, Clock, Sparkles
+  Camera, FileText, Clock, Sparkles, ShieldX
 } from 'lucide-react'
 import { PhotoAnalysisPanel } from '@/components/dashboard/photo-analysis-panel'
 import type {
@@ -34,7 +34,7 @@ const SESSION_STATUS_CONFIG: Record<SessionStatus, { bg: string; text: string; i
 }
 
 export default function ProtocolsPage() {
-  const { businessId, loading: ctxLoading } = useBusinessContext()
+  const { businessId, loading: ctxLoading, permissions } = useBusinessContext()
   const { confirm } = useConfirm()
 
   // State
@@ -183,6 +183,18 @@ export default function ProtocolsPage() {
     }
     return true
   })
+
+  if (permissions && !permissions.protocols) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="text-center space-y-3">
+          <ShieldX className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto" />
+          <p className="text-lg font-medium text-gray-500 dark:text-gray-400">Bu sayfaya erişim yetkiniz bulunmamaktadır.</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500">İşletme sahibinizle iletişime geçin.</p>
+        </div>
+      </div>
+    )
+  }
 
   if (ctxLoading) {
     return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-pulse-900" /></div>

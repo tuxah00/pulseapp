@@ -10,7 +10,7 @@ import {
   Plus, Package, Loader2, X, Pencil, Trash2, Search,
   ChevronRight, Clock, CheckCircle, XCircle, AlertTriangle,
   Users, Tag, Minus, LayoutList, LayoutGrid, CalendarPlus,
-  Filter, ArrowUpDown,
+  Filter, ArrowUpDown, ShieldX,
 } from 'lucide-react'
 import { formatCurrency, formatDate, cn } from '@/lib/utils'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
@@ -630,6 +630,18 @@ export default function PaketlerPage() {
     }
 
     await insertAppointments(nonConflicting, endTime, duration)
+  }
+
+  if (permissions && !permissions.packages) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="text-center space-y-3">
+          <ShieldX className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto" />
+          <p className="text-lg font-medium text-gray-500 dark:text-gray-400">Bu sayfaya erişim yetkiniz bulunmamaktadır.</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500">İşletme sahibinizle iletişime geçin.</p>
+        </div>
+      </div>
+    )
   }
 
   if (ctxLoading) {

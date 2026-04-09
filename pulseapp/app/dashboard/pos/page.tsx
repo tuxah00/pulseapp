@@ -15,7 +15,7 @@ import {
   Loader2, Search, Plus, Minus, Trash2, X, Wallet,
   CreditCard, Banknote, ArrowRightLeft, ShoppingBag,
   Scissors, Package, User, Clock, Receipt,
-  DoorOpen, DoorClosed, ChevronDown,
+  DoorOpen, DoorClosed, ChevronDown, ShieldX,
 } from 'lucide-react'
 
 interface Product {
@@ -44,7 +44,7 @@ function showToast(title: string, body?: string) {
 }
 
 export default function KasaPage() {
-  const { businessId, staffId, staffName, staffRole } = useBusinessContext()
+  const { businessId, staffId, staffName, staffRole, permissions } = useBusinessContext()
   const supabaseRef = useRef(createClient())
   const supabase = supabaseRef.current
   const { confirm } = useConfirm()
@@ -320,6 +320,18 @@ export default function KasaPage() {
   }, [customers, debouncedCustomerSearch])
 
   const selectedCustomer = customers.find(c => c.id === selectedCustomerId)
+
+  if (permissions && !permissions.pos) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="text-center space-y-3">
+          <ShieldX className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto" />
+          <p className="text-lg font-medium text-gray-500 dark:text-gray-400">Bu sayfaya erişim yetkiniz bulunmamaktadır.</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500">İşletme sahibinizle iletişime geçin.</p>
+        </div>
+      </div>
+    )
+  }
 
   if (loading) {
     return (

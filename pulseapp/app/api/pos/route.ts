@@ -1,19 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { requirePermission } from '@/lib/api/with-permission'
 import type { POSItem, InvoiceItem, POSPaymentStatus } from '@/types'
 
 // GET: İşlem listesi
 export async function GET(req: NextRequest) {
-  const supabase = createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
+  const auth = await requirePermission(req, 'pos')
+  if (!auth.ok) return auth.response
+  const { businessId, userId } = auth.ctx
 
+  const supabase = createServerSupabaseClient()
   const { searchParams } = new URL(req.url)
-  const businessId = searchParams.get('businessId')
   const from = searchParams.get('from')
   const to = searchParams.get('to')
-
-  if (!businessId) return NextResponse.json({ error: 'businessId gerekli' }, { status: 400 })
 
   let query = supabase
     .from('pos_transactions')
@@ -31,19 +30,20 @@ export async function GET(req: NextRequest) {
 
 // POST: Yeni işlem oluştur + otomatik fatura + stok düşme
 export async function POST(req: NextRequest) {
-  const supabase = createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
+  const auth = await requirePermission(req, 'pos')
+  if (!auth.ok) return auth.response
+  const { businessId, userId } = auth.ctx
 
+  const supabase = createServerSupabaseClient()
   const body = await req.json()
   const {
-    business_id, customer_id, appointment_id, staff_id,
+    customer_id, appointment_id, staff_id,
     items, discount_amount = 0, discount_type, tax_rate = 0,
-    payments, notes, transaction_type = 'sale',
+    payments, notes, transaction_type = 'sale', referral_id,
   } = body
 
-  if (!business_id || !items || !Array.isArray(items) || items.length === 0) {
-    return NextResponse.json({ error: 'business_id ve items gerekli' }, { status: 400 })
+  if (!items || !Array.isArray(items) || items.length === 0) {
+    return NextResponse.json({ error: 'items gerekli' }, { status: 400 })
   }
   if (!payments || !Array.isArray(payments) || payments.length === 0) {
     return NextResponse.json({ error: 'payments gerekli' }, { status: 400 })
@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
   const { count } = await supabase
     .from('pos_transactions')
     .select('*', { count: 'exact', head: true })
-    .eq('business_id', business_id)
+    .eq('business_id', businessId)
 
   const receipt_number = `RCP-${year}-${String((count || 0) + 1).padStart(4, '0')}`
 
@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
     const { count: invCount } = await supabase
       .from('invoices')
       .select('*', { count: 'exact', head: true })
-      .eq('business_id', business_id)
+      .eq('business_id', businessId)
       .is('deleted_at', null)
 
     const invoiceNumber = `INV-${year}-${String((invCount || 0) + 1).padStart(4, '0')}`
@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
     const { data: invoice } = await supabase
       .from('invoices')
       .insert({
-        business_id,
+        business_id: businessId,
         customer_id: customer_id || null,
         appointment_id: appointment_id || null,
         invoice_number: invoiceNumber,
@@ -137,12 +137,12 @@ export async function POST(req: NextRequest) {
               .eq('id', item.product_id)
 
             await supabase.from('stock_movements').insert({
-              business_id,
+              business_id: businessId,
               product_id: item.product_id,
               type: 'out',
               quantity: item.quantity,
               notes: `Kasa satışı ${receipt_number}`,
-              created_by: user.id,
+              created_by: userId,
             })
           }
         }
@@ -154,7 +154,7 @@ export async function POST(req: NextRequest) {
   const { data: transaction, error } = await supabase
     .from('pos_transactions')
     .insert({
-      business_id,
+      business_id: businessId,
       invoice_id,
       appointment_id: appointment_id || null,
       customer_id: customer_id || null,
@@ -181,15 +181,26 @@ export async function POST(req: NextRequest) {
     await supabase.from('invoices').update({ pos_transaction_id: transaction.id }).eq('id', invoice_id)
   }
 
+  // Referans ödülü kullanıldıysa işaretle
+  if (referral_id) {
+    await supabase
+      .from('referrals')
+      .update({ reward_claimed: true })
+      .eq('id', referral_id)
+      .eq('business_id', businessId)
+      .eq('reward_claimed', false)  // Race condition koruması
+  }
+
   return NextResponse.json({ transaction })
 }
 
 // PATCH: İşlem güncelle
 export async function PATCH(req: NextRequest) {
-  const supabase = createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
+  const auth = await requirePermission(req, 'pos')
+  if (!auth.ok) return auth.response
+  const { businessId } = auth.ctx
 
+  const supabase = createServerSupabaseClient()
   const { searchParams } = new URL(req.url)
   const id = searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'id gerekli' }, { status: 400 })
@@ -205,20 +216,11 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'Güncellenecek alan yok' }, { status: 400 })
   }
 
-  // Kullanıcının business_id'sini al ve işlemin sahipliğini doğrula
-  const { data: staff } = await supabase
-    .from('staff_members')
-    .select('business_id')
-    .eq('user_id', user.id)
-    .single()
-
-  if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
-
   const { data, error } = await supabase
     .from('pos_transactions')
     .update(updateObj)
     .eq('id', id)
-    .eq('business_id', staff.business_id)
+    .eq('business_id', businessId)
     .select('*, customers(name, phone), staff_members(name)')
     .single()
 
