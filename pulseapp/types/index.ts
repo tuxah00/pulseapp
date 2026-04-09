@@ -966,3 +966,17 @@ export interface ToothRecord {
   // JOINs
   staff?: { id: string; name: string }
 }
+
+
+// ── Oda (Room) ──
+
+export interface Room {
+  id: string
+  business_id: string
+  name: string
+  capacity: number
+  color: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
