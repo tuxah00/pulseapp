@@ -261,7 +261,47 @@ CREATE INDEX IF NOT EXISTS idx_customers_birthday ON customers (birthday) WHERE 
 -- appointments.manage_token, follow_up_queue tablosu
 ```
 
-17. **Sektör enum genişletme** (yoga_pilates, spa_massage vb. için):
+17. **Diş haritası** (`025_tooth_records.sql`): ✅ Uygulandı (2026-04-09)
+```sql
+-- tooth_records tablosu, RLS, trigger
+```
+
+18. **Fotoğraf röntgen tipleri** (`026_photo_xray_types.sql`): ✅ Uygulandı (2026-04-09)
+```sql
+-- customer_photos.photo_type CHECK constraint genişletme (xray, panoramic)
+```
+
+19. **WhatsApp geliştirmeleri** (`027_whatsapp_enhancements.sql`): ✅ Uygulandı (2026-04-09)
+```sql
+-- customers.preferred_channel kolonu (sms/whatsapp/auto)
+```
+
+20. **KVKK uyumluluk** (`028_kvkk_compliance.sql`): ✅ Uygulandı (2026-04-09)
+```sql
+-- consent_records, data_deletion_requests tabloları
+```
+
+21. **Faturalama altyapısı** (`029_billing.sql`): ✅ Uygulandı (2026-04-09)
+```sql
+-- payments tablosu (PayTR), businesses billing alanları, invoices e-fatura alanları
+```
+
+22. **Tedavi odaları** (`031_rooms.sql`): ✅ Uygulandı (2026-04-09)
+```sql
+-- rooms tablosu, appointments.room_id FK, RLS
+```
+
+23. **KVKK uyumluluk v2** (`032_kvkk_compliance.sql`): ✅ Uygulandı (2026-04-09)
+```sql
+-- consent_records, data_deletion_requests güncel versiyon (028 yerine kullan)
+```
+
+24. **Fatura soft delete** (`033_invoice_soft_delete.sql`): ✅ Uygulandı (2026-04-09)
+```sql
+-- invoices.deleted_at kolonu, partial index
+```
+
+25. **Sektör enum genişletme** (yoga_pilates, spa_massage vb. için):
 ```sql
 ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'spa_massage';
 ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'yoga_pilates';
