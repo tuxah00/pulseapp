@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 
 // GET: Stok hareket geçmişi
 export async function GET(req: NextRequest) {
@@ -16,8 +15,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'productId veya businessId gerekli' }, { status: 400 })
   }
 
-  const admin = createAdminClient()
-  let query = admin
+  let query = supabase
     .from('stock_movements')
     .select('*, staff_members(name)')
     .order('created_at', { ascending: false })
@@ -44,10 +42,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'businessId, productId, quantity, type gerekli' }, { status: 400 })
   }
 
-  const admin = createAdminClient()
-
   // Mevcut stok miktarını al
-  const { data: product, error: productError } = await admin
+  const { data: product, error: productError } = await supabase
     .from('products')
     .select('stock_count, min_stock_level, name')
     .eq('id', productId)
@@ -62,7 +58,7 @@ export async function POST(req: NextRequest) {
   const newCount = Math.max(0, product.stock_count + delta)
 
   // Stok güncelle
-  const { error: updateError } = await admin
+  const { error: updateError } = await supabase
     .from('products')
     .update({ stock_count: newCount })
     .eq('id', productId)
@@ -70,7 +66,7 @@ export async function POST(req: NextRequest) {
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 })
 
   // Hareket kaydı oluştur
-  const { data: movement, error: movementError } = await admin
+  const { data: movement, error: movementError } = await supabase
     .from('stock_movements')
     .insert({
       business_id: businessId,
@@ -89,7 +85,7 @@ export async function POST(req: NextRequest) {
   // Düşük stok uyarısı bildirimi
   if (newCount <= product.min_stock_level) {
     // staff_members'dan owner'ı bul
-    const { data: owner } = await admin
+    const { data: owner } = await supabase
       .from('staff_members')
       .select('id')
       .eq('business_id', businessId)
@@ -97,7 +93,7 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (owner) {
-      await admin
+      await supabase
         .from('notifications')
         .insert({
           business_id: businessId,

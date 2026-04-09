@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 
 // DELETE: Fotoğraf sil
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
@@ -20,10 +19,8 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     .single()
   if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
 
-  const admin = createAdminClient()
-
   // Fotoğrafın URL'sini al (Storage'dan silmek için)
-  const { data: photo } = await admin
+  const { data: photo } = await supabase
     .from('customer_photos')
     .select('photo_url')
     .eq('id', params.id)
@@ -33,7 +30,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
   if (!photo) return NextResponse.json({ error: 'Fotoğraf bulunamadı' }, { status: 404 })
 
   // DB kaydını sil
-  const { error } = await admin
+  const { error } = await supabase
     .from('customer_photos')
     .delete()
     .eq('id', params.id)
@@ -46,7 +43,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     const url = new URL(photo.photo_url)
     const pathMatch = url.pathname.match(/\/storage\/v1\/object\/public\/(.+)/)
     if (pathMatch) {
-      await admin.storage.from('customer-photos').remove([pathMatch[1].replace('customer-photos/', '')])
+      await supabase.storage.from('customer-photos').remove([pathMatch[1].replace('customer-photos/', '')])
     }
   } catch {
     // Storage silme hatası kritik değil

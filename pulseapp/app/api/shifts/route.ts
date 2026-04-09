@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 
 async function verifyMembership(supabase: ReturnType<typeof createServerSupabaseClient>, userId: string, businessId: string) {
   const { data } = await supabase
@@ -30,8 +29,7 @@ export async function GET(request: NextRequest) {
   const isMember = await verifyMembership(supabase, user.id, businessId)
   if (!isMember) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
 
-  const admin = createAdminClient()
-  const { data, error } = await admin
+  const { data, error } = await supabase
     .from('shifts')
     .select('*, staff_members(id, name, avatar_url)')
     .eq('business_id', businessId)
@@ -64,8 +62,7 @@ export async function POST(request: NextRequest) {
   const isMember = await verifyMembership(supabase, user.id, businessId)
   if (!isMember) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
 
-  const admin = createAdminClient()
-  const { data, error } = await admin
+  const { data, error } = await supabase
     .from('shifts')
     .upsert({
       business_id: businessId,

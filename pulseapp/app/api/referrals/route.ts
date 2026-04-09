@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/api/with-permission'
 
 // GET: Referans listesi
@@ -12,8 +12,8 @@ export async function GET(request: NextRequest) {
   const status = searchParams.get('status')
   const referrerId = searchParams.get('referrerId')
 
-  const admin = createAdminClient()
-  let query = admin
+  const supabase = createServerSupabaseClient()
+  let query = supabase
     .from('referrals')
     .select(`
       *,
@@ -44,12 +44,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'referrerCustomerId zorunlu' }, { status: 400 })
   }
 
-  const admin = createAdminClient()
+  const supabase = createServerSupabaseClient()
 
   // Referred kişi zaten müşteri mi kontrol et
   let referredCustomerId = null
   if (referredPhone) {
-    const { data: existing } = await admin
+    const { data: existing } = await supabase
       .from('customers')
       .select('id')
       .eq('business_id', businessId)
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     if (existing) referredCustomerId = existing.id
   }
 
-  const { data, error } = await admin
+  const { data, error } = await supabase
     .from('referrals')
     .insert({
       business_id: businessId,
@@ -91,7 +91,7 @@ export async function PATCH(request: NextRequest) {
 
   if (!id) return NextResponse.json({ error: 'id zorunlu' }, { status: 400 })
 
-  const admin = createAdminClient()
+  const supabase = createServerSupabaseClient()
   const updateData: Record<string, unknown> = {}
 
   if (status) {
@@ -101,7 +101,7 @@ export async function PATCH(request: NextRequest) {
   if (referredCustomerId) updateData.referred_customer_id = referredCustomerId
   if (rewardClaimed !== undefined) updateData.reward_claimed = rewardClaimed
 
-  const { data, error } = await admin
+  const { data, error } = await supabase
     .from('referrals')
     .update(updateData)
     .eq('id', id)

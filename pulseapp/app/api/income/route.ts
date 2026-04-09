@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 
 // GET: Gelir listesi
 export async function GET(req: NextRequest) {
@@ -16,8 +15,7 @@ export async function GET(req: NextRequest) {
 
   if (!businessId) return NextResponse.json({ error: 'businessId gerekli' }, { status: 400 })
 
-  const admin = createAdminClient()
-  let query = admin
+  let query = supabase
     .from('income')
     .select('*')
     .eq('business_id', businessId)
@@ -45,8 +43,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'business_id, category, amount, income_date gerekli' }, { status: 400 })
   }
 
-  const admin = createAdminClient()
-  const { data: income, error } = await admin
+  const { data: income, error } = await supabase
     .from('income')
     .insert({
       business_id,
@@ -75,8 +72,7 @@ export async function DELETE(req: NextRequest) {
   const id = searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'id gerekli' }, { status: 400 })
 
-  const admin = createAdminClient()
-  const { error } = await admin.from('income').delete().eq('id', id)
+  const { error } = await supabase.from('income').delete().eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ success: true })
 }

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 
 // GET: Gider listesi
 export async function GET(req: NextRequest) {
@@ -16,8 +15,7 @@ export async function GET(req: NextRequest) {
 
   if (!businessId) return NextResponse.json({ error: 'businessId gerekli' }, { status: 400 })
 
-  const admin = createAdminClient()
-  let query = admin
+  let query = supabase
     .from('expenses')
     .select('*')
     .eq('business_id', businessId)
@@ -45,8 +43,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'business_id, category, amount, expense_date gerekli' }, { status: 400 })
   }
 
-  const admin = createAdminClient()
-  const { data: expense, error } = await admin
+  const { data: expense, error } = await supabase
     .from('expenses')
     .insert({
       business_id,
@@ -86,8 +83,7 @@ export async function PATCH(req: NextRequest) {
   if (body.recurring_period !== undefined) updateObj.recurring_period = body.recurring_period
   if (body.custom_interval_days !== undefined) updateObj.custom_interval_days = body.custom_interval_days
 
-  const admin = createAdminClient()
-  const { data: expense, error } = await admin
+  const { data: expense, error } = await supabase
     .from('expenses')
     .update(updateObj)
     .eq('id', id)
@@ -108,8 +104,7 @@ export async function DELETE(req: NextRequest) {
   const id = searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'id gerekli' }, { status: 400 })
 
-  const admin = createAdminClient()
-  const { error } = await admin.from('expenses').delete().eq('id', id)
+  const { error } = await supabase.from('expenses').delete().eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ success: true })
 }

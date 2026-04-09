@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 
 // PUT: Vardiya güncelle
 export async function PUT(
@@ -11,9 +10,7 @@ export async function PUT(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
 
-  const admin = createAdminClient()
-
-  const { data: existing } = await admin
+  const { data: existing } = await supabase
     .from('shifts')
     .select('business_id')
     .eq('id', params.id)
@@ -33,7 +30,7 @@ export async function PUT(
   const body = await request.json()
   const { startTime, endTime, shiftType, notes } = body
 
-  const { data, error } = await admin
+  const { data, error } = await supabase
     .from('shifts')
     .update({
       start_time: shiftType === 'off' ? null : startTime,
@@ -58,9 +55,7 @@ export async function DELETE(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
 
-  const admin = createAdminClient()
-
-  const { data: existing } = await admin
+  const { data: existing } = await supabase
     .from('shifts')
     .select('business_id')
     .eq('id', params.id)
@@ -77,7 +72,7 @@ export async function DELETE(
 
   if (!membership) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
 
-  const { error } = await admin
+  const { error } = await supabase
     .from('shifts')
     .delete()
     .eq('id', params.id)

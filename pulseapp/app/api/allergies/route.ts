@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 
 async function verifyMembership(supabase: ReturnType<typeof createServerSupabaseClient>, userId: string, businessId: string) {
   const { data } = await supabase
@@ -27,8 +26,7 @@ export async function GET(request: NextRequest) {
   const staff = await verifyMembership(supabase, user.id, businessId)
   if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
 
-  const admin = createAdminClient()
-  let query = admin
+  let query = supabase
     .from('customer_allergies')
     .select('*')
     .eq('business_id', businessId)
@@ -58,8 +56,7 @@ export async function POST(request: NextRequest) {
   const staff = await verifyMembership(supabase, user.id, businessId)
   if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
 
-  const admin = createAdminClient()
-  const { data, error } = await admin
+  const { data, error } = await supabase
     .from('customer_allergies')
     .insert({
       business_id: businessId,
@@ -92,8 +89,7 @@ export async function DELETE(request: NextRequest) {
   const staff = await verifyMembership(supabase, user.id, businessId)
   if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
 
-  const admin = createAdminClient()
-  const { error } = await admin
+  const { error } = await supabase
     .from('customer_allergies')
     .delete()
     .eq('id', id)
