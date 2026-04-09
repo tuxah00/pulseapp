@@ -1,4 +1,5 @@
 import type { SectorType, PlanType } from '@/types'
+import { getPluginSidebarItems } from '@/lib/plugins/registry'
 
 export interface SidebarItem {
   key: string
@@ -174,8 +175,16 @@ export function getCustomerLabelSingular(sector?: string): string {
   return CUSTOMER_LABELS_SINGULAR[sector || ''] || 'Müşteri'
 }
 
-export function getSidebarSections(sector: SectorType, _plan: PlanType): SidebarSection[] {
+export function getSidebarSections(sector: SectorType, plan: PlanType): SidebarSection[] {
   const sectorItems = SECTOR_ITEMS[sector] ?? []
+
+  // Merge plugin sidebar items (deduplicate by key)
+  const pluginItems = getPluginSidebarItems(sector, plan)
+  const existingKeys = new Set(sectorItems.map(i => i.key))
+  const newPluginItems: SidebarItem[] = pluginItems
+    .filter(pi => !existingKeys.has(pi.key))
+    .map(pi => ({ key: pi.key, name: pi.name, href: pi.href, iconName: pi.iconName }))
+  const allSectorItems = [...sectorItems, ...newPluginItems]
 
   // Sectors that replace appointments with reservations
   const excludeAppointments: SectorType[] = ['restaurant', 'cafe']
@@ -187,7 +196,7 @@ export function getSidebarSections(sector: SectorType, _plan: PlanType): Sidebar
 
   return [
     { label: 'Ana', items: filteredBase },
-    ...(sectorItems.length > 0 ? [{ label: 'Sektör', items: sectorItems }] : []),
+    ...(allSectorItems.length > 0 ? [{ label: 'Sektör', items: allSectorItems }] : []),
     { label: 'Yönetim', items: MANAGEMENT_ITEMS },
   ]
 }
