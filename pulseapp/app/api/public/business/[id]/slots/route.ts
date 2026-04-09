@@ -1,11 +1,8 @@
-import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { WorkingHours } from '@/types'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+const supabase = createAdminClient()
 
 const DAY_KEYS: Record<number, keyof WorkingHours> = {
   0: 'sun', 1: 'mon', 2: 'tue', 3: 'wed', 4: 'thu', 5: 'fri', 6: 'sat',
