@@ -548,27 +548,29 @@ export default function CustomersPage() {
             const initials = getInitials(customer.name)
             const avatarColor = getAvatarColor(customer.name)
             return (
-              <AnimatedItem key={customer.id} onClick={() => setSelectedCustomer(customer)} className={cn(
-                'rounded-2xl border px-4 py-3 cursor-pointer transition-all',
-                'border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900/50',
-                'hover:border-gray-200 dark:hover:border-gray-700 hover:shadow-sm',
-                selectedCustomer?.id === customer.id && 'ring-2 ring-pulse-900 border-pulse-300 dark:border-pulse-700',
-              )}>
-                <div className="flex items-center gap-3">
-                  <div className={cn('flex h-10 w-10 items-center justify-center rounded-xl text-gray-600 dark:text-gray-300 font-semibold text-sm flex-shrink-0', avatarColor)}>
-                    {initials}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{customer.name}</span>
-                      {isBirthdayToday(customer.birthday) && <span title="Bugün doğum günü!"><Cake className="h-4 w-4 text-pink-500 flex-shrink-0" /></span>}
-                      <span className={`badge text-xs ${getSegmentColor(customer.segment)}`}>{SEGMENT_LABELS[customer.segment]}</span>
+              <AnimatedItem key={customer.id}>
+                <div onClick={() => setSelectedCustomer(customer)} className={cn(
+                  'rounded-2xl border px-4 py-3 cursor-pointer transition-all',
+                  'border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900/50',
+                  'hover:border-gray-200 dark:hover:border-gray-700 hover:shadow-sm',
+                  selectedCustomer?.id === customer.id && 'ring-2 ring-pulse-900 border-pulse-300 dark:border-pulse-700',
+                )}>
+                  <div className="flex items-center gap-3">
+                    <div className={cn('flex h-10 w-10 items-center justify-center rounded-xl text-gray-600 dark:text-gray-300 font-semibold text-sm flex-shrink-0', avatarColor)}>
+                      {initials}
                     </div>
-                    <p className="text-xs text-gray-400 mt-0.5">{formatPhone(customer.phone)}</p>
-                  </div>
-                  <div className="text-right text-xs flex-shrink-0 hidden sm:block">
-                    <p className="font-semibold text-gray-900 dark:text-gray-100">{customer.total_visits} ziyaret</p>
-                    <p className="text-gray-400 mt-0.5">{customer.last_visit_at ? formatDate(customer.last_visit_at) : 'Henüz yok'}</p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{customer.name}</span>
+                        {isBirthdayToday(customer.birthday) && <span title="Bugün doğum günü!"><Cake className="h-4 w-4 text-pink-500 flex-shrink-0" /></span>}
+                        <span className={`badge text-xs ${getSegmentColor(customer.segment)}`}>{SEGMENT_LABELS[customer.segment]}</span>
+                      </div>
+                      <p className="text-xs text-gray-400 mt-0.5">{formatPhone(customer.phone)}</p>
+                    </div>
+                    <div className="text-right text-xs flex-shrink-0 hidden sm:block">
+                      <p className="font-semibold text-gray-900 dark:text-gray-100">{customer.total_visits} ziyaret</p>
+                      <p className="text-gray-400 mt-0.5">{customer.last_visit_at ? formatDate(customer.last_visit_at) : 'Henüz yok'}</p>
+                    </div>
                   </div>
                 </div>
               </AnimatedItem>

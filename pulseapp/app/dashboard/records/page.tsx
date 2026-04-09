@@ -915,17 +915,18 @@ function RecordsPageInner() {
             </AnimatedList>
           )}
           {viewMode === 'box' && (
-            <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 gap-2">
+            <AnimatedList className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 gap-2">
               {sortedRecords.map((record) => (
-                <CompactBoxCard
-                  key={record.id}
-                  initials={record.title?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || 'D'}
-                  title={record.title}
-                  colorClass="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
-                  onClick={() => setSelectedRecord(record)}
-                />
+                <AnimatedItem key={record.id}>
+                  <CompactBoxCard
+                    initials={record.title?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || 'D'}
+                    title={record.title}
+                    colorClass="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                    onClick={() => setSelectedRecord(record)}
+                  />
+                </AnimatedItem>
               ))}
-            </div>
+            </AnimatedList>
           )}
         </>
       )}
