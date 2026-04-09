@@ -2,7 +2,7 @@ export async function logAudit(params: {
   businessId: string
   staffId: string | null
   staffName: string | null
-  action: 'create' | 'update' | 'delete' | 'status_change' | 'send' | 'pay' | 'cancel'
+  action: 'create' | 'update' | 'delete' | 'restore' | 'status_change' | 'send' | 'pay' | 'cancel'
   resource: string
   resourceId?: string
   details?: Record<string, string | number | boolean | null>

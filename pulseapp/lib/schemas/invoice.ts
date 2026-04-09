@@ -55,6 +55,7 @@ export const invoicePatchSchema = z.object({
   paid_amount: z.number().min(0, MSG.NON_NEGATIVE).optional(),
   staff_id: z.string().uuid(MSG.INVALID_UUID).optional().nullable(),
   staff_name: z.string().optional().nullable(),
+  restore: z.boolean().optional(),
 })
 
 export type InvoicePatchInput = z.infer<typeof invoicePatchSchema>

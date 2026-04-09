@@ -23,14 +23,21 @@ export async function GET(req: NextRequest) {
   const sortBy = searchParams.get('sort_by') || 'created_at'
   const sortOrder = searchParams.get('sort_order') || 'desc'
 
+  const showDeleted = searchParams.get('showDeleted') === 'true'
+
   const supabase = createServerSupabaseClient()
   let query = supabase
     .from('invoices')
     .select('*, customers(name, phone)')
     .eq('business_id', businessId)
-    .is('deleted_at', null)
 
-  if (status && status !== 'all') query = query.eq('status', status)
+  if (showDeleted) {
+    query = query.not('deleted_at', 'is', null)
+  } else {
+    query = query.is('deleted_at', null)
+  }
+
+  if (!showDeleted && status && status !== 'all') query = query.eq('status', status)
   if (from) query = query.gte('created_at', from)
   if (to) query = query.lte('created_at', to + 'T23:59:59Z')
   if (customerId) query = query.eq('customer_id', customerId)
@@ -146,6 +153,19 @@ export async function PATCH(req: NextRequest) {
   const body = result.data
   const supabase = createServerSupabaseClient()
   const updateObj: Record<string, unknown> = { updated_at: new Date().toISOString() }
+
+  // Çöp kutusundan geri al
+  if (body.restore === true) {
+    updateObj.deleted_at = null
+    const { data: invoice, error } = await supabase
+      .from('invoices')
+      .update(updateObj)
+      .eq('id', id)
+      .select('*, customers(name, phone)')
+      .single()
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ invoice })
+  }
 
   if (body.status !== undefined) {
     updateObj.status = body.status

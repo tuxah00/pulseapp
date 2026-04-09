@@ -10,7 +10,7 @@ import {
   CheckCircle, Clock, AlertCircle, XCircle, Download,
   Search, ChevronDown, Printer, CreditCard, Banknote,
   ArrowUpDown, Filter, CalendarDays, DollarSign,
-  FileText, FileSpreadsheet, ChevronRight, Send, ExternalLink,
+  FileText, FileSpreadsheet, ChevronRight, Send, ExternalLink, RotateCcw,
 } from 'lucide-react'
 import { formatCurrency, cn } from '@/lib/utils'
 import { exportToCSV, printInvoicePDF } from '@/lib/utils/export'
@@ -97,6 +97,11 @@ export default function InvoicesPage() {
   const [payNotes, setPayNotes] = useState('')
   const [payingSaving, setPayingSaving] = useState(false)
 
+  // Çöp kutusu (silinmiş faturalar)
+  const [showDeleted, setShowDeleted] = useState(false)
+  const [deletedInvoices, setDeletedInvoices] = useState<Invoice[]>([])
+  const [deletedLoading, setDeletedLoading] = useState(false)
+
   // Export dropdown
   const [showExportMenu, setShowExportMenu] = useState(false)
 
@@ -129,6 +134,15 @@ export default function InvoicesPage() {
     setLoading(false)
   }, [businessId, statusFilter, filterCustomerId, filterPaymentMethod, filterFrom, filterTo, filterAmountMin, filterAmountMax, sortBy, sortOrder])
 
+  const fetchDeletedInvoices = useCallback(async () => {
+    if (!businessId) return
+    setDeletedLoading(true)
+    const res = await fetch(`/api/invoices?showDeleted=true`)
+    const json = await res.json()
+    setDeletedInvoices(json.invoices || [])
+    setDeletedLoading(false)
+  }, [businessId])
+
   const fetchCustomers = useCallback(async () => {
     if (!businessId) return
     const { data } = await supabase
@@ -155,6 +169,10 @@ export default function InvoicesPage() {
       fetchCustomers()
     }
   }, [fetchInvoices, fetchCustomers, ctxLoading])
+
+  useEffect(() => {
+    if (showDeleted) fetchDeletedInvoices()
+  }, [showDeleted, fetchDeletedInvoices])
 
   useEffect(() => {
     if (selectedInvoice) {
@@ -331,6 +349,19 @@ export default function InvoicesPage() {
     logAudit({ businessId: businessId!, staffId, staffName, action: 'delete', resource: 'invoice', resourceId: invoice.id, details: { invoice_number: invoice.invoice_number } })
   }
 
+  async function handleRestore(invoice: Invoice) {
+    const ok = await confirm({ title: 'Onay', message: `"${invoice.invoice_number}" faturasını geri almak istediğinize emin misiniz?` })
+    if (!ok) return
+    await fetch(`/api/invoices?id=${invoice.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ restore: true }),
+    })
+    fetchDeletedInvoices()
+    fetchInvoices()
+    logAudit({ businessId: businessId!, staffId, staffName, action: 'restore', resource: 'invoice', resourceId: invoice.id, details: { invoice_number: invoice.invoice_number } })
+  }
+
   function handleExportCSV() {
     setShowExportMenu(false)
     exportToCSV(
@@ -488,12 +519,19 @@ export default function InvoicesPage() {
             {(['all', 'pending', 'paid', 'partial', 'overdue', 'cancelled'] as const).map(s => (
               <button
                 key={s}
-                onClick={() => setStatusFilter(s)}
-                className={cn('px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors', statusFilter === s ? 'bg-pulse-900 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600')}
+                onClick={() => { setStatusFilter(s); setShowDeleted(false) }}
+                className={cn('px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors', !showDeleted && statusFilter === s ? 'bg-pulse-900 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600')}
               >
                 {s === 'all' ? 'Tümü' : STATUS_CONFIG[s as InvoiceStatus]?.label}
               </button>
             ))}
+            <button
+              onClick={() => setShowDeleted(v => !v)}
+              className={cn('flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors', showDeleted ? 'bg-red-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600')}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Çöp Kutusu
+            </button>
           </div>
           <div className="flex items-center gap-2 ml-auto">
             <button onClick={() => setShowFilters(!showFilters)} className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors', showFilters || hasActiveFilters ? 'bg-pulse-100 text-pulse-900 dark:bg-pulse-900/30 dark:text-pulse-400' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600')}>
@@ -575,8 +613,56 @@ export default function InvoicesPage() {
         )}
       </div>
 
+      {/* Çöp Kutusu — Silinmiş Faturalar */}
+      {showDeleted && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-sm font-medium text-red-600 dark:text-red-400">
+            <Trash2 className="h-4 w-4" />
+            Çöp Kutusu — {deletedInvoices.length} silinmiş fatura
+          </div>
+          {deletedLoading ? (
+            <div className="flex items-center justify-center py-10">
+              <Loader2 className="h-6 w-6 animate-spin text-pulse-900" />
+            </div>
+          ) : deletedInvoices.length === 0 ? (
+            <div className="card flex flex-col items-center justify-center py-16 text-center">
+              <Trash2 className="mb-3 h-12 w-12 text-gray-200 dark:text-gray-600" />
+              <p className="text-sm text-gray-400">Silinmiş fatura yok</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {deletedInvoices.map(invoice => (
+                <div key={invoice.id} className="card flex items-center gap-4 p-4 opacity-70">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30 flex-shrink-0">
+                    <Receipt className="h-5 w-5 text-red-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium text-gray-700 dark:text-gray-300">{invoice.invoice_number}</span>
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                        <Trash2 className="h-3 w-3" />Silinmiş
+                      </span>
+                    </div>
+                    <div className="mt-0.5 text-sm text-gray-400">
+                      {invoice.customers?.name || 'Müşterisiz'} &bull; {formatCurrency(invoice.total)} &bull; Silinme: {invoice.deleted_at ? new Date(invoice.deleted_at).toLocaleDateString('tr-TR') : '—'}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleRestore(invoice)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" />
+                    Geri Al
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Fatura Listesi */}
-      {filteredInvoices.length === 0 ? (
+      {!showDeleted && (filteredInvoices.length === 0 ? (
         <div className="card flex flex-col items-center justify-center py-24 text-center">
           <Receipt className="mb-4 h-16 w-16 text-gray-200 dark:text-gray-600" />
           <h3 className="text-base font-semibold text-gray-700 dark:text-gray-300">
@@ -644,7 +730,7 @@ export default function InvoicesPage() {
             )
           })}
         </AnimatedList>
-      )}
+      ))}
 
       {/* ── Fatura Detay Slide-Over ── */}
       {selectedInvoice && (
