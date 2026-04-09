@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { sendMessage } from '@/lib/messaging/send'
 import { withPermission } from '@/lib/api/with-permission'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
@@ -21,9 +21,9 @@ export const POST = withPermission('messages', async (req: NextRequest, ctx) => 
       )
     }
 
-    const admin = createAdminClient()
+    const supabase = createServerSupabaseClient()
 
-    const { data: customer } = await admin
+    const { data: customer } = await supabase
       .from('customers')
       .select('id, phone, name, whatsapp_opted_in, preferred_channel')
       .eq('id', customerId)
@@ -55,7 +55,7 @@ export const POST = withPermission('messages', async (req: NextRequest, ctx) => 
     }
 
     // Telefon yoksa web kanalına kaydet
-    const { error: dbError } = await admin.from('messages').insert({
+    const { error: dbError } = await supabase.from('messages').insert({
       business_id: ctx.businessId,
       customer_id: customerId,
       direction: 'outbound',

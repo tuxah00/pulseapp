@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/api/with-permission'
 import { getAnthropicClient, AI_MODEL } from '@/lib/ai/client'
 
@@ -19,17 +19,17 @@ export async function POST(req: NextRequest) {
   if (!auth.ok) return auth.response
   const { businessId } = auth.ctx
 
-  const admin = createAdminClient()
+  const supabase = createServerSupabaseClient()
   const now = new Date()
 
   // Segment istatistiklerini topla
   const [bizResult, segmentResult, birthdayResult] = await Promise.all([
-    admin.from('businesses').select('name, sector').eq('id', businessId).single(),
-    admin.from('customers')
+    supabase.from('businesses').select('name, sector').eq('id', businessId).single(),
+    supabase.from('customers')
       .select('segment, total_visits, last_visit_at')
       .eq('business_id', businessId)
       .eq('is_active', true),
-    admin.from('customers')
+    supabase.from('customers')
       .select('id, name')
       .eq('business_id', businessId)
       .eq('is_active', true)

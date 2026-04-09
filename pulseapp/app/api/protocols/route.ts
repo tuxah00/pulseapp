@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/api/with-permission'
 
 // GET: Protokol listesi
@@ -12,8 +12,8 @@ export async function GET(request: NextRequest) {
   const customerId = searchParams.get('customerId')
   const status = searchParams.get('status')
 
-  const admin = createAdminClient()
-  let query = admin
+  const supabase = createServerSupabaseClient()
+  let query = supabase
     .from('treatment_protocols')
     .select(`
       *,
@@ -46,10 +46,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'customerId, name, totalSessions zorunlu' }, { status: 400 })
   }
 
-  const admin = createAdminClient()
+  const supabase = createServerSupabaseClient()
 
   // Protokolü oluştur
-  const { data: protocol, error: protocolError } = await admin
+  const { data: protocol, error: protocolError } = await supabase
     .from('treatment_protocols')
     .insert({
       business_id: businessId,
@@ -81,18 +81,18 @@ export async function POST(request: NextRequest) {
     })
   }
 
-  const { error: sessionsError } = await admin
+  const { error: sessionsError } = await supabase
     .from('protocol_sessions')
     .insert(sessions)
 
   if (sessionsError) {
     // Protokolü geri sil
-    await admin.from('treatment_protocols').delete().eq('id', protocol.id)
+    await supabase.from('treatment_protocols').delete().eq('id', protocol.id)
     return NextResponse.json({ error: sessionsError.message }, { status: 500 })
   }
 
   // Oluşturulan protokolü seanslarıyla birlikte getir
-  const { data: fullProtocol } = await admin
+  const { data: fullProtocol } = await supabase
     .from('treatment_protocols')
     .select(`
       *,

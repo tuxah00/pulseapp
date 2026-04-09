@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 
 async function verifyMembership(
   supabase: ReturnType<typeof createServerSupabaseClient>,
@@ -41,10 +40,8 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   const staff = await verifyMembership(supabase, user.id, businessId)
   if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
 
-  const admin = createAdminClient()
-
   // Mevcut randevuyu çek (süre, personel için)
-  const { data: existing, error: fetchErr } = await admin
+  const { data: existing, error: fetchErr } = await supabase
     .from('appointments')
     .select('id, business_id, staff_id, start_time, end_time, appointment_date, services(duration_minutes)')
     .eq('id', params.id)
@@ -83,7 +80,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   const newEnd = (updateData.end_time as string) ?? existing.end_time
 
   if (existing.staff_id) {
-    const { data: dayApts } = await admin
+    const { data: dayApts } = await supabase
       .from('appointments')
       .select('id, start_time, end_time')
       .eq('business_id', businessId)
@@ -107,7 +104,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     }
   }
 
-  const { data, error } = await admin
+  const { data, error } = await supabase
     .from('appointments')
     .update(updateData)
     .eq('id', params.id)

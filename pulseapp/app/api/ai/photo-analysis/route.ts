@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/api/with-permission'
 import { getAnthropicClient, AI_MODEL } from '@/lib/ai/client'
 import { getPhotoAnalysisPrompt } from '@/lib/ai/photo-prompts'
@@ -18,10 +18,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'photoUrl zorunlu' }, { status: 400 })
   }
 
-  const admin = createAdminClient()
+  const supabase = createServerSupabaseClient()
 
   // İşletmenin sektörünü al
-  const { data: business } = await admin
+  const { data: business } = await supabase
     .from('businesses')
     .select('sector')
     .eq('id', businessId)

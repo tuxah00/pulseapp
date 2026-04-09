@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 import type { POSItem, InvoiceItem, POSPaymentStatus } from '@/types'
 
 // GET: İşlem listesi
@@ -16,8 +15,7 @@ export async function GET(req: NextRequest) {
 
   if (!businessId) return NextResponse.json({ error: 'businessId gerekli' }, { status: 400 })
 
-  const admin = createAdminClient()
-  let query = admin
+  let query = supabase
     .from('pos_transactions')
     .select('*, customers(name, phone), staff_members(name)')
     .eq('business_id', businessId)
@@ -70,9 +68,8 @@ export async function POST(req: NextRequest) {
   else if (paidAmount > 0) payment_status = 'partial'
 
   // Fiş numarası: RCP-YYYY-XXXX
-  const admin = createAdminClient()
   const year = new Date().getFullYear()
-  const { count } = await admin
+  const { count } = await supabase
     .from('pos_transactions')
     .select('*', { count: 'exact', head: true })
     .eq('business_id', business_id)
@@ -90,7 +87,7 @@ export async function POST(req: NextRequest) {
       type: item.type,
     }))
 
-    const { count: invCount } = await admin
+    const { count: invCount } = await supabase
       .from('invoices')
       .select('*', { count: 'exact', head: true })
       .eq('business_id', business_id)
@@ -98,7 +95,7 @@ export async function POST(req: NextRequest) {
     const invoiceNumber = `INV-${year}-${String((invCount || 0) + 1).padStart(4, '0')}`
     const primaryMethod = payments[0]?.method || 'cash'
 
-    const { data: invoice } = await admin
+    const { data: invoice } = await supabase
       .from('invoices')
       .insert({
         business_id,
@@ -125,7 +122,7 @@ export async function POST(req: NextRequest) {
 
       for (const item of items as POSItem[]) {
         if (item.product_id && item.type === 'product') {
-          const { data: product } = await admin
+          const { data: product } = await supabase
             .from('products')
             .select('stock_quantity')
             .eq('id', item.product_id)
@@ -133,12 +130,12 @@ export async function POST(req: NextRequest) {
 
           if (product) {
             const newQty = Math.max(0, (product.stock_quantity || 0) - item.quantity)
-            await admin
+            await supabase
               .from('products')
               .update({ stock_quantity: newQty, updated_at: new Date().toISOString() })
               .eq('id', item.product_id)
 
-            await admin.from('stock_movements').insert({
+            await supabase.from('stock_movements').insert({
               business_id,
               product_id: item.product_id,
               type: 'out',
@@ -153,7 +150,7 @@ export async function POST(req: NextRequest) {
   }
 
   // POS transaction kaydet
-  const { data: transaction, error } = await admin
+  const { data: transaction, error } = await supabase
     .from('pos_transactions')
     .insert({
       business_id,
@@ -180,7 +177,7 @@ export async function POST(req: NextRequest) {
 
   // POS → Fatura backlink: pos_transaction_id güncelle
   if (transaction && invoice_id) {
-    await admin.from('invoices').update({ pos_transaction_id: transaction.id }).eq('id', invoice_id)
+    await supabase.from('invoices').update({ pos_transaction_id: transaction.id }).eq('id', invoice_id)
   }
 
   return NextResponse.json({ transaction })
@@ -207,8 +204,6 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'Güncellenecek alan yok' }, { status: 400 })
   }
 
-  const admin = createAdminClient()
-
   // Kullanıcının business_id'sini al ve işlemin sahipliğini doğrula
   const { data: staff } = await supabase
     .from('staff_members')
@@ -218,7 +213,7 @@ export async function PATCH(req: NextRequest) {
 
   if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
 
-  const { data, error } = await admin
+  const { data, error } = await supabase
     .from('pos_transactions')
     .update(updateObj)
     .eq('id', id)

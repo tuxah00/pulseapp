@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/api/with-permission'
 import type { InvoiceItem } from '@/types'
 
@@ -21,8 +21,8 @@ export async function GET(req: NextRequest) {
   const sortBy = searchParams.get('sort_by') || 'created_at'
   const sortOrder = searchParams.get('sort_order') || 'desc'
 
-  const admin = createAdminClient()
-  let query = admin
+  const supabase = createServerSupabaseClient()
+  let query = supabase
     .from('invoices')
     .select('*, customers(name, phone)')
     .eq('business_id', businessId)
@@ -70,9 +70,9 @@ export async function POST(req: NextRequest) {
   const total = subtotal + tax_amount
 
   // Fatura numarası oluştur: INV-YYYY-XXXX
-  const admin = createAdminClient()
+  const supabase = createServerSupabaseClient()
   const year = new Date().getFullYear()
-  const { count } = await admin
+  const { count } = await supabase
     .from('invoices')
     .select('*', { count: 'exact', head: true })
     .eq('business_id', business_id)
@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
     initialStatus = deposit_amount >= total ? 'paid' : 'partial'
   }
 
-  const { data: invoice, error } = await admin
+  const { data: invoice, error } = await supabase
     .from('invoices')
     .insert({
       business_id,
@@ -116,7 +116,7 @@ export async function POST(req: NextRequest) {
 
   // Kapora ödeme kaydı oluştur
   if (payment_type === 'deposit' && deposit_amount && deposit_amount > 0 && invoice) {
-    await admin.from('invoice_payments').insert({
+    await supabase.from('invoice_payments').insert({
       business_id,
       invoice_id: invoice.id,
       amount: deposit_amount,
@@ -141,7 +141,7 @@ export async function PATCH(req: NextRequest) {
   if (!id) return NextResponse.json({ error: 'id gerekli' }, { status: 400 })
 
   const body = await req.json()
-  const admin = createAdminClient()
+  const supabase = createServerSupabaseClient()
   const updateObj: Record<string, unknown> = { updated_at: new Date().toISOString() }
 
   if (body.status !== undefined) {
@@ -158,13 +158,13 @@ export async function PATCH(req: NextRequest) {
 
   // Tam ödeme durumunda paid_amount'u total'e eşitle
   if (body.status === 'paid') {
-    const { data: existing } = await admin.from('invoices').select('total').eq('id', id).single()
+    const { data: existing } = await supabase.from('invoices').select('total').eq('id', id).single()
     if (existing) {
       updateObj.paid_amount = existing.total
     }
   }
 
-  const { data: invoice, error } = await admin
+  const { data: invoice, error } = await supabase
     .from('invoices')
     .update(updateObj)
     .eq('id', id)
@@ -177,7 +177,7 @@ export async function PATCH(req: NextRequest) {
   if (body.status === 'paid' && invoice?.items && Array.isArray(invoice.items)) {
     for (const item of invoice.items as InvoiceItem[]) {
       if (item.product_id && item.type === 'product') {
-        const { data: product } = await admin
+        const { data: product } = await supabase
           .from('products')
           .select('stock_quantity')
           .eq('id', item.product_id)
@@ -185,12 +185,12 @@ export async function PATCH(req: NextRequest) {
 
         if (product) {
           const newQty = Math.max(0, (product.stock_quantity || 0) - item.quantity)
-          await admin
+          await supabase
             .from('products')
             .update({ stock_quantity: newQty, updated_at: new Date().toISOString() })
             .eq('id', item.product_id)
 
-          await admin.from('stock_movements').insert({
+          await supabase.from('stock_movements').insert({
             business_id: invoice.business_id,
             product_id: item.product_id,
             type: 'out',
@@ -204,7 +204,7 @@ export async function PATCH(req: NextRequest) {
 
     // Tam ödeme kaydı oluştur (eğer body'de payment_method varsa)
     if (body.payment_method && invoice) {
-      await admin.from('invoice_payments').insert({
+      await supabase.from('invoice_payments').insert({
         business_id: invoice.business_id,
         invoice_id: invoice.id,
         amount: invoice.total - (invoice.paid_amount || 0) + (invoice.total || 0), // kalan tutar
@@ -228,8 +228,8 @@ export async function DELETE(req: NextRequest) {
   const id = searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'id gerekli' }, { status: 400 })
 
-  const admin = createAdminClient()
-  const { error } = await admin.from('invoices').delete().eq('id', id)
+  const supabase = createServerSupabaseClient()
+  const { error } = await supabase.from('invoices').delete().eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ success: true })
 }
