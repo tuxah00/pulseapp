@@ -1,10 +1,15 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import dynamic from 'next/dynamic'
 import { Toaster, toast } from 'sonner'
 import Sidebar from './sidebar'
 import TopBar from './top-bar'
-import CommandPalette from './command-palette'
+
+const CommandPalette = dynamic(() => import('./command-palette'), {
+  ssr: false,
+  loading: () => null,
+})
 import type { SectorType, PlanType, StaffPermissions } from '@/types'
 
 interface DashboardShellProps {

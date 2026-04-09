@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { Clock, TrendingUp } from 'lucide-react'
@@ -37,31 +37,35 @@ export default function PerformanceStats() {
 
   useEffect(() => { if (!ctxLoading) fetchData() }, [fetchData, ctxLoading])
 
+  const stats = useMemo(() => {
+    const completed = appointments.filter(a => a.status === 'completed')
+    const noShow = appointments.filter(a => a.status === 'no_show')
+    const cancelled = appointments.filter(a => a.status === 'cancelled')
+    const total = appointments.length
+    const completionRate = total > 0 ? Math.round((completed.length / total) * 100) : 0
+    const noShowRate = total > 0 ? Math.round((noShow.length / total) * 100) : 0
+
+    const hourDist = Array.from({ length: 13 }, (_, i) => {
+      const hour = i + 8
+      const count = appointments.filter(a => parseInt(a.start_time?.split(':')[0] || '0') === hour).length
+      return { hour: `${String(hour).padStart(2, '0')}:00`, count }
+    })
+    const maxHour = Math.max(...hourDist.map(h => h.count), 1)
+    const topHours = [...hourDist].sort((a, b) => b.count - a.count).slice(0, 3)
+
+    const serviceStats = services.map(svc => {
+      const count = completed.filter(a => a.service_id === svc.id).length
+      const revenue = count * (svc.price || 0)
+      return { name: svc.name, count, revenue }
+    }).filter(s => s.count > 0).sort((a, b) => b.revenue - a.revenue).slice(0, 5)
+    const maxRevenue = Math.max(...serviceStats.map(s => s.revenue), 1)
+
+    return { completed, noShow, cancelled, total, completionRate, noShowRate, hourDist, maxHour, topHours, serviceStats, maxRevenue }
+  }, [appointments, services])
+
   if (loading) return null
 
-  const completed = appointments.filter(a => a.status === 'completed')
-  const noShow = appointments.filter(a => a.status === 'no_show')
-  const cancelled = appointments.filter(a => a.status === 'cancelled')
-  const total = appointments.length
-  const completionRate = total > 0 ? Math.round((completed.length / total) * 100) : 0
-  const noShowRate = total > 0 ? Math.round((noShow.length / total) * 100) : 0
-
-  // Peak hours
-  const hourDist = Array.from({ length: 13 }, (_, i) => {
-    const hour = i + 8
-    const count = appointments.filter(a => parseInt(a.start_time?.split(':')[0] || '0') === hour).length
-    return { hour: `${String(hour).padStart(2, '0')}:00`, count }
-  })
-  const maxHour = Math.max(...hourDist.map(h => h.count), 1)
-  const topHours = [...hourDist].sort((a, b) => b.count - a.count).slice(0, 3)
-
-  // Service revenue comparison (month)
-  const serviceStats = services.map(svc => {
-    const count = completed.filter(a => a.service_id === svc.id).length
-    const revenue = count * (svc.price || 0)
-    return { name: svc.name, count, revenue }
-  }).filter(s => s.count > 0).sort((a, b) => b.revenue - a.revenue).slice(0, 5)
-  const maxRevenue = Math.max(...serviceStats.map(s => s.revenue), 1)
+  const { cancelled, total, completionRate, noShowRate, maxHour, topHours, serviceStats, maxRevenue } = stats
 
   if (total === 0) return null
 

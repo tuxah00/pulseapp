@@ -3,6 +3,19 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 
 const DEFAULT_RESERVATION_DURATION = 90 // minutes
 
+const ALLOWED_FIELDS = [
+  'business_id', 'customer_name', 'customer_phone', 'guest_count',
+  'table_number', 'reservation_date', 'reservation_time', 'status', 'notes',
+] as const
+
+function pickAllowedFields(body: Record<string, unknown>) {
+  const result: Record<string, unknown> = {}
+  for (const key of ALLOWED_FIELDS) {
+    if (key in body) result[key] = body[key]
+  }
+  return result
+}
+
 /**
  * Parse "HH:MM" time string into total minutes since midnight.
  */
@@ -92,22 +105,27 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const supabase = createServerSupabaseClient()
-  const body = await req.json()
+  const rawBody = await req.json()
+
+  // Zorunlu alan kontrolü
+  if (!rawBody.business_id || !rawBody.customer_name || !rawBody.table_number || !rawBody.reservation_date || !rawBody.reservation_time) {
+    return NextResponse.json({ error: 'Zorunlu alanlar eksik: business_id, customer_name, table_number, reservation_date, reservation_time' }, { status: 400 })
+  }
+
+  const body = pickAllowedFields(rawBody)
 
   // Conflict check for table reservations
-  if (body.business_id && body.table_number && body.reservation_date && body.reservation_time) {
-    const duration = await getReservationDuration(supabase, body.business_id)
-    const conflictTime = await checkTableConflict(
-      supabase,
-      body.business_id,
-      body.table_number,
-      body.reservation_date,
-      body.reservation_time,
-      duration,
-    )
+  const bizId = body.business_id as string
+  const tableNo = body.table_number as string
+  const resDate = body.reservation_date as string
+  const resTime = body.reservation_time as string
+
+  if (bizId && tableNo && resDate && resTime) {
+    const duration = await getReservationDuration(supabase, bizId)
+    const conflictTime = await checkTableConflict(supabase, bizId, tableNo, resDate, resTime, duration)
     if (conflictTime) {
       return NextResponse.json(
-        { error: `Bu masa (${body.table_number}) seçilen saatte zaten rezerve edilmiş. Çakışan rezervasyon saati: ${conflictTime}` },
+        { error: `Bu masa (${tableNo}) seçilen saatte zaten rezerve edilmiş. Çakışan rezervasyon saati: ${conflictTime}` },
         { status: 409 },
       )
     }
@@ -129,23 +147,21 @@ export async function PATCH(req: NextRequest) {
   const id = searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
 
-  const body = await req.json()
+  const rawBody = await req.json()
+  const body = pickAllowedFields(rawBody)
 
   // Conflict check for table reservations (exclude current reservation)
-  if (body.business_id && body.table_number && body.reservation_date && body.reservation_time) {
-    const duration = await getReservationDuration(supabase, body.business_id)
-    const conflictTime = await checkTableConflict(
-      supabase,
-      body.business_id,
-      body.table_number,
-      body.reservation_date,
-      body.reservation_time,
-      duration,
-      id,
-    )
+  const bizId = body.business_id as string
+  const tableNo = body.table_number as string
+  const resDate = body.reservation_date as string
+  const resTime = body.reservation_time as string
+
+  if (bizId && tableNo && resDate && resTime) {
+    const duration = await getReservationDuration(supabase, bizId)
+    const conflictTime = await checkTableConflict(supabase, bizId, tableNo, resDate, resTime, duration, id)
     if (conflictTime) {
       return NextResponse.json(
-        { error: `Bu masa (${body.table_number}) seçilen saatte zaten rezerve edilmiş. Çakışan rezervasyon saati: ${conflictTime}` },
+        { error: `Bu masa (${tableNo}) seçilen saatte zaten rezerve edilmiş. Çakışan rezervasyon saati: ${conflictTime}` },
         { status: 409 },
       )
     }

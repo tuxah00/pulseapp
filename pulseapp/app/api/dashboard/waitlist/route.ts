@@ -11,6 +11,19 @@ export async function GET(request: NextRequest) {
   const businessId = searchParams.get('businessId')
   if (!businessId) return NextResponse.json({ error: 'businessId gerekli' }, { status: 400 })
 
+  // Kullanıcının bu işletmeye ait personel olduğunu doğrula
+  const { data: staffCheck } = await supabase
+    .from('staff_members')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('business_id', businessId)
+    .eq('is_active', true)
+    .single()
+
+  if (!staffCheck) {
+    return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
+  }
+
   const admin = createAdminClient()
   const { data, error } = await admin
     .from('waitlist_entries')

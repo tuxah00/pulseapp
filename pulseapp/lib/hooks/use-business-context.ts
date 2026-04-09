@@ -36,7 +36,7 @@ export function useBusinessContext(): BusinessContext {
       staffRole: null,
       permissions: null,
       sector: null,
-      loading: false,
+      loading: true,
     }
   }
 }
