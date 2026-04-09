@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requirePermission } from '@/lib/api/with-permission'
+import { validateBody } from '@/lib/api/validate'
+import { recordCreateSchema } from '@/lib/schemas'
 
 export async function GET(req: NextRequest) {
   const auth = await requirePermission(req, 'records')
@@ -37,12 +39,9 @@ export async function POST(req: NextRequest) {
   if (!auth.ok) return auth.response
   const { businessId } = auth.ctx
 
-  const body = await req.json()
-  const { type, title, data, customer_id } = body
-
-  if (!type || !title) {
-    return NextResponse.json({ error: 'type and title are required' }, { status: 400 })
-  }
+  const result = await validateBody(req, recordCreateSchema)
+  if (!result.ok) return result.response
+  const { type, title, data, customer_id } = result.data
 
   const admin = createAdminClient()
   const { data: record, error } = await admin

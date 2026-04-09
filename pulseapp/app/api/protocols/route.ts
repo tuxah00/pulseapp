@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/api/with-permission'
+import { validateBody } from '@/lib/api/validate'
+import { protocolCreateSchema } from '@/lib/schemas'
 
 // GET: Protokol listesi
 export async function GET(request: NextRequest) {
@@ -39,12 +41,9 @@ export async function POST(request: NextRequest) {
   if (!auth.ok) return auth.response
   const { businessId, staffId } = auth.ctx
 
-  const body = await request.json()
-  const { customerId, serviceId, name, totalSessions, intervalDays, notes } = body
-
-  if (!customerId || !name || !totalSessions) {
-    return NextResponse.json({ error: 'customerId, name, totalSessions zorunlu' }, { status: 400 })
-  }
+  const result = await validateBody(request, protocolCreateSchema)
+  if (!result.ok) return result.response
+  const { customerId, serviceId, name, totalSessions, intervalDays, notes } = result.data
 
   const supabase = createServerSupabaseClient()
 

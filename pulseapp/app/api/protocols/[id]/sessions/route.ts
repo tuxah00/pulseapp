@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { validateBody } from '@/lib/api/validate'
+import { sessionPatchSchema } from '@/lib/schemas'
 
 async function verifyMembership(supabase: ReturnType<typeof createServerSupabaseClient>, userId: string, businessId: string) {
   const { data } = await supabase
@@ -17,12 +19,9 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
 
-  const body = await request.json()
-  const { businessId, sessionId, status, appointmentId, notes, completedDate, beforePhotoUrl, afterPhotoUrl } = body
-
-  if (!businessId || !sessionId) {
-    return NextResponse.json({ error: 'businessId ve sessionId zorunlu' }, { status: 400 })
-  }
+  const result = await validateBody(request, sessionPatchSchema)
+  if (!result.ok) return result.response
+  const { businessId, sessionId, status, appointmentId, notes, completedDate, beforePhotoUrl, afterPhotoUrl } = result.data
 
   const staff = await verifyMembership(supabase, user.id, businessId)
   if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })

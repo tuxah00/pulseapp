@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/api/with-permission'
+import { validateBody } from '@/lib/api/validate'
+import { invoiceCreateSchema, invoicePatchSchema } from '@/lib/schemas'
 import type { InvoiceItem } from '@/types'
 
 // GET: Fatura listesi (gelişmiş filtreler)
@@ -52,20 +54,17 @@ export async function POST(req: NextRequest) {
   if (!auth.ok) return auth.response
   const { businessId, staffId } = auth.ctx
 
-  const body = await req.json()
+  const result = await validateBody(req, invoiceCreateSchema)
+  if (!result.ok) return result.response
   const {
-    customer_id, appointment_id, items, tax_rate = 0, notes, due_date,
-    staff_name, payment_type = 'standard', installment_count, installment_frequency,
+    customer_id, appointment_id, items, tax_rate, notes, due_date,
+    staff_name, payment_type, installment_count, installment_frequency,
     deposit_amount, payment_method,
-  } = body
+  } = result.data
   const business_id = businessId
 
-  if (!items || !Array.isArray(items) || items.length === 0) {
-    return NextResponse.json({ error: 'items gerekli' }, { status: 400 })
-  }
-
   // Hesapla
-  const subtotal = items.reduce((sum: number, item: InvoiceItem) => sum + item.total, 0)
+  const subtotal = items.reduce((sum, item) => sum + item.total, 0)
   const tax_amount = Math.round(subtotal * tax_rate) / 100
   const total = subtotal + tax_amount
 
@@ -140,7 +139,9 @@ export async function PATCH(req: NextRequest) {
   const id = searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'id gerekli' }, { status: 400 })
 
-  const body = await req.json()
+  const result = await validateBody(req, invoicePatchSchema)
+  if (!result.ok) return result.response
+  const body = result.data
   const supabase = createServerSupabaseClient()
   const updateObj: Record<string, unknown> = { updated_at: new Date().toISOString() }
 
