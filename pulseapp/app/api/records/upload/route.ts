@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 const BUCKET_NAME = 'records-files'
+const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB
+const ALLOWED_EXTENSIONS = new Set([
+  'pdf', 'jpg', 'jpeg', 'png', 'heic', 'heif',
+  'doc', 'docx', 'xls', 'xlsx',
+  'dcm', 'tiff', 'tif', 'bmp', 'webp', 'gif', 'svg',
+])
 
 export async function POST(req: NextRequest) {
   const supabase = createAdminClient()
@@ -13,6 +19,17 @@ export async function POST(req: NextRequest) {
 
   if (!file || !businessId || !recordId) {
     return NextResponse.json({ error: 'file, businessId and recordId are required' }, { status: 400 })
+  }
+
+  // Dosya tipi kontrolü
+  const fileExt = file.name.split('.').pop()?.toLowerCase() || ''
+  if (!ALLOWED_EXTENSIONS.has(fileExt)) {
+    return NextResponse.json({ error: `Desteklenmeyen dosya formatı: .${fileExt}` }, { status: 400 })
+  }
+
+  // Dosya boyutu kontrolü
+  if (file.size > MAX_FILE_SIZE) {
+    return NextResponse.json({ error: 'Dosya boyutu 50MB limitini aşıyor' }, { status: 400 })
   }
 
   // Bucket yoksa oluştur

@@ -72,6 +72,9 @@ export default function CustomersPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [viewMode, setViewMode] = useViewMode('customers', 'list')
+  const [page, setPage] = useState(0)
+  const [totalCount, setTotalCount] = useState(0)
+  const PAGE_SIZE = 50
 
   const [segment, setSegment] = useState<CustomerSegment>('new')
   const {
@@ -104,21 +107,26 @@ export default function CustomersPage() {
     if (!businessId) return
     let query = supabase
       .from('customers')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('business_id', businessId)
       .eq('is_active', true)
       .order('created_at', { ascending: false })
+      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
 
     if (filterSegment !== 'all') query = query.eq('segment', filterSegment)
     if (debouncedSearch.trim()) query = query.or(`name.ilike.%${debouncedSearch}%,phone.ilike.%${debouncedSearch}%`)
 
-    const { data, error } = await query
+    const { data, error, count } = await query
     if (data) setCustomers(data)
+    if (count !== null) setTotalCount(count)
     if (error) console.error('Müşteri çekme hatası:', error)
     setLoading(false)
-  }, [businessId, filterSegment, debouncedSearch])
+  }, [businessId, filterSegment, debouncedSearch, page])
 
   useEffect(() => { if (!ctxLoading) fetchCustomers() }, [fetchCustomers, ctxLoading])
+
+  // Filtre/arama değiştiğinde sayfayı sıfırla
+  useEffect(() => { setPage(0) }, [filterSegment, debouncedSearch])
 
   function openNewModal() {
     setEditingCustomer(null)
@@ -435,7 +443,7 @@ export default function CustomersPage() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">{customerLabel}</h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{customers.length} {customerLabel.toLowerCase()} kayıtlı</p>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{totalCount} {customerLabel.toLowerCase()} kayıtlı</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <button
@@ -582,6 +590,31 @@ export default function CustomersPage() {
             </AnimatedItem>
           ))}
         </AnimatedList>
+      )}
+
+      {/* ── Sayfalama ── */}
+      {totalCount > PAGE_SIZE && (
+        <div className="flex items-center justify-between pt-2">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, totalCount)} / {totalCount}
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPage(p => Math.max(0, p - 1))}
+              disabled={page === 0}
+              className="btn-secondary text-sm px-3 py-1.5 disabled:opacity-40"
+            >
+              Önceki
+            </button>
+            <button
+              onClick={() => setPage(p => p + 1)}
+              disabled={(page + 1) * PAGE_SIZE >= totalCount}
+              className="btn-secondary text-sm px-3 py-1.5 disabled:opacity-40"
+            >
+              Sonraki
+            </button>
+          </div>
+        </div>
       )}
 
       {/* ── Müşteri Detay Slide-Over Paneli ── */}

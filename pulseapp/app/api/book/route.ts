@@ -145,15 +145,15 @@ export async function POST(req: NextRequest) {
   const normalizedPhone = customer_phone.replace(/\s/g, '')
   let customerId: string
 
-  const { data: existingCustomer } = await supabase
+  const { data: existingCustomers } = await supabase
     .from('customers')
     .select('id')
     .eq('business_id', businessId)
     .eq('phone', normalizedPhone)
-    .single()
+    .limit(1)
 
-  if (existingCustomer) {
-    customerId = existingCustomer.id
+  if (existingCustomers && existingCustomers.length > 0) {
+    customerId = existingCustomers[0].id
   } else {
     const { data: newCustomer, error: custErr } = await supabase
       .from('customers')

@@ -13,8 +13,8 @@ export default function ClassesError({
     <ErrorFallback
       error={error}
       reset={reset}
-      title="Sınıf programı yüklenemedi"
-      description="Sınıf verileri getirilirken bir hata oluştu. Lütfen tekrar deneyin."
+      title="Sayfa yüklenemedi"
+      description="Beklenmeyen bir hata oluştu. Yeniden denemek ister misiniz?"
     />
   )
 }

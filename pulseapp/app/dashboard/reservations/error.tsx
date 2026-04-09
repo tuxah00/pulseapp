@@ -13,8 +13,8 @@ export default function ReservationsError({
     <ErrorFallback
       error={error}
       reset={reset}
-      title="Rezervasyonlar yüklenemedi"
-      description="Rezervasyon verileri getirilirken bir hata oluştu. Lütfen tekrar deneyin."
+      title="Sayfa yüklenemedi"
+      description="Beklenmeyen bir hata oluştu. Yeniden denemek ister misiniz?"
     />
   )
 }

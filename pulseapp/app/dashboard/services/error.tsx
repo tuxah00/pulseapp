@@ -13,8 +13,8 @@ export default function ServicesError({
     <ErrorFallback
       error={error}
       reset={reset}
-      title="Hizmetler yüklenemedi"
-      description="Hizmet verileri getirilirken bir hata oluştu. Lütfen tekrar deneyin."
+      title="Sayfa yüklenemedi"
+      description="Beklenmeyen bir hata oluştu. Yeniden denemek ister misiniz?"
     />
   )
 }

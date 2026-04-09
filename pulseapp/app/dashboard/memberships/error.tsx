@@ -13,8 +13,8 @@ export default function MembershipsError({
     <ErrorFallback
       error={error}
       reset={reset}
-      title="Üyelikler yüklenemedi"
-      description="Üyelik verileri getirilirken bir hata oluştu. Lütfen tekrar deneyin."
+      title="Sayfa yüklenemedi"
+      description="Beklenmeyen bir hata oluştu. Yeniden denemek ister misiniz?"
     />
   )
 }

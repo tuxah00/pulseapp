@@ -13,8 +13,8 @@ export default function ShiftsError({
     <ErrorFallback
       error={error}
       reset={reset}
-      title="Vardiya verileri yüklenemedi"
-      description="Vardiya verileri getirilirken bir hata oluştu. Lütfen tekrar deneyin."
+      title="Sayfa yüklenemedi"
+      description="Beklenmeyen bir hata oluştu. Yeniden denemek ister misiniz?"
     />
   )
 }

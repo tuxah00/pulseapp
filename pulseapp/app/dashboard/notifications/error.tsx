@@ -13,8 +13,8 @@ export default function NotificationsError({
     <ErrorFallback
       error={error}
       reset={reset}
-      title="Bildirimler yüklenemedi"
-      description="Bildirim verileri getirilirken bir hata oluştu. Lütfen tekrar deneyin."
+      title="Sayfa yüklenemedi"
+      description="Beklenmeyen bir hata oluştu. Yeniden denemek ister misiniz?"
     />
   )
 }

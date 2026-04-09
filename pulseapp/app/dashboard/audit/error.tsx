@@ -13,8 +13,8 @@ export default function AuditError({
     <ErrorFallback
       error={error}
       reset={reset}
-      title="Denetim verileri yüklenemedi"
-      description="Denetim kayıtları getirilirken bir hata oluştu. Lütfen tekrar deneyin."
+      title="Sayfa yüklenemedi"
+      description="Beklenmeyen bir hata oluştu. Yeniden denemek ister misiniz?"
     />
   )
 }

@@ -13,8 +13,8 @@ export default function PackagesError({
     <ErrorFallback
       error={error}
       reset={reset}
-      title="Paketler yüklenemedi"
-      description="Paket verileri getirilirken bir hata oluştu. Lütfen tekrar deneyin."
+      title="Sayfa yüklenemedi"
+      description="Beklenmeyen bir hata oluştu. Yeniden denemek ister misiniz?"
     />
   )
 }

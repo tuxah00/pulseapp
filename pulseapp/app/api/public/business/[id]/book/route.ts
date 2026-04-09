@@ -1,10 +1,7 @@
-import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+const supabase = createAdminClient()
 
 function normalizePhone(phone: string): string {
   const digits = phone.replace(/\D/g, '')
@@ -45,17 +42,17 @@ export async function POST(
   const normalizedPhone = normalizePhone(phone)
 
   // Müşteriyi bul veya oluştur
-  const { data: existingCustomer } = await supabase
+  const { data: existingCustomers } = await supabase
     .from('customers')
     .select('id')
     .eq('business_id', params.id)
     .eq('phone', normalizedPhone)
-    .single()
+    .limit(1)
 
   let customerId: string
 
-  if (existingCustomer) {
-    customerId = existingCustomer.id
+  if (existingCustomers && existingCustomers.length > 0) {
+    customerId = existingCustomers[0].id
   } else {
     const { data: newCustomer, error: customerError } = await supabase
       .from('customers')

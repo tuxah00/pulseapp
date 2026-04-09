@@ -13,8 +13,8 @@ export default function StaffError({
     <ErrorFallback
       error={error}
       reset={reset}
-      title="Personel verileri yüklenemedi"
-      description="Personel verileri getirilirken bir hata oluştu. Lütfen tekrar deneyin."
+      title="Sayfa yüklenemedi"
+      description="Beklenmeyen bir hata oluştu. Yeniden denemek ister misiniz?"
     />
   )
 }

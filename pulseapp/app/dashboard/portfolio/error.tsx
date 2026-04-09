@@ -13,8 +13,8 @@ export default function PortfolioError({
     <ErrorFallback
       error={error}
       reset={reset}
-      title="Portfolyo yüklenemedi"
-      description="Portfolyo verileri getirilirken bir hata oluştu. Lütfen tekrar deneyin."
+      title="Sayfa yüklenemedi"
+      description="Beklenmeyen bir hata oluştu. Yeniden denemek ister misiniz?"
     />
   )
 }

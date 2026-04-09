@@ -94,7 +94,7 @@ export default async function DashboardPage() {
 
       supabase
         .from('notifications')
-        .select('*')
+        .select('id, type, title, body, is_read, created_at')
         .eq('business_id', businessId)
         .eq('is_read', false)
         .order('created_at', { ascending: false })

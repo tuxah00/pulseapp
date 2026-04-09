@@ -13,8 +13,8 @@ export default function RecordsError({
     <ErrorFallback
       error={error}
       reset={reset}
-      title="Kayıtlar yüklenemedi"
-      description="Hasta kayıtları getirilirken bir hata oluştu. Lütfen tekrar deneyin."
+      title="Sayfa yüklenemedi"
+      description="Beklenmeyen bir hata oluştu. Yeniden denemek ister misiniz?"
     />
   )
 }

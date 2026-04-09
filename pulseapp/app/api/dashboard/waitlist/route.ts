@@ -10,6 +10,19 @@ export async function GET(request: NextRequest) {
   const businessId = searchParams.get('businessId')
   if (!businessId) return NextResponse.json({ error: 'businessId gerekli' }, { status: 400 })
 
+  // Kullanıcının bu işletmeye ait personel olduğunu doğrula
+  const { data: staffCheck } = await supabase
+    .from('staff_members')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('business_id', businessId)
+    .eq('is_active', true)
+    .single()
+
+  if (!staffCheck) {
+    return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
+  }
+
   const { data, error } = await supabase
     .from('waitlist_entries')
     .select('*, services(name), staff_members(name)')

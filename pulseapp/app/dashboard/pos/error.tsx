@@ -13,8 +13,8 @@ export default function PosError({
     <ErrorFallback
       error={error}
       reset={reset}
-      title="Kasa verileri yüklenemedi"
-      description="Kasa verileri getirilirken bir hata oluştu. Lütfen tekrar deneyin."
+      title="Sayfa yüklenemedi"
+      description="Beklenmeyen bir hata oluştu. Yeniden denemek ister misiniz?"
     />
   )
 }

@@ -13,8 +13,8 @@ export default function InventoryError({
     <ErrorFallback
       error={error}
       reset={reset}
-      title="Stok verileri yüklenemedi"
-      description="Stok bilgileri getirilirken bir hata oluştu. Lütfen tekrar deneyin."
+      title="Sayfa yüklenemedi"
+      description="Beklenmeyen bir hata oluştu. Yeniden denemek ister misiniz?"
     />
   )
 }

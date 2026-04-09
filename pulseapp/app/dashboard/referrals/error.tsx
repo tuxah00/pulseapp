@@ -13,8 +13,8 @@ export default function ReferralsError({
     <ErrorFallback
       error={error}
       reset={reset}
-      title="Referanslar yüklenemedi"
-      description="Referans verileri getirilirken bir hata oluştu. Lütfen tekrar deneyin."
+      title="Sayfa yüklenemedi"
+      description="Beklenmeyen bir hata oluştu. Yeniden denemek ister misiniz?"
     />
   )
 }

@@ -13,8 +13,8 @@ export default function ReviewsError({
     <ErrorFallback
       error={error}
       reset={reset}
-      title="Yorumlar yüklenemedi"
-      description="Yorum verileri getirilirken bir hata oluştu. Lütfen tekrar deneyin."
+      title="Sayfa yüklenemedi"
+      description="Beklenmeyen bir hata oluştu. Yeniden denemek ister misiniz?"
     />
   )
 }

@@ -13,8 +13,8 @@ export default function ProtocolsError({
     <ErrorFallback
       error={error}
       reset={reset}
-      title="Protokoller yüklenemedi"
-      description="Tedavi protokolleri getirilirken bir hata oluştu. Lütfen tekrar deneyin."
+      title="Sayfa yüklenemedi"
+      description="Beklenmeyen bir hata oluştu. Yeniden denemek ister misiniz?"
     />
   )
 }
