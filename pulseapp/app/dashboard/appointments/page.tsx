@@ -86,6 +86,7 @@ export default function AppointmentsPage() {
   const [customerId, setCustomerId] = useState('')
   const [serviceId, setServiceId] = useState('')
   const [staffId, setStaffId] = useState('')
+  const [roomId, setRoomId] = useState('')
   const [date, setDate] = useState('')
   const [startTime, setStartTime] = useState('09:00')
   const [notes, setNotes] = useState('')
@@ -256,7 +257,7 @@ export default function AppointmentsPage() {
 
   function openNewModal(overrideDate?: string, overrideTime?: string) {
     setEditingAppointment(null)
-    setCustomerId(''); setServiceId(''); setStaffId('')
+    setCustomerId(''); setServiceId(''); setStaffId(''); setRoomId('')
     setDate(overrideDate || selectedDate); setStartTime(overrideTime || '09:00'); setNotes('')
     setIsRecurring(false); setRecurrenceFrequency('weekly'); setRecurrenceCount(4)
     setError(null); setShowModal(true)
@@ -266,6 +267,7 @@ export default function AppointmentsPage() {
     e?.stopPropagation()
     setEditingAppointment(apt)
     setCustomerId(apt.customer_id); setServiceId(apt.service_id || ''); setStaffId(apt.staff_id || '')
+    setRoomId((apt as AppointmentView & { room_id?: string }).room_id || '')
     setDate(apt.appointment_date); setStartTime(apt.start_time); setNotes(apt.notes || '')
     setIsRecurring(false)
     setError(null); setShowModal(true)
@@ -348,6 +350,7 @@ export default function AppointmentsPage() {
     const endTime = calculateEndTime(startTime, duration)
     const payload = {
       customer_id: customerId, service_id: serviceId || null, staff_id: staffId || null,
+      room_id: roomId || null,
       appointment_date: date, start_time: startTime, end_time: endTime, notes: notes || null,
     }
     const conflict = await checkStaffConflict(staffId || null, date, startTime, endTime, editingAppointment?.id ?? null)
@@ -381,6 +384,7 @@ export default function AppointmentsPage() {
         customer_id: customerId,
         service_id: serviceId || null,
         staff_id: staffId || null,
+        room_id: roomId || null,
         appointment_date: d,
         start_time: startTime,
         end_time: endTime,
@@ -1805,6 +1809,17 @@ export default function AppointmentsPage() {
                   className="input"
                 />
               </div>
+              {rooms.length > 0 && (
+                <div>
+                  <label className="label">Oda</label>
+                  <CustomSelect
+                    options={[{ value: '', label: '— Oda atama —' }, ...rooms.map(r => ({ value: r.id, label: r.name }))]}
+                    value={roomId}
+                    onChange={v => setRoomId(v)}
+                    className="input"
+                  />
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="label">Tarih</label>

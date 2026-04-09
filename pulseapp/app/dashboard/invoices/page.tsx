@@ -10,7 +10,7 @@ import {
   CheckCircle, Clock, AlertCircle, XCircle, Download,
   Search, ChevronDown, Printer, CreditCard, Banknote,
   ArrowUpDown, Filter, CalendarDays, DollarSign,
-  FileText, FileSpreadsheet, ChevronRight,
+  FileText, FileSpreadsheet, ChevronRight, Send, ExternalLink,
 } from 'lucide-react'
 import { formatCurrency, cn } from '@/lib/utils'
 import { exportToCSV, printInvoicePDF } from '@/lib/utils/export'
@@ -99,6 +99,10 @@ export default function InvoicesPage() {
 
   // Export dropdown
   const [showExportMenu, setShowExportMenu] = useState(false)
+
+  // e-Fatura
+  const [efaturaSending, setEfaturaSending] = useState(false)
+  const [efaturaError, setEfaturaError] = useState<string | null>(null)
 
   const { confirm } = useConfirm()
   const supabase = createClient()
@@ -232,6 +236,23 @@ export default function InvoicesPage() {
     fetchInvoices()
     setSelectedInvoice(json.invoice)
     logAudit({ businessId: businessId!, staffId, staffName, action: 'create', resource: 'invoice', resourceId: json.invoice?.id, details: { customer_id: formCustomerId || null, total: json.invoice?.total ?? null, payment_type: formPaymentType } })
+  }
+
+  async function sendEfatura(invoice: Invoice) {
+    setEfaturaSending(true); setEfaturaError(null)
+    const res = await fetch('/api/efatura', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ invoiceId: invoice.id }),
+    })
+    const json = await res.json()
+    if (!res.ok) {
+      setEfaturaError(json.error || 'e-Fatura gönderilemedi')
+    } else {
+      setSelectedInvoice(prev => prev ? { ...prev, efatura_id: json.efatura?.id, efatura_status: 'sent' } : prev)
+      fetchInvoices()
+    }
+    setEfaturaSending(false)
   }
 
   function resetForm() {
@@ -840,6 +861,38 @@ export default function InvoicesPage() {
                   <div>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Not</p>
                     <p className="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">{selectedInvoice.notes}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* e-Fatura */}
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">e-Fatura</p>
+                {selectedInvoice.efatura_id ? (
+                  <div className="rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-3 flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-medium text-green-700 dark:text-green-400">Gönderildi</p>
+                      <p className="text-[10px] text-green-600 dark:text-green-500 mt-0.5">ID: {selectedInvoice.efatura_id}</p>
+                    </div>
+                    {selectedInvoice.efatura_pdf_url && (
+                      <a href={selectedInvoice.efatura_pdf_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-green-700 dark:text-green-400 hover:underline">
+                        <ExternalLink className="h-3.5 w-3.5" />PDF
+                      </a>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    {efaturaError && (
+                      <p className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-lg px-3 py-2">{efaturaError}</p>
+                    )}
+                    <button
+                      onClick={() => sendEfatura(selectedInvoice)}
+                      disabled={efaturaSending}
+                      className="flex items-center justify-center gap-1.5 w-full px-3 py-2 text-sm font-medium rounded-lg bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors disabled:opacity-50"
+                    >
+                      {efaturaSending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                      {efaturaSending ? 'Gönderiliyor...' : 'e-Fatura Gönder'}
+                    </button>
                   </div>
                 )}
               </div>

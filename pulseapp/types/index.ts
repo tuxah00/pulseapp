@@ -154,6 +154,10 @@ export interface Invoice {
   notes: string | null
   created_at: string
   updated_at: string
+  // e-Fatura (Paraşüt)
+  efatura_id?: string | null
+  efatura_status?: string | null
+  efatura_pdf_url?: string | null
   // JOINs
   customers?: { name: string; phone: string }
   // Virtual (loaded separately)
