@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
   const businessId = searchParams.get('businessId')
   const status = searchParams.get('status')
   const referrerId = searchParams.get('referrerId')
+  const rewardClaimed = searchParams.get('rewardClaimed')
 
   if (!businessId) return NextResponse.json({ error: 'businessId gerekli' }, { status: 400 })
 
@@ -39,6 +40,7 @@ export async function GET(request: NextRequest) {
 
   if (status) query = query.eq('status', status)
   if (referrerId) query = query.eq('referrer_customer_id', referrerId)
+  if (rewardClaimed !== null) query = query.eq('reward_claimed', rewardClaimed === 'true')
 
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
@@ -25,10 +25,10 @@ import {
   CalendarDays,
   CalendarRange,
   Search, Filter, ArrowUpDown,
-  Users, Building2,
+  Users, Building2, Ban, Lock,
 } from 'lucide-react'
 import { formatTime, formatDate, getStatusColor, formatCurrency, cn } from '@/lib/utils'
-import { STATUS_LABELS, type AppointmentStatus, type Customer, type Service, type StaffMember, type WorkingHours } from '@/types'
+import { STATUS_LABELS, type AppointmentStatus, type Customer, type Service, type StaffMember, type WorkingHours, type BlockedSlot } from '@/types'
 import type { AppointmentRow } from '@/types/db'
 
 type AppointmentView = AppointmentRow & {
@@ -95,6 +95,17 @@ export default function AppointmentsPage() {
   const [isRecurring, setIsRecurring] = useState(false)
   const [recurrenceFrequency, setRecurrenceFrequency] = useState<'weekly' | 'biweekly' | 'monthly'>('weekly')
   const [recurrenceCount, setRecurrenceCount] = useState(4)
+
+  // Bloklanmış slotlar
+  const [blockedSlots, setBlockedSlots] = useState<BlockedSlot[]>([])
+
+  // Rubber-band seçim state
+  const [isSelecting, setIsSelecting] = useState(false)
+  const [selectionStart, setSelectionStart] = useState<{ col: number; hour: number } | null>(null)
+  const [selectionEnd, setSelectionEnd] = useState<{ col: number; hour: number } | null>(null)
+  const [selectionViewMode, setSelectionViewMode] = useState<string>('')
+  const [actionMenu, setActionMenu] = useState<{ x: number; y: number; cells: { col: number; colId: string; date: string; hour: number }[] } | null>(null)
+  const gridRef = useRef<HTMLDivElement>(null)
 
   const supabase = createClient()
 
@@ -193,8 +204,28 @@ export default function AppointmentsPage() {
     return () => clearInterval(id)
   }, [])
 
+  const fetchBlockedSlots = useCallback(async () => {
+    if (!businessId) return
+    let from = selectedDate, to = selectedDate
+    if (viewMode === 'week') {
+      const wr = getWeekRange(selectedDate)
+      from = wr.start; to = wr.end
+    } else if (viewMode === 'month') {
+      const mr = getMonthRange(selectedDate)
+      from = mr.start; to = mr.end
+    }
+    try {
+      const res = await fetch(`/api/blocked-slots?businessId=${businessId}&from=${from}&to=${to}`)
+      if (res.ok) {
+        const data = await res.json()
+        setBlockedSlots(data.blockedSlots || [])
+      }
+    } catch { /* ignore */ }
+  }, [businessId, selectedDate, viewMode])
+
   useEffect(() => { if (!ctxLoading) fetchAppointments() }, [fetchAppointments, ctxLoading])
   useEffect(() => { if (!ctxLoading) fetchFormData() }, [fetchFormData, ctxLoading])
+  useEffect(() => { if (!ctxLoading) fetchBlockedSlots() }, [fetchBlockedSlots, ctxLoading])
 
   useEffect(() => {
     if (!showModal) return
@@ -491,6 +522,148 @@ export default function AppointmentsPage() {
     }
   }
 
+  // ── Rubber-band seçim yardımcıları ──
+  function getSelectedCells(
+    start: { col: number; hour: number },
+    end: { col: number; hour: number },
+    colData: { id: string; date: string }[]
+  ) {
+    const minCol = Math.min(start.col, end.col)
+    const maxCol = Math.max(start.col, end.col)
+    const minHour = Math.min(start.hour, end.hour)
+    const maxHour = Math.max(start.hour, end.hour)
+    const cells: { col: number; colId: string; date: string; hour: number }[] = []
+    for (let c = minCol; c <= maxCol; c++) {
+      for (let h = minHour; h <= maxHour; h++) {
+        if (colData[c]) {
+          cells.push({ col: c, colId: colData[c].id, date: colData[c].date, hour: h })
+        }
+      }
+    }
+    return cells
+  }
+
+  function isCellSelected(col: number, hour: number): boolean {
+    if (!selectionStart || !selectionEnd || !isSelecting) return false
+    const minCol = Math.min(selectionStart.col, selectionEnd.col)
+    const maxCol = Math.max(selectionStart.col, selectionEnd.col)
+    const minHour = Math.min(selectionStart.hour, selectionEnd.hour)
+    const maxHour = Math.max(selectionStart.hour, selectionEnd.hour)
+    return col >= minCol && col <= maxCol && hour >= minHour && hour <= maxHour
+  }
+
+  function isHourBlocked(date: string, hour: number, staffId?: string | null, roomId?: string | null): boolean {
+    return blockedSlots.some(bs => {
+      if (bs.date !== date) return false
+      const bsStartH = parseInt(bs.start_time.split(':')[0])
+      const bsEndH = parseInt(bs.end_time.split(':')[0])
+      if (hour < bsStartH || hour >= bsEndH) return false
+      if (staffId && bs.staff_id && bs.staff_id !== staffId) return false
+      if (roomId && bs.room_id && bs.room_id !== roomId) return false
+      if (!staffId && !roomId && !bs.staff_id && !bs.room_id) return true
+      if (staffId && bs.staff_id === staffId) return true
+      if (roomId && bs.room_id === roomId) return true
+      if (!bs.staff_id && !bs.room_id) return true
+      return false
+    })
+  }
+
+  function getBlockedSlotAt(date: string, hour: number, staffId?: string | null, roomId?: string | null): BlockedSlot | null {
+    return blockedSlots.find(bs => {
+      if (bs.date !== date) return false
+      const bsStartH = parseInt(bs.start_time.split(':')[0])
+      const bsEndH = parseInt(bs.end_time.split(':')[0])
+      if (hour < bsStartH || hour >= bsEndH) return false
+      if (staffId && bs.staff_id && bs.staff_id !== staffId) return false
+      if (roomId && bs.room_id && bs.room_id !== roomId) return false
+      if (!staffId && !roomId && !bs.staff_id && !bs.room_id) return true
+      if (staffId && bs.staff_id === staffId) return true
+      if (roomId && bs.room_id === roomId) return true
+      if (!bs.staff_id && !bs.room_id) return true
+      return false
+    }) || null
+  }
+
+  async function handleBlockSlots(cells: { col: number; colId: string; date: string; hour: number }[], reason?: string) {
+    if (!businessId || cells.length === 0) return
+    // Günlere göre grupla ve ardışık saatleri birleştir
+    const grouped = new Map<string, { date: string; colId: string; hours: number[] }>()
+    for (const c of cells) {
+      const key = `${c.date}_${c.colId}`
+      if (!grouped.has(key)) grouped.set(key, { date: c.date, colId: c.colId, hours: [] })
+      grouped.get(key)!.hours.push(c.hour)
+    }
+    const slots: Array<{ date: string; start_time: string; end_time: string; staff_id?: string; room_id?: string; reason?: string }> = []
+    for (const g of grouped.values()) {
+      g.hours.sort((a, b) => a - b)
+      let rangeStart = g.hours[0]
+      let rangeEnd = g.hours[0]
+      for (let i = 1; i <= g.hours.length; i++) {
+        if (i < g.hours.length && g.hours[i] === rangeEnd + 1) {
+          rangeEnd = g.hours[i]
+        } else {
+          const slot: typeof slots[0] = {
+            date: g.date,
+            start_time: `${String(rangeStart).padStart(2, '0')}:00`,
+            end_time: `${String(rangeEnd + 1).padStart(2, '0')}:00`,
+            reason: reason || undefined,
+          }
+          // viewMode'a göre staff_id/room_id ata
+          if (selectionViewMode === 'staff' && g.colId !== '__unassigned__') slot.staff_id = g.colId
+          if (selectionViewMode === 'room' && g.colId !== '__unassigned__') slot.room_id = g.colId
+          slots.push(slot)
+          rangeStart = g.hours[i]
+          rangeEnd = g.hours[i]
+        }
+      }
+    }
+    try {
+      const res = await fetch('/api/blocked-slots', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ businessId, slots }),
+      })
+      if (res.ok) {
+        await fetchBlockedSlots()
+        window.dispatchEvent(new CustomEvent('pulse-toast', {
+          detail: { type: 'system', title: 'Saat Bloklandı', body: `${slots.length} zaman dilimi bloklandı.` },
+        }))
+      }
+    } catch { /* ignore */ }
+  }
+
+  async function handleUnblock(slotId: string) {
+    if (!businessId) return
+    try {
+      const res = await fetch(`/api/blocked-slots?id=${slotId}&businessId=${businessId}`, { method: 'DELETE' })
+      if (res.ok) {
+        await fetchBlockedSlots()
+        window.dispatchEvent(new CustomEvent('pulse-toast', {
+          detail: { type: 'system', title: 'Blok Kaldırıldı', body: 'Zaman dilimi tekrar açıldı.' },
+        }))
+      }
+    } catch { /* ignore */ }
+  }
+
+  // Seçimi temizle
+  function clearSelection() {
+    setIsSelecting(false)
+    setSelectionStart(null)
+    setSelectionEnd(null)
+    setActionMenu(null)
+  }
+
+  // ESC ile seçimi kapat
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && (actionMenu || isSelecting)) {
+        clearSelection()
+      }
+    }
+    document.addEventListener('keydown', h)
+    return () => document.removeEventListener('keydown', h)
+  }, [actionMenu, isSelecting])
+
   async function handleRescheduleSave(e: React.FormEvent) {
     e.preventDefault()
     if (!rescheduleAppointment) return
@@ -628,6 +801,7 @@ export default function AppointmentsPage() {
   }
 
   function generateTimeSlots(dateStr?: string, wh?: Record<string, { open: string; close: string } | null> | null): string[] {
+    let slots: string[] = []
     if (dateStr && wh) {
       const dayKey = getDayKeyFromDate(dateStr)
       const dayHours = wh[dayKey]
@@ -636,19 +810,31 @@ export default function AppointmentsPage() {
       const [closeH, closeM] = dayHours.close.split(':').map(Number)
       const openTotal = openH * 60 + openM
       const closeTotal = closeH * 60 + closeM
-      const slots: string[] = []
       for (let t = openTotal; t < closeTotal; t += 30) {
         const hh = Math.floor(t / 60)
         const mm = t % 60
         slots.push(`${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`)
       }
-      return slots
+    } else {
+      // Fallback: 08:00 - 21:30
+      for (let h = 8; h <= 21; h++) {
+        slots.push(`${String(h).padStart(2, '0')}:00`)
+        slots.push(`${String(h).padStart(2, '0')}:30`)
+      }
     }
-    // Fallback: 08:00 - 21:30
-    const slots: string[] = []
-    for (let h = 8; h <= 21; h++) {
-      slots.push(`${String(h).padStart(2, '0')}:00`)
-      slots.push(`${String(h).padStart(2, '0')}:30`)
+    // Bloklanmış saatleri işaretle (kaldırmak yerine label'da göster)
+    if (dateStr) {
+      const blockedForDate = blockedSlots.filter(bs => bs.date === dateStr && !bs.staff_id && !bs.room_id)
+      if (blockedForDate.length > 0) {
+        slots = slots.filter(slot => {
+          const slotMin = parseInt(slot.split(':')[0]) * 60 + parseInt(slot.split(':')[1])
+          return !blockedForDate.some(bs => {
+            const bsStart = parseInt(bs.start_time.split(':')[0]) * 60 + parseInt(bs.start_time.split(':')[1])
+            const bsEnd = parseInt(bs.end_time.split(':')[0]) * 60 + parseInt(bs.end_time.split(':')[1])
+            return slotMin >= bsStart && slotMin < bsEnd
+          })
+        })
+      }
     }
     return slots
   }
@@ -1030,6 +1216,7 @@ export default function AppointmentsPage() {
                     {weekDays.map((day, dayIdx) => {
                       const dayAppointments = appointments.filter(a => a.appointment_date === day)
                       const isDayToday = day === todayStr
+                      const weekColData = weekDays.map(d => ({ id: d, date: d }))
 
                       return (
                         <div
@@ -1048,30 +1235,84 @@ export default function AppointmentsPage() {
                             if (!id) return
                             const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
                             const dropY = e.clientY - rect.top
-                            // En yakın saate snap (30 dk yerine 1 saat)
                             const dropHour = Math.max(startHour, Math.min(endHour - 1, Math.round(dropY / hourHeight) + startHour))
                             const timeStr = `${String(dropHour).padStart(2, '0')}:00`
                             handleDragMove(id, day, timeStr)
                           }}
-                          onClick={(e) => {
+                          onMouseDown={(e) => {
+                            if (e.button !== 0) return
+                            const target = e.target as HTMLElement
+                            if (target.closest('[draggable]')) return
                             const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-                            const clickY = e.clientY - rect.top
-                            const clickHour = Math.max(startHour, Math.min(endHour, Math.floor((clickY / hourHeight) + startHour)))
-                            const timeStr = `${String(clickHour).padStart(2, '0')}:00`
-
-                            if (dayAppointments.length > 0) {
-                              const hourApts = dayAppointments.filter(a => {
-                                const aHour = parseInt(a.start_time.split(':')[0])
-                                return aHour === clickHour
-                              })
-                              if (hourApts.length > 0) {
-                                setSlotPopup({ day, hour: clickHour, apts: hourApts, x: e.clientX, y: e.clientY })
+                            const hour = Math.max(startHour, Math.min(endHour, Math.floor((e.clientY - rect.top) / hourHeight) + startHour))
+                            setSelectionStart({ col: dayIdx, hour })
+                            setSelectionEnd({ col: dayIdx, hour })
+                            setIsSelecting(true)
+                            setSelectionViewMode('week')
+                            setActionMenu(null)
+                            e.preventDefault()
+                          }}
+                          onMouseMove={(e) => {
+                            if (!isSelecting || selectionViewMode !== 'week') return
+                            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                            const hour = Math.max(startHour, Math.min(endHour, Math.floor((e.clientY - rect.top) / hourHeight) + startHour))
+                            setSelectionEnd({ col: dayIdx, hour })
+                          }}
+                          onMouseUp={(e) => {
+                            if (!isSelecting || selectionViewMode !== 'week' || !selectionStart || !selectionEnd) return
+                            setIsSelecting(false)
+                            const cells = getSelectedCells(selectionStart, selectionEnd, weekColData)
+                            if (cells.length <= 1 && selectionStart.col === selectionEnd.col && selectionStart.hour === selectionEnd.hour) {
+                              const blocked = getBlockedSlotAt(day, selectionStart.hour)
+                              if (blocked) {
+                                handleUnblock(blocked.id)
+                                clearSelection()
                                 return
                               }
+                              // Tek tıklama — randevu popup veya yeni randevu
+                              const timeStr = `${String(selectionStart.hour).padStart(2, '0')}:00`
+                              if (dayAppointments.length > 0) {
+                                const hourApts = dayAppointments.filter(a => parseInt(a.start_time.split(':')[0]) === selectionStart!.hour)
+                                if (hourApts.length > 0) {
+                                  setSlotPopup({ day, hour: selectionStart.hour, apts: hourApts, x: e.clientX, y: e.clientY })
+                                  clearSelection()
+                                  return
+                                }
+                              }
+                              openNewModal(day, timeStr)
+                              clearSelection()
+                              return
                             }
-                            openNewModal(day, timeStr)
+                            setActionMenu({ x: e.clientX, y: e.clientY, cells })
                           }}
                         >
+                          {/* Bloklanmış saatler */}
+                          {hours.map(hour => {
+                            const blocked = isHourBlocked(day, hour)
+                            if (!blocked) return null
+                            return (
+                              <div
+                                key={`blocked-${hour}`}
+                                className="absolute left-0 right-0 bg-gray-200/60 dark:bg-gray-700/60 border-y border-gray-300/50 dark:border-gray-600/50"
+                                style={{ top: (hour - startHour) * hourHeight, height: hourHeight }}
+                              >
+                                <div className="flex items-center justify-center h-full opacity-40">
+                                  <Ban className="h-3 w-3 text-gray-500 dark:text-gray-400" />
+                                </div>
+                              </div>
+                            )
+                          })}
+                          {/* Seçim highlight */}
+                          {(isSelecting || actionMenu) && selectionViewMode === 'week' && hours.map(hour => {
+                            if (!isCellSelected(dayIdx, hour)) return null
+                            return (
+                              <div
+                                key={`sel-${hour}`}
+                                className="absolute left-0 right-0 bg-pulse-900/20 dark:bg-pulse-400/20 border border-pulse-900/30 dark:border-pulse-400/30 pointer-events-none z-[5]"
+                                style={{ top: (hour - startHour) * hourHeight, height: hourHeight }}
+                              />
+                            )
+                          })}
                           {/* Randevu blokları — çakışma tespiti ile yan yana kolon */}
                           {computeOverlapLayout(dayAppointments).map(({ apt, column, totalColumns }) => {
                             const startMin = toMinutes(apt.start_time) - startHour * 60
@@ -1315,7 +1556,9 @@ export default function AppointmentsPage() {
                       <div key={`line-${i}`} className="absolute left-[60px] right-0 border-t border-gray-100 dark:border-gray-800" style={{ top: i * hourHeight }} />
                     ))}
                     {/* Personel kolonları */}
-                    {columns.map((col, colIdx) => (
+                    {columns.map((col, colIdx) => {
+                      const colData = columns.map(c => ({ id: c.id, date: selectedDate }))
+                      return (
                       <div
                         key={col.id}
                         className="absolute border-l border-gray-100 dark:border-gray-800"
@@ -1324,12 +1567,82 @@ export default function AppointmentsPage() {
                           width: `calc((100% - 60px) / ${columns.length})`,
                           top: 0, height: '100%',
                         }}
-                        onClick={(e) => {
+                        onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }}
+                        onDrop={(e) => {
+                          e.preventDefault()
+                          const id = e.dataTransfer.getData('text/plain')
+                          if (!id) return
                           const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-                          const clickHour = Math.max(startHour, Math.min(endHour, Math.floor((e.clientY - rect.top) / hourHeight) + startHour))
-                          openNewModal(selectedDate, `${String(clickHour).padStart(2, '0')}:00`)
+                          const dropY = e.clientY - rect.top
+                          const dropHour = Math.max(startHour, Math.min(endHour - 1, Math.round(dropY / hourHeight) + startHour))
+                          const timeStr = `${String(dropHour).padStart(2, '0')}:00`
+                          handleDragMove(id, selectedDate, timeStr)
+                        }}
+                        onMouseDown={(e) => {
+                          if (e.button !== 0) return
+                          const target = e.target as HTMLElement
+                          if (target.closest('[draggable]')) return
+                          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                          const hour = Math.max(startHour, Math.min(endHour, Math.floor((e.clientY - rect.top) / hourHeight) + startHour))
+                          setSelectionStart({ col: colIdx, hour })
+                          setSelectionEnd({ col: colIdx, hour })
+                          setIsSelecting(true)
+                          setSelectionViewMode('staff')
+                          setActionMenu(null)
+                          e.preventDefault()
+                        }}
+                        onMouseMove={(e) => {
+                          if (!isSelecting || selectionViewMode !== 'staff') return
+                          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                          const hour = Math.max(startHour, Math.min(endHour, Math.floor((e.clientY - rect.top) / hourHeight) + startHour))
+                          setSelectionEnd({ col: colIdx, hour })
+                        }}
+                        onMouseUp={(e) => {
+                          if (!isSelecting || selectionViewMode !== 'staff' || !selectionStart || !selectionEnd) return
+                          setIsSelecting(false)
+                          const cells = getSelectedCells(selectionStart, selectionEnd, colData)
+                          if (cells.length <= 1 && selectionStart.col === selectionEnd.col && selectionStart.hour === selectionEnd.hour) {
+                            // Tek hücre tıklama — bloklu ise unblock, yoksa yeni randevu
+                            const blocked = getBlockedSlotAt(selectedDate, selectionStart.hour, col.id !== '__unassigned__' ? col.id : null, null)
+                            if (blocked) {
+                              handleUnblock(blocked.id)
+                            } else {
+                              openNewModal(selectedDate, `${String(selectionStart.hour).padStart(2, '0')}:00`)
+                            }
+                            clearSelection()
+                            return
+                          }
+                          setActionMenu({ x: e.clientX, y: e.clientY, cells })
                         }}
                       >
+                        {/* Bloklanmış saatler */}
+                        {hours.map(hour => {
+                          const blocked = isHourBlocked(selectedDate, hour, col.id !== '__unassigned__' ? col.id : null, null)
+                          if (!blocked) return null
+                          return (
+                            <div
+                              key={`blocked-${hour}`}
+                              className="absolute left-0 right-0 bg-gray-200/60 dark:bg-gray-700/60 border-y border-gray-300/50 dark:border-gray-600/50 cursor-pointer"
+                              style={{ top: (hour - startHour) * hourHeight, height: hourHeight }}
+                              title="Bloklanmış — tıklayarak açabilirsiniz"
+                            >
+                              <div className="flex items-center justify-center h-full opacity-40">
+                                <Ban className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                              </div>
+                            </div>
+                          )
+                        })}
+                        {/* Seçim highlight */}
+                        {(isSelecting || actionMenu) && selectionViewMode === 'staff' && hours.map(hour => {
+                          if (!isCellSelected(colIdx, hour)) return null
+                          return (
+                            <div
+                              key={`sel-${hour}`}
+                              className="absolute left-0 right-0 bg-pulse-900/20 dark:bg-pulse-400/20 border border-pulse-900/30 dark:border-pulse-400/30 pointer-events-none z-[5]"
+                              style={{ top: (hour - startHour) * hourHeight, height: hourHeight }}
+                            />
+                          )
+                        })}
                         {col.apts.map(apt => {
                           const startMin = toMinutes(apt.start_time) - startHour * 60
                           const endMin = toMinutes(apt.end_time) - startHour * 60
@@ -1338,7 +1651,18 @@ export default function AppointmentsPage() {
                           return (
                             <div
                               key={apt.id}
-                              className={cn('absolute left-0.5 right-0.5 rounded-md px-1.5 py-0.5 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity border border-white/20', staffColors[col.colorIdx])}
+                              draggable
+                              onDragStart={(e) => {
+                                e.dataTransfer.setData('text/plain', apt.id)
+                                e.dataTransfer.effectAllowed = 'move'
+                                setDraggingId(apt.id)
+                              }}
+                              onDragEnd={() => setDraggingId(null)}
+                              className={cn(
+                                'absolute left-0.5 right-0.5 rounded-md px-1.5 py-0.5 overflow-hidden cursor-grab active:cursor-grabbing hover:opacity-90 transition-opacity border border-white/20',
+                                staffColors[col.colorIdx],
+                                draggingId === apt.id && 'opacity-50'
+                              )}
                               style={{ top, height }}
                               onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
                             >
@@ -1367,7 +1691,8 @@ export default function AppointmentsPage() {
                           )
                         })()}
                       </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
               </div>
@@ -1441,7 +1766,9 @@ export default function AppointmentsPage() {
                     {hours.map((_, i) => (
                       <div key={`line-${i}`} className="absolute left-[60px] right-0 border-t border-gray-100 dark:border-gray-800" style={{ top: i * hourHeight }} />
                     ))}
-                    {columns.map((col, colIdx) => (
+                    {columns.map((col, colIdx) => {
+                      const colData = columns.map(c => ({ id: c.id, date: selectedDate }))
+                      return (
                       <div
                         key={col.id}
                         className="absolute border-l border-gray-100 dark:border-gray-800"
@@ -1450,12 +1777,81 @@ export default function AppointmentsPage() {
                           width: `calc((100% - 60px) / ${columns.length})`,
                           top: 0, height: '100%',
                         }}
-                        onClick={(e) => {
+                        onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }}
+                        onDrop={(e) => {
+                          e.preventDefault()
+                          const id = e.dataTransfer.getData('text/plain')
+                          if (!id) return
                           const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-                          const clickHour = Math.max(startHour, Math.min(endHour, Math.floor((e.clientY - rect.top) / hourHeight) + startHour))
-                          openNewModal(selectedDate, `${String(clickHour).padStart(2, '0')}:00`)
+                          const dropY = e.clientY - rect.top
+                          const dropHour = Math.max(startHour, Math.min(endHour - 1, Math.round(dropY / hourHeight) + startHour))
+                          const timeStr = `${String(dropHour).padStart(2, '0')}:00`
+                          handleDragMove(id, selectedDate, timeStr)
+                        }}
+                        onMouseDown={(e) => {
+                          if (e.button !== 0) return
+                          const target = e.target as HTMLElement
+                          if (target.closest('[draggable]')) return
+                          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                          const hour = Math.max(startHour, Math.min(endHour, Math.floor((e.clientY - rect.top) / hourHeight) + startHour))
+                          setSelectionStart({ col: colIdx, hour })
+                          setSelectionEnd({ col: colIdx, hour })
+                          setIsSelecting(true)
+                          setSelectionViewMode('room')
+                          setActionMenu(null)
+                          e.preventDefault()
+                        }}
+                        onMouseMove={(e) => {
+                          if (!isSelecting || selectionViewMode !== 'room') return
+                          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                          const hour = Math.max(startHour, Math.min(endHour, Math.floor((e.clientY - rect.top) / hourHeight) + startHour))
+                          setSelectionEnd({ col: colIdx, hour })
+                        }}
+                        onMouseUp={(e) => {
+                          if (!isSelecting || selectionViewMode !== 'room' || !selectionStart || !selectionEnd) return
+                          setIsSelecting(false)
+                          const cells = getSelectedCells(selectionStart, selectionEnd, colData)
+                          if (cells.length <= 1 && selectionStart.col === selectionEnd.col && selectionStart.hour === selectionEnd.hour) {
+                            const blocked = getBlockedSlotAt(selectedDate, selectionStart.hour, null, col.id !== '__unassigned__' ? col.id : null)
+                            if (blocked) {
+                              handleUnblock(blocked.id)
+                            } else {
+                              openNewModal(selectedDate, `${String(selectionStart.hour).padStart(2, '0')}:00`)
+                            }
+                            clearSelection()
+                            return
+                          }
+                          setActionMenu({ x: e.clientX, y: e.clientY, cells })
                         }}
                       >
+                        {/* Bloklanmış saatler */}
+                        {hours.map(hour => {
+                          const blocked = isHourBlocked(selectedDate, hour, null, col.id !== '__unassigned__' ? col.id : null)
+                          if (!blocked) return null
+                          return (
+                            <div
+                              key={`blocked-${hour}`}
+                              className="absolute left-0 right-0 bg-gray-200/60 dark:bg-gray-700/60 border-y border-gray-300/50 dark:border-gray-600/50 cursor-pointer"
+                              style={{ top: (hour - startHour) * hourHeight, height: hourHeight }}
+                              title="Bloklanmış — tıklayarak açabilirsiniz"
+                            >
+                              <div className="flex items-center justify-center h-full opacity-40">
+                                <Ban className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                              </div>
+                            </div>
+                          )
+                        })}
+                        {/* Seçim highlight */}
+                        {(isSelecting || actionMenu) && selectionViewMode === 'room' && hours.map(hour => {
+                          if (!isCellSelected(colIdx, hour)) return null
+                          return (
+                            <div
+                              key={`sel-${hour}`}
+                              className="absolute left-0 right-0 bg-pulse-900/20 dark:bg-pulse-400/20 border border-pulse-900/30 dark:border-pulse-400/30 pointer-events-none z-[5]"
+                              style={{ top: (hour - startHour) * hourHeight, height: hourHeight }}
+                            />
+                          )
+                        })}
                         {col.apts.map(apt => {
                           const startMin = toMinutes(apt.start_time) - startHour * 60
                           const endMin = toMinutes(apt.end_time) - startHour * 60
@@ -1464,7 +1860,17 @@ export default function AppointmentsPage() {
                           return (
                             <div
                               key={apt.id}
-                              className="absolute left-0.5 right-0.5 rounded-md px-1.5 py-0.5 overflow-hidden cursor-pointer hover:opacity-80 transition-opacity text-white border border-white/20"
+                              draggable
+                              onDragStart={(e) => {
+                                e.dataTransfer.setData('text/plain', apt.id)
+                                e.dataTransfer.effectAllowed = 'move'
+                                setDraggingId(apt.id)
+                              }}
+                              onDragEnd={() => setDraggingId(null)}
+                              className={cn(
+                                'absolute left-0.5 right-0.5 rounded-md px-1.5 py-0.5 overflow-hidden cursor-grab active:cursor-grabbing hover:opacity-80 transition-opacity text-white border border-white/20',
+                                draggingId === apt.id && 'opacity-50'
+                              )}
                               style={{ top, height, backgroundColor: col.color }}
                               onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
                             >
@@ -1476,7 +1882,8 @@ export default function AppointmentsPage() {
                           )
                         })}
                       </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
               </div>
@@ -1521,6 +1928,49 @@ export default function AppointmentsPage() {
             </div>
           </div>
         </div>
+        </Portal>
+      )}
+
+      {/* Seçim sonrası aksiyon menüsü */}
+      {actionMenu && (
+        <Portal>
+          <div className="fixed inset-0 z-[100]" onClick={clearSelection}>
+            <div
+              className="absolute z-[101] bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 p-3 w-56 modal-content"
+              style={{
+                top: typeof window !== 'undefined' ? Math.min(actionMenu.y - 10, window.innerHeight - 200) : actionMenu.y - 10,
+                left: typeof window !== 'undefined' ? Math.min(actionMenu.x - 10, window.innerWidth - 260) : actionMenu.x - 10,
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+                {actionMenu.cells.length} saat seçildi
+              </p>
+              <div className="space-y-1">
+                <button
+                  onClick={() => {
+                    const firstCell = actionMenu.cells[0]
+                    openNewModal(firstCell.date, `${String(firstCell.hour).padStart(2, '0')}:00`)
+                    clearSelection()
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                >
+                  <Plus className="h-4 w-4 text-pulse-900 dark:text-pulse-400" />
+                  Randevu Oluştur
+                </button>
+                <button
+                  onClick={() => {
+                    handleBlockSlots(actionMenu.cells)
+                    clearSelection()
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                >
+                  <Lock className="h-4 w-4 text-red-500" />
+                  Saati Blokla
+                </button>
+              </div>
+            </div>
+          </div>
         </Portal>
       )}
 

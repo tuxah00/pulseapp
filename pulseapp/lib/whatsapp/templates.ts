@@ -15,6 +15,8 @@ export type WhatsAppTemplateType =
   | 'winback'
   | 'booking_confirmation'
   | 'cancellation_notice'
+  | 'follow_up'
+  | 'post_care'
 
 interface TemplateParams {
   customerName: string
@@ -48,6 +50,12 @@ const templates: Record<WhatsAppTemplateType, (params: TemplateParams) => string
 
   cancellation_notice: ({ customerName, businessName, date, time }) =>
     `Merhaba ${customerName}\n\n${businessName} ${date} tarihli ${time} saatli randevunuz iptal edilmiştir.\n\nYeni randevu almak için bize yazabilirsiniz.`,
+
+  follow_up: ({ customerName, businessName, serviceName, message }) =>
+    `Merhaba ${customerName} 💙\n\n${businessName} olarak ${serviceName || 'tedaviniz'} sonrasında durumunuzu merak ediyoruz.\n\n${message || 'Herhangi bir sorunuz veya şikayetiniz varsa bize yazabilirsiniz.'}\n\nSağlıklı günler dileriz! 🌿`,
+
+  post_care: ({ customerName, businessName, serviceName, message }) =>
+    `Merhaba ${customerName} 📋\n\n${businessName} - ${serviceName || 'Tedavi'} Sonrası Bakım Talimatları:\n\n${message}\n\nSorularınız için bize ulaşabilirsiniz.`,
 }
 
 /**

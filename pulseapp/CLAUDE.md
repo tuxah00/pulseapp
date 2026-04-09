@@ -261,7 +261,52 @@ CREATE INDEX IF NOT EXISTS idx_customers_birthday ON customers (birthday) WHERE 
 -- appointments.manage_token, follow_up_queue tablosu
 ```
 
-17. **Sektör enum genişletme** (yoga_pilates, spa_massage vb. için):
+17. **Diş haritası** (`025_tooth_records.sql`): ✅ Uygulandı (2026-04-09)
+```sql
+-- tooth_records tablosu, RLS, trigger
+```
+
+18. **Fotoğraf röntgen tipleri** (`026_photo_xray_types.sql`): ✅ Uygulandı (2026-04-09)
+```sql
+-- customer_photos.photo_type CHECK constraint genişletme (xray, panoramic)
+```
+
+19. **WhatsApp geliştirmeleri** (`027_whatsapp_enhancements.sql`): ✅ Uygulandı (2026-04-09)
+```sql
+-- customers.preferred_channel kolonu (sms/whatsapp/auto)
+```
+
+20. **KVKK uyumluluk** (`028_kvkk_compliance.sql`): ✅ Uygulandı (2026-04-09)
+```sql
+-- consent_records, data_deletion_requests tabloları
+```
+
+21. **Faturalama altyapısı** (`029_billing.sql`): ✅ Uygulandı (2026-04-09)
+```sql
+-- payments tablosu (PayTR), businesses billing alanları, invoices e-fatura alanları
+```
+
+22. **Tedavi odaları** (`031_rooms.sql`): ✅ Uygulandı (2026-04-09)
+```sql
+-- rooms tablosu, appointments.room_id FK, RLS
+```
+
+23. **KVKK uyumluluk v2** (`032_kvkk_compliance.sql`): ✅ Uygulandı (2026-04-09)
+```sql
+-- consent_records, data_deletion_requests güncel versiyon (028 yerine kullan)
+```
+
+24. **Fatura soft delete** (`033_invoice_soft_delete.sql`): ✅ Uygulandı (2026-04-09)
+```sql
+-- invoices.deleted_at kolonu, partial index
+```
+
+25. **Bloklanmış zaman dilimleri** (`034_blocked_slots.sql`): ✅ Uygulandı (2026-04-09)
+```sql
+-- blocked_slots tablosu (randevu alınamayacak saatler), RLS, index'ler
+```
+
+26. **Sektör enum genişletme** (yoga_pilates, spa_massage vb. için):
 ```sql
 ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'spa_massage';
 ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'yoga_pilates';
@@ -475,9 +520,14 @@ Tüm analytics endpoint'leri `?businessId=&from=&to=` parametresi alır:
 - **Export:** CSV + PDF (jspdf + jspdf-autotable) + Excel (xlsx)
 - **Tipler:** `InvoicePayment`, `InvoicePaymentType`, `InstallmentFrequency`, `PaymentRecordType` — `types/index.ts`
 
+## Aktif Geliştirme Odağı
+- **Öncelikli Sektörler:** Estetik Klinik (`medical_aesthetic`) ve Diş Kliniği (`dental_clinic`)
+- Tüm yeni özellikler öncelikle bu iki sektör için geliştirilecek
+- Diğer sektörler mevcut haliyle desteklenmeye devam eder
+
 ## Sektör Odak Stratejisi
-Öncelikli sektörler: Kuaför, Berber, Güzellik Salonu, Diş Kliniği, Medikal Estetik, Psikolog, Veteriner, Fizyoterapi, Diyetisyen, Fitness, Yoga/Pilates, Spa/Masaj, Dövme/Piercing, Fotoğraf Stüdyosu, Oto Yıkama, Özel Ders.
-Odak: Medikal Estetik & Güzellik Kliniği — taksitli ödeme, kapora sistemi, paket satışı, hizmet+ürün birlikte faturalandırma.
+Odak: Estetik Klinik (medical_aesthetic) & Diş Kliniği (dental_clinic) — tedavi protokolleri, reçete yönetimi, laboratuvar takibi, post-care talimatları, diş haritası, hasta dosyaları.
+İkincil: Kuaför, Berber, Güzellik Salonu, Psikolog, Veteriner, Fizyoterapi, Diyetisyen, Fitness, Yoga/Pilates, Spa/Masaj.
 
 ## Personel Detay Popup
 - Personel detayı slide-over yerine ortada popup (centered modal) olarak açılır
