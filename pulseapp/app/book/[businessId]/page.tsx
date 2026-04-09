@@ -574,9 +574,9 @@ export default function BookingPage() {
                     className="mt-0.5 h-4 w-4 flex-shrink-0 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
                   <span className="text-xs text-gray-600 leading-relaxed">
-                    <span className="font-medium text-gray-800">KVKK Aydınlatma Metni</span>
-                    {' '}kapsamında kişisel verilerimin işlenmesine, randevu yönetimi ve iletişim
-                    amacıyla kullanılmasına onay veriyorum. Verileriniz üçüncü taraflarla paylaşılmaz.
+                    <a href="/privacy" target="_blank" rel="noopener noreferrer" className="font-medium text-blue-700 underline hover:text-blue-900">KVKK Aydınlatma Metni</a>
+                    &apos;ni okudum, kişisel verilerimin işlenmesine, randevu yönetimi ve iletişim
+                    amacıyla kullanılmasına onay veriyorum.
                   </span>
                 </label>
               </div>
