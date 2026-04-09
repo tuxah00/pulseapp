@@ -7,7 +7,7 @@ import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import {
   Loader2, Save, Building2, Bell, Sparkles, Cake,
   CreditCard, MapPin, Phone, Mail, Globe,
-  MessageSquare, ChevronDown, ChevronUp, Camera, X,
+  MessageSquare, ChevronDown, ChevronUp, Camera, X, Smartphone,
 } from 'lucide-react'
 import {
   SECTOR_LABELS, PLAN_LABELS, PLAN_PRICES,
@@ -51,6 +51,9 @@ const DEFAULT_SETTINGS: BusinessSettings = {
   birthday_sms_enabled: false,
   birthday_sms_template: 'Doğum gününüz kutlu olsun {name}! 🎂 Size özel sürprizimiz var, bizi ziyaret edin!',
   birthday_sms_hour: 9,
+  whatsapp_enabled: false,
+  whatsapp_mode: 'sandbox',
+  default_channel: 'auto',
 }
 
 function generateTimeOptions(): string[] {
@@ -616,6 +619,68 @@ export default function BusinessSettingsPage() {
                 <p className="mt-1.5 text-xs text-gray-400">
                   Her rezervasyonun varsayılan süresi. Aynı masaya bu süre içinde çakışan rezervasyon yapılamaz.
                 </p>
+              </div>
+            </div>
+
+            {/* WhatsApp */}
+            <div className="card border-green-200 bg-gradient-to-br from-green-50/40 to-white dark:from-gray-800 dark:to-gray-800 dark:border-gray-700">
+              <div className="flex items-center gap-3 mb-1">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-green-100">
+                  <Smartphone className="h-5 w-5 text-green-600" />
+                </div>
+                <h2 className="text-lg font-semibold text-gray-900">WhatsApp Business</h2>
+              </div>
+              <p className="text-sm text-gray-500 mb-6">
+                Müşterilerinize SMS yerine WhatsApp üzerinden mesaj gönderin. Açılma oranı %90+.
+              </p>
+
+              <div className="space-y-4">
+                <ToggleSetting
+                  label="WhatsApp aktif"
+                  description="Twilio WhatsApp Business API üzerinden mesaj gönderimi etkinleştirilir."
+                  checked={settings.whatsapp_enabled ?? false}
+                  onChange={(v) => setSettings(prev => ({ ...prev, whatsapp_enabled: v }))}
+                />
+
+                {settings.whatsapp_enabled && (
+                  <div className="ml-14 space-y-4">
+                    <div>
+                      <label className="label">Mod</label>
+                      <CustomSelect
+                        options={[
+                          { value: 'sandbox', label: 'Sandbox (test modu)' },
+                          { value: 'production', label: 'Production (canlı)' },
+                        ]}
+                        value={settings.whatsapp_mode ?? 'sandbox'}
+                        onChange={v => setSettings(prev => ({ ...prev, whatsapp_mode: v as 'sandbox' | 'production' }))}
+                      />
+                      <p className="mt-1.5 text-xs text-gray-400">
+                        Sandbox modunda yalnızca Twilio sandbox numarasına katılmış kişilere ulaşabilirsiniz.
+                      </p>
+                    </div>
+                    <div>
+                      <label className="label">Varsayılan Mesajlaşma Kanalı</label>
+                      <CustomSelect
+                        options={[
+                          { value: 'auto', label: 'Otomatik (WhatsApp tercihli, yoksa SMS)' },
+                          { value: 'whatsapp', label: 'Her zaman WhatsApp' },
+                          { value: 'sms', label: 'Her zaman SMS' },
+                        ]}
+                        value={settings.default_channel ?? 'auto'}
+                        onChange={v => setSettings(prev => ({ ...prev, default_channel: v as 'auto' | 'sms' | 'whatsapp' }))}
+                      />
+                    </div>
+                    <div className="rounded-lg bg-green-50 border border-green-100 px-4 py-3 text-sm text-green-700">
+                      <p className="font-medium mb-1">Kurulum adımları:</p>
+                      <ol className="list-decimal list-inside space-y-1 text-xs">
+                        <li>Twilio konsolunda WhatsApp Sandbox&apos;ı etkinleştirin</li>
+                        <li><code className="bg-green-100 px-1 rounded">TWILIO_WHATSAPP_NUMBER</code> env değişkenini .env dosyasına ekleyin</li>
+                        <li>Müşterileriniz sandbox numarasına katılım mesajı göndersin</li>
+                        <li>Production için Twilio&apos;dan onaylı gönderici numarası alın</li>
+                      </ol>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
