@@ -25,6 +25,7 @@ import {
   CalendarDays,
   CalendarRange,
   Search, Filter, ArrowUpDown,
+  Users, Building2,
 } from 'lucide-react'
 import { formatTime, formatDate, getStatusColor, formatCurrency, cn } from '@/lib/utils'
 import { STATUS_LABELS, type AppointmentStatus, type Customer, type Service, type StaffMember, type WorkingHours } from '@/types'
@@ -79,6 +80,7 @@ export default function AppointmentsPage() {
   const [customers, setCustomers] = useState<Customer[]>([])
   const [services, setServices] = useState<Service[]>([])
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>([])
+  const [rooms, setRooms] = useState<{ id: string; name: string; color: string }[]>([])
   const [workingHours, setWorkingHours] = useState<Record<string, { open: string; close: string } | null> | null>(null)
 
   const [customerId, setCustomerId] = useState('')
@@ -170,16 +172,18 @@ export default function AppointmentsPage() {
 
   const fetchFormData = useCallback(async () => {
     if (!businessId) return
-    const [custRes, svcRes, staffRes, bizRes] = await Promise.all([
+    const [custRes, svcRes, staffRes, bizRes, roomsRes] = await Promise.all([
       supabase.from('customers').select('*').eq('business_id', businessId).eq('is_active', true).order('name'),
       supabase.from('services').select('*').eq('business_id', businessId).eq('is_active', true).order('sort_order'),
       supabase.from('staff_members').select('*').eq('business_id', businessId).eq('is_active', true).order('name'),
       supabase.from('businesses').select('working_hours').eq('id', businessId).single(),
+      fetch(`/api/rooms`).then(r => r.ok ? r.json() : { rooms: [] }).catch(() => ({ rooms: [] })),
     ])
     if (custRes.data) setCustomers(custRes.data)
     if (svcRes.data) setServices(svcRes.data)
     if (staffRes.data) setStaffMembers(staffRes.data)
     if (bizRes.data?.working_hours) setWorkingHours(bizRes.data.working_hours)
+    if (roomsRes.rooms) setRooms(roomsRes.rooms)
   }, [businessId])
 
   useEffect(() => {
@@ -786,6 +790,16 @@ export default function AppointmentsPage() {
                   <p className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">{formatMonthLabel()}</p>
                   <button onClick={goToday} className="text-xs text-pulse-900 dark:text-pulse-400 hover:underline mt-0.5">Bu Aya Dön</button>
                 </>
+              ) : viewMode === 'staff' ? (
+                <>
+                  <p className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">{formatSelectedDate()} — Personel</p>
+                  {!isToday && <button onClick={goToday} className="text-xs text-pulse-900 dark:text-pulse-400 hover:underline mt-0.5">Bugüne Dön</button>}
+                </>
+              ) : viewMode === 'room' ? (
+                <>
+                  <p className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">{formatSelectedDate()} — Odalar</p>
+                  {!isToday && <button onClick={goToday} className="text-xs text-pulse-900 dark:text-pulse-400 hover:underline mt-0.5">Bugüne Dön</button>}
+                </>
               ) : (
                 <>
                   <p className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">{formatSelectedDate()}</p>
@@ -859,12 +873,14 @@ export default function AppointmentsPage() {
             <button type="button" onClick={() => setViewMode('week')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'week' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Haftalık takvim"><CalendarDays className="h-4 w-4" /></button>
             <button type="button" onClick={() => setViewMode('month')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'month' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Aylık takvim"><CalendarRange className="h-4 w-4" /></button>
             <button type="button" onClick={() => setViewMode('box')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'box' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Kutu görünüm"><LayoutGrid className="h-4 w-4" /></button>
+            <button type="button" onClick={() => setViewMode('staff')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'staff' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Personel takvimi"><Users className="h-4 w-4" /></button>
+            <button type="button" onClick={() => setViewMode('room')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'room' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Oda takvimi"><Building2 className="h-4 w-4" /></button>
           </div>
         </div>
       </div>
 
       {/* Arama (liste/kutu modunda) */}
-      {viewMode !== 'week' && viewMode !== 'month' && (
+      {viewMode !== 'week' && viewMode !== 'month' && viewMode !== 'staff' && viewMode !== 'room' && (
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <input type="text" value={search} onChange={e => setSearch(e.target.value)} className="input pl-10" placeholder="Müşteri, hizmet veya personel ara..." />
@@ -1226,6 +1242,243 @@ export default function AppointmentsPage() {
             </div>
           )
         })()
+      ) : viewMode === 'staff' ? (
+        /* ── Personel Takvimi — günlük, her kolon bir personel ── */
+        (() => {
+          const dayApts = appointments.filter(a => a.appointment_date === selectedDate)
+          const staffColors = ['bg-blue-200 dark:bg-blue-800', 'bg-green-200 dark:bg-green-800', 'bg-purple-200 dark:bg-purple-800', 'bg-amber-200 dark:bg-amber-800', 'bg-pink-200 dark:bg-pink-800', 'bg-cyan-200 dark:bg-cyan-800', 'bg-orange-200 dark:bg-orange-800', 'bg-rose-200 dark:bg-rose-800']
+          const staffTextColors = ['text-blue-800 dark:text-blue-200', 'text-green-800 dark:text-green-200', 'text-purple-800 dark:text-purple-200', 'text-amber-800 dark:text-amber-200', 'text-pink-800 dark:text-pink-200', 'text-cyan-800 dark:text-cyan-200', 'text-orange-800 dark:text-orange-200', 'text-rose-800 dark:text-rose-200']
+          const hourHeight = 60
+          const toMinutes = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
+
+          let startHour = 8, endHour = 21
+          if (workingHours) {
+            const keys = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
+            const opens = keys.map(k => workingHours[k]?.open).filter(Boolean).map(t => parseInt(t!))
+            const closes = keys.map(k => workingHours[k]?.close).filter(Boolean).map(t => parseInt(t!))
+            if (opens.length) startHour = Math.min(...opens)
+            if (closes.length) endHour = Math.max(...closes)
+          }
+          const hours = Array.from({ length: endHour - startHour + 1 }, (_, i) => i + startHour)
+
+          // Sütunlar: aktif personel listesi + "Atanmamış" sütunu (varsa)
+          const unassigned = dayApts.filter(a => !a.staff_id)
+          const columns = [
+            ...staffMembers.map((s, i) => ({
+              id: s.id,
+              label: s.name,
+              apts: dayApts.filter(a => a.staff_id === s.id),
+              colorIdx: i % staffColors.length,
+            })),
+            ...(unassigned.length > 0 ? [{ id: '__unassigned__', label: 'Atanmamış', apts: unassigned, colorIdx: staffColors.length - 1 }] : []),
+          ]
+
+          if (columns.length === 0) {
+            return (
+              <div className="card flex flex-col items-center justify-center py-16 text-center">
+                <Users className="h-10 w-10 text-gray-300 mb-3" />
+                <p className="text-gray-500 font-medium">Aktif personel bulunamadı</p>
+                <p className="text-xs text-gray-400 mt-1">Personel Ayarları&apos;ndan personel ekleyin</p>
+              </div>
+            )
+          }
+
+          return (
+            <div className="card overflow-hidden !p-0">
+              <div className="overflow-x-auto overflow-y-auto max-h-[70vh]">
+                <div className="relative" style={{ minWidth: `${60 + columns.length * 140}px` }}>
+                  {/* Başlık satırı */}
+                  <div className="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 grid" style={{ gridTemplateColumns: `60px repeat(${columns.length}, 1fr)` }}>
+                    <div className="p-2" />
+                    {columns.map((col, i) => (
+                      <div key={col.id} className={cn('p-2 text-center border-l border-gray-200 dark:border-gray-700', i === 0 && 'border-l-0')}>
+                        <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 truncate">{col.label}</p>
+                        <p className="text-xs text-gray-400">{col.apts.length} randevu</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Grid gövdesi */}
+                  <div className="relative select-none" style={{ height: hours.length * hourHeight }}>
+                    {/* Saat etiketleri */}
+                    {hours.map((hour, i) => (
+                      <div key={`h-${hour}`} className="absolute left-0 w-[60px] text-right pr-2 text-xs text-gray-400" style={{ top: i === 0 ? 2 : i * hourHeight - 6 }}>
+                        {String(hour).padStart(2, '0')}:00
+                      </div>
+                    ))}
+                    {/* Yatay çizgiler */}
+                    {hours.map((_, i) => (
+                      <div key={`line-${i}`} className="absolute left-[60px] right-0 border-t border-gray-100 dark:border-gray-800" style={{ top: i * hourHeight }} />
+                    ))}
+                    {/* Personel kolonları */}
+                    {columns.map((col, colIdx) => (
+                      <div
+                        key={col.id}
+                        className="absolute border-l border-gray-100 dark:border-gray-800"
+                        style={{
+                          left: `calc(60px + ${colIdx} * ((100% - 60px) / ${columns.length}))`,
+                          width: `calc((100% - 60px) / ${columns.length})`,
+                          top: 0, height: '100%',
+                        }}
+                        onClick={(e) => {
+                          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                          const clickHour = Math.max(startHour, Math.min(endHour, Math.floor((e.clientY - rect.top) / hourHeight) + startHour))
+                          openNewModal(selectedDate, `${String(clickHour).padStart(2, '0')}:00`)
+                        }}
+                      >
+                        {col.apts.map(apt => {
+                          const startMin = toMinutes(apt.start_time) - startHour * 60
+                          const endMin = toMinutes(apt.end_time) - startHour * 60
+                          const top = (startMin / 60) * hourHeight
+                          const height = Math.max(((endMin - startMin) / 60) * hourHeight, 20)
+                          return (
+                            <div
+                              key={apt.id}
+                              className={cn('absolute left-0.5 right-0.5 rounded-md px-1.5 py-0.5 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity border border-white/20', staffColors[col.colorIdx])}
+                              style={{ top, height }}
+                              onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
+                            >
+                              <p className={cn('text-[10px] font-semibold truncate', staffTextColors[col.colorIdx])}>
+                                {apt.customers?.name || 'İsimsiz'}
+                              </p>
+                              {height > 30 && (
+                                <p className={cn('text-[9px] truncate opacity-75', staffTextColors[col.colorIdx])}>
+                                  {apt.services?.name} · {formatTime(apt.start_time)}
+                                </p>
+                              )}
+                            </div>
+                          )
+                        })}
+                        {/* Şu anki saat çizgisi (bugün için) */}
+                        {selectedDate === new Date().toISOString().split('T')[0] && now && colIdx === 0 && (() => {
+                          const currentMin = (now.getHours() * 60 + now.getMinutes()) - startHour * 60
+                          if (currentMin < 0 || currentMin > hours.length * 60) return null
+                          return (
+                            <div className="absolute left-0 right-0 z-10 pointer-events-none" style={{ top: (currentMin / 60) * hourHeight, width: `${columns.length * 100}%` }}>
+                              <div className="flex items-center">
+                                <div className="h-2.5 w-2.5 rounded-full bg-red-500 -ml-1 flex-shrink-0" />
+                                <div className="flex-1 h-px bg-red-500" />
+                              </div>
+                            </div>
+                          )
+                        })()}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )
+        })()
+      ) : viewMode === 'room' ? (
+        /* ── Oda Takvimi — günlük, her kolon bir oda ── */
+        (() => {
+          if (rooms.length === 0) {
+            return (
+              <div className="card flex flex-col items-center justify-center py-16 text-center">
+                <Building2 className="h-10 w-10 text-gray-300 mb-3" />
+                <p className="text-gray-500 font-medium">Henüz oda tanımlanmamış</p>
+                <p className="text-xs text-gray-400 mt-1 max-w-xs">Ayarlar → İşletme Bilgileri bölümünden odaları ekleyin. Migration 031 çalıştırıldı mı kontrol edin.</p>
+              </div>
+            )
+          }
+
+          const dayApts = appointments.filter(a => a.appointment_date === selectedDate)
+          const hourHeight = 60
+          const toMinutes = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
+
+          let startHour = 8, endHour = 21
+          if (workingHours) {
+            const keys = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
+            const opens = keys.map(k => workingHours[k]?.open).filter(Boolean).map(t => parseInt(t!))
+            const closes = keys.map(k => workingHours[k]?.close).filter(Boolean).map(t => parseInt(t!))
+            if (opens.length) startHour = Math.min(...opens)
+            if (closes.length) endHour = Math.max(...closes)
+          }
+          const hours = Array.from({ length: endHour - startHour + 1 }, (_, i) => i + startHour)
+
+          // Sütunlar: odalar + "Oda atanmamış"
+          const unassigned = dayApts.filter(a => !(a as AppointmentView & { room_id?: string }).room_id)
+          const columns = [
+            ...rooms.map((r) => ({
+              id: r.id,
+              label: r.name,
+              color: r.color || '#6366f1',
+              apts: dayApts.filter(a => (a as AppointmentView & { room_id?: string }).room_id === r.id),
+            })),
+            { id: '__unassigned__', label: 'Oda atanmamış', color: '#9ca3af', apts: unassigned },
+          ]
+
+          return (
+            <div className="card overflow-hidden !p-0">
+              <div className="overflow-x-auto overflow-y-auto max-h-[70vh]">
+                <div className="relative" style={{ minWidth: `${60 + columns.length * 140}px` }}>
+                  {/* Başlık satırı */}
+                  <div className="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 grid" style={{ gridTemplateColumns: `60px repeat(${columns.length}, 1fr)` }}>
+                    <div className="p-2" />
+                    {columns.map((col, i) => (
+                      <div key={col.id} className={cn('p-2 text-center border-l border-gray-200 dark:border-gray-700', i === 0 && 'border-l-0')}>
+                        <div className="flex items-center justify-center gap-1.5">
+                          <div className="h-2.5 w-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: col.color }} />
+                          <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 truncate">{col.label}</p>
+                        </div>
+                        <p className="text-xs text-gray-400">{col.apts.length} randevu</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Grid gövdesi */}
+                  <div className="relative select-none" style={{ height: hours.length * hourHeight }}>
+                    {hours.map((hour, i) => (
+                      <div key={`h-${hour}`} className="absolute left-0 w-[60px] text-right pr-2 text-xs text-gray-400" style={{ top: i === 0 ? 2 : i * hourHeight - 6 }}>
+                        {String(hour).padStart(2, '0')}:00
+                      </div>
+                    ))}
+                    {hours.map((_, i) => (
+                      <div key={`line-${i}`} className="absolute left-[60px] right-0 border-t border-gray-100 dark:border-gray-800" style={{ top: i * hourHeight }} />
+                    ))}
+                    {columns.map((col, colIdx) => (
+                      <div
+                        key={col.id}
+                        className="absolute border-l border-gray-100 dark:border-gray-800"
+                        style={{
+                          left: `calc(60px + ${colIdx} * ((100% - 60px) / ${columns.length}))`,
+                          width: `calc((100% - 60px) / ${columns.length})`,
+                          top: 0, height: '100%',
+                        }}
+                        onClick={(e) => {
+                          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                          const clickHour = Math.max(startHour, Math.min(endHour, Math.floor((e.clientY - rect.top) / hourHeight) + startHour))
+                          openNewModal(selectedDate, `${String(clickHour).padStart(2, '0')}:00`)
+                        }}
+                      >
+                        {col.apts.map(apt => {
+                          const startMin = toMinutes(apt.start_time) - startHour * 60
+                          const endMin = toMinutes(apt.end_time) - startHour * 60
+                          const top = (startMin / 60) * hourHeight
+                          const height = Math.max(((endMin - startMin) / 60) * hourHeight, 20)
+                          return (
+                            <div
+                              key={apt.id}
+                              className="absolute left-0.5 right-0.5 rounded-md px-1.5 py-0.5 overflow-hidden cursor-pointer hover:opacity-80 transition-opacity text-white border border-white/20"
+                              style={{ top, height, backgroundColor: col.color }}
+                              onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
+                            >
+                              <p className="text-[10px] font-semibold truncate">{apt.customers?.name || 'İsimsiz'}</p>
+                              {height > 30 && (
+                                <p className="text-[9px] truncate opacity-80">{apt.services?.name} · {formatTime(apt.start_time)}</p>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )
+        })()
       ) : null}
 
       {/* Saat dilimi popup (çakışan randevular) */}
@@ -1267,7 +1520,7 @@ export default function AppointmentsPage() {
         </Portal>
       )}
 
-      {!loading && viewMode !== 'week' && viewMode !== 'month' ? (filteredAppointments.length === 0 ? (
+      {!loading && viewMode !== 'week' && viewMode !== 'month' && viewMode !== 'staff' && viewMode !== 'room' ? (filteredAppointments.length === 0 ? (
         <div className="card flex flex-col items-center justify-center py-16">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 dark:bg-gray-800 mb-4">
             <Calendar className="h-7 w-7 text-gray-300 dark:text-gray-600" />
