@@ -26,6 +26,7 @@ import type {
 import TodayAppointments from './_components/today-appointments'
 import WeeklyInsights from './_components/weekly-insights'
 import PerformanceStats from './_components/performance-stats'
+import AiInsightsWidget from './_components/ai-insights-widget'
 import { Sparkline } from '@/components/ui/sparkline'
 
 type TodayAppointmentRow = AppointmentRow & {
@@ -335,6 +336,9 @@ export default async function DashboardPage() {
 
           {/* Weekly AI insights */}
           <WeeklyInsights />
+
+          {/* AI Campaign suggestions */}
+          <AiInsightsWidget />
 
           {/* Risk customers */}
           {riskCustomers && riskCustomers.length > 0 && (
