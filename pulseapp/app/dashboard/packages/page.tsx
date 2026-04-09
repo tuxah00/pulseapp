@@ -507,12 +507,13 @@ export default function PaketlerPage() {
     const newStart = timeToMinutes(startTime)
     const newEnd = timeToMinutes(endTime)
 
-    ;(data || []).forEach((row: any) => {
+    ;(data || []).forEach((row) => {
       const existStart = timeToMinutes(row.start_time)
       const existEnd = timeToMinutes(row.end_time)
       if (newStart < existEnd && newEnd > existStart) {
         if (!result[row.appointment_date]) {
-          result[row.appointment_date] = row.customer?.name || 'Başka randevu'
+          const customerData = row.customer as unknown as { name: string } | null
+          result[row.appointment_date] = customerData?.name || 'Başka randevu'
         }
       }
     })

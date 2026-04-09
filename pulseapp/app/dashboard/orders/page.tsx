@@ -8,6 +8,7 @@ import {
   Plus, Loader2, X, Trash2, ChefHat, Clock, CheckCircle,
   CreditCard, XCircle, ArrowRight, ClipboardList, Minus,
 } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatCurrency } from '@/lib/utils'
 
@@ -36,7 +37,7 @@ interface Product {
   stock_count: number
 }
 
-const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; icon: any }> = {
+const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; icon: LucideIcon }> = {
   pending: { label: 'Bekliyor', color: 'text-amber-700 dark:text-amber-300', bg: 'bg-amber-100 dark:bg-amber-900/30', icon: Clock },
   preparing: { label: 'Hazırlanıyor', color: 'text-blue-700 dark:text-blue-300', bg: 'bg-blue-100 dark:bg-blue-900/30', icon: ChefHat },
   ready: { label: 'Hazır', color: 'text-green-700 dark:text-green-300', bg: 'bg-green-100 dark:bg-green-900/30', icon: CheckCircle },
@@ -277,7 +278,7 @@ export default function OrdersPage() {
 
                 {/* Items */}
                 <div className="space-y-1">
-                  {(order.items || []).map((item: any, i: number) => (
+                  {(order.items || []).map((item: OrderItem, i: number) => (
                     <div key={i} className="flex items-center justify-between text-sm">
                       <span className="text-gray-700 dark:text-gray-300">
                         {item.quantity}x {item.name}

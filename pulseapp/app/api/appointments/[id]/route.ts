@@ -70,7 +70,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       const duration =
         currentDuration > 0
           ? currentDuration
-          : ((existing as any).services?.duration_minutes ?? 30)
+          : ((existing.services as unknown as { duration_minutes: number } | null)?.duration_minutes ?? 30)
       updateData.end_time = calculateEndTime(start_time, duration)
     }
   } else if (end_time) {
