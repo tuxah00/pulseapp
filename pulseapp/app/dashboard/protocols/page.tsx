@@ -7,8 +7,9 @@ import { createClient } from '@/lib/supabase/client'
 import {
   Plus, ClipboardCheck, Search, X, Calendar, User, Activity,
   ChevronRight, Loader2, Pause, Play, CheckCircle, XCircle, SkipForward,
-  Camera, FileText, Clock
+  Camera, FileText, Clock, Sparkles, ShieldX
 } from 'lucide-react'
+import { PhotoAnalysisPanel } from '@/components/dashboard/photo-analysis-panel'
 import type {
   TreatmentProtocol, ProtocolSession, Customer, Service, ProtocolStatus, SessionStatus
 } from '@/types'
@@ -16,6 +17,7 @@ import { cn } from '@/lib/utils'
 import { PROTOCOL_STATUS_LABELS, SESSION_STATUS_LABELS } from '@/types'
 import { formatCurrency } from '@/lib/utils'
 import { CustomSelect } from '@/components/ui/custom-select'
+import { Portal } from '@/components/ui/portal'
 
 const STATUS_CONFIG: Record<ProtocolStatus, { bg: string; text: string }> = {
   active: { bg: 'bg-blue-50 dark:bg-blue-900/20', text: 'text-blue-600 dark:text-blue-400' },
@@ -32,7 +34,7 @@ const SESSION_STATUS_CONFIG: Record<SessionStatus, { bg: string; text: string; i
 }
 
 export default function ProtocolsPage() {
-  const { businessId, loading: ctxLoading } = useBusinessContext()
+  const { businessId, loading: ctxLoading, permissions } = useBusinessContext()
   const { confirm } = useConfirm()
 
   // State
@@ -46,6 +48,8 @@ export default function ProtocolsPage() {
 
   // Create modal
   const [showCreate, setShowCreate] = useState(false)
+  const [isClosingCreate, setIsClosingCreate] = useState(false)
+  const closeCreate = () => setIsClosingCreate(true)
   const [saving, setSaving] = useState(false)
   const [formCustomerId, setFormCustomerId] = useState('')
   const [formServiceId, setFormServiceId] = useState('')
@@ -81,6 +85,13 @@ export default function ProtocolsPage() {
   useEffect(() => { fetchProtocols() }, [fetchProtocols])
   useEffect(() => { fetchMeta() }, [fetchMeta])
 
+  useEffect(() => {
+    if (!showCreate) return
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') closeCreate() }
+    document.addEventListener('keydown', h)
+    return () => document.removeEventListener('keydown', h)
+  }, [showCreate])
+
   // Create protocol
   const handleCreate = async () => {
     if (!businessId || !formCustomerId || !formName || formSessions < 1) return
@@ -95,7 +106,7 @@ export default function ProtocolsPage() {
         }),
       })
       if (res.ok) {
-        setShowCreate(false)
+        closeCreate()
         resetForm()
         fetchProtocols()
       }
@@ -172,6 +183,18 @@ export default function ProtocolsPage() {
     }
     return true
   })
+
+  if (permissions && !permissions.protocols) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="text-center space-y-3">
+          <ShieldX className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto" />
+          <p className="text-lg font-medium text-gray-500 dark:text-gray-400">Bu sayfaya erişim yetkiniz bulunmamaktadır.</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500">İşletme sahibinizle iletişime geçin.</p>
+        </div>
+      </div>
+    )
+  }
 
   if (ctxLoading) {
     return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-pulse-900" /></div>
@@ -292,18 +315,28 @@ export default function ProtocolsPage() {
               onUpdateStatus={updateProtocolStatus}
               onUpdateSession={updateSession}
               onDelete={handleDelete}
+              onRefresh={async () => {
+                await fetchProtocols()
+                if (selectedProtocol) {
+                  const res = await fetch(`/api/protocols/${selectedProtocol.id}?businessId=${businessId}`)
+                  const json = await res.json()
+                  if (json.protocol) setSelectedProtocol(json.protocol)
+                }
+              }}
             />
           </div>
         )}
       </div>
 
       {/* Create Modal */}
-      {showCreate && (
-        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+      {(showCreate || isClosingCreate) && (
+        <Portal>
+          <div className={`modal-overlay fixed inset-0 z-[100] bg-black/60 dark:bg-black/70 ${isClosingCreate ? 'closing' : ''}`} onClick={() => { closeCreate(); resetForm() }} onAnimationEnd={() => { if (isClosingCreate) { setShowCreate(false); setIsClosingCreate(false) } }} />
+          <div className="fixed inset-0 z-[101] flex items-center justify-center p-4 pointer-events-none">
+          <div className={`modal-content bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto pointer-events-auto ${isClosingCreate ? 'closing' : ''}`}>
             <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
               <h2 className="text-lg font-bold text-gray-900 dark:text-white">Yeni Tedavi Protokolü</h2>
-              <button onClick={() => { setShowCreate(false); resetForm() }} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => { closeCreate(); resetForm() }} className="text-gray-400 hover:text-gray-600">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -346,14 +379,15 @@ export default function ProtocolsPage() {
               </div>
             </div>
             <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
-              <button onClick={() => { setShowCreate(false); resetForm() }} className="btn-secondary">İptal</button>
+              <button onClick={() => { closeCreate(); resetForm() }} className="btn-secondary">İptal</button>
               <button onClick={handleCreate} disabled={saving || !formCustomerId || !formName} className="btn-primary disabled:opacity-50">
                 {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1 inline" /> : <Plus className="h-4 w-4 mr-1 inline" />}
                 Oluştur
               </button>
             </div>
           </div>
-        </div>
+          </div>
+        </Portal>
       )}
     </div>
   )
@@ -361,19 +395,58 @@ export default function ProtocolsPage() {
 
 // Detail panel component
 function DetailPanel({
-  protocol, onClose, onUpdateStatus, onUpdateSession, onDelete
+  protocol, onClose, onUpdateStatus, onUpdateSession, onDelete, onRefresh
 }: {
   protocol: TreatmentProtocol
   onClose: () => void
   onUpdateStatus: (id: string, status: ProtocolStatus) => void
   onUpdateSession: (protocolId: string, sessionId: string, status: SessionStatus) => void
   onDelete: (id: string) => void
+  onRefresh: () => void
 }) {
+  const { businessId } = useBusinessContext()
+  const [analysisSessionId, setAnalysisSessionId] = useState<string | null>(null)
+  const [uploadingSession, setUploadingSession] = useState<string | null>(null)
+  const [uploadingType, setUploadingType] = useState<'before' | 'after' | null>(null)
   const customer = Array.isArray(protocol.customer) ? protocol.customer[0] : protocol.customer
   const service = Array.isArray(protocol.service) ? protocol.service[0] : protocol.service
   const sessions = (protocol.sessions || []).sort((a, b) => a.session_number - b.session_number)
   const progress = protocol.total_sessions > 0 ? (protocol.completed_sessions / protocol.total_sessions) * 100 : 0
   const sc = STATUS_CONFIG[protocol.status]
+
+  const handlePhotoUpload = async (sessionId: string, type: 'before' | 'after', file: File) => {
+    if (!businessId) return
+    setUploadingSession(sessionId)
+    setUploadingType(type)
+    try {
+      // 1. Upload file to storage
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('businessId', businessId)
+      formData.append('recordId', sessionId)
+      const uploadRes = await fetch('/api/records/upload', { method: 'POST', body: formData })
+      if (!uploadRes.ok) throw new Error('Yükleme başarısız')
+      const { url } = await uploadRes.json()
+
+      // 2. Save URL to session
+      const patchBody: Record<string, string> = { businessId, sessionId }
+      if (type === 'before') patchBody.beforePhotoUrl = url
+      else patchBody.afterPhotoUrl = url
+
+      const patchRes = await fetch(`/api/protocols/${protocol.id}/sessions`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patchBody),
+      })
+      if (!patchRes.ok) throw new Error('Kaydetme başarısız')
+      onRefresh()
+    } catch (e) {
+      console.error('Photo upload error:', e)
+    } finally {
+      setUploadingSession(null)
+      setUploadingType(null)
+    }
+  }
 
   return (
     <>
@@ -471,13 +544,82 @@ function DetailPanel({
                   </div>
                   {session.notes && <p className="text-xs text-gray-500 mt-1">{session.notes}</p>}
 
-                  {/* Session photos */}
-                  <div className="flex gap-2 mt-1">
-                    {session.before_photo_url && (
-                      <span className="text-xs text-blue-500 flex items-center gap-0.5"><Camera className="h-3 w-3" /> Öncesi</span>
+                  {/* Session photos — upload & view */}
+                  <div className="mt-2 space-y-2">
+                    {/* Photo thumbnails & links */}
+                    {(session.before_photo_url || session.after_photo_url) && (
+                      <div className="flex items-center gap-3 flex-wrap">
+                        {session.before_photo_url && (
+                          <a href={session.before_photo_url} target="_blank" rel="noopener noreferrer" className="group relative">
+                            <img src={session.before_photo_url} alt="Öncesi" className="h-16 w-16 rounded-lg object-cover border border-gray-200 dark:border-gray-600 group-hover:ring-2 ring-blue-400 transition" />
+                            <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[10px] bg-blue-500 text-white px-1.5 rounded-full">Öncesi</span>
+                          </a>
+                        )}
+                        {session.after_photo_url && (
+                          <a href={session.after_photo_url} target="_blank" rel="noopener noreferrer" className="group relative">
+                            <img src={session.after_photo_url} alt="Sonrası" className="h-16 w-16 rounded-lg object-cover border border-gray-200 dark:border-gray-600 group-hover:ring-2 ring-green-400 transition" />
+                            <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[10px] bg-green-500 text-white px-1.5 rounded-full">Sonrası</span>
+                          </a>
+                        )}
+                        <button
+                          onClick={() => setAnalysisSessionId(analysisSessionId === session.id ? null : session.id)}
+                          className="text-xs flex items-center gap-1 px-2 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
+                        >
+                          <Sparkles className="h-3 w-3" />
+                          {analysisSessionId === session.id ? 'Kapat' : 'AI Analiz'}
+                        </button>
+                      </div>
                     )}
-                    {session.after_photo_url && (
-                      <span className="text-xs text-green-500 flex items-center gap-0.5"><Camera className="h-3 w-3" /> Sonrası</span>
+
+                    {/* Upload buttons */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {!session.before_photo_url && (
+                        <label className={cn(
+                          'text-xs flex items-center gap-1 px-2 py-1 rounded-lg cursor-pointer transition-colors',
+                          'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40',
+                          uploadingSession === session.id && uploadingType === 'before' && 'opacity-50 pointer-events-none'
+                        )}>
+                          {uploadingSession === session.id && uploadingType === 'before'
+                            ? <Loader2 className="h-3 w-3 animate-spin" />
+                            : <Camera className="h-3 w-3" />}
+                          Öncesi Fotoğrafı
+                          <input type="file" accept="image/*" className="hidden" onChange={e => {
+                            const f = e.target.files?.[0]
+                            if (f) handlePhotoUpload(session.id, 'before', f)
+                            e.target.value = ''
+                          }} />
+                        </label>
+                      )}
+                      {!session.after_photo_url && (
+                        <label className={cn(
+                          'text-xs flex items-center gap-1 px-2 py-1 rounded-lg cursor-pointer transition-colors',
+                          'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40',
+                          uploadingSession === session.id && uploadingType === 'after' && 'opacity-50 pointer-events-none'
+                        )}>
+                          {uploadingSession === session.id && uploadingType === 'after'
+                            ? <Loader2 className="h-3 w-3 animate-spin" />
+                            : <Camera className="h-3 w-3" />}
+                          Sonrası Fotoğrafı
+                          <input type="file" accept="image/*" className="hidden" onChange={e => {
+                            const f = e.target.files?.[0]
+                            if (f) handlePhotoUpload(session.id, 'after', f)
+                            e.target.value = ''
+                          }} />
+                        </label>
+                      )}
+                    </div>
+
+                    {/* AI Analysis Panel */}
+                    {analysisSessionId === session.id && (session.before_photo_url || session.after_photo_url) && (
+                      <PhotoAnalysisPanel
+                        customerId={protocol.customer_id}
+                        protocolId={protocol.id}
+                        mode={session.before_photo_url && session.after_photo_url ? 'before_after' : 'single'}
+                        beforeUrl={session.before_photo_url || undefined}
+                        afterUrl={session.after_photo_url || undefined}
+                        photoUrl={session.before_photo_url || session.after_photo_url || undefined}
+                        onClose={() => setAnalysisSessionId(null)}
+                      />
                     )}
                   </div>
 

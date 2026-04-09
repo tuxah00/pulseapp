@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 
 const BUCKET_NAME = 'business-logos'
 
@@ -19,12 +18,12 @@ async function getAuthorizedStaff() {
     return { error: NextResponse.json({ error: 'Yetkisiz' }, { status: 403 }) }
   }
 
-  return { staff }
+  return { staff, supabase }
 }
 
 export async function POST(req: NextRequest) {
-  const { staff, error } = await getAuthorizedStaff()
-  if (error) return error
+  const { staff, supabase, error } = await getAuthorizedStaff()
+  if (error || !supabase) return error
 
   const formData = await req.formData()
   const file = formData.get('file') as File | null
@@ -35,25 +34,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Sadece JPG, PNG veya WebP yüklenebilir' }, { status: 400 })
   }
 
-  const admin = createAdminClient()
   const path = `${staff!.business_id}/logo.${ext}`
   const bytes = await file.arrayBuffer()
 
-  const { error: uploadError } = await admin.storage
+  const { error: uploadError } = await supabase.storage
     .from(BUCKET_NAME)
     .upload(path, bytes, { contentType: file.type, upsert: true })
 
   if (uploadError) return NextResponse.json({ error: uploadError.message }, { status: 500 })
 
-  const { data: { publicUrl } } = admin.storage.from(BUCKET_NAME).getPublicUrl(path)
+  const { data: { publicUrl } } = supabase.storage.from(BUCKET_NAME).getPublicUrl(path)
 
-  const { data: business } = await admin
+  const { data: business } = await supabase
     .from('businesses')
     .select('settings')
     .eq('id', staff!.business_id)
     .single()
 
-  await admin.from('businesses')
+  await supabase.from('businesses')
     .update({ settings: { ...(business?.settings || {}), logo_url: publicUrl } })
     .eq('id', staff!.business_id)
 
@@ -61,17 +59,16 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(_req: NextRequest) {
-  const { staff, error } = await getAuthorizedStaff()
-  if (error) return error
+  const { staff, supabase, error } = await getAuthorizedStaff()
+  if (error || !supabase) return error
 
-  const admin = createAdminClient()
-  const { data: business } = await admin
+  const { data: business } = await supabase
     .from('businesses')
     .select('settings')
     .eq('id', staff!.business_id)
     .single()
 
-  await admin.from('businesses')
+  await supabase.from('businesses')
     .update({ settings: { ...(business?.settings || {}), logo_url: null } })
     .eq('id', staff!.business_id)
 

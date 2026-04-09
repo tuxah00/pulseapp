@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 
 async function verifyMembership(supabase: ReturnType<typeof createServerSupabaseClient>, userId: string, businessId: string) {
   const { data } = await supabase
@@ -25,8 +24,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   const staff = await verifyMembership(supabase, user.id, businessId)
   if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
 
-  const admin = createAdminClient()
-  const { data, error } = await admin
+  const { data, error } = await supabase
     .from('treatment_protocols')
     .select(`
       *,
@@ -61,14 +59,12 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   const staff = await verifyMembership(supabase, user.id, businessId)
   if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
 
-  const admin = createAdminClient()
-
   const updateData: Record<string, unknown> = {}
   if (status) updateData.status = status
   if (notes !== undefined) updateData.notes = notes
   if (intervalDays) updateData.interval_days = intervalDays
 
-  const { data, error } = await admin
+  const { data, error } = await supabase
     .from('treatment_protocols')
     .update(updateData)
     .eq('id', params.id)
@@ -93,8 +89,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
   const staff = await verifyMembership(supabase, user.id, businessId)
   if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
 
-  const admin = createAdminClient()
-  const { error } = await admin
+  const { error } = await supabase
     .from('treatment_protocols')
     .delete()
     .eq('id', params.id)

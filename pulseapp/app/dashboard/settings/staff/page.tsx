@@ -78,8 +78,12 @@ export default function StaffPage() {
   const [staff, setStaff] = useState<StaffMember[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
+  const [isClosingModal, setIsClosingModal] = useState(false)
+  const closeModal = () => setIsClosingModal(true)
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null)
   const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null)
+  const [isClosingSelectedStaff, setIsClosingSelectedStaff] = useState(false)
+  const closeSelectedStaff = () => setIsClosingSelectedStaff(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [viewMode, setViewMode] = useViewMode('staff', 'list')
@@ -95,6 +99,10 @@ export default function StaffPage() {
   const [localPerms, setLocalPerms] = useState<StaffPermissions | null>(null)
 
   const [showInviteModal, setShowInviteModal] = useState(false)
+  const [isClosingInviteModal, setIsClosingInviteModal] = useState(false)
+  const closeInviteModal = () => setIsClosingInviteModal(true)
+  const [permPopupClosing, setPermPopupClosing] = useState(false)
+  const closePermPopup = () => setPermPopupClosing(true)
   const [inviteRole, setInviteRole] = useState<'manager' | 'staff'>('staff')
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteLink, setInviteLink] = useState<string | null>(null)
@@ -170,7 +178,7 @@ export default function StaffPage() {
       })
       if (err) { setError('Ekleme hatası: ' + err.message); setSaving(false); return }
     }
-    setSaving(false); setShowModal(false)
+    setSaving(false); closeModal()
     await fetchStaff()
     await logAudit({
       businessId: businessId!,
@@ -484,12 +492,12 @@ export default function StaffPage() {
 
       {/* ── Personel Detay Popup (Ortada) ── */}
       {selectedStaff && (
-        <div className="modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" onClick={() => setSelectedStaff(null)}>
-          <div className="modal-content card w-full max-w-xl max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 ${isClosingSelectedStaff ? 'closing' : ''}`} onClick={closeSelectedStaff} onAnimationEnd={() => { if (isClosingSelectedStaff) { setSelectedStaff(null); setIsClosingSelectedStaff(false) } }}>
+          <div className={`modal-content card w-full max-w-xl max-h-[85vh] flex flex-col ${isClosingSelectedStaff ? 'closing' : ''}`} onClick={(e) => e.stopPropagation()}>
             {/* Başlık */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
               <h3 className="font-semibold text-gray-900 dark:text-gray-100">Personel Detayı</h3>
-              <button onClick={() => setSelectedStaff(null)} className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600">
+              <button onClick={closeSelectedStaff} className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600">
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -579,7 +587,7 @@ export default function StaffPage() {
             {/* Alt butonlar */}
             {canEditPermissions(currentUserRole as StaffRole, selectedStaff.role) && localPerms && (
               <div className="border-t border-gray-200 dark:border-gray-700 px-5 py-3 flex gap-3 flex-shrink-0">
-                <button onClick={() => setSelectedStaff(null)} className="btn-secondary flex-1 text-sm">İptal</button>
+                <button onClick={closeSelectedStaff} className="btn-secondary flex-1 text-sm">İptal</button>
                 <button onClick={handleBatchSavePermissions} disabled={permsSaving} className="btn-primary flex-1 text-sm">
                   {permsSaving && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin inline" />}
                   Kaydet
@@ -592,8 +600,8 @@ export default function StaffPage() {
 
       {/* Modal */}
       {showModal && (
-        <div className="modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
-          <div className="modal-content card w-full max-w-md">
+        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
+          <div className={`modal-content card w-full max-w-md ${isClosingModal ? 'closing' : ''}`}>
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
               {editingStaff ? 'Personeli Düzenle' : 'Yeni Personel Ekle'}
             </h2>
@@ -620,7 +628,7 @@ export default function StaffPage() {
               </div>
               {error && <div className="rounded-lg bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-400">{error}</div>}
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setShowModal(false)} className="btn-secondary flex-1">İptal</button>
+                <button type="button" onClick={closeModal} className="btn-secondary flex-1">İptal</button>
                 <button type="submit" disabled={saving} className="btn-primary flex-1">
                   {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin inline" />}
                   {editingStaff ? 'Güncelle' : 'Ekle'}
@@ -633,8 +641,8 @@ export default function StaffPage() {
 
       {/* Yetki Popup Modal — Yeniden tasarlanmış */}
       {permPopupStaff && (
-        <div className="modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" onClick={() => setPermPopupStaff(null)}>
-          <div className="modal-content card w-full max-w-md max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 ${permPopupClosing ? 'closing' : ''}`} onClick={closePermPopup} onAnimationEnd={() => { if (permPopupClosing) { setPermPopupStaff(null); setPermPopupClosing(false) } }}>
+          <div className={`modal-content card w-full max-w-md max-h-[85vh] flex flex-col ${permPopupClosing ? 'closing' : ''}`} onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{permPopupStaff.name}</h2>
@@ -643,7 +651,7 @@ export default function StaffPage() {
                   Erişim Yetkileri
                 </p>
               </div>
-              <button onClick={() => setPermPopupStaff(null)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={closePermPopup} className="text-gray-400 hover:text-gray-600">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -713,7 +721,7 @@ export default function StaffPage() {
               ) : (
                 <span className="text-xs text-gray-400">{getPermissionCount(permPopupStaff)}/{Object.keys(PERMISSION_LABELS).length} yetki açık</span>
               )}
-              <button onClick={() => setPermPopupStaff(null)} className="btn-secondary text-sm py-1.5 px-4">Kapat</button>
+              <button onClick={closePermPopup} className="btn-secondary text-sm py-1.5 px-4">Kapat</button>
             </div>
           </div>
         </div>
@@ -721,14 +729,14 @@ export default function StaffPage() {
 
       {/* Davet Modal */}
       {showInviteModal && (
-        <div className="modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" onClick={() => setShowInviteModal(false)}>
-          <div className="modal-content card w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 ${isClosingInviteModal ? 'closing' : ''}`} onClick={closeInviteModal} onAnimationEnd={() => { if (isClosingInviteModal) { setShowInviteModal(false); setIsClosingInviteModal(false) } }}>
+          <div className={`modal-content card w-full max-w-sm ${isClosingInviteModal ? 'closing' : ''}`} onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Personel Davet Et</h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400">Link paylaşarak sisteme katmak için</p>
               </div>
-              <button onClick={() => setShowInviteModal(false)} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
+              <button onClick={closeInviteModal} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
             </div>
 
             {!inviteLink ? (

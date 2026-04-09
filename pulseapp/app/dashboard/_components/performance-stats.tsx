@@ -8,8 +8,8 @@ import { cn, formatCurrency } from '@/lib/utils'
 
 export default function PerformanceStats() {
   const { businessId, loading: ctxLoading } = useBusinessContext()
-  const [appointments, setAppointments] = useState<any[]>([])
-  const [services, setServices] = useState<any[]>([])
+  const [appointments, setAppointments] = useState<{ status: string; start_time: string; service_id: string }[]>([])
+  const [services, setServices] = useState<{ id: string; name: string; price: number }[]>([])
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 

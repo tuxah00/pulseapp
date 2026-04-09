@@ -1,0 +1,113 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+
+async function verifyMembership(
+  supabase: ReturnType<typeof createServerSupabaseClient>,
+  userId: string,
+  businessId: string,
+) {
+  const { data } = await supabase
+    .from('staff_members')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('business_id', businessId)
+    .single()
+  return data
+}
+
+// GET: Hastanın tüm diş kayıtları
+export async function GET(request: NextRequest) {
+  const supabase = createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
+
+  const { searchParams } = new URL(request.url)
+  const businessId = searchParams.get('businessId')
+  const customerId = searchParams.get('customerId')
+  if (!businessId || !customerId) {
+    return NextResponse.json({ error: 'businessId ve customerId gerekli' }, { status: 400 })
+  }
+
+  const staff = await verifyMembership(supabase, user.id, businessId)
+  if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
+
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from('tooth_records')
+    .select('*, staff:treated_by_staff_id(id, name)')
+    .eq('business_id', businessId)
+    .eq('customer_id', customerId)
+    .order('tooth_number')
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ records: data ?? [] })
+}
+
+// POST/PATCH: Diş kaydı oluştur veya güncelle (upsert by tooth_number)
+export async function POST(request: NextRequest) {
+  const supabase = createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
+
+  const body = await request.json()
+  const { businessId, customerId, toothNumber, condition, treatment, notes, treatedAt } = body
+
+  if (!businessId || !customerId || !toothNumber || !condition) {
+    return NextResponse.json({ error: 'businessId, customerId, toothNumber ve condition gerekli' }, { status: 400 })
+  }
+
+  const staff = await verifyMembership(supabase, user.id, businessId)
+  if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
+
+  const admin = createAdminClient()
+  const payload = {
+    business_id: businessId,
+    customer_id: customerId,
+    tooth_number: toothNumber,
+    condition,
+    treatment: treatment || null,
+    notes: notes || null,
+    treated_at: treatedAt || null,
+    treated_by_staff_id: staff.id,
+  }
+
+  const { data, error } = await admin
+    .from('tooth_records')
+    .upsert(payload, { onConflict: 'business_id,customer_id,tooth_number' })
+    .select()
+    .single()
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ record: data })
+}
+
+// DELETE: Diş kaydını sil (sadece tooth_number bazlı)
+export async function DELETE(request: NextRequest) {
+  const supabase = createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
+
+  const { searchParams } = new URL(request.url)
+  const businessId = searchParams.get('businessId')
+  const customerId = searchParams.get('customerId')
+  const toothNumber = searchParams.get('toothNumber')
+
+  if (!businessId || !customerId || !toothNumber) {
+    return NextResponse.json({ error: 'businessId, customerId ve toothNumber gerekli' }, { status: 400 })
+  }
+
+  const staff = await verifyMembership(supabase, user.id, businessId)
+  if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
+
+  const admin = createAdminClient()
+  const { error } = await admin
+    .from('tooth_records')
+    .delete()
+    .eq('business_id', businessId)
+    .eq('customer_id', customerId)
+    .eq('tooth_number', parseInt(toothNumber))
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ success: true })
+}

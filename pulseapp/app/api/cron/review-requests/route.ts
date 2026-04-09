@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { sendSMS } from '@/lib/sms/send'
+import { sendMessage } from '@/lib/messaging/send'
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization')
@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
       : `Merhaba ${customer.name}! 😊\n\n${business.name} ziyaretiniz için teşekkürler. Hizmetimizden memnun kaldıysanız bizi tavsiye etmeyi unutmayın! 🙏`
 
     try {
-      const smsResult = await sendSMS({
+      const smsResult = await sendMessage({
         to: customer.phone,
         body: message,
         businessId: business.id,

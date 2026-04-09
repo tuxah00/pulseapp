@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 import Anthropic from '@anthropic-ai/sdk'
 
 async function verifyMembership(supabase: ReturnType<typeof createServerSupabaseClient>, userId: string, businessId: string) {
@@ -29,15 +28,13 @@ export async function POST(request: NextRequest) {
   const staff = await verifyMembership(supabase, user.id, businessId)
   if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
 
-  const admin = createAdminClient()
-
   // Müşteri bilgilerini topla
   const [customerResult, allergiesResult, protocolsResult, appointmentsResult, servicesResult] = await Promise.all([
-    admin.from('customers').select('name, segment, total_visits, notes').eq('id', customerId).single(),
-    admin.from('customer_allergies').select('allergen, severity, reaction').eq('customer_id', customerId).eq('business_id', businessId),
-    admin.from('treatment_protocols').select('name, status, total_sessions, completed_sessions, service:services(name)').eq('customer_id', customerId).eq('business_id', businessId).order('created_at', { ascending: false }).limit(5),
-    admin.from('appointments').select('appointment_date, status, service:services(name)').eq('customer_id', customerId).eq('business_id', businessId).order('appointment_date', { ascending: false }).limit(10),
-    admin.from('services').select('name, description, price, duration_minutes').eq('business_id', businessId).eq('is_active', true),
+    supabase.from('customers').select('name, segment, total_visits, notes').eq('id', customerId).single(),
+    supabase.from('customer_allergies').select('allergen, severity, reaction').eq('customer_id', customerId).eq('business_id', businessId),
+    supabase.from('treatment_protocols').select('name, status, total_sessions, completed_sessions, service:services(name)').eq('customer_id', customerId).eq('business_id', businessId).order('created_at', { ascending: false }).limit(5),
+    supabase.from('appointments').select('appointment_date, status, service:services(name)').eq('customer_id', customerId).eq('business_id', businessId).order('appointment_date', { ascending: false }).limit(10),
+    supabase.from('services').select('name, description, price, duration_minutes').eq('business_id', businessId).eq('is_active', true),
   ])
 
   const customer = customerResult.data

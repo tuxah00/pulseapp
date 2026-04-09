@@ -1,38 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
-
-async function verifyMembership(supabase: ReturnType<typeof createServerSupabaseClient>, userId: string, businessId: string) {
-  const { data } = await supabase
-    .from('staff_members')
-    .select('id, business_id')
-    .eq('user_id', userId)
-    .eq('business_id', businessId)
-    .single()
-  return data
-}
+import { requirePermission } from '@/lib/api/with-permission'
 
 // GET: Personel performans karnesi
 export async function GET(request: NextRequest) {
-  const supabase = createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
+  const auth = await requirePermission(request, 'analytics')
+  if (!auth.ok) return auth.response
+  const { businessId } = auth.ctx
 
   const { searchParams } = new URL(request.url)
-  const businessId = searchParams.get('businessId')
   const staffId = searchParams.get('staffId')
   const from = searchParams.get('from')
   const to = searchParams.get('to')
 
-  if (!businessId) return NextResponse.json({ error: 'businessId gerekli' }, { status: 400 })
-
-  const staff = await verifyMembership(supabase, user.id, businessId)
-  if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
-
-  const admin = createAdminClient()
+  const supabase = createServerSupabaseClient()
 
   // Personel listesi
-  let staffQuery = admin
+  let staffQuery = supabase
     .from('staff_members')
     .select('id, name, role, avatar_url')
     .eq('business_id', businessId)
@@ -48,7 +32,7 @@ export async function GET(request: NextRequest) {
   }
 
   // Randevular, faturalar ve yorumları paralel çek
-  let aptQuery = admin
+  let aptQuery = supabase
     .from('appointments')
     .select('id, staff_id, status, appointment_date, start_time, end_time')
     .eq('business_id', businessId)
@@ -58,17 +42,18 @@ export async function GET(request: NextRequest) {
   if (to) aptQuery = aptQuery.lte('appointment_date', to)
   if (staffId) aptQuery = aptQuery.eq('staff_id', staffId)
 
-  let invQuery = admin
+  let invQuery = supabase
     .from('invoices')
     .select('staff_id, total, paid_amount, status')
     .eq('business_id', businessId)
+    .is('deleted_at', null)
     .in('status', ['paid', 'partial'])
 
   if (from) invQuery = invQuery.gte('created_at', from)
   if (to) invQuery = invQuery.lte('created_at', to)
   if (staffId) invQuery = invQuery.eq('staff_id', staffId)
 
-  let reviewQuery = admin
+  let reviewQuery = supabase
     .from('reviews')
     .select('id, rating')
     .eq('business_id', businessId)

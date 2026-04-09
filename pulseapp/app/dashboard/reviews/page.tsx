@@ -10,9 +10,13 @@ import {
 import { formatDate, cn } from '@/lib/utils'
 import type { Review } from '@/types'
 
+type ReviewWithJoin = Review & {
+  customers?: { name: string; phone: string | null } | null
+}
+
 export default function ReviewsPage() {
   const { businessId, loading: ctxLoading, permissions } = useBusinessContext()
-  const [reviews, setReviews] = useState<any[]>([])
+  const [reviews, setReviews] = useState<ReviewWithJoin[]>([])
   const [loading, setLoading] = useState(true)
   const [filterRating, setFilterRating] = useState<number | null>(null)
   const [search, setSearch] = useState('')
@@ -68,7 +72,7 @@ export default function ReviewsPage() {
     fetchReviews()
   }
 
-  async function handleAiDraft(review: any) {
+  async function handleAiDraft(review: ReviewWithJoin) {
     setAiDraftLoading(review.id)
     try {
       const res = await fetch('/api/ai/review-response', {
@@ -254,7 +258,7 @@ export default function ReviewsPage() {
                       </div>
                       <p className="text-sm text-purple-800 dark:text-purple-200">{review.ai_response_draft}</p>
                       <button
-                        onClick={() => { setResponseText(review.ai_response_draft); setRespondingTo(review.id) }}
+                        onClick={() => { setResponseText(review.ai_response_draft ?? ''); setRespondingTo(review.id) }}
                         className="mt-2 text-xs font-medium text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-800/50 hover:bg-purple-200 dark:hover:bg-purple-800 rounded-lg px-3 py-1.5 transition-colors"
                       >
                         Bu taslağı kullan

@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "pulseapp (Next.js dev)",
+      "runtimeExecutable": "npm.cmd",
+      "runtimeArgs": ["run", "dev"],
+      "cwd": "C:/Users/ahmet_58cdzcg/Documents/PulseApp/pulseapp-v2-fixed/pulseapp",
+      "port": 3000
+    }
+  ]
+}

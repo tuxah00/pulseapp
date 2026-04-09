@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 
 // GET: Faturanın ödeme geçmişi
 export async function GET(req: NextRequest) {
@@ -12,8 +11,7 @@ export async function GET(req: NextRequest) {
   const invoiceId = searchParams.get('invoiceId')
   if (!invoiceId) return NextResponse.json({ error: 'invoiceId gerekli' }, { status: 400 })
 
-  const admin = createAdminClient()
-  const { data, error } = await admin
+  const { data, error } = await supabase
     .from('invoice_payments')
     .select('*')
     .eq('invoice_id', invoiceId)
@@ -36,13 +34,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'invoice_id, amount ve method gerekli' }, { status: 400 })
   }
 
-  const admin = createAdminClient()
-
   // Faturayı getir
-  const { data: invoice, error: invoiceError } = await admin
+  const { data: invoice, error: invoiceError } = await supabase
     .from('invoices')
     .select('*')
     .eq('id', invoice_id)
+    .is('deleted_at', null)
     .single()
 
   if (invoiceError || !invoice) {
@@ -54,7 +51,7 @@ export async function POST(req: NextRequest) {
   const paymentAmount = isRefund ? -Math.abs(amount) : Math.abs(amount)
 
   // Ödeme kaydı oluştur
-  const { data: payment, error: paymentError } = await admin
+  const { data: payment, error: paymentError } = await supabase
     .from('invoice_payments')
     .insert({
       business_id: invoice.business_id,
@@ -96,7 +93,7 @@ export async function POST(req: NextRequest) {
     updateObj.payment_method = method
   }
 
-  const { data: updatedInvoice, error: updateError } = await admin
+  const { data: updatedInvoice, error: updateError } = await supabase
     .from('invoices')
     .update(updateObj)
     .eq('id', invoice_id)
@@ -110,7 +107,7 @@ export async function POST(req: NextRequest) {
     const items = updatedInvoice.items as Array<{ product_id?: string; type?: string; quantity: number }>
     for (const item of items) {
       if (item.product_id && item.type === 'product') {
-        const { data: product } = await admin
+        const { data: product } = await supabase
           .from('products')
           .select('stock_quantity')
           .eq('id', item.product_id)
@@ -118,12 +115,12 @@ export async function POST(req: NextRequest) {
 
         if (product) {
           const newQty = Math.max(0, (product.stock_quantity || 0) - item.quantity)
-          await admin
+          await supabase
             .from('products')
             .update({ stock_quantity: newQty, updated_at: new Date().toISOString() })
             .eq('id', item.product_id)
 
-          await admin.from('stock_movements').insert({
+          await supabase.from('stock_movements').insert({
             business_id: invoice.business_id,
             product_id: item.product_id,
             type: 'out',

@@ -1,2 +1,2 @@
 import { redirect } from 'next/navigation'
-export default function Page() { redirect('/dashboard/hizmetler') }
+export default function Page() { redirect('/dashboard/services') }

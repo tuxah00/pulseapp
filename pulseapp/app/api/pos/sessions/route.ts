@@ -1,21 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { requirePermission } from '@/lib/api/with-permission'
 
 // GET: Oturum listesi (açık oturum + geçmiş)
 export async function GET(req: NextRequest) {
+  const auth = await requirePermission(req, 'pos')
+  if (!auth.ok) return auth.response
+  const { businessId } = auth.ctx
+
   const supabase = createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
-
-  const { searchParams } = new URL(req.url)
-  const businessId = searchParams.get('businessId')
-  if (!businessId) return NextResponse.json({ error: 'businessId gerekli' }, { status: 400 })
-
-  const admin = createAdminClient()
 
   // Açık oturum
-  const { data: openSession } = await admin
+  const { data: openSession } = await supabase
     .from('pos_sessions')
     .select('*, staff_members(name)')
     .eq('business_id', businessId)
@@ -25,7 +21,7 @@ export async function GET(req: NextRequest) {
     .maybeSingle()
 
   // Son 30 kapalı oturum
-  const { data: history } = await admin
+  const { data: history } = await supabase
     .from('pos_sessions')
     .select('*, staff_members(name)')
     .eq('business_id', businessId)
@@ -38,24 +34,23 @@ export async function GET(req: NextRequest) {
 
 // POST: Kasa aç
 export async function POST(req: NextRequest) {
+  const auth = await requirePermission(req, 'pos')
+  if (!auth.ok) return auth.response
+  const { businessId } = auth.ctx
+
   const supabase = createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
-
   const body = await req.json()
-  const { business_id, staff_id, opening_cash = 0 } = body
+  const { staff_id, opening_cash = 0 } = body
 
-  if (!business_id || !staff_id) {
-    return NextResponse.json({ error: 'business_id ve staff_id gerekli' }, { status: 400 })
+  if (!staff_id) {
+    return NextResponse.json({ error: 'staff_id gerekli' }, { status: 400 })
   }
 
-  const admin = createAdminClient()
-
   // Zaten açık oturum var mı kontrol et
-  const { data: existing } = await admin
+  const { data: existing } = await supabase
     .from('pos_sessions')
     .select('id')
-    .eq('business_id', business_id)
+    .eq('business_id', businessId)
     .eq('status', 'open')
     .limit(1)
     .maybeSingle()
@@ -64,10 +59,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Zaten açık bir kasa oturumu var' }, { status: 409 })
   }
 
-  const { data: session, error } = await admin
+  const { data: session, error } = await supabase
     .from('pos_sessions')
     .insert({
-      business_id,
+      business_id: businessId,
       staff_id,
       opening_cash,
       status: 'open',
@@ -81,10 +76,11 @@ export async function POST(req: NextRequest) {
 
 // PATCH: Kasa kapat
 export async function PATCH(req: NextRequest) {
-  const supabase = createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
+  const auth = await requirePermission(req, 'pos')
+  if (!auth.ok) return auth.response
+  const { businessId } = auth.ctx
 
+  const supabase = createServerSupabaseClient()
   const { searchParams } = new URL(req.url)
   const id = searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'id gerekli' }, { status: 400 })
@@ -92,22 +88,11 @@ export async function PATCH(req: NextRequest) {
   const body = await req.json()
   const { actual_cash, notes } = body
 
-  const admin = createAdminClient()
-
-  // Kullanıcının business_id'sini al ve oturumun sahipliğini doğrula
-  const { data: staff } = await supabase
-    .from('staff_members')
-    .select('business_id')
-    .eq('user_id', user.id)
-    .single()
-
-  if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
-
-  const { data: session } = await admin
+  const { data: session } = await supabase
     .from('pos_sessions')
     .select('*')
     .eq('id', id)
-    .eq('business_id', staff.business_id)
+    .eq('business_id', businessId)
     .eq('status', 'open')
     .single()
 
@@ -115,7 +100,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'Açık oturum bulunamadı' }, { status: 404 })
   }
 
-  const { data: transactions } = await admin
+  const { data: transactions } = await supabase
     .from('pos_transactions')
     .select('payments, total, transaction_type')
     .eq('business_id', session.business_id)
@@ -157,7 +142,7 @@ export async function PATCH(req: NextRequest) {
   const actualCashNum = actual_cash != null ? Number(actual_cash) : null
   const difference = actualCashNum != null ? actualCashNum - expectedCash : null
 
-  const { data: updated, error } = await admin
+  const { data: updated, error } = await supabase
     .from('pos_sessions')
     .update({
       closed_at: new Date().toISOString(),

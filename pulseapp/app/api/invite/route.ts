@@ -21,8 +21,7 @@ export async function POST(req: NextRequest) {
 
   const { email, role = 'staff' } = await req.json()
 
-  const admin = createAdminClient()
-  const { data: invitation, error } = await admin
+  const { data: invitation, error } = await supabase
     .from('staff_invitations')
     .insert({
       business_id: staff.business_id,
@@ -42,7 +41,7 @@ export async function POST(req: NextRequest) {
   })
 }
 
-// GET: Validate token (public)
+// GET: Validate token (public — must use admin client to bypass RLS)
 export async function GET(req: NextRequest) {
   const token = req.nextUrl.searchParams.get('token')
   if (!token) return NextResponse.json({ error: 'Token gerekli' }, { status: 400 })

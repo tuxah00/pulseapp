@@ -4,12 +4,13 @@ import { useState, useEffect, useCallback } from 'react'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { createClient } from '@/lib/supabase/client'
 import {
-  Plus, UserCheck, Search, X, Loader2, Gift, Phone, ArrowRight, CheckCircle, Clock
+  Plus, UserCheck, Search, X, Loader2, Gift, Phone, ArrowRight, CheckCircle, Clock, ShieldX
 } from 'lucide-react'
 import type { Referral, Customer, ReferralStatus, RewardType } from '@/types'
 import { REFERRAL_STATUS_LABELS, REWARD_TYPE_LABELS } from '@/types'
 import { formatCurrency } from '@/lib/utils'
 import { CustomSelect } from '@/components/ui/custom-select'
+import { Portal } from '@/components/ui/portal'
 
 const STATUS_CONFIG: Record<ReferralStatus, { bg: string; text: string; icon: typeof CheckCircle }> = {
   pending: { bg: 'bg-yellow-50 dark:bg-yellow-900/20', text: 'text-yellow-600 dark:text-yellow-400', icon: Clock },
@@ -19,7 +20,7 @@ const STATUS_CONFIG: Record<ReferralStatus, { bg: string; text: string; icon: ty
 
 
 export default function ReferralsPage() {
-  const { businessId, loading: ctxLoading } = useBusinessContext()
+  const { businessId, loading: ctxLoading, permissions } = useBusinessContext()
 
   const [referrals, setReferrals] = useState<Referral[]>([])
   const [customers, setCustomers] = useState<Customer[]>([])
@@ -29,6 +30,8 @@ export default function ReferralsPage() {
 
   // Create modal
   const [showCreate, setShowCreate] = useState(false)
+  const [isClosingCreate, setIsClosingCreate] = useState(false)
+  const closeCreate = () => setIsClosingCreate(true)
   const [saving, setSaving] = useState(false)
   const [formReferrerId, setFormReferrerId] = useState('')
   const [formReferredName, setFormReferredName] = useState('')
@@ -65,6 +68,13 @@ export default function ReferralsPage() {
   useEffect(() => { fetchReferrals() }, [fetchReferrals])
   useEffect(() => { fetchCustomers() }, [fetchCustomers])
 
+  useEffect(() => {
+    if (!showCreate) return
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') closeCreate() }
+    document.addEventListener('keydown', h)
+    return () => document.removeEventListener('keydown', h)
+  }, [showCreate])
+
   // Stats
   const totalReferrals = referrals.length
   const convertedCount = referrals.filter(r => r.status === 'converted').length
@@ -88,7 +98,7 @@ export default function ReferralsPage() {
         }),
       })
       if (res.ok) {
-        setShowCreate(false)
+        closeCreate()
         resetForm()
         fetchReferrals()
       }
@@ -135,6 +145,18 @@ export default function ReferralsPage() {
       r.referred_phone?.includes(q)
     )
   })
+
+  if (permissions && !permissions.referrals) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="text-center space-y-3">
+          <ShieldX className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto" />
+          <p className="text-lg font-medium text-gray-500 dark:text-gray-400">Bu sayfaya erişim yetkiniz bulunmamaktadır.</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500">İşletme sahibinizle iletişime geçin.</p>
+        </div>
+      </div>
+    )
+  }
 
   if (ctxLoading) {
     return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-pulse-900" /></div>
@@ -274,12 +296,13 @@ export default function ReferralsPage() {
       )}
 
       {/* Create Modal */}
-      {showCreate && (
-        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-lg">
+      {(showCreate || isClosingCreate) && (
+        <Portal>
+        <div className={`modal-overlay fixed inset-0 z-[100] bg-black/60 dark:bg-black/70 flex items-center justify-center p-4 ${isClosingCreate ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingCreate) { setShowCreate(false); setIsClosingCreate(false) } }}>
+          <div className={`modal-content bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-lg ${isClosingCreate ? 'closing' : ''}`}>
             <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
               <h2 className="text-lg font-bold text-gray-900 dark:text-white">Yeni Referans</h2>
-              <button onClick={() => { setShowCreate(false); resetForm() }} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
+              <button onClick={() => { closeCreate(); resetForm() }} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
             </div>
             <div className="p-6 space-y-4">
               <div>
@@ -318,7 +341,7 @@ export default function ReferralsPage() {
               </div>
             </div>
             <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
-              <button onClick={() => { setShowCreate(false); resetForm() }} className="btn-secondary">İptal</button>
+              <button onClick={() => { closeCreate(); resetForm() }} className="btn-secondary">İptal</button>
               <button onClick={handleCreate} disabled={saving || !formReferrerId} className="btn-primary disabled:opacity-50">
                 {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1 inline" /> : <Plus className="h-4 w-4 mr-1 inline" />}
                 Oluştur
@@ -326,6 +349,7 @@ export default function ReferralsPage() {
             </div>
           </div>
         </div>
+        </Portal>
       )}
     </div>
   )

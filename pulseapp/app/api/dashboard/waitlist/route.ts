@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function GET(request: NextRequest) {
   const supabase = createServerSupabaseClient()
@@ -11,8 +10,7 @@ export async function GET(request: NextRequest) {
   const businessId = searchParams.get('businessId')
   if (!businessId) return NextResponse.json({ error: 'businessId gerekli' }, { status: 400 })
 
-  const admin = createAdminClient()
-  const { data, error } = await admin
+  const { data, error } = await supabase
     .from('waitlist_entries')
     .select('*, services(name), staff_members(name)')
     .eq('business_id', businessId)

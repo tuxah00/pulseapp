@@ -128,9 +128,21 @@ Opsiyonel: `PAYTR_*`, `RESEND_API_KEY`, `GOOGLE_PLACES_API_KEY`
 
 ---
 
+## Bekleyen Harici Entegrasyonlar (Altyapı Hazır, Hesap Bağlanacak)
+
+Aşağıdaki özelliklerin kodu tamamlandı; aktif etmek için sadece ilgili hesap açılıp env değişkeni eklenecek:
+
+| Özellik | Eksik Env Değişkeni | Hazır Dosyalar | Not |
+|---------|---------------------|----------------|-----|
+| **WhatsApp Business** | `TWILIO_WHATSAPP_NUMBER` | `lib/whatsapp/send.ts`, `lib/whatsapp/templates.ts`, `app/api/webhooks/whatsapp/route.ts` | Twilio konsolunda WA Sandbox'ı etkinleştir, sandbox için `whatsapp:+14155238886` |
+| **PayTR Ödeme** | `PAYTR_MERCHANT_ID`, `PAYTR_MERCHANT_KEY`, `PAYTR_MERCHANT_SALT` | `lib/billing/paytr.ts`, `app/api/billing/checkout/route.ts`, `app/api/webhooks/paytr/route.ts`, `app/dashboard/settings/billing/page.tsx` | paytr.com'dan merchant hesabı aç |
+| **Paraşüt E-Fatura** | `PARASUT_CLIENT_ID`, `PARASUT_CLIENT_SECRET`, `PARASUT_USERNAME`, `PARASUT_PASSWORD` | `lib/efatura/parasut.ts`, `app/api/efatura/route.ts` | parasut.com API erişimi için başvur |
+| **Vercel Cron Jobs** | — (env yok, `vercel.json` güncellenmeli) | `app/api/cron/reminders/route.ts`, `app/api/cron/birthday/route.ts`, `app/api/cron/review-requests/route.ts`, `app/api/cron/winback/route.ts` | `vercel.json`'a cron schedule ekle, `CRON_SECRET` zaten tanımlı olmalı |
+
+---
+
 ## Bilinen Eksikler / Dikkat Edilecekler
 
-- **Ödeme akışı tamamlanmadı**: PayTR webhook route'u var ama Billing UI ile tam entegre değil
 - **Form validasyonu zayıf**: `zod` veya `react-hook-form` yok; validasyon sayfadan sayfaya değişiyor
 - **Test altyapısı yok**: Jest/Vitest/Cypress kurulu değil
 - **`error.tsx` dosyaları eksik**: App Router hata sınırları tanımlanmamış
@@ -166,4 +178,6 @@ Aşağıdaki migration'lar Supabase SQL Editor'de manuel olarak çalıştırılm
 - `008_fix_shifts_trigger.sql` — shifts tablosunun updated_at trigger'ını moddatetime'dan bağımsız hale getirir (vardiye kaydetme için kritik)
 
 ### Uygulanan Migration'lar (Supabase'de çalıştırıldı)
-- `006_create_shifts.sql` + `008_fix_shifts_trigger.sql` → **✅ Uygulandı (2026-03-19)** — `shifts` tablosu oluşturuldu, `moddatetime` bağımlılığı kaldırıldı, RLS policy'leri ve indeksler aktif
+- `006_create_shifts.sql` + `008_fix_shifts_trigger.sql` → **✅ Uygulandı (2026-03-19)**
+- `027_whatsapp_enhancements.sql` → **✅ Uygulandı (2026-04-09)** — `customers.preferred_channel` kolonu, WA index
+- `028_kvkk_compliance.sql` → **✅ Uygulandı (2026-04-09)** — `consent_records`, `data_deletion_requests` tabloları, RLS politikaları

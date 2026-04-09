@@ -14,7 +14,32 @@ import { useConfirm } from '@/lib/hooks/use-confirm'
 import { SEGMENT_LABELS } from '@/types'
 import { exportToCSV } from '@/lib/utils/export'
 import type { Expense, Income } from '@/types'
+import type {
+  AppointmentRow,
+  CustomerRow,
+  ReviewRow,
+  ServiceRow,
+  StaffMemberRow,
+  InvoiceRow,
+} from '@/types/db'
 import { CustomSelect } from '@/components/ui/custom-select'
+
+type AnalyticsTab = 'overview' | 'staff' | 'customers' | 'sources' | 'services' | 'expenses'
+
+type AnalyticsAppointment = AppointmentRow & {
+  services: { name: string; price: number } | null
+}
+
+type PrevAppointment = Pick<AppointmentRow, 'status'> & {
+  services: { price: number } | null
+}
+
+type StaffSummary = Pick<StaffMemberRow, 'id' | 'name'>
+
+type AnalyticsInvoice = Pick<
+  InvoiceRow,
+  'id' | 'total' | 'appointment_id' | 'paid_at' | 'created_at'
+>
 
 function getPeriodDates(period: 'week' | 'month' | 'year', offset = 0): { start: string; end: string } {
   const now = new Date()
@@ -49,15 +74,15 @@ export default function AnalyticsPage() {
   const { confirm } = useConfirm()
   const [loading, setLoading] = useState(true)
   const [period, setPeriod] = useState<'week' | 'month' | 'year'>('month')
-  const [activeTab, setActiveTab] = useState<'overview' | 'staff' | 'customers' | 'sources' | 'services' | 'expenses'>('overview')
+  const [activeTab, setActiveTab] = useState<AnalyticsTab>('overview')
 
-  const [appointments, setAppointments] = useState<any[]>([])
-  const [prevAppointments, setPrevAppointments] = useState<any[]>([])
-  const [customers, setCustomers] = useState<any[]>([])
-  const [reviews, setReviews] = useState<any[]>([])
-  const [services, setServices] = useState<any[]>([])
-  const [staffMembers, setStaffMembers] = useState<any[]>([])
-  const [paidInvoices, setPaidInvoices] = useState<any[]>([])
+  const [appointments, setAppointments] = useState<AnalyticsAppointment[]>([])
+  const [prevAppointments, setPrevAppointments] = useState<PrevAppointment[]>([])
+  const [customers, setCustomers] = useState<CustomerRow[]>([])
+  const [reviews, setReviews] = useState<ReviewRow[]>([])
+  const [services, setServices] = useState<ServiceRow[]>([])
+  const [staffMembers, setStaffMembers] = useState<StaffSummary[]>([])
+  const [paidInvoices, setPaidInvoices] = useState<AnalyticsInvoice[]>([])
 
   // Expenses state
   const [expenses, setExpenses] = useState<Expense[]>([])
@@ -111,13 +136,13 @@ export default function AnalyticsPage() {
         .gte('paid_at', start + 'T00:00:00').lte('paid_at', end + 'T23:59:59'),
     ])
 
-    if (aptRes.data) setAppointments(aptRes.data)
-    if (prevAptRes.data) setPrevAppointments(prevAptRes.data)
-    if (custRes.data) setCustomers(custRes.data)
-    if (revRes.data) setReviews(revRes.data)
-    if (svcRes.data) setServices(svcRes.data)
-    if (staffRes.data) setStaffMembers(staffRes.data)
-    if (invRes.data) setPaidInvoices(invRes.data)
+    if (aptRes.data) setAppointments(aptRes.data as unknown as AnalyticsAppointment[])
+    if (prevAptRes.data) setPrevAppointments(prevAptRes.data as unknown as PrevAppointment[])
+    if (custRes.data) setCustomers(custRes.data as CustomerRow[])
+    if (revRes.data) setReviews(revRes.data as ReviewRow[])
+    if (svcRes.data) setServices(svcRes.data as ServiceRow[])
+    if (staffRes.data) setStaffMembers(staffRes.data as StaffSummary[])
+    if (invRes.data) setPaidInvoices(invRes.data as AnalyticsInvoice[])
     setLoading(false)
   }, [businessId, period])
 
@@ -254,13 +279,13 @@ export default function AnalyticsPage() {
   const prevTotal = prevAppointments.length
 
   const appointmentRevenue = completed.reduce((s, a) => s + (a.services?.price || 0), 0)
-  const prevRevenue = prevCompleted.reduce((s: number, a: any) => s + (a.services?.price || 0), 0)
+  const prevRevenue = prevCompleted.reduce((s, a) => s + (a.services?.price || 0), 0)
 
   // Fatura geliri: appointment_id'si olan faturalar zaten randevudan sayıldıysa tekrar sayma
-  const completedAptIds = new Set(completed.map((a: any) => a.id))
+  const completedAptIds = new Set(completed.map(a => a.id))
   const invoiceOnlyRevenue = paidInvoices
     .filter(inv => !inv.appointment_id || !completedAptIds.has(inv.appointment_id))
-    .reduce((s: number, inv: any) => s + (inv.total || 0), 0)
+    .reduce((s, inv) => s + (inv.total || 0), 0)
   const manualIncome = incomes.reduce((s, i) => s + i.amount, 0)
   const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0)
   const totalRevenue = appointmentRevenue + invoiceOnlyRevenue + manualIncome
@@ -342,8 +367,8 @@ export default function AnalyticsPage() {
         const d = new Date(startDate); d.setMonth(d.getMonth() + i)
         const label = d.toLocaleDateString('tr-TR', { month: 'short' })
         const ym = d.toISOString().slice(0, 7)
-        const rev = completed.filter(a => a.appointment_date?.startsWith(ym)).reduce((s: number, a: any) => s + (a.services?.price || 0), 0)
-        const invRev = paidInvoices.filter(inv => inv.paid_at?.startsWith(ym)).reduce((s: number, inv: any) => s + (inv.total || 0), 0)
+        const rev = completed.filter(a => a.appointment_date?.startsWith(ym)).reduce((s, a) => s + (a.services?.price || 0), 0)
+        const invRev = paidInvoices.filter(inv => inv.paid_at?.startsWith(ym)).reduce((s, inv) => s + (inv.total || 0), 0)
         return { label, revenue: rev + invRev }
       })
     : Array.from({ length: dayCount }, (_, i) => {
@@ -352,8 +377,8 @@ export default function AnalyticsPage() {
         const label = period === 'week'
           ? ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'][d.getDay() === 0 ? 6 : d.getDay() - 1]
           : String(d.getDate())
-        const rev = completed.filter(a => a.appointment_date === dateStr).reduce((s: number, a: any) => s + (a.services?.price || 0), 0)
-        const invRev = paidInvoices.filter(inv => inv.paid_at?.split('T')[0] === dateStr).reduce((s: number, inv: any) => s + (inv.total || 0), 0)
+        const rev = completed.filter(a => a.appointment_date === dateStr).reduce((s, a) => s + (a.services?.price || 0), 0)
+        const invRev = paidInvoices.filter(inv => inv.paid_at?.split('T')[0] === dateStr).reduce((s, inv) => s + (inv.total || 0), 0)
         return { label, revenue: rev + invRev }
       })
   const maxRevenue = Math.max(...trendRevenue.map(d => d.revenue), 1)
@@ -373,7 +398,7 @@ export default function AnalyticsPage() {
   }).sort((a, b) => b.count - a.count)
 
   // Hizmet bazlı gelir kırılımı (tamamlanan randevulardan)
-  const serviceRevenueMap = completed.reduce((acc: Record<string, { name: string; count: number; revenue: number }>, apt: any) => {
+  const serviceRevenueMap = completed.reduce<Record<string, { name: string; count: number; revenue: number }>>((acc, apt) => {
     const sid = apt.service_id
     if (!sid) return acc
     const name = apt.services?.name || 'Bilinmeyen'
@@ -382,7 +407,7 @@ export default function AnalyticsPage() {
     acc[sid].count++
     acc[sid].revenue += price
     return acc
-  }, {} as Record<string, { name: string; count: number; revenue: number }>)
+  }, {})
   const serviceRevenueList = Object.values(serviceRevenueMap).sort((a, b) => b.revenue - a.revenue)
 
   const periodMultiplier = period === 'week' ? 30 / 7 : period === 'month' ? 1 : 1 / 12
@@ -425,7 +450,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Sekmeler */}
-      <div className="flex gap-1 border-b border-gray-200 dark:border-gray-700 overflow-x-auto whitespace-nowrap">
+      <div className="sticky top-14 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 bg-gray-50 dark:bg-gray-950 flex gap-1 border-b border-gray-200 dark:border-gray-700 overflow-x-auto whitespace-nowrap hide-scrollbar">
         {([
           ['overview', 'Genel Bakış', <BarChart3 key="o" className="h-3.5 w-3.5" />],
           ['staff', 'Personel', <Users key="s" className="h-3.5 w-3.5" />],
@@ -434,7 +459,7 @@ export default function AnalyticsPage() {
           ['services', 'Hizmet', <Layers key="sv" className="h-3.5 w-3.5" />],
           ['expenses', 'Gelir-Gider', <Wallet key="e" className="h-3.5 w-3.5" />],
         ] as const).map(([key, label, icon]) => (
-          <button key={key} onClick={() => setActiveTab(key as any)}
+          <button key={key} onClick={() => setActiveTab(key as AnalyticsTab)}
             className={cn('flex-shrink-0 flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors',
               activeTab === key
                 ? 'border-pulse-900 text-pulse-900 dark:text-pulse-400'

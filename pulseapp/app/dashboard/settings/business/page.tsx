@@ -7,13 +7,16 @@ import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import {
   Loader2, Save, Building2, Bell, Sparkles, Cake,
   CreditCard, MapPin, Phone, Mail, Globe,
-  MessageSquare, ChevronDown, ChevronUp, Camera, X,
+  MessageSquare, ChevronDown, ChevronUp, Camera, X, Smartphone,
+  DoorOpen, Plus, Pencil, Trash2, Users,
 } from 'lucide-react'
 import {
   SECTOR_LABELS, PLAN_LABELS, PLAN_PRICES,
   type Business, type SectorType, type WorkingHours, type DayHours, type BusinessSettings,
+  type Room,
 } from '@/types'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, cn } from '@/lib/utils'
+import { useConfirm } from '@/lib/hooks/use-confirm'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { logAudit } from '@/lib/utils/audit'
 
@@ -51,6 +54,9 @@ const DEFAULT_SETTINGS: BusinessSettings = {
   birthday_sms_enabled: false,
   birthday_sms_template: 'Doğum gününüz kutlu olsun {name}! 🎂 Size özel sürprizimiz var, bizi ziyaret edin!',
   birthday_sms_hour: 9,
+  whatsapp_enabled: false,
+  whatsapp_mode: 'sandbox',
+  default_channel: 'auto',
 }
 
 function generateTimeOptions(): string[] {
@@ -64,12 +70,15 @@ function generateTimeOptions(): string[] {
 
 const TIME_OPTIONS = generateTimeOptions()
 
-type TabId = 'info' | 'settings' | 'subscription'
+type TabId = 'info' | 'settings' | 'rooms' | 'subscription'
+
+const ROOM_COLORS = ['#6366f1', '#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#06b6d4']
 
 export default function BusinessSettingsPage() {
   const { businessId, staffId: currentStaffId, staffName: currentStaffName, loading: ctxLoading, permissions } = useBusinessContext()
   const supabase = createClient()
   const router = useRouter()
+  const { confirm } = useConfirm()
 
   const [business, setBusiness] = useState<Business | null>(null)
   const [loading, setLoading] = useState(true)
@@ -80,6 +89,17 @@ export default function BusinessSettingsPage() {
 
   // Logo
   const [logoUploading, setLogoUploading] = useState(false)
+
+  // Odalar
+  const [rooms, setRooms] = useState<Room[]>([])
+  const [roomsLoading, setRoomsLoading] = useState(false)
+  const [showRoomModal, setShowRoomModal] = useState(false)
+  const [isClosingRoomModal, setIsClosingRoomModal] = useState(false)
+  const [editingRoom, setEditingRoom] = useState<Room | null>(null)
+  const [roomName, setRoomName] = useState('')
+  const [roomCapacity, setRoomCapacity] = useState(1)
+  const [roomColor, setRoomColor] = useState('#6366f1')
+  const [roomSaving, setRoomSaving] = useState(false)
 
   // İşletme bilgileri formu
   const [name, setName] = useState('')
@@ -130,6 +150,109 @@ export default function BusinessSettingsPage() {
   useEffect(() => {
     if (!ctxLoading) fetchBusiness()
   }, [fetchBusiness, ctxLoading])
+
+  const fetchRooms = useCallback(async () => {
+    if (!businessId) return
+    setRoomsLoading(true)
+    try {
+      const res = await fetch('/api/rooms')
+      if (res.ok) {
+        const { rooms: data } = await res.json()
+        setRooms(data || [])
+      }
+    } catch (err) {
+      console.error('Oda listesi çekme hatası:', err)
+    }
+    setRoomsLoading(false)
+  }, [businessId])
+
+  useEffect(() => {
+    if (businessId) fetchRooms()
+  }, [fetchRooms, businessId])
+
+  function resetRoomForm() {
+    setRoomName('')
+    setRoomCapacity(1)
+    setRoomColor('#6366f1')
+    setEditingRoom(null)
+    setIsClosingRoomModal(true)
+  }
+
+  function openNewRoomModal() {
+    setRoomName('')
+    setRoomCapacity(1)
+    setRoomColor('#6366f1')
+    setEditingRoom(null)
+    setShowRoomModal(true)
+  }
+
+  function openEditRoomModal(room: Room) {
+    setRoomName(room.name)
+    setRoomCapacity(room.capacity)
+    setRoomColor(room.color)
+    setEditingRoom(room)
+    setShowRoomModal(true)
+  }
+
+  async function handleSaveRoom() {
+    if (!roomName.trim()) return
+    setRoomSaving(true)
+    setError(null)
+    try {
+      if (editingRoom) {
+        const res = await fetch(`/api/rooms?id=${editingRoom.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: roomName.trim(), capacity: roomCapacity, color: roomColor }),
+        })
+        if (!res.ok) {
+          const { error: msg } = await res.json()
+          setError(msg || 'Oda güncellenemedi')
+        } else {
+          resetRoomForm()
+          fetchRooms()
+        }
+      } else {
+        const res = await fetch('/api/rooms', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: roomName.trim(), capacity: roomCapacity, color: roomColor }),
+        })
+        if (!res.ok) {
+          const { error: msg } = await res.json()
+          setError(msg || 'Oda eklenemedi')
+        } else {
+          resetRoomForm()
+          fetchRooms()
+        }
+      }
+    } catch {
+      setError('Bir hata oluştu')
+    }
+    setRoomSaving(false)
+  }
+
+  async function handleDeleteRoom(id: string) {
+    const ok = await confirm({
+      title: 'Odayı Sil',
+      message: 'Bu odayı silmek istediğinize emin misiniz? Bu işlem geri alınamaz.',
+      confirmText: 'Sil',
+      cancelText: 'İptal',
+      variant: 'danger',
+    })
+    if (!ok) return
+    try {
+      const res = await fetch(`/api/rooms?id=${id}`, { method: 'DELETE' })
+      if (res.ok) {
+        fetchRooms()
+      } else {
+        const { error: msg } = await res.json()
+        setError(msg || 'Oda silinemedi')
+      }
+    } catch {
+      setError('Bir hata oluştu')
+    }
+  }
 
   function updateDayHours(day: keyof WorkingHours, field: 'open' | 'close', value: string) {
     setWorkingHours(prev => ({
@@ -246,6 +369,7 @@ export default function BusinessSettingsPage() {
   const tabs: { id: TabId; label: string; icon: React.ReactNode }[] = [
     { id: 'info', label: 'İşletme Bilgileri', icon: <Building2 className="h-4 w-4" /> },
     { id: 'settings', label: 'Bildirim & AI', icon: <Bell className="h-4 w-4" /> },
+    { id: 'rooms', label: 'Odalar', icon: <DoorOpen className="h-4 w-4" /> },
     { id: 'subscription', label: 'Abonelik', icon: <CreditCard className="h-4 w-4" /> },
   ]
 
@@ -619,6 +743,68 @@ export default function BusinessSettingsPage() {
               </div>
             </div>
 
+            {/* WhatsApp */}
+            <div className="card border-green-200 bg-gradient-to-br from-green-50/40 to-white dark:from-gray-800 dark:to-gray-800 dark:border-gray-700">
+              <div className="flex items-center gap-3 mb-1">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-green-100">
+                  <Smartphone className="h-5 w-5 text-green-600" />
+                </div>
+                <h2 className="text-lg font-semibold text-gray-900">WhatsApp Business</h2>
+              </div>
+              <p className="text-sm text-gray-500 mb-6">
+                Müşterilerinize SMS yerine WhatsApp üzerinden mesaj gönderin. Açılma oranı %90+.
+              </p>
+
+              <div className="space-y-4">
+                <ToggleSetting
+                  label="WhatsApp aktif"
+                  description="Twilio WhatsApp Business API üzerinden mesaj gönderimi etkinleştirilir."
+                  checked={settings.whatsapp_enabled ?? false}
+                  onChange={(v) => setSettings(prev => ({ ...prev, whatsapp_enabled: v }))}
+                />
+
+                {settings.whatsapp_enabled && (
+                  <div className="ml-14 space-y-4">
+                    <div>
+                      <label className="label">Mod</label>
+                      <CustomSelect
+                        options={[
+                          { value: 'sandbox', label: 'Sandbox (test modu)' },
+                          { value: 'production', label: 'Production (canlı)' },
+                        ]}
+                        value={settings.whatsapp_mode ?? 'sandbox'}
+                        onChange={v => setSettings(prev => ({ ...prev, whatsapp_mode: v as 'sandbox' | 'production' }))}
+                      />
+                      <p className="mt-1.5 text-xs text-gray-400">
+                        Sandbox modunda yalnızca Twilio sandbox numarasına katılmış kişilere ulaşabilirsiniz.
+                      </p>
+                    </div>
+                    <div>
+                      <label className="label">Varsayılan Mesajlaşma Kanalı</label>
+                      <CustomSelect
+                        options={[
+                          { value: 'auto', label: 'Otomatik (WhatsApp tercihli, yoksa SMS)' },
+                          { value: 'whatsapp', label: 'Her zaman WhatsApp' },
+                          { value: 'sms', label: 'Her zaman SMS' },
+                        ]}
+                        value={settings.default_channel ?? 'auto'}
+                        onChange={v => setSettings(prev => ({ ...prev, default_channel: v as 'auto' | 'sms' | 'whatsapp' }))}
+                      />
+                    </div>
+                    <div className="rounded-lg bg-green-50 border border-green-100 px-4 py-3 text-sm text-green-700">
+                      <p className="font-medium mb-1">Kurulum adımları:</p>
+                      <ol className="list-decimal list-inside space-y-1 text-xs">
+                        <li>Twilio konsolunda WhatsApp Sandbox&apos;ı etkinleştirin</li>
+                        <li><code className="bg-green-100 px-1 rounded">TWILIO_WHATSAPP_NUMBER</code> env değişkenini .env dosyasına ekleyin</li>
+                        <li>Müşterileriniz sandbox numarasına katılım mesajı göndersin</li>
+                        <li>Production için Twilio&apos;dan onaylı gönderici numarası alın</li>
+                      </ol>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
             <div className="card border-purple-200 bg-gradient-to-br from-purple-50/50 to-white dark:from-gray-800 dark:to-gray-800 dark:border-gray-700">
               <div className="flex items-center gap-3 mb-1">
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-100">
@@ -654,6 +840,175 @@ export default function BusinessSettingsPage() {
             </div>
           </div>
         </form>
+      )}
+
+      {/* Odalar */}
+      {activeTab === 'rooms' && (
+        <div className="space-y-6">
+          <div className="card">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Tedavi Odaları</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  İşletmenizin odalarını tanımlayın. Randevu oluştururken oda seçimi yapılabilir.
+                </p>
+              </div>
+              <button onClick={openNewRoomModal} className="btn-primary">
+                <Plus className="mr-2 h-4 w-4" />
+                Oda Ekle
+              </button>
+            </div>
+
+            {roomsLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-pulse-900" />
+              </div>
+            ) : rooms.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gray-100 dark:bg-gray-700 mb-4">
+                  <DoorOpen className="h-8 w-8 text-gray-400" />
+                </div>
+                <p className="text-gray-500 dark:text-gray-400 font-medium">Henüz oda eklenmemiş</p>
+                <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">İlk odanızı ekleyerek başlayın.</p>
+                <button onClick={openNewRoomModal} className="btn-primary mt-4">
+                  <Plus className="mr-2 h-4 w-4" />
+                  İlk Odayı Ekle
+                </button>
+              </div>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {rooms.map((room) => (
+                  <div
+                    key={room.id}
+                    className="flex items-center gap-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 transition-shadow hover:shadow-sm"
+                  >
+                    <div
+                      className="h-10 w-10 rounded-lg flex-shrink-0"
+                      style={{ backgroundColor: room.color }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-gray-900 dark:text-gray-100 truncate">{room.name}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 mt-0.5">
+                        <Users className="h-3 w-3" />
+                        {room.capacity} kişi kapasiteli
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button
+                        onClick={() => openEditRoomModal(room)}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteRoom(room.id)}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Oda Ekle/Düzenle Modal */}
+      {showRoomModal && (
+        <div
+          className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 ${isClosingRoomModal ? 'closing' : ''}`}
+          onAnimationEnd={() => {
+            if (isClosingRoomModal) {
+              setShowRoomModal(false)
+              setIsClosingRoomModal(false)
+            }
+          }}
+        >
+          <div className={`modal-content card w-full max-w-md ${isClosingRoomModal ? 'closing' : ''}`}>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                {editingRoom ? 'Odayı Düzenle' : 'Yeni Oda Ekle'}
+              </h3>
+              <button
+                onClick={resetRoomForm}
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="label">Oda Adı</label>
+                <input
+                  type="text"
+                  value={roomName}
+                  onChange={(e) => setRoomName(e.target.value)}
+                  className="input"
+                  placeholder="Ör: Oda 1, VIP Salon"
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <label className="label">Kapasite (Kişi)</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={roomCapacity}
+                  onChange={(e) => setRoomCapacity(Math.max(1, Number(e.target.value)))}
+                  className="input"
+                />
+              </div>
+
+              <div>
+                <label className="label">Renk</label>
+                <div className="flex gap-2 mt-1">
+                  {ROOM_COLORS.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setRoomColor(c)}
+                      className={cn(
+                        'h-8 w-8 rounded-lg transition-all',
+                        roomColor === c
+                          ? 'ring-2 ring-offset-2 ring-gray-900 dark:ring-white dark:ring-offset-gray-800 scale-110'
+                          : 'hover:scale-105'
+                      )}
+                      style={{ backgroundColor: c }}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                type="button"
+                onClick={resetRoomForm}
+                className="btn-secondary"
+              >
+                İptal
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveRoom}
+                disabled={roomSaving || !roomName.trim()}
+                className="btn-primary"
+              >
+                {roomSaving ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="mr-2 h-4 w-4" />
+                )}
+                {editingRoom ? 'Güncelle' : 'Kaydet'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Abonelik */}

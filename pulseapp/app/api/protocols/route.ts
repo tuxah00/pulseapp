@@ -1,35 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
-
-async function verifyMembership(supabase: ReturnType<typeof createServerSupabaseClient>, userId: string, businessId: string) {
-  const { data } = await supabase
-    .from('staff_members')
-    .select('id, business_id')
-    .eq('user_id', userId)
-    .eq('business_id', businessId)
-    .single()
-  return data
-}
+import { requirePermission } from '@/lib/api/with-permission'
+import { validateBody } from '@/lib/api/validate'
+import { protocolCreateSchema } from '@/lib/schemas'
 
 // GET: Protokol listesi
 export async function GET(request: NextRequest) {
-  const supabase = createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
+  const auth = await requirePermission(request, 'protocols')
+  if (!auth.ok) return auth.response
+  const { businessId } = auth.ctx
 
   const { searchParams } = new URL(request.url)
-  const businessId = searchParams.get('businessId')
   const customerId = searchParams.get('customerId')
   const status = searchParams.get('status')
 
-  if (!businessId) return NextResponse.json({ error: 'businessId gerekli' }, { status: 400 })
-
-  const staff = await verifyMembership(supabase, user.id, businessId)
-  if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
-
-  const admin = createAdminClient()
-  let query = admin
+  const supabase = createServerSupabaseClient()
+  let query = supabase
     .from('treatment_protocols')
     .select(`
       *,
@@ -51,24 +37,18 @@ export async function GET(request: NextRequest) {
 
 // POST: Yeni protokol oluştur
 export async function POST(request: NextRequest) {
+  const auth = await requirePermission(request, 'protocols')
+  if (!auth.ok) return auth.response
+  const { businessId, staffId } = auth.ctx
+
+  const result = await validateBody(request, protocolCreateSchema)
+  if (!result.ok) return result.response
+  const { customerId, serviceId, name, totalSessions, intervalDays, notes } = result.data
+
   const supabase = createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
-
-  const body = await request.json()
-  const { businessId, customerId, serviceId, name, totalSessions, intervalDays, notes } = body
-
-  if (!businessId || !customerId || !name || !totalSessions) {
-    return NextResponse.json({ error: 'businessId, customerId, name, totalSessions zorunlu' }, { status: 400 })
-  }
-
-  const staff = await verifyMembership(supabase, user.id, businessId)
-  if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
-
-  const admin = createAdminClient()
 
   // Protokolü oluştur
-  const { data: protocol, error: protocolError } = await admin
+  const { data: protocol, error: protocolError } = await supabase
     .from('treatment_protocols')
     .insert({
       business_id: businessId,
@@ -78,7 +58,7 @@ export async function POST(request: NextRequest) {
       total_sessions: totalSessions,
       interval_days: intervalDays || 14,
       notes: notes || null,
-      created_by: staff.id,
+      created_by: staffId,
     })
     .select()
     .single()
@@ -100,18 +80,18 @@ export async function POST(request: NextRequest) {
     })
   }
 
-  const { error: sessionsError } = await admin
+  const { error: sessionsError } = await supabase
     .from('protocol_sessions')
     .insert(sessions)
 
   if (sessionsError) {
     // Protokolü geri sil
-    await admin.from('treatment_protocols').delete().eq('id', protocol.id)
+    await supabase.from('treatment_protocols').delete().eq('id', protocol.id)
     return NextResponse.json({ error: sessionsError.message }, { status: 500 })
   }
 
   // Oluşturulan protokolü seanslarıyla birlikte getir
-  const { data: fullProtocol } = await admin
+  const { data: fullProtocol } = await supabase
     .from('treatment_protocols')
     .select(`
       *,

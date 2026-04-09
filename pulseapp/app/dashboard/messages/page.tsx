@@ -8,13 +8,13 @@ import {
   MessageSquare, Search, Send, Loader2, Phone,
   Bot, User, ChevronLeft, Clock, ArrowDownCircle,
   Sparkles, Calendar, HelpCircle, AlertTriangle,
-  MessageCircle, X, Filter,
+  MessageCircle, X, Filter, Smartphone,
 } from 'lucide-react'
 import { formatPhone, cn } from '@/lib/utils'
 import { format, isToday, isYesterday, parseISO } from 'date-fns'
 import { tr } from 'date-fns/locale'
 import type {
-  Message, Customer, AiClassification, MessageDirection,
+  Message, Customer, AiClassification, MessageDirection, MessageChannel,
 } from '@/types'
 
 interface Conversation {
@@ -60,6 +60,7 @@ export default function MessagesPage() {
   const [newMessage, setNewMessage] = useState('')
   const [sending, setSending] = useState(false)
   const [filterClassification, setFilterClassification] = useState<AiClassification | 'all'>('all')
+  const [filterChannel, setFilterChannel] = useState<MessageChannel | 'all'>('all')
   const [mobileShowChat, setMobileShowChat] = useState(false)
   const [aiSuggestion, setAiSuggestion] = useState<string | null>(null)
   const [aiLoading, setAiLoading] = useState(false)
@@ -121,9 +122,13 @@ export default function MessagesPage() {
       convList = convList.filter(c => c.lastMessage.ai_classification === filterClassification)
     }
 
+    if (filterChannel !== 'all') {
+      convList = convList.filter(c => c.lastMessage.channel === filterChannel)
+    }
+
     setConversations(convList)
     setLoading(false)
-  }, [businessId, filterClassification])
+  }, [businessId, filterClassification, filterChannel])
 
   // Seçili müşterinin mesajlarını çek
   const fetchMessages = useCallback(async (customerId: string) => {
@@ -348,8 +353,32 @@ export default function MessagesPage() {
               />
             </div>
 
-            {/* AI Filtre */}
+            {/* Kanal Filtresi */}
             <div className="mt-3 flex gap-1.5 overflow-x-auto pb-1">
+              {([
+                { key: 'all', label: 'Tümü', icon: null },
+                { key: 'sms', label: 'SMS', icon: <Phone className="h-3 w-3" /> },
+                { key: 'whatsapp', label: 'WhatsApp', icon: <Smartphone className="h-3 w-3" /> },
+                { key: 'web', label: 'Web', icon: <MessageSquare className="h-3 w-3" /> },
+              ] as const).map(({ key, label, icon }) => (
+                <button
+                  key={key}
+                  onClick={() => setFilterChannel(key as MessageChannel | 'all')}
+                  className={cn(
+                    'badge px-2.5 py-1 cursor-pointer whitespace-nowrap transition-colors flex items-center gap-1',
+                    filterChannel === key
+                      ? key === 'whatsapp' ? 'bg-green-600 text-white' : 'bg-gray-900 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  )}
+                >
+                  {icon}
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {/* AI Filtre */}
+            <div className="mt-2 flex gap-1.5 overflow-x-auto pb-1">
               <button
                 onClick={() => setFilterClassification('all')}
                 className={cn(
@@ -589,11 +618,18 @@ export default function MessagesPage() {
                                 <p className="text-[10px] text-white/60 mt-0.5">{(msg as any).staff_name}</p>
                               )}
 
-                              {/* Zaman */}
+                              {/* Zaman + Kanal */}
                               <div className={cn(
                                 'flex items-center justify-end gap-1 mt-1',
                                 msg.direction === 'outbound' ? 'text-white/60' : 'text-gray-400'
                               )}>
+                                {/* Kanal ikonu */}
+                                {msg.channel === 'whatsapp' && (
+                                  <Smartphone className="h-2.5 w-2.5 text-green-400" />
+                                )}
+                                {msg.channel === 'sms' && (
+                                  <Phone className="h-2.5 w-2.5 opacity-60" />
+                                )}
                                 <span className="text-[10px]">
                                   {format(parseISO(msg.created_at), 'HH:mm')}
                                 </span>

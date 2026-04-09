@@ -23,10 +23,19 @@ import {
   Trash2,
   Repeat,
   CalendarDays,
+  CalendarRange,
   Search, Filter, ArrowUpDown,
+  Users, Building2,
 } from 'lucide-react'
 import { formatTime, formatDate, getStatusColor, formatCurrency, cn } from '@/lib/utils'
 import { STATUS_LABELS, type AppointmentStatus, type Customer, type Service, type StaffMember, type WorkingHours } from '@/types'
+import type { AppointmentRow } from '@/types/db'
+
+type AppointmentView = AppointmentRow & {
+  customers: { name: string; phone: string | null } | null
+  services: { name: string; price: number; duration_minutes: number } | null
+  staff_members: { name: string } | null
+}
 import { logAudit } from '@/lib/utils/audit'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
@@ -37,20 +46,26 @@ import { Portal } from '@/components/ui/portal'
 export default function AppointmentsPage() {
   const { businessId, staffId: currentStaffId, staffName: currentStaffName, loading: ctxLoading } = useBusinessContext()
   const { confirm } = useConfirm()
-  const [appointments, setAppointments] = useState<any[]>([])
+  const [appointments, setAppointments] = useState<AppointmentView[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
   const [now, setNow] = useState<Date | null>(null)
   const [viewMode, setViewMode] = useViewMode('appointments', 'list')
-  const [selectedAppointment, setSelectedAppointment] = useState<any | null>(null)
+  const [selectedAppointment, setSelectedAppointment] = useState<AppointmentView | null>(null)
   const [panelClosing, setPanelClosing] = useState(false)
   const closePanelAnimated = useCallback(() => setPanelClosing(true), [])
   const [showModal, setShowModal] = useState(false)
-  const [editingAppointment, setEditingAppointment] = useState<any | null>(null)
-  const [rescheduleAppointment, setRescheduleAppointment] = useState<any | null>(null)
-  const [cancelConfirmAppointment, setCancelConfirmAppointment] = useState<any | null>(null)
+  const [isClosingModal, setIsClosingModal] = useState(false)
+  const closeModal = () => setIsClosingModal(true)
+  const [editingAppointment, setEditingAppointment] = useState<AppointmentView | null>(null)
+  const [rescheduleAppointment, setRescheduleAppointment] = useState<AppointmentView | null>(null)
+  const [isClosingReschedule, setIsClosingReschedule] = useState(false)
+  const closeReschedule = () => setIsClosingReschedule(true)
+  const [cancelConfirmAppointment, setCancelConfirmAppointment] = useState<AppointmentView | null>(null)
+  const [isClosingCancelConfirm, setIsClosingCancelConfirm] = useState(false)
+  const closeCancelConfirm = () => setIsClosingCancelConfirm(true)
   const [cancelNotifyCustomer, setCancelNotifyCustomer] = useState(true)
-  const [slotPopup, setSlotPopup] = useState<{ day: string; hour: number; apts: any[]; x: number; y: number } | null>(null)
+  const [slotPopup, setSlotPopup] = useState<{ day: string; hour: number; apts: AppointmentView[]; x: number; y: number } | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [rescheduleDate, setRescheduleDate] = useState('')
@@ -65,11 +80,13 @@ export default function AppointmentsPage() {
   const [customers, setCustomers] = useState<Customer[]>([])
   const [services, setServices] = useState<Service[]>([])
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>([])
+  const [rooms, setRooms] = useState<{ id: string; name: string; color: string }[]>([])
   const [workingHours, setWorkingHours] = useState<Record<string, { open: string; close: string } | null> | null>(null)
 
   const [customerId, setCustomerId] = useState('')
   const [serviceId, setServiceId] = useState('')
   const [staffId, setStaffId] = useState('')
+  const [roomId, setRoomId] = useState('')
   const [date, setDate] = useState('')
   const [startTime, setStartTime] = useState('09:00')
   const [notes, setNotes] = useState('')
@@ -106,6 +123,27 @@ export default function AppointmentsPage() {
     })
   }
 
+  // Aylık takvim için: ayın ilk gününü kapsayan haftanın Pazartesi'sinden,
+  // ayın son gününü kapsayan haftanın Pazar'ına kadar 6×7=42 gün döndürür
+  function getMonthGridDays(dateStr: string): string[] {
+    const [y, m] = dateStr.split('-').map(Number)
+    const firstOfMonth = new Date(y, m - 1, 1)
+    const day = firstOfMonth.getDay() // 0=Pazar
+    const mondayOffset = day === 0 ? -6 : 1 - day
+    const gridStart = new Date(firstOfMonth)
+    gridStart.setDate(firstOfMonth.getDate() + mondayOffset)
+    return Array.from({ length: 42 }, (_, i) => {
+      const dt = new Date(gridStart)
+      dt.setDate(gridStart.getDate() + i)
+      return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`
+    })
+  }
+
+  function getMonthRange(dateStr: string): { start: string; end: string } {
+    const days = getMonthGridDays(dateStr)
+    return { start: days[0], end: days[days.length - 1] }
+  }
+
   const fetchAppointments = useCallback(async () => {
     if (!businessId) return
     setLoading(true)
@@ -120,6 +158,9 @@ export default function AppointmentsPage() {
     if (viewMode === 'week') {
       const { start, end } = getWeekRange(selectedDate)
       query = query.gte('appointment_date', start).lte('appointment_date', end)
+    } else if (viewMode === 'month') {
+      const { start, end } = getMonthRange(selectedDate)
+      query = query.gte('appointment_date', start).lte('appointment_date', end)
     } else {
       query = query.eq('appointment_date', selectedDate)
     }
@@ -132,16 +173,18 @@ export default function AppointmentsPage() {
 
   const fetchFormData = useCallback(async () => {
     if (!businessId) return
-    const [custRes, svcRes, staffRes, bizRes] = await Promise.all([
+    const [custRes, svcRes, staffRes, bizRes, roomsRes] = await Promise.all([
       supabase.from('customers').select('*').eq('business_id', businessId).eq('is_active', true).order('name'),
       supabase.from('services').select('*').eq('business_id', businessId).eq('is_active', true).order('sort_order'),
       supabase.from('staff_members').select('*').eq('business_id', businessId).eq('is_active', true).order('name'),
       supabase.from('businesses').select('working_hours').eq('id', businessId).single(),
+      fetch(`/api/rooms`).then(r => r.ok ? r.json() : { rooms: [] }).catch(() => ({ rooms: [] })),
     ])
     if (custRes.data) setCustomers(custRes.data)
     if (svcRes.data) setServices(svcRes.data)
     if (staffRes.data) setStaffMembers(staffRes.data)
     if (bizRes.data?.working_hours) setWorkingHours(bizRes.data.working_hours)
+    if (roomsRes.rooms) setRooms(roomsRes.rooms)
   }, [businessId])
 
   useEffect(() => {
@@ -155,15 +198,27 @@ export default function AppointmentsPage() {
 
   useEffect(() => {
     if (!showModal) return
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowModal(false) }
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') closeModal() }
     document.addEventListener('keydown', h)
     return () => document.removeEventListener('keydown', h)
   }, [showModal])
 
   function changeDate(days: number) {
     const d = new Date(selectedDate + 'T12:00:00')
-    d.setDate(d.getDate() + (viewMode === 'week' ? days * 7 : days))
+    if (viewMode === 'month') {
+      d.setMonth(d.getMonth() + days)
+    } else if (viewMode === 'week') {
+      d.setDate(d.getDate() + days * 7)
+    } else {
+      d.setDate(d.getDate() + days)
+    }
     setSelectedDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`)
+  }
+
+  function formatMonthLabel() {
+    const [y, m] = selectedDate.split('-').map(Number)
+    const months = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık']
+    return `${months[m - 1]} ${y}`
   }
 
   function goToday() { setSelectedDate(new Date().toISOString().split('T')[0]) }
@@ -173,7 +228,7 @@ export default function AppointmentsPage() {
   const isToday = selectedDate === todayStr
   const nowMinutes = now ? now.getHours() * 60 + now.getMinutes() : -1
 
-  function getTimeState(apt: any): 'past' | 'current' | 'future' {
+  function getTimeState(apt: AppointmentView): 'past' | 'current' | 'future' {
     if (selectedDate < todayStr) return 'past'
     if (selectedDate > todayStr) return 'future'
     const toMinutes = (time: string) => { const [h, m] = time.split(':').map(Number); return h * 60 + m }
@@ -202,22 +257,23 @@ export default function AppointmentsPage() {
 
   function openNewModal(overrideDate?: string, overrideTime?: string) {
     setEditingAppointment(null)
-    setCustomerId(''); setServiceId(''); setStaffId('')
+    setCustomerId(''); setServiceId(''); setStaffId(''); setRoomId('')
     setDate(overrideDate || selectedDate); setStartTime(overrideTime || '09:00'); setNotes('')
     setIsRecurring(false); setRecurrenceFrequency('weekly'); setRecurrenceCount(4)
     setError(null); setShowModal(true)
   }
 
-  function openEditModal(apt: any, e?: React.MouseEvent) {
+  function openEditModal(apt: AppointmentView, e?: React.MouseEvent) {
     e?.stopPropagation()
     setEditingAppointment(apt)
     setCustomerId(apt.customer_id); setServiceId(apt.service_id || ''); setStaffId(apt.staff_id || '')
+    setRoomId((apt as AppointmentView & { room_id?: string }).room_id || '')
     setDate(apt.appointment_date); setStartTime(apt.start_time); setNotes(apt.notes || '')
     setIsRecurring(false)
     setError(null); setShowModal(true)
   }
 
-  function openRescheduleModal(apt: any, e?: React.MouseEvent) {
+  function openRescheduleModal(apt: AppointmentView, e?: React.MouseEvent) {
     e?.stopPropagation()
     setRescheduleAppointment(apt)
     setRescheduleDate(apt.appointment_date)
@@ -225,7 +281,7 @@ export default function AppointmentsPage() {
     setError(null)
   }
 
-  function openCancelConfirm(apt: any, e?: React.MouseEvent) {
+  function openCancelConfirm(apt: AppointmentView, e?: React.MouseEvent) {
     e?.stopPropagation()
     setCancelConfirmAppointment(apt)
     setCancelNotifyCustomer(true)
@@ -294,6 +350,7 @@ export default function AppointmentsPage() {
     const endTime = calculateEndTime(startTime, duration)
     const payload = {
       customer_id: customerId, service_id: serviceId || null, staff_id: staffId || null,
+      room_id: roomId || null,
       appointment_date: date, start_time: startTime, end_time: endTime, notes: notes || null,
     }
     const conflict = await checkStaffConflict(staffId || null, date, startTime, endTime, editingAppointment?.id ?? null)
@@ -327,6 +384,7 @@ export default function AppointmentsPage() {
         customer_id: customerId,
         service_id: serviceId || null,
         staff_id: staffId || null,
+        room_id: roomId || null,
         appointment_date: d,
         start_time: startTime,
         end_time: endTime,
@@ -351,7 +409,7 @@ export default function AppointmentsPage() {
       const { error } = await supabase.from('appointments').insert({ business_id: businessId, ...payload, status: 'confirmed', source: 'manual' })
       if (error) { setError(error.message.includes('başka bir randevusu var') ? 'Bu personelin bu saatte başka bir randevusu var.' : error.message); setSaving(false); return }
     }
-    setSaving(false); setShowModal(false)
+    setSaving(false); closeModal()
     await fetchAppointments()
     const auditCustomer = customers.find(c => c.id === customerId)
     const auditService = services.find(s => s.id === serviceId)
@@ -374,6 +432,65 @@ export default function AppointmentsPage() {
     })
   }
 
+  // Drag-drop ile randevuyu yeni tarihe taşı (aylık/haftalık takvim)
+  const [draggingId, setDraggingId] = useState<string | null>(null)
+  async function handleDragMove(appointmentId: string, newDate: string, newStartTime?: string) {
+    if (!businessId) return
+    const apt = appointments.find(a => a.id === appointmentId)
+    if (!apt) return
+    // Aynı tarih + saat ise işlem yapma
+    if (apt.appointment_date === newDate && (!newStartTime || apt.start_time === newStartTime)) return
+
+    try {
+      const res = await fetch(`/api/appointments/${appointmentId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          businessId,
+          appointment_date: newDate,
+          ...(newStartTime ? { start_time: newStartTime } : {}),
+        }),
+      })
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}))
+        window.dispatchEvent(new CustomEvent('pulse-toast', {
+          detail: {
+            type: 'error',
+            title: 'Randevu Taşınamadı',
+            body: j.error || 'Bir hata oluştu, lütfen tekrar deneyin.',
+          },
+        }))
+        return
+      }
+      await fetchAppointments()
+      await logAudit({
+        businessId: businessId!,
+        staffId: currentStaffId,
+        staffName: currentStaffName,
+        action: 'update',
+        resource: 'appointment',
+        resourceId: appointmentId,
+        details: {
+          customer_name: apt.customers?.name || null,
+          service_name: apt.services?.name || null,
+          from_date: apt.appointment_date,
+          to_date: newDate,
+          ...(newStartTime ? { from_time: apt.start_time, to_time: newStartTime } : {}),
+          via: 'drag-drop',
+        },
+      })
+    } catch (err) {
+      console.error('drag-drop hatası:', err)
+      window.dispatchEvent(new CustomEvent('pulse-toast', {
+        detail: {
+          type: 'error',
+          title: 'Randevu Taşınamadı',
+          body: 'Bir hata oluştu, lütfen tekrar deneyin.',
+        },
+      }))
+    }
+  }
+
   async function handleRescheduleSave(e: React.FormEvent) {
     e.preventDefault()
     if (!rescheduleAppointment) return
@@ -385,7 +502,7 @@ export default function AppointmentsPage() {
     if (conflict) { setError('Bu personelin bu saatte başka bir randevusu var.'); setSaving(false); return }
     const { error } = await supabase.from('appointments').update({ appointment_date: rescheduleDate, start_time: rescheduleTime, end_time: endTime }).eq('id', rescheduleAppointment.id)
     if (error) { setError(error.message); setSaving(false); return }
-    setSaving(false); setRescheduleAppointment(null); fetchAppointments()
+    setSaving(false); closeReschedule(); fetchAppointments()
   }
 
   async function handleCancelConfirm() {
@@ -393,7 +510,7 @@ export default function AppointmentsPage() {
     setSaving(true)
     const apt = cancelConfirmAppointment
     const { error } = await supabase.from('appointments').update({ status: 'cancelled' }).eq('id', apt.id)
-    if (error) { alert('İptal güncellenemedi: ' + error.message); setSaving(false); setCancelConfirmAppointment(null); return }
+    if (error) { alert('İptal güncellenemedi: ' + error.message); setSaving(false); closeCancelConfirm(); return }
     if (cancelNotifyCustomer && apt.customer_id) {
       try {
         await fetch('/api/messages/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ businessId, customerId: apt.customer_id, content: 'Merhaba, randevunuz iptal edilmiştir. Sorularınız için bizi arayabilirsiniz.' }) })
@@ -409,7 +526,7 @@ export default function AppointmentsPage() {
         is_read: false,
       })
     } catch { /* */ }
-    setSaving(false); setCancelConfirmAppointment(null)
+    setSaving(false); closeCancelConfirm()
     if (selectedAppointment?.id === apt.id) setSelectedAppointment(null)
     fetchAppointments()
   }
@@ -455,7 +572,7 @@ export default function AppointmentsPage() {
     }
     // Detay panelindeki randevuyu güncelle
     if (selectedAppointment?.id === appointmentId) {
-      setSelectedAppointment((prev: any) => prev ? { ...prev, status: newStatus } : null)
+      setSelectedAppointment((prev) => prev ? { ...prev, status: newStatus } : null)
     }
     const statusApt = appointments.find(a => a.id === appointmentId)
     await logAudit({
@@ -553,14 +670,21 @@ export default function AppointmentsPage() {
     })
     if (sortField) {
       list = [...list].sort((a, b) => {
-        let va: any, vb: any
+        let va: string | number | null | undefined
+        let vb: string | number | null | undefined
         if (sortField === 'customer_name') { va = a.customers?.name; vb = b.customers?.name }
         else if (sortField === 'service_name') { va = a.services?.name; vb = b.services?.name }
-        else { va = (a as any)[sortField]; vb = (b as any)[sortField] }
+        else {
+          va = a[sortField as keyof AppointmentView] as string | number | null | undefined
+          vb = b[sortField as keyof AppointmentView] as string | number | null | undefined
+        }
         if (va == null && vb == null) return 0
         if (va == null) return 1
         if (vb == null) return -1
-        const cmp = typeof va === 'string' ? va.localeCompare(vb, 'tr') : (va as number) - (vb as number)
+        const cmp =
+          typeof va === 'string' && typeof vb === 'string'
+            ? va.localeCompare(vb, 'tr')
+            : (va as number) - (vb as number)
         return sortDir === 'asc' ? cmp : -cmp
       })
     }
@@ -573,7 +697,7 @@ export default function AppointmentsPage() {
   const noShowCount = appointments.filter(a => a.status === 'no_show').length
 
   // Aksiyon butonları — hem liste hem kutu görünümünde kullanılır
-  function ActionButtons({ apt, size = 'md' }: { apt: any; size?: 'sm' | 'md' }) {
+  function ActionButtons({ apt, size = 'md' }: { apt: AppointmentView; size?: 'sm' | 'md' }) {
     const btnCls = size === 'sm'
       ? 'flex h-7 w-7 items-center justify-center rounded-lg transition-colors'
       : 'flex h-8 w-8 items-center justify-center rounded-lg transition-colors'
@@ -665,6 +789,21 @@ export default function AppointmentsPage() {
                   <p className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">{formatWeekRange()}</p>
                   <button onClick={goToday} className="text-xs text-pulse-900 dark:text-pulse-400 hover:underline mt-0.5">Bu Haftaya Dön</button>
                 </>
+              ) : viewMode === 'month' ? (
+                <>
+                  <p className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">{formatMonthLabel()}</p>
+                  <button onClick={goToday} className="text-xs text-pulse-900 dark:text-pulse-400 hover:underline mt-0.5">Bu Aya Dön</button>
+                </>
+              ) : viewMode === 'staff' ? (
+                <>
+                  <p className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">{formatSelectedDate()} — Personel</p>
+                  {!isToday && <button onClick={goToday} className="text-xs text-pulse-900 dark:text-pulse-400 hover:underline mt-0.5">Bugüne Dön</button>}
+                </>
+              ) : viewMode === 'room' ? (
+                <>
+                  <p className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">{formatSelectedDate()} — Odalar</p>
+                  {!isToday && <button onClick={goToday} className="text-xs text-pulse-900 dark:text-pulse-400 hover:underline mt-0.5">Bugüne Dön</button>}
+                </>
               ) : (
                 <>
                   <p className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">{formatSelectedDate()}</p>
@@ -736,13 +875,16 @@ export default function AppointmentsPage() {
             <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-0.5" />
             <button type="button" onClick={() => setViewMode('list')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'list' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Liste görünüm"><LayoutList className="h-4 w-4" /></button>
             <button type="button" onClick={() => setViewMode('week')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'week' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Haftalık takvim"><CalendarDays className="h-4 w-4" /></button>
+            <button type="button" onClick={() => setViewMode('month')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'month' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Aylık takvim"><CalendarRange className="h-4 w-4" /></button>
             <button type="button" onClick={() => setViewMode('box')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'box' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Kutu görünüm"><LayoutGrid className="h-4 w-4" /></button>
+            <button type="button" onClick={() => setViewMode('staff')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'staff' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Personel takvimi"><Users className="h-4 w-4" /></button>
+            <button type="button" onClick={() => setViewMode('room')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'room' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Oda takvimi"><Building2 className="h-4 w-4" /></button>
           </div>
         </div>
       </div>
 
       {/* Arama (liste/kutu modunda) */}
-      {viewMode !== 'week' && (
+      {viewMode !== 'week' && viewMode !== 'month' && viewMode !== 'staff' && viewMode !== 'room' && (
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <input type="text" value={search} onChange={e => setSearch(e.target.value)} className="input pl-10" placeholder="Müşteri, hizmet veya personel ara..." />
@@ -899,6 +1041,18 @@ export default function AppointmentsPage() {
                             top: topPad,
                             height: `calc(100% - ${topPad}px)`,
                           }}
+                          onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }}
+                          onDrop={(e) => {
+                            e.preventDefault()
+                            const id = e.dataTransfer.getData('text/plain')
+                            if (!id) return
+                            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                            const dropY = e.clientY - rect.top
+                            // En yakın saate snap (30 dk yerine 1 saat)
+                            const dropHour = Math.max(startHour, Math.min(endHour - 1, Math.round(dropY / hourHeight) + startHour))
+                            const timeStr = `${String(dropHour).padStart(2, '0')}:00`
+                            handleDragMove(id, day, timeStr)
+                          }}
                           onClick={(e) => {
                             const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
                             const clickY = e.clientY - rect.top
@@ -931,9 +1085,17 @@ export default function AppointmentsPage() {
                             return (
                               <div
                                 key={apt.id}
+                                draggable
+                                onDragStart={(e) => {
+                                  e.dataTransfer.setData('text/plain', apt.id)
+                                  e.dataTransfer.effectAllowed = 'move'
+                                  setDraggingId(apt.id)
+                                }}
+                                onDragEnd={() => setDraggingId(null)}
                                 className={cn(
-                                  'absolute rounded-md px-1.5 py-0.5 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity border border-white/20',
-                                  staffColors[colorIdx]
+                                  'absolute rounded-md px-1.5 py-0.5 overflow-hidden cursor-grab active:cursor-grabbing hover:opacity-90 transition-opacity border border-white/20',
+                                  staffColors[colorIdx],
+                                  draggingId === apt.id && 'opacity-50'
                                 )}
                                 style={{ top, height, left: `${colLeft}%`, width: `${colWidth - 1}%` }}
                                 onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
@@ -967,6 +1129,354 @@ export default function AppointmentsPage() {
                         </div>
                       )
                     })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )
+        })()
+      ) : viewMode === 'month' ? (
+        /* ── Aylık Takvim Görünümü ── */
+        (() => {
+          const gridDays = getMonthGridDays(selectedDate)
+          const [curY, curM] = selectedDate.split('-').map(Number)
+          const dayNames = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz']
+          const staffColors = ['bg-blue-200 dark:bg-blue-800', 'bg-green-200 dark:bg-green-800', 'bg-purple-200 dark:bg-purple-800', 'bg-amber-200 dark:bg-amber-800', 'bg-pink-200 dark:bg-pink-800', 'bg-cyan-200 dark:bg-cyan-800', 'bg-orange-200 dark:bg-orange-800', 'bg-rose-200 dark:bg-rose-800']
+          const staffTextColors = ['text-blue-800 dark:text-blue-200', 'text-green-800 dark:text-green-200', 'text-purple-800 dark:text-purple-200', 'text-amber-800 dark:text-amber-200', 'text-pink-800 dark:text-pink-200', 'text-cyan-800 dark:text-cyan-200', 'text-orange-800 dark:text-orange-200', 'text-rose-800 dark:text-rose-200']
+
+          function getStaffColorIndex(sId: string | null): number {
+            if (!sId) return 0
+            const idx = staffMembers.findIndex(s => s.id === sId)
+            return idx >= 0 ? idx % staffColors.length : 0
+          }
+
+          const MAX_VISIBLE_PER_DAY = 3
+
+          return (
+            <div className="card !p-0 overflow-hidden">
+              {/* Gün başlıkları */}
+              <div className="grid grid-cols-7 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+                {dayNames.map((name) => (
+                  <div key={name} className="p-2 text-center text-xs font-semibold text-gray-500 dark:text-gray-400">
+                    {name}
+                  </div>
+                ))}
+              </div>
+              {/* 6 hafta × 7 gün */}
+              <div className="grid grid-cols-7 grid-rows-6">
+                {gridDays.map((day) => {
+                  const [dy, dm, dd] = day.split('-').map(Number)
+                  const isOtherMonth = dy !== curY || dm !== curM
+                  const isDayToday = day === todayStr
+                  const dayApts = appointments
+                    .filter(a => a.appointment_date === day)
+                    .sort((a, b) => a.start_time.localeCompare(b.start_time))
+                  const visible = dayApts.slice(0, MAX_VISIBLE_PER_DAY)
+                  const extra = dayApts.length - visible.length
+
+                  return (
+                    <div
+                      key={day}
+                      className={cn(
+                        'min-h-[110px] border-b border-r border-gray-100 dark:border-gray-800 p-1.5 flex flex-col gap-1 transition-colors',
+                        isOtherMonth && 'bg-gray-50/50 dark:bg-gray-900/30',
+                        isDayToday && 'bg-pulse-50/40 dark:bg-pulse-900/20',
+                        'hover:bg-gray-50 dark:hover:bg-gray-800/40 cursor-pointer'
+                      )}
+                      onClick={() => {
+                        setSelectedDate(day)
+                        setViewMode('list')
+                      }}
+                      onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }}
+                      onDrop={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        const id = e.dataTransfer.getData('text/plain')
+                        if (!id) return
+                        handleDragMove(id, day)
+                      }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className={cn(
+                          'inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold',
+                          isDayToday ? 'bg-pulse-900 text-white' : isOtherMonth ? 'text-gray-400 dark:text-gray-600' : 'text-gray-700 dark:text-gray-300'
+                        )}>
+                          {dd}
+                        </span>
+                        {dayApts.length > 0 && (
+                          <span className="text-[10px] text-gray-400 tabular-nums">{dayApts.length}</span>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-1 overflow-hidden">
+                        {visible.map((apt) => {
+                          const colorIdx = getStaffColorIndex(apt.staff_id)
+                          return (
+                            <div
+                              key={apt.id}
+                              draggable
+                              onDragStart={(e) => {
+                                e.stopPropagation()
+                                e.dataTransfer.setData('text/plain', apt.id)
+                                e.dataTransfer.effectAllowed = 'move'
+                                setDraggingId(apt.id)
+                              }}
+                              onDragEnd={() => setDraggingId(null)}
+                              onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
+                              className={cn(
+                                'rounded px-1.5 py-0.5 text-[10px] font-medium truncate cursor-grab active:cursor-grabbing border border-white/20 hover:opacity-90',
+                                staffColors[colorIdx],
+                                staffTextColors[colorIdx],
+                                draggingId === apt.id && 'opacity-50'
+                              )}
+                            >
+                              {formatTime(apt.start_time)} {apt.customers?.name || 'İsimsiz'}
+                            </div>
+                          )
+                        })}
+                        {extra > 0 && (
+                          <div className="text-[10px] text-gray-500 dark:text-gray-400 px-1">
+                            +{extra} daha
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )
+        })()
+      ) : viewMode === 'staff' ? (
+        /* ── Personel Takvimi — günlük, her kolon bir personel ── */
+        (() => {
+          const dayApts = appointments.filter(a => a.appointment_date === selectedDate)
+          const staffColors = ['bg-blue-200 dark:bg-blue-800', 'bg-green-200 dark:bg-green-800', 'bg-purple-200 dark:bg-purple-800', 'bg-amber-200 dark:bg-amber-800', 'bg-pink-200 dark:bg-pink-800', 'bg-cyan-200 dark:bg-cyan-800', 'bg-orange-200 dark:bg-orange-800', 'bg-rose-200 dark:bg-rose-800']
+          const staffTextColors = ['text-blue-800 dark:text-blue-200', 'text-green-800 dark:text-green-200', 'text-purple-800 dark:text-purple-200', 'text-amber-800 dark:text-amber-200', 'text-pink-800 dark:text-pink-200', 'text-cyan-800 dark:text-cyan-200', 'text-orange-800 dark:text-orange-200', 'text-rose-800 dark:text-rose-200']
+          const hourHeight = 60
+          const toMinutes = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
+
+          let startHour = 8, endHour = 21
+          if (workingHours) {
+            const keys = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
+            const opens = keys.map(k => workingHours[k]?.open).filter(Boolean).map(t => parseInt(t!))
+            const closes = keys.map(k => workingHours[k]?.close).filter(Boolean).map(t => parseInt(t!))
+            if (opens.length) startHour = Math.min(...opens)
+            if (closes.length) endHour = Math.max(...closes)
+          }
+          const hours = Array.from({ length: endHour - startHour + 1 }, (_, i) => i + startHour)
+
+          // Sütunlar: aktif personel listesi + "Atanmamış" sütunu (varsa)
+          const unassigned = dayApts.filter(a => !a.staff_id)
+          const columns = [
+            ...staffMembers.map((s, i) => ({
+              id: s.id,
+              label: s.name,
+              apts: dayApts.filter(a => a.staff_id === s.id),
+              colorIdx: i % staffColors.length,
+            })),
+            ...(unassigned.length > 0 ? [{ id: '__unassigned__', label: 'Atanmamış', apts: unassigned, colorIdx: staffColors.length - 1 }] : []),
+          ]
+
+          if (columns.length === 0) {
+            return (
+              <div className="card flex flex-col items-center justify-center py-16 text-center">
+                <Users className="h-10 w-10 text-gray-300 mb-3" />
+                <p className="text-gray-500 font-medium">Aktif personel bulunamadı</p>
+                <p className="text-xs text-gray-400 mt-1">Personel Ayarları&apos;ndan personel ekleyin</p>
+              </div>
+            )
+          }
+
+          return (
+            <div className="card overflow-hidden !p-0">
+              <div className="overflow-x-auto overflow-y-auto max-h-[70vh]">
+                <div className="relative" style={{ minWidth: `${60 + columns.length * 140}px` }}>
+                  {/* Başlık satırı */}
+                  <div className="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 grid" style={{ gridTemplateColumns: `60px repeat(${columns.length}, 1fr)` }}>
+                    <div className="p-2" />
+                    {columns.map((col, i) => (
+                      <div key={col.id} className={cn('p-2 text-center border-l border-gray-200 dark:border-gray-700', i === 0 && 'border-l-0')}>
+                        <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 truncate">{col.label}</p>
+                        <p className="text-xs text-gray-400">{col.apts.length} randevu</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Grid gövdesi */}
+                  <div className="relative select-none" style={{ height: hours.length * hourHeight }}>
+                    {/* Saat etiketleri */}
+                    {hours.map((hour, i) => (
+                      <div key={`h-${hour}`} className="absolute left-0 w-[60px] text-right pr-2 text-xs text-gray-400" style={{ top: i === 0 ? 2 : i * hourHeight - 6 }}>
+                        {String(hour).padStart(2, '0')}:00
+                      </div>
+                    ))}
+                    {/* Yatay çizgiler */}
+                    {hours.map((_, i) => (
+                      <div key={`line-${i}`} className="absolute left-[60px] right-0 border-t border-gray-100 dark:border-gray-800" style={{ top: i * hourHeight }} />
+                    ))}
+                    {/* Personel kolonları */}
+                    {columns.map((col, colIdx) => (
+                      <div
+                        key={col.id}
+                        className="absolute border-l border-gray-100 dark:border-gray-800"
+                        style={{
+                          left: `calc(60px + ${colIdx} * ((100% - 60px) / ${columns.length}))`,
+                          width: `calc((100% - 60px) / ${columns.length})`,
+                          top: 0, height: '100%',
+                        }}
+                        onClick={(e) => {
+                          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                          const clickHour = Math.max(startHour, Math.min(endHour, Math.floor((e.clientY - rect.top) / hourHeight) + startHour))
+                          openNewModal(selectedDate, `${String(clickHour).padStart(2, '0')}:00`)
+                        }}
+                      >
+                        {col.apts.map(apt => {
+                          const startMin = toMinutes(apt.start_time) - startHour * 60
+                          const endMin = toMinutes(apt.end_time) - startHour * 60
+                          const top = (startMin / 60) * hourHeight
+                          const height = Math.max(((endMin - startMin) / 60) * hourHeight, 20)
+                          return (
+                            <div
+                              key={apt.id}
+                              className={cn('absolute left-0.5 right-0.5 rounded-md px-1.5 py-0.5 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity border border-white/20', staffColors[col.colorIdx])}
+                              style={{ top, height }}
+                              onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
+                            >
+                              <p className={cn('text-[10px] font-semibold truncate', staffTextColors[col.colorIdx])}>
+                                {apt.customers?.name || 'İsimsiz'}
+                              </p>
+                              {height > 30 && (
+                                <p className={cn('text-[9px] truncate opacity-75', staffTextColors[col.colorIdx])}>
+                                  {apt.services?.name} · {formatTime(apt.start_time)}
+                                </p>
+                              )}
+                            </div>
+                          )
+                        })}
+                        {/* Şu anki saat çizgisi (bugün için) */}
+                        {selectedDate === new Date().toISOString().split('T')[0] && now && colIdx === 0 && (() => {
+                          const currentMin = (now.getHours() * 60 + now.getMinutes()) - startHour * 60
+                          if (currentMin < 0 || currentMin > hours.length * 60) return null
+                          return (
+                            <div className="absolute left-0 right-0 z-10 pointer-events-none" style={{ top: (currentMin / 60) * hourHeight, width: `${columns.length * 100}%` }}>
+                              <div className="flex items-center">
+                                <div className="h-2.5 w-2.5 rounded-full bg-red-500 -ml-1 flex-shrink-0" />
+                                <div className="flex-1 h-px bg-red-500" />
+                              </div>
+                            </div>
+                          )
+                        })()}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )
+        })()
+      ) : viewMode === 'room' ? (
+        /* ── Oda Takvimi — günlük, her kolon bir oda ── */
+        (() => {
+          if (rooms.length === 0) {
+            return (
+              <div className="card flex flex-col items-center justify-center py-16 text-center">
+                <Building2 className="h-10 w-10 text-gray-300 mb-3" />
+                <p className="text-gray-500 font-medium">Henüz oda tanımlanmamış</p>
+                <p className="text-xs text-gray-400 mt-1 max-w-xs">Ayarlar → İşletme Bilgileri bölümünden odaları ekleyin. Migration 031 çalıştırıldı mı kontrol edin.</p>
+              </div>
+            )
+          }
+
+          const dayApts = appointments.filter(a => a.appointment_date === selectedDate)
+          const hourHeight = 60
+          const toMinutes = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
+
+          let startHour = 8, endHour = 21
+          if (workingHours) {
+            const keys = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
+            const opens = keys.map(k => workingHours[k]?.open).filter(Boolean).map(t => parseInt(t!))
+            const closes = keys.map(k => workingHours[k]?.close).filter(Boolean).map(t => parseInt(t!))
+            if (opens.length) startHour = Math.min(...opens)
+            if (closes.length) endHour = Math.max(...closes)
+          }
+          const hours = Array.from({ length: endHour - startHour + 1 }, (_, i) => i + startHour)
+
+          // Sütunlar: odalar + "Oda atanmamış"
+          const unassigned = dayApts.filter(a => !(a as AppointmentView & { room_id?: string }).room_id)
+          const columns = [
+            ...rooms.map((r) => ({
+              id: r.id,
+              label: r.name,
+              color: r.color || '#6366f1',
+              apts: dayApts.filter(a => (a as AppointmentView & { room_id?: string }).room_id === r.id),
+            })),
+            { id: '__unassigned__', label: 'Oda atanmamış', color: '#9ca3af', apts: unassigned },
+          ]
+
+          return (
+            <div className="card overflow-hidden !p-0">
+              <div className="overflow-x-auto overflow-y-auto max-h-[70vh]">
+                <div className="relative" style={{ minWidth: `${60 + columns.length * 140}px` }}>
+                  {/* Başlık satırı */}
+                  <div className="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 grid" style={{ gridTemplateColumns: `60px repeat(${columns.length}, 1fr)` }}>
+                    <div className="p-2" />
+                    {columns.map((col, i) => (
+                      <div key={col.id} className={cn('p-2 text-center border-l border-gray-200 dark:border-gray-700', i === 0 && 'border-l-0')}>
+                        <div className="flex items-center justify-center gap-1.5">
+                          <div className="h-2.5 w-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: col.color }} />
+                          <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 truncate">{col.label}</p>
+                        </div>
+                        <p className="text-xs text-gray-400">{col.apts.length} randevu</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Grid gövdesi */}
+                  <div className="relative select-none" style={{ height: hours.length * hourHeight }}>
+                    {hours.map((hour, i) => (
+                      <div key={`h-${hour}`} className="absolute left-0 w-[60px] text-right pr-2 text-xs text-gray-400" style={{ top: i === 0 ? 2 : i * hourHeight - 6 }}>
+                        {String(hour).padStart(2, '0')}:00
+                      </div>
+                    ))}
+                    {hours.map((_, i) => (
+                      <div key={`line-${i}`} className="absolute left-[60px] right-0 border-t border-gray-100 dark:border-gray-800" style={{ top: i * hourHeight }} />
+                    ))}
+                    {columns.map((col, colIdx) => (
+                      <div
+                        key={col.id}
+                        className="absolute border-l border-gray-100 dark:border-gray-800"
+                        style={{
+                          left: `calc(60px + ${colIdx} * ((100% - 60px) / ${columns.length}))`,
+                          width: `calc((100% - 60px) / ${columns.length})`,
+                          top: 0, height: '100%',
+                        }}
+                        onClick={(e) => {
+                          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                          const clickHour = Math.max(startHour, Math.min(endHour, Math.floor((e.clientY - rect.top) / hourHeight) + startHour))
+                          openNewModal(selectedDate, `${String(clickHour).padStart(2, '0')}:00`)
+                        }}
+                      >
+                        {col.apts.map(apt => {
+                          const startMin = toMinutes(apt.start_time) - startHour * 60
+                          const endMin = toMinutes(apt.end_time) - startHour * 60
+                          const top = (startMin / 60) * hourHeight
+                          const height = Math.max(((endMin - startMin) / 60) * hourHeight, 20)
+                          return (
+                            <div
+                              key={apt.id}
+                              className="absolute left-0.5 right-0.5 rounded-md px-1.5 py-0.5 overflow-hidden cursor-pointer hover:opacity-80 transition-opacity text-white border border-white/20"
+                              style={{ top, height, backgroundColor: col.color }}
+                              onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
+                            >
+                              <p className="text-[10px] font-semibold truncate">{apt.customers?.name || 'İsimsiz'}</p>
+                              {height > 30 && (
+                                <p className="text-[9px] truncate opacity-80">{apt.services?.name} · {formatTime(apt.start_time)}</p>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -1014,7 +1524,7 @@ export default function AppointmentsPage() {
         </Portal>
       )}
 
-      {!loading && viewMode !== 'week' ? (filteredAppointments.length === 0 ? (
+      {!loading && viewMode !== 'week' && viewMode !== 'month' && viewMode !== 'staff' && viewMode !== 'room' ? (filteredAppointments.length === 0 ? (
         <div className="card flex flex-col items-center justify-center py-16">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 dark:bg-gray-800 mb-4">
             <Calendar className="h-7 w-7 text-gray-300 dark:text-gray-600" />
@@ -1192,7 +1702,7 @@ export default function AppointmentsPage() {
                 )}
                 {selectedAppointment.status === 'completed' && (
                   <button
-                    onClick={() => { window.location.href = `/dashboard/kasa?appointmentId=${selectedAppointment.id}` }}
+                    onClick={() => { window.location.href = `/dashboard/pos?appointmentId=${selectedAppointment.id}` }}
                     className="w-full flex items-center gap-2 rounded-lg border border-pulse-200 dark:border-pulse-800 bg-pulse-50 dark:bg-pulse-900/20 px-4 py-2.5 text-sm font-medium text-pulse-900 dark:text-pulse-300 hover:bg-pulse-100 dark:hover:bg-pulse-800/30 transition-colors"
                   >
                     <CheckCircle className="h-4 w-4" /> Tahsilat Al
@@ -1257,13 +1767,13 @@ export default function AppointmentsPage() {
       {/* Yeni / Düzenleme Randevu Modal */}
       {showModal && (
         <Portal>
-        <div className="modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4">
-          <div className="modal-content card w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
+          <div className={`modal-content card w-full max-w-md max-h-[90vh] overflow-y-auto ${isClosingModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 {editingAppointment ? 'Randevu Düzenle' : 'Yeni Randevu'}
               </h2>
-              <button onClick={() => { setShowModal(false); setEditingAppointment(null) }} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => { closeModal(); setEditingAppointment(null) }} className="text-gray-400 hover:text-gray-600">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -1299,6 +1809,17 @@ export default function AppointmentsPage() {
                   className="input"
                 />
               </div>
+              {rooms.length > 0 && (
+                <div>
+                  <label className="label">Oda</label>
+                  <CustomSelect
+                    options={[{ value: '', label: '— Oda atama —' }, ...rooms.map(r => ({ value: r.id, label: r.name }))]}
+                    value={roomId}
+                    onChange={v => setRoomId(v)}
+                    className="input"
+                  />
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="label">Tarih</label>
@@ -1360,7 +1881,7 @@ export default function AppointmentsPage() {
                               { value: 'monthly', label: 'Her ay' },
                             ]}
                             value={recurrenceFrequency}
-                            onChange={v => setRecurrenceFrequency(v as any)}
+                            onChange={v => setRecurrenceFrequency(v as 'weekly' | 'biweekly' | 'monthly')}
                             className="input text-sm"
                           />
                         </div>
@@ -1387,7 +1908,7 @@ export default function AppointmentsPage() {
 
               {error && <div className="rounded-lg bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-400">{error}</div>}
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => { setShowModal(false); setEditingAppointment(null) }} className="btn-secondary flex-1">İptal</button>
+                <button type="button" onClick={() => { closeModal(); setEditingAppointment(null) }} className="btn-secondary flex-1">İptal</button>
                 <button type="submit" disabled={saving || !customerId} className="btn-primary flex-1">
                   {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   {editingAppointment ? 'Güncelle' : isRecurring ? `${recurrenceCount} Randevu Oluştur` : 'Randevu Oluştur'}
@@ -1400,16 +1921,16 @@ export default function AppointmentsPage() {
       )}
 
       {/* Erteleme Modal */}
-      {rescheduleAppointment && (
+      {(rescheduleAppointment || isClosingReschedule) && (
         <Portal>
-        <div className="modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4">
-          <div className="modal-content card w-full max-w-sm">
+        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4 ${isClosingReschedule ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingReschedule) { setRescheduleAppointment(null); setIsClosingReschedule(false) } }}>
+          <div className={`modal-content card w-full max-w-sm ${isClosingReschedule ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Randevuyu Ertele</h2>
-              <button onClick={() => setRescheduleAppointment(null)} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
+              <button onClick={() => closeReschedule()} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
             </div>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-              {rescheduleAppointment.customers?.name} — {formatTime(rescheduleAppointment.start_time)}
+              {rescheduleAppointment?.customers?.name} — {rescheduleAppointment ? formatTime(rescheduleAppointment.start_time) : ''}
             </p>
             <form onSubmit={handleRescheduleSave} className="space-y-4">
               <div>
@@ -1435,7 +1956,7 @@ export default function AppointmentsPage() {
               </div>
               {error && <div className="rounded-lg bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-400">{error}</div>}
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setRescheduleAppointment(null)} className="btn-secondary flex-1">Vazgeç</button>
+                <button type="button" onClick={() => closeReschedule()} className="btn-secondary flex-1">Vazgeç</button>
                 <button type="submit" disabled={saving} className="btn-primary flex-1">
                   {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Ertele
                 </button>
@@ -1447,23 +1968,23 @@ export default function AppointmentsPage() {
       )}
 
       {/* İptal Onay Modal */}
-      {cancelConfirmAppointment && (
+      {(cancelConfirmAppointment || isClosingCancelConfirm) && (
         <Portal>
-        <div className="modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4">
-          <div className="modal-content card w-full max-w-sm">
+        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4 ${isClosingCancelConfirm ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingCancelConfirm) { setCancelConfirmAppointment(null); setIsClosingCancelConfirm(false) } }}>
+          <div className={`modal-content card w-full max-w-sm ${isClosingCancelConfirm ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Randevuyu İptal Et</h2>
-              <button onClick={() => setCancelConfirmAppointment(null)} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
+              <button onClick={() => closeCancelConfirm()} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
             </div>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-              {cancelConfirmAppointment.customers?.name} — {formatTime(cancelConfirmAppointment.start_time)} randevusunu iptal etmek istediğinize emin misiniz?
+              {cancelConfirmAppointment?.customers?.name} — {cancelConfirmAppointment ? formatTime(cancelConfirmAppointment.start_time) : ''} randevusunu iptal etmek istediğinize emin misiniz?
             </p>
             <label className="flex items-center gap-2 cursor-pointer mb-4">
               <input type="checkbox" checked={cancelNotifyCustomer} onChange={(e) => setCancelNotifyCustomer(e.target.checked)} className="rounded border-gray-300" />
               <span className="text-sm text-gray-700 dark:text-gray-300">Müşteriye iptal bildirimi gönder</span>
             </label>
             <div className="flex gap-3">
-              <button type="button" onClick={() => setCancelConfirmAppointment(null)} className="btn-secondary flex-1">Vazgeç</button>
+              <button type="button" onClick={() => closeCancelConfirm()} className="btn-secondary flex-1">Vazgeç</button>
               <button type="button" onClick={handleCancelConfirm} disabled={saving} className="flex-1 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50">
                 {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin inline" />}İptal Et
               </button>

@@ -10,7 +10,7 @@ import {
   CheckCircle, Clock, AlertCircle, XCircle, Download,
   Search, ChevronDown, Printer, CreditCard, Banknote,
   ArrowUpDown, Filter, CalendarDays, DollarSign,
-  FileText, FileSpreadsheet, ChevronRight,
+  FileText, FileSpreadsheet, ChevronRight, Send, ExternalLink,
 } from 'lucide-react'
 import { formatCurrency, cn } from '@/lib/utils'
 import { exportToCSV, printInvoicePDF } from '@/lib/utils/export'
@@ -60,6 +60,8 @@ export default function InvoicesPage() {
   const [panelClosing, setPanelClosing] = useState(false)
   const closePanelAnimated = useCallback(() => setPanelClosing(true), [])
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [isClosingCreateModal, setIsClosingCreateModal] = useState(false)
+  const closeCreateModal = () => setIsClosingCreateModal(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -97,6 +99,10 @@ export default function InvoicesPage() {
 
   // Export dropdown
   const [showExportMenu, setShowExportMenu] = useState(false)
+
+  // e-Fatura
+  const [efaturaSending, setEfaturaSending] = useState(false)
+  const [efaturaError, setEfaturaError] = useState<string | null>(null)
 
   const { confirm } = useConfirm()
   const supabase = createClient()
@@ -161,7 +167,7 @@ export default function InvoicesPage() {
 
   useEffect(() => {
     if (!showCreateModal) return
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowCreateModal(false) }
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') closeCreateModal() }
     document.addEventListener('keydown', h)
     return () => document.removeEventListener('keydown', h)
   }, [showCreateModal])
@@ -225,11 +231,28 @@ export default function InvoicesPage() {
     if (!res.ok) { setError(json.error); setSaving(false); return }
 
     setSaving(false)
-    setShowCreateModal(false)
+    closeCreateModal()
     resetForm()
     fetchInvoices()
     setSelectedInvoice(json.invoice)
     logAudit({ businessId: businessId!, staffId, staffName, action: 'create', resource: 'invoice', resourceId: json.invoice?.id, details: { customer_id: formCustomerId || null, total: json.invoice?.total ?? null, payment_type: formPaymentType } })
+  }
+
+  async function sendEfatura(invoice: Invoice) {
+    setEfaturaSending(true); setEfaturaError(null)
+    const res = await fetch('/api/efatura', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ invoiceId: invoice.id }),
+    })
+    const json = await res.json()
+    if (!res.ok) {
+      setEfaturaError(json.error || 'e-Fatura gönderilemedi')
+    } else {
+      setSelectedInvoice(prev => prev ? { ...prev, efatura_id: json.efatura?.id, efatura_status: 'sent' } : prev)
+      fetchInvoices()
+    }
+    setEfaturaSending(false)
   }
 
   function resetForm() {
@@ -842,6 +865,38 @@ export default function InvoicesPage() {
                 )}
               </div>
 
+              {/* e-Fatura */}
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">e-Fatura</p>
+                {selectedInvoice.efatura_id ? (
+                  <div className="rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-3 flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-medium text-green-700 dark:text-green-400">Gönderildi</p>
+                      <p className="text-[10px] text-green-600 dark:text-green-500 mt-0.5">ID: {selectedInvoice.efatura_id}</p>
+                    </div>
+                    {selectedInvoice.efatura_pdf_url && (
+                      <a href={selectedInvoice.efatura_pdf_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-green-700 dark:text-green-400 hover:underline">
+                        <ExternalLink className="h-3.5 w-3.5" />PDF
+                      </a>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    {efaturaError && (
+                      <p className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-lg px-3 py-2">{efaturaError}</p>
+                    )}
+                    <button
+                      onClick={() => sendEfatura(selectedInvoice)}
+                      disabled={efaturaSending}
+                      className="flex items-center justify-center gap-1.5 w-full px-3 py-2 text-sm font-medium rounded-lg bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors disabled:opacity-50"
+                    >
+                      {efaturaSending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                      {efaturaSending ? 'Gönderiliyor...' : 'e-Fatura Gönder'}
+                    </button>
+                  </div>
+                )}
+              </div>
+
               {/* Aksiyonlar */}
               <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-2">
                 {(selectedInvoice.status === 'pending' || selectedInvoice.status === 'overdue') && (
@@ -878,13 +933,13 @@ export default function InvoicesPage() {
       )}
 
       {/* Fatura Oluştur Modal */}
-      {showCreateModal && (
+      {(showCreateModal || isClosingCreateModal) && (
         <Portal>
-        <div className="modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4">
-          <div className="modal-content card w-full max-w-lg max-h-[90vh] overflow-y-auto dark:bg-gray-900">
+        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4 ${isClosingCreateModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingCreateModal) { setShowCreateModal(false); setIsClosingCreateModal(false) } }}>
+          <div className={`modal-content card w-full max-w-lg max-h-[90vh] overflow-y-auto dark:bg-gray-900 ${isClosingCreateModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Yeni Fatura Oluştur</h2>
-              <button onClick={() => setShowCreateModal(false)} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
+              <button onClick={() => closeCreateModal()} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
             </div>
 
             <form onSubmit={handleCreate} className="space-y-4">
@@ -1054,7 +1109,7 @@ export default function InvoicesPage() {
               {error && <div className="rounded-lg bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-400">{error}</div>}
 
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setShowCreateModal(false)} className="btn-secondary flex-1">İptal</button>
+                <button type="button" onClick={() => closeCreateModal()} className="btn-secondary flex-1">İptal</button>
                 <button type="submit" disabled={saving} className="btn-primary flex-1">
                   {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Fatura Oluştur

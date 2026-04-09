@@ -1,0 +1,20 @@
+'use client'
+
+import ErrorFallback from '@/components/ui/error-fallback'
+
+export default function InvoicesError({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string }
+  reset: () => void
+}) {
+  return (
+    <ErrorFallback
+      error={error}
+      reset={reset}
+      title="Faturalar yüklenemedi"
+      description="Fatura verileri getirilirken bir hata oluştu. Lütfen tekrar deneyin."
+    />
+  )
+}

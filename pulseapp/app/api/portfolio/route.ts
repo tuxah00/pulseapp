@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { requirePermission } from '@/lib/api/with-permission'
 
 export async function GET(req: NextRequest) {
-  const supabase = createServerSupabaseClient()
+  const auth = await requirePermission(req, 'portfolio')
+  if (!auth.ok) return auth.response
+  const { businessId } = auth.ctx
+
   const { searchParams } = new URL(req.url)
-  const businessId = searchParams.get('businessId')
   const category = searchParams.get('category')
 
-  if (!businessId) return NextResponse.json({ error: 'businessId required' }, { status: 400 })
-
+  const supabase = createServerSupabaseClient()
   let query = supabase
     .from('portfolio_items')
     .select('*')
@@ -24,12 +26,16 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const supabase = createServerSupabaseClient()
+  const auth = await requirePermission(req, 'portfolio')
+  if (!auth.ok) return auth.response
+  const { businessId } = auth.ctx
+
   const body = await req.json()
+  const supabase = createServerSupabaseClient()
 
   const { data, error } = await supabase
     .from('portfolio_items')
-    .insert(body)
+    .insert({ ...body, business_id: businessId })
     .select()
     .single()
 
@@ -38,16 +44,22 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const supabase = createServerSupabaseClient()
+  const auth = await requirePermission(req, 'portfolio')
+  if (!auth.ok) return auth.response
+  const { businessId } = auth.ctx
+
   const { searchParams } = new URL(req.url)
   const id = searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
 
   const body = await req.json()
+  const supabase = createServerSupabaseClient()
+
   const { data, error } = await supabase
     .from('portfolio_items')
     .update(body)
     .eq('id', id)
+    .eq('business_id', businessId)
     .select()
     .single()
 
@@ -56,15 +68,30 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const supabase = createServerSupabaseClient()
+  const auth = await requirePermission(req, 'portfolio')
+  if (!auth.ok) return auth.response
+  const { businessId } = auth.ctx
+
   const { searchParams } = new URL(req.url)
   const id = searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
 
-  // Get storage_path before deleting
-  const { data: item } = await supabase.from('portfolio_items').select('storage_path').eq('id', id).single()
+  const supabase = createServerSupabaseClient()
 
-  const { error } = await supabase.from('portfolio_items').delete().eq('id', id)
+  // Get storage_path before deleting
+  const { data: item } = await supabase
+    .from('portfolio_items')
+    .select('storage_path')
+    .eq('id', id)
+    .eq('business_id', businessId)
+    .single()
+
+  const { error } = await supabase
+    .from('portfolio_items')
+    .delete()
+    .eq('id', id)
+    .eq('business_id', businessId)
+
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   // Also delete from storage if path exists

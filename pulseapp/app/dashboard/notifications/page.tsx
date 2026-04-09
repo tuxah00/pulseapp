@@ -8,6 +8,7 @@ import {
   CheckCheck, Filter, Loader2, ChevronLeft, ChevronRight,
   Package, Eye, EyeOff,
 } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface Notification {
@@ -21,7 +22,7 @@ interface Notification {
   created_at: string
 }
 
-const TYPE_CONFIG: Record<string, { icon: any; color: string; label: string }> = {
+const TYPE_CONFIG: Record<string, { icon: LucideIcon; color: string; label: string }> = {
   appointment: { icon: Calendar, color: 'text-blue-500', label: 'Randevu' },
   review: { icon: Star, color: 'text-amber-500', label: 'Yorum' },
   payment: { icon: CreditCard, color: 'text-green-500', label: 'Ödeme' },
@@ -113,7 +114,7 @@ export default function NotificationsPage() {
     } else if (notif.related_type === 'customer' || notif.type === 'customer') {
       router.push('/dashboard/customers')
     } else if (notif.type === 'stock_alert') {
-      router.push('/dashboard/stoklar')
+      router.push('/dashboard/inventory')
     }
   }
 

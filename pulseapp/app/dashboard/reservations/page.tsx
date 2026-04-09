@@ -74,6 +74,8 @@ export default function ReservationsPage() {
   const [loading, setLoading] = useState(true)
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
   const [showModal, setShowModal] = useState(false)
+  const [isClosingModal, setIsClosingModal] = useState(false)
+  const closeModal = () => setIsClosingModal(true)
   const [editingReservation, setEditingReservation] = useState<TableReservation | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -110,7 +112,7 @@ export default function ReservationsPage() {
 
   useEffect(() => {
     if (!showModal) return
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowModal(false) }
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') closeModal() }
     document.addEventListener('keydown', h)
     return () => document.removeEventListener('keydown', h)
   }, [showModal])
@@ -191,7 +193,7 @@ export default function ReservationsPage() {
         const json = await res.json()
         if (json.error) { setError(json.error); setSaving(false); return }
       }
-      setShowModal(false)
+      closeModal()
       fetchReservations()
     } catch (e) {
       setError('Bir hata oluştu.')
@@ -471,14 +473,14 @@ export default function ReservationsPage() {
 
       {/* Modal */}
       {showModal && (
-        <div className="modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50">
-          <div className="modal-content w-full max-w-md rounded-2xl bg-white dark:bg-gray-900 shadow-2xl">
+        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
+          <div className={`modal-content w-full max-w-md rounded-2xl bg-white dark:bg-gray-900 shadow-2xl ${isClosingModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-6 py-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 {editingReservation ? 'Rezervasyonu Düzenle' : 'Yeni Rezervasyon'}
               </h2>
               <button
-                onClick={() => setShowModal(false)}
+                onClick={() => closeModal()}
                 className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300"
               >
                 <X className="h-4 w-4" />
@@ -587,7 +589,7 @@ export default function ReservationsPage() {
 
             <div className="flex items-center justify-end gap-3 border-t border-gray-200 dark:border-gray-700 px-6 py-4">
               <button
-                onClick={() => setShowModal(false)}
+                onClick={() => closeModal()}
                 className="rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 İptal

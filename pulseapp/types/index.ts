@@ -83,7 +83,7 @@ export type AppointmentSource = 'web' | 'manual' | 'phone'
 export type CustomerSegment = 'new' | 'regular' | 'vip' | 'risk' | 'lost'
 
 export type MessageDirection = 'inbound' | 'outbound'
-export type MessageChannel = 'sms' | 'web'
+export type MessageChannel = 'sms' | 'web' | 'whatsapp'
 export type MessageType = 'text' | 'template' | 'ai_generated' | 'system'
 export type AiClassification =
   | 'appointment' | 'question' | 'complaint' | 'cancellation' | 'greeting' | 'other'
@@ -154,6 +154,11 @@ export interface Invoice {
   notes: string | null
   created_at: string
   updated_at: string
+  deleted_at: string | null
+  // e-Fatura (Paraşüt)
+  efatura_id?: string | null
+  efatura_status?: string | null
+  efatura_pdf_url?: string | null
   // JOINs
   customers?: { name: string; phone: string }
   // Virtual (loaded separately)
@@ -319,6 +324,9 @@ export interface BusinessSettings {
   birthday_sms_template: string
   birthday_sms_hour: number
   logo_url?: string | null
+  whatsapp_enabled?: boolean
+  whatsapp_mode?: 'sandbox' | 'production'
+  default_channel?: 'auto' | 'sms' | 'whatsapp'
 }
 
 
@@ -766,7 +774,15 @@ export interface ProtocolSession {
 
 // ── Müşteri Fotoğraf Galerisi ──
 
-export type PhotoType = 'before' | 'after' | 'progress'
+export type PhotoType = 'before' | 'after' | 'progress' | 'xray' | 'panoramic'
+
+export const PHOTO_TYPE_LABELS: Record<PhotoType, string> = {
+  before: 'Öncesi',
+  after: 'Sonrası',
+  progress: 'Süreç',
+  xray: 'Röntgen',
+  panoramic: 'Panoramik',
+}
 
 export interface CustomerPhoto {
   id: string
@@ -895,4 +911,58 @@ export interface FollowUpJob {
   customer?: Customer
   appointment?: Appointment
   protocol?: TreatmentProtocol
+}
+
+
+// ── Diş Haritası ──
+
+export type ToothCondition =
+  | 'healthy'
+  | 'caries'
+  | 'filled'
+  | 'crown'
+  | 'extracted'
+  | 'implant'
+  | 'root_canal'
+  | 'bridge'
+  | 'missing'
+
+export const TOOTH_CONDITION_LABELS: Record<ToothCondition, string> = {
+  healthy: 'Sağlıklı',
+  caries: 'Çürük',
+  filled: 'Dolgulu',
+  crown: 'Kron',
+  extracted: 'Çekilmiş',
+  implant: 'İmplant',
+  root_canal: 'Kanal Tedavisi',
+  bridge: 'Köprü',
+  missing: 'Eksik',
+}
+
+export const TOOTH_CONDITION_COLORS: Record<ToothCondition, { bg: string; border: string; text: string }> = {
+  healthy:    { bg: 'bg-white dark:bg-gray-200',      border: 'border-gray-300 dark:border-gray-400',  text: 'text-gray-700' },
+  caries:     { bg: 'bg-yellow-100 dark:bg-yellow-200', border: 'border-yellow-400',                   text: 'text-yellow-800' },
+  filled:     { bg: 'bg-blue-100 dark:bg-blue-200',    border: 'border-blue-400',                      text: 'text-blue-800' },
+  crown:      { bg: 'bg-cyan-100 dark:bg-cyan-200',    border: 'border-cyan-400',                      text: 'text-cyan-800' },
+  extracted:  { bg: 'bg-red-100 dark:bg-red-200',      border: 'border-red-400',                       text: 'text-red-800' },
+  implant:    { bg: 'bg-green-100 dark:bg-green-200',  border: 'border-green-400',                     text: 'text-green-800' },
+  root_canal: { bg: 'bg-orange-100 dark:bg-orange-200', border: 'border-orange-400',                   text: 'text-orange-800' },
+  bridge:     { bg: 'bg-purple-100 dark:bg-purple-200', border: 'border-purple-400',                   text: 'text-purple-800' },
+  missing:    { bg: 'bg-gray-200 dark:bg-gray-400',    border: 'border-gray-400',                      text: 'text-gray-600' },
+}
+
+export interface ToothRecord {
+  id: string
+  business_id: string
+  customer_id: string
+  tooth_number: number
+  condition: ToothCondition
+  treatment: string | null
+  notes: string | null
+  treated_at: string | null
+  treated_by_staff_id: string | null
+  created_at: string
+  updated_at: string
+  // JOINs
+  staff?: { id: string; name: string }
 }
