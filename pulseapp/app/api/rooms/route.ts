@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/api/with-permission'
 
 export async function GET(req: NextRequest) {
@@ -7,8 +7,8 @@ export async function GET(req: NextRequest) {
   if (!auth.ok) return auth.response
   const { businessId } = auth.ctx
 
-  const admin = createAdminClient()
-  const { data, error } = await admin
+  const supabase = createServerSupabaseClient()
+  const { data, error } = await supabase
     .from('rooms')
     .select('*')
     .eq('business_id', businessId)
@@ -29,8 +29,8 @@ export async function POST(req: NextRequest) {
 
   if (!name?.trim()) return NextResponse.json({ error: 'name zorunlu' }, { status: 400 })
 
-  const admin = createAdminClient()
-  const { data, error } = await admin
+  const supabase = createServerSupabaseClient()
+  const { data, error } = await supabase
     .from('rooms')
     .insert({ business_id: businessId, name: name.trim(), capacity: capacity || 1, color: color || '#6366f1' })
     .select()
@@ -50,8 +50,8 @@ export async function PATCH(req: NextRequest) {
   if (!id) return NextResponse.json({ error: 'id zorunlu' }, { status: 400 })
 
   const body = await req.json()
-  const admin = createAdminClient()
-  const { data, error } = await admin
+  const supabase = createServerSupabaseClient()
+  const { data, error } = await supabase
     .from('rooms')
     .update({ ...body, updated_at: new Date().toISOString() })
     .eq('id', id)
@@ -72,9 +72,9 @@ export async function DELETE(req: NextRequest) {
   const id = searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'id zorunlu' }, { status: 400 })
 
-  const admin = createAdminClient()
+  const supabase = createServerSupabaseClient()
   // Soft delete
-  const { error } = await admin
+  const { error } = await supabase
     .from('rooms')
     .update({ is_active: false, updated_at: new Date().toISOString() })
     .eq('id', id)

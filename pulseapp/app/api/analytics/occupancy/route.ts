@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/api/with-permission'
 
 // GET: Doluluk oranı & verimlilik analizi
@@ -13,10 +13,10 @@ export async function GET(request: NextRequest) {
   const from = searchParams.get('from')
   const to = searchParams.get('to')
 
-  const admin = createAdminClient()
+  const supabase = createServerSupabaseClient()
 
   // İşletme çalışma saatlerini al
-  const { data: business } = await admin
+  const { data: business } = await supabase
     .from('businesses')
     .select('working_hours')
     .eq('id', businessId)
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
   const defaultWorkMinutes = 9 * 60 // 9 saat varsayılan
 
   // Randevuları al
-  let query = admin
+  let query = supabase
     .from('appointments')
     .select('id, appointment_date, start_time, end_time, status, staff_id, staff_members(name)')
     .eq('business_id', businessId)

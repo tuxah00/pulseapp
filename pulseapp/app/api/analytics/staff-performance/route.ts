@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/api/with-permission'
 
 // GET: Personel performans karnesi
@@ -13,10 +13,10 @@ export async function GET(request: NextRequest) {
   const from = searchParams.get('from')
   const to = searchParams.get('to')
 
-  const admin = createAdminClient()
+  const supabase = createServerSupabaseClient()
 
   // Personel listesi
-  let staffQuery = admin
+  let staffQuery = supabase
     .from('staff_members')
     .select('id, name, role, avatar_url')
     .eq('business_id', businessId)
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
   }
 
   // Randevular, faturalar ve yorumları paralel çek
-  let aptQuery = admin
+  let aptQuery = supabase
     .from('appointments')
     .select('id, staff_id, status, appointment_date, start_time, end_time')
     .eq('business_id', businessId)
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
   if (to) aptQuery = aptQuery.lte('appointment_date', to)
   if (staffId) aptQuery = aptQuery.eq('staff_id', staffId)
 
-  let invQuery = admin
+  let invQuery = supabase
     .from('invoices')
     .select('staff_id, total, paid_amount, status')
     .eq('business_id', businessId)
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
   if (to) invQuery = invQuery.lte('created_at', to)
   if (staffId) invQuery = invQuery.eq('staff_id', staffId)
 
-  let reviewQuery = admin
+  let reviewQuery = supabase
     .from('reviews')
     .select('id, rating')
     .eq('business_id', businessId)

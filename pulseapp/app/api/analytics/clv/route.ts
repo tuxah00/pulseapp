@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/api/with-permission'
 
 // GET: Müşteri Yaşam Boyu Değeri (CLV)
@@ -12,10 +12,10 @@ export async function GET(request: NextRequest) {
   const customerId = searchParams.get('customerId')
   const limit = parseInt(searchParams.get('limit') || '20')
 
-  const admin = createAdminClient()
+  const supabase = createServerSupabaseClient()
 
   // Müşterileri al
-  let customerQuery = admin
+  let customerQuery = supabase
     .from('customers')
     .select('id, name, phone, segment, total_visits, total_revenue, last_visit_at, created_at')
     .eq('business_id', businessId)

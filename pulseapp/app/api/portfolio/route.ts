@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/api/with-permission'
 
 export async function GET(req: NextRequest) {
@@ -10,8 +10,8 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const category = searchParams.get('category')
 
-  const admin = createAdminClient()
-  let query = admin
+  const supabase = createServerSupabaseClient()
+  let query = supabase
     .from('portfolio_items')
     .select('*')
     .eq('business_id', businessId)
@@ -31,9 +31,9 @@ export async function POST(req: NextRequest) {
   const { businessId } = auth.ctx
 
   const body = await req.json()
-  const admin = createAdminClient()
+  const supabase = createServerSupabaseClient()
 
-  const { data, error } = await admin
+  const { data, error } = await supabase
     .from('portfolio_items')
     .insert({ ...body, business_id: businessId })
     .select()
@@ -53,9 +53,9 @@ export async function PATCH(req: NextRequest) {
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
 
   const body = await req.json()
-  const admin = createAdminClient()
+  const supabase = createServerSupabaseClient()
 
-  const { data, error } = await admin
+  const { data, error } = await supabase
     .from('portfolio_items')
     .update(body)
     .eq('id', id)
@@ -76,17 +76,17 @@ export async function DELETE(req: NextRequest) {
   const id = searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
 
-  const admin = createAdminClient()
+  const supabase = createServerSupabaseClient()
 
   // Get storage_path before deleting
-  const { data: item } = await admin
+  const { data: item } = await supabase
     .from('portfolio_items')
     .select('storage_path')
     .eq('id', id)
     .eq('business_id', businessId)
     .single()
 
-  const { error } = await admin
+  const { error } = await supabase
     .from('portfolio_items')
     .delete()
     .eq('id', id)
@@ -96,7 +96,7 @@ export async function DELETE(req: NextRequest) {
 
   // Also delete from storage if path exists
   if (item?.storage_path) {
-    await admin.storage.from('portfolio').remove([item.storage_path])
+    await supabase.storage.from('portfolio').remove([item.storage_path])
   }
 
   return NextResponse.json({ success: true })

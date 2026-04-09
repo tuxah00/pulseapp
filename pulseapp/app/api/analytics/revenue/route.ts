@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/api/with-permission'
 
 // GET: Gelişmiş gelir analizi
@@ -13,10 +13,10 @@ export async function GET(request: NextRequest) {
   const from = searchParams.get('from')
   const to = searchParams.get('to')
 
-  const admin = createAdminClient()
+  const supabase = createServerSupabaseClient()
 
   // Temel fatura verisi
-  let query = admin
+  let query = supabase
     .from('invoices')
     .select('id, total, paid_amount, status, payment_method, staff_name, created_at, items, customer_id, customers(name, segment)')
     .eq('business_id', businessId)
