@@ -7,8 +7,9 @@ import { createClient } from '@/lib/supabase/client'
 import {
   Plus, ClipboardCheck, Search, X, Calendar, User, Activity,
   ChevronRight, Loader2, Pause, Play, CheckCircle, XCircle, SkipForward,
-  Camera, FileText, Clock
+  Camera, FileText, Clock, Sparkles
 } from 'lucide-react'
+import { PhotoAnalysisPanel } from '@/components/dashboard/photo-analysis-panel'
 import type {
   TreatmentProtocol, ProtocolSession, Customer, Service, ProtocolStatus, SessionStatus
 } from '@/types'
@@ -382,6 +383,7 @@ function DetailPanel({
   onUpdateSession: (protocolId: string, sessionId: string, status: SessionStatus) => void
   onDelete: (id: string) => void
 }) {
+  const [analysisSessionId, setAnalysisSessionId] = useState<string | null>(null)
   const customer = Array.isArray(protocol.customer) ? protocol.customer[0] : protocol.customer
   const service = Array.isArray(protocol.service) ? protocol.service[0] : protocol.service
   const sessions = (protocol.sessions || []).sort((a, b) => a.session_number - b.session_number)
@@ -485,14 +487,38 @@ function DetailPanel({
                   {session.notes && <p className="text-xs text-gray-500 mt-1">{session.notes}</p>}
 
                   {/* Session photos */}
-                  <div className="flex gap-2 mt-1">
-                    {session.before_photo_url && (
-                      <span className="text-xs text-blue-500 flex items-center gap-0.5"><Camera className="h-3 w-3" /> Öncesi</span>
-                    )}
-                    {session.after_photo_url && (
-                      <span className="text-xs text-green-500 flex items-center gap-0.5"><Camera className="h-3 w-3" /> Sonrası</span>
-                    )}
-                  </div>
+                  {(session.before_photo_url || session.after_photo_url) && (
+                    <div className="mt-2 space-y-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {session.before_photo_url && (
+                          <a href={session.before_photo_url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 flex items-center gap-0.5 hover:underline"><Camera className="h-3 w-3" /> Öncesi</a>
+                        )}
+                        {session.after_photo_url && (
+                          <a href={session.after_photo_url} target="_blank" rel="noopener noreferrer" className="text-xs text-green-500 flex items-center gap-0.5 hover:underline"><Camera className="h-3 w-3" /> Sonrası</a>
+                        )}
+                        {(session.before_photo_url || session.after_photo_url) && (
+                          <button
+                            onClick={() => setAnalysisSessionId(analysisSessionId === session.id ? null : session.id)}
+                            className="text-xs flex items-center gap-0.5 text-indigo-600 dark:text-indigo-400 hover:underline"
+                          >
+                            <Sparkles className="h-3 w-3" />
+                            {analysisSessionId === session.id ? 'Analizi Kapat' : 'AI Analiz'}
+                          </button>
+                        )}
+                      </div>
+                      {analysisSessionId === session.id && (
+                        <PhotoAnalysisPanel
+                          customerId={protocol.customer_id}
+                          protocolId={protocol.id}
+                          mode={session.before_photo_url && session.after_photo_url ? 'before_after' : 'single'}
+                          beforeUrl={session.before_photo_url || undefined}
+                          afterUrl={session.after_photo_url || undefined}
+                          photoUrl={session.before_photo_url || session.after_photo_url || undefined}
+                          onClose={() => setAnalysisSessionId(null)}
+                        />
+                      )}
+                    </div>
+                  )}
 
                   {/* Session actions */}
                   {session.status === 'planned' && protocol.status === 'active' && (
