@@ -156,7 +156,7 @@ export default function KasaPage() {
     }
     const fetchRewards = async () => {
       try {
-        const res = await fetch(`/api/referrals?referrerId=${selectedCustomerId}&status=converted&rewardClaimed=false`)
+        const res = await fetch(`/api/referrals?businessId=${businessId}&referrerId=${selectedCustomerId}&status=converted&rewardClaimed=false`)
         const json = await res.json()
         const rewards = (json.referrals || []).filter((r: Referral) => r.reward_type && r.reward_value)
         setAvailableRewards(rewards)

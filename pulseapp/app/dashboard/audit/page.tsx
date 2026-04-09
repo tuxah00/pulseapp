@@ -26,6 +26,7 @@ const ACTION_LABELS: Record<string, string> = {
   send: 'Gönderdi',
   pay: 'Ödeme Aldı',
   cancel: 'İptal Etti',
+  restore: 'Geri Yükledi',
 }
 
 const RESOURCE_LABELS: Record<string, string> = {
@@ -213,6 +214,7 @@ const ACTION_COLORS: Record<string, string> = {
   send: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
   pay: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
   cancel: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
+  restore: 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300',
 }
 
 export default function AuditPage() {
