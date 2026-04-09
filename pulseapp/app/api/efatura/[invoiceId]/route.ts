@@ -22,6 +22,7 @@ export async function GET(
     .select('efatura_id, efatura_pdf_url')
     .eq('id', params.invoiceId)
     .eq('business_id', businessId)
+    .is('deleted_at', null)
     .single()
 
   if (!invoice?.efatura_id) {
@@ -65,6 +66,7 @@ export async function DELETE(
     .select('efatura_id')
     .eq('id', params.invoiceId)
     .eq('business_id', businessId)
+    .is('deleted_at', null)
     .single()
 
   if (!invoice?.efatura_id) {

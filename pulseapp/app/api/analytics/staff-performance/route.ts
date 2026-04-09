@@ -46,6 +46,7 @@ export async function GET(request: NextRequest) {
     .from('invoices')
     .select('staff_id, total, paid_amount, status')
     .eq('business_id', businessId)
+    .is('deleted_at', null)
     .in('status', ['paid', 'partial'])
 
   if (from) invQuery = invQuery.gte('created_at', from)

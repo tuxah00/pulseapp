@@ -39,6 +39,7 @@ export async function POST(req: NextRequest) {
     .from('invoices')
     .select('*')
     .eq('id', invoice_id)
+    .is('deleted_at', null)
     .single()
 
   if (invoiceError || !invoice) {

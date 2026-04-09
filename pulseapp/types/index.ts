@@ -154,6 +154,7 @@ export interface Invoice {
   notes: string | null
   created_at: string
   updated_at: string
+  deleted_at: string | null
   // e-Fatura (Paraşüt)
   efatura_id?: string | null
   efatura_status?: string | null

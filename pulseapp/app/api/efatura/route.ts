@@ -28,6 +28,7 @@ export async function POST(req: NextRequest) {
     .select('*, customers(name, phone)')
     .eq('id', invoiceId)
     .eq('business_id', businessId)
+    .is('deleted_at', null)
     .single()
 
   if (!invoice) return NextResponse.json({ error: 'Fatura bulunamadı' }, { status: 404 })
@@ -91,6 +92,7 @@ export async function GET(req: NextRequest) {
     .from('invoices')
     .select('id, invoice_number, efatura_id, efatura_status, efatura_pdf_url, total, created_at, customers(name)')
     .eq('business_id', businessId)
+    .is('deleted_at', null)
     .not('efatura_id', 'is', null)
     .order('created_at', { ascending: false })
 

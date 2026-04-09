@@ -91,6 +91,7 @@ export async function POST(req: NextRequest) {
       .from('invoices')
       .select('*', { count: 'exact', head: true })
       .eq('business_id', business_id)
+      .is('deleted_at', null)
 
     const invoiceNumber = `INV-${year}-${String((invCount || 0) + 1).padStart(4, '0')}`
     const primaryMethod = payments[0]?.method || 'cash'

@@ -28,6 +28,7 @@ export async function GET(req: NextRequest) {
     .from('invoices')
     .select('*, customers(name, phone)')
     .eq('business_id', businessId)
+    .is('deleted_at', null)
 
   if (status && status !== 'all') query = query.eq('status', status)
   if (from) query = query.gte('created_at', from)
@@ -75,6 +76,7 @@ export async function POST(req: NextRequest) {
     .from('invoices')
     .select('*', { count: 'exact', head: true })
     .eq('business_id', business_id)
+    .is('deleted_at', null)
 
   const invoiceNumber = `INV-${year}-${String((count || 0) + 1).padStart(4, '0')}`
 
@@ -230,7 +232,11 @@ export async function DELETE(req: NextRequest) {
   if (!id) return NextResponse.json({ error: 'id gerekli' }, { status: 400 })
 
   const supabase = createServerSupabaseClient()
-  const { error } = await supabase.from('invoices').delete().eq('id', id)
+  const { error } = await supabase
+    .from('invoices')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('id', id)
+    .is('deleted_at', null)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ success: true })
 }
