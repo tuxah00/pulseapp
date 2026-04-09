@@ -230,7 +230,7 @@ export default function ServicesPage() {
           </button>
         </div>
       ) : viewMode === 'list' ? (
-        <AnimatedList className="space-y-3">
+        <AnimatedList key="list" className="space-y-3">
           {sortedServices.map((service) => (
             <AnimatedItem
               key={service.id}
@@ -259,7 +259,7 @@ export default function ServicesPage() {
           ))}
         </AnimatedList>
       ) : (
-        <AnimatedList className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+        <AnimatedList key="box" className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
           {sortedServices.map((service) => (
             <AnimatedItem key={service.id} className="card flex aspect-square flex-col justify-between p-4 hover:shadow-md transition-shadow">
               <div className="flex flex-col items-center gap-1 text-center">
