@@ -1,32 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-
-async function verifyMembership(supabase: ReturnType<typeof createServerSupabaseClient>, userId: string, businessId: string) {
-  const { data } = await supabase
-    .from('staff_members')
-    .select('id, business_id')
-    .eq('user_id', userId)
-    .eq('business_id', businessId)
-    .single()
-  return data
-}
+import { requirePermission } from '@/lib/api/with-permission'
 
 // GET: Referans listesi
 export async function GET(request: NextRequest) {
-  const supabase = createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
+  const auth = await requirePermission(request, 'referrals')
+  if (!auth.ok) return auth.response
+  const { businessId } = auth.ctx
 
   const { searchParams } = new URL(request.url)
-  const businessId = searchParams.get('businessId')
   const status = searchParams.get('status')
   const referrerId = searchParams.get('referrerId')
-
-  if (!businessId) return NextResponse.json({ error: 'businessId gerekli' }, { status: 400 })
-
-  const staff = await verifyMembership(supabase, user.id, businessId)
-  if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
 
   const admin = createAdminClient()
   let query = admin
@@ -49,19 +33,16 @@ export async function GET(request: NextRequest) {
 
 // POST: Yeni referans oluştur
 export async function POST(request: NextRequest) {
-  const supabase = createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
+  const auth = await requirePermission(request, 'referrals')
+  if (!auth.ok) return auth.response
+  const { businessId } = auth.ctx
 
   const body = await request.json()
-  const { businessId, referrerCustomerId, referredName, referredPhone, rewardType, rewardValue, expiresAt } = body
+  const { referrerCustomerId, referredName, referredPhone, rewardType, rewardValue, expiresAt } = body
 
-  if (!businessId || !referrerCustomerId) {
-    return NextResponse.json({ error: 'businessId ve referrerCustomerId zorunlu' }, { status: 400 })
+  if (!referrerCustomerId) {
+    return NextResponse.json({ error: 'referrerCustomerId zorunlu' }, { status: 400 })
   }
-
-  const staff = await verifyMembership(supabase, user.id, businessId)
-  if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
 
   const admin = createAdminClient()
 
@@ -101,17 +82,14 @@ export async function POST(request: NextRequest) {
 
 // PATCH: Referans güncelle (dönüştür, ödül işaretle)
 export async function PATCH(request: NextRequest) {
-  const supabase = createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
+  const auth = await requirePermission(request, 'referrals')
+  if (!auth.ok) return auth.response
+  const { businessId } = auth.ctx
 
   const body = await request.json()
-  const { businessId, id, status, referredCustomerId, rewardClaimed } = body
+  const { id, status, referredCustomerId, rewardClaimed } = body
 
-  if (!businessId || !id) return NextResponse.json({ error: 'businessId ve id zorunlu' }, { status: 400 })
-
-  const staff = await verifyMembership(supabase, user.id, businessId)
-  if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
+  if (!id) return NextResponse.json({ error: 'id zorunlu' }, { status: 400 })
 
   const admin = createAdminClient()
   const updateData: Record<string, unknown> = {}

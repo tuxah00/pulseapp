@@ -1,16 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { requirePermission } from '@/lib/api/with-permission'
 import type { InvoiceItem } from '@/types'
 
 // GET: Fatura listesi (gelişmiş filtreler)
 export async function GET(req: NextRequest) {
-  const supabase = createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
+  const auth = await requirePermission(req, 'invoices')
+  if (!auth.ok) return auth.response
+  const { businessId } = auth.ctx
 
   const { searchParams } = new URL(req.url)
-  const businessId = searchParams.get('businessId')
   const status = searchParams.get('status')
   const from = searchParams.get('from')
   const to = searchParams.get('to')
@@ -21,8 +20,6 @@ export async function GET(req: NextRequest) {
   const amountMax = searchParams.get('amount_max')
   const sortBy = searchParams.get('sort_by') || 'created_at'
   const sortOrder = searchParams.get('sort_order') || 'desc'
-
-  if (!businessId) return NextResponse.json({ error: 'businessId gerekli' }, { status: 400 })
 
   const admin = createAdminClient()
   let query = admin
@@ -51,19 +48,20 @@ export async function GET(req: NextRequest) {
 
 // POST: Yeni fatura oluştur
 export async function POST(req: NextRequest) {
-  const supabase = createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
+  const auth = await requirePermission(req, 'invoices')
+  if (!auth.ok) return auth.response
+  const { businessId, staffId } = auth.ctx
 
   const body = await req.json()
   const {
-    business_id, customer_id, appointment_id, items, tax_rate = 0, notes, due_date,
-    staff_id, staff_name, payment_type = 'standard', installment_count, installment_frequency,
+    customer_id, appointment_id, items, tax_rate = 0, notes, due_date,
+    staff_name, payment_type = 'standard', installment_count, installment_frequency,
     deposit_amount, payment_method,
   } = body
+  const business_id = businessId
 
-  if (!business_id || !items || !Array.isArray(items) || items.length === 0) {
-    return NextResponse.json({ error: 'business_id ve items gerekli' }, { status: 400 })
+  if (!items || !Array.isArray(items) || items.length === 0) {
+    return NextResponse.json({ error: 'items gerekli' }, { status: 400 })
   }
 
   // Hesapla
@@ -105,7 +103,7 @@ export async function POST(req: NextRequest) {
       status: initialStatus,
       notes: notes || null,
       due_date: due_date || null,
-      staff_id: staff_id || null,
+      staff_id: staffId,
       staff_name: staff_name || null,
       payment_type: payment_type || 'standard',
       installment_count: installment_count || null,
@@ -124,7 +122,7 @@ export async function POST(req: NextRequest) {
       amount: deposit_amount,
       method: payment_method || 'cash',
       payment_type: 'deposit',
-      staff_id: staff_id || null,
+      staff_id: staffId,
       staff_name: staff_name || null,
     })
   }
@@ -134,9 +132,9 @@ export async function POST(req: NextRequest) {
 
 // PATCH: Fatura güncelle (durum, ödeme yöntemi vb.)
 export async function PATCH(req: NextRequest) {
-  const supabase = createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
+  const auth = await requirePermission(req, 'invoices')
+  if (!auth.ok) return auth.response
+  const { userId, businessId: _bId } = auth.ctx
 
   const { searchParams } = new URL(req.url)
   const id = searchParams.get('id')
@@ -198,7 +196,7 @@ export async function PATCH(req: NextRequest) {
             type: 'out',
             quantity: item.quantity,
             notes: `Fatura ${invoice.invoice_number} ile satış`,
-            created_by: user.id,
+            created_by: userId,
           })
         }
       }
@@ -223,9 +221,8 @@ export async function PATCH(req: NextRequest) {
 
 // DELETE: Fatura sil
 export async function DELETE(req: NextRequest) {
-  const supabase = createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
+  const auth = await requirePermission(req, 'invoices')
+  if (!auth.ok) return auth.response
 
   const { searchParams } = new URL(req.url)
   const id = searchParams.get('id')

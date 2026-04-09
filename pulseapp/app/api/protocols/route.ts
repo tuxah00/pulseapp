@@ -1,32 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-
-async function verifyMembership(supabase: ReturnType<typeof createServerSupabaseClient>, userId: string, businessId: string) {
-  const { data } = await supabase
-    .from('staff_members')
-    .select('id, business_id')
-    .eq('user_id', userId)
-    .eq('business_id', businessId)
-    .single()
-  return data
-}
+import { requirePermission } from '@/lib/api/with-permission'
 
 // GET: Protokol listesi
 export async function GET(request: NextRequest) {
-  const supabase = createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
+  const auth = await requirePermission(request, 'protocols')
+  if (!auth.ok) return auth.response
+  const { businessId } = auth.ctx
 
   const { searchParams } = new URL(request.url)
-  const businessId = searchParams.get('businessId')
   const customerId = searchParams.get('customerId')
   const status = searchParams.get('status')
-
-  if (!businessId) return NextResponse.json({ error: 'businessId gerekli' }, { status: 400 })
-
-  const staff = await verifyMembership(supabase, user.id, businessId)
-  if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
 
   const admin = createAdminClient()
   let query = admin
@@ -51,19 +35,16 @@ export async function GET(request: NextRequest) {
 
 // POST: Yeni protokol oluştur
 export async function POST(request: NextRequest) {
-  const supabase = createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
+  const auth = await requirePermission(request, 'protocols')
+  if (!auth.ok) return auth.response
+  const { businessId, staffId } = auth.ctx
 
   const body = await request.json()
-  const { businessId, customerId, serviceId, name, totalSessions, intervalDays, notes } = body
+  const { customerId, serviceId, name, totalSessions, intervalDays, notes } = body
 
-  if (!businessId || !customerId || !name || !totalSessions) {
-    return NextResponse.json({ error: 'businessId, customerId, name, totalSessions zorunlu' }, { status: 400 })
+  if (!customerId || !name || !totalSessions) {
+    return NextResponse.json({ error: 'customerId, name, totalSessions zorunlu' }, { status: 400 })
   }
-
-  const staff = await verifyMembership(supabase, user.id, businessId)
-  if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
 
   const admin = createAdminClient()
 
@@ -78,7 +59,7 @@ export async function POST(request: NextRequest) {
       total_sessions: totalSessions,
       interval_days: intervalDays || 14,
       notes: notes || null,
-      created_by: staff.id,
+      created_by: staffId,
     })
     .select()
     .single()

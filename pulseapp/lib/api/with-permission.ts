@@ -97,6 +97,82 @@ export function withPermission(
 }
 
 /**
+ * Inline kullanım için permission kontrol fonksiyonu.
+ * GET/POST/DELETE gibi birden fazla HTTP metodu olan route'lar için uygundur.
+ *
+ * Kullanım:
+ * ```ts
+ * const auth = await requirePermission(req, 'invoices')
+ * if (!auth.ok) return auth.response
+ * const { businessId, role } = auth.ctx
+ * ```
+ */
+export async function requirePermission(
+  req: NextRequest,
+  permission: keyof StaffPermissions
+): Promise<
+  | { ok: true; ctx: AuthContext }
+  | { ok: false; response: NextResponse }
+> {
+  try {
+    const supabase = createServerSupabaseClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return {
+        ok: false,
+        response: NextResponse.json({ error: 'Oturum bulunamadı.' }, { status: 401 }),
+      }
+    }
+
+    const admin = createAdminClient()
+    const { data: staff } = await admin
+      .from('staff_members')
+      .select('id, business_id, role, permissions, is_active')
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .limit(1)
+      .single()
+
+    if (!staff) {
+      return {
+        ok: false,
+        response: NextResponse.json({ error: 'Personel kaydı bulunamadı.' }, { status: 403 }),
+      }
+    }
+
+    const role = staff.role as StaffRole
+    const effectivePerms = getEffectivePermissions(role, staff.permissions)
+
+    if (!effectivePerms[permission]) {
+      return {
+        ok: false,
+        response: NextResponse.json(
+          { error: `Bu işlem için yetkiniz yok: ${permission}` },
+          { status: 403 }
+        ),
+      }
+    }
+
+    return {
+      ok: true,
+      ctx: {
+        userId: user.id,
+        staffId: staff.id,
+        businessId: staff.business_id,
+        role,
+        permissions: effectivePerms,
+      },
+    }
+  } catch {
+    return {
+      ok: false,
+      response: NextResponse.json({ error: 'Sunucu hatası' }, { status: 500 }),
+    }
+  }
+}
+
+/**
  * Sadece auth kontrolü yapan wrapper (permission kontrolü yok).
  * Public olmayan ama tüm staff'ın erişebildiği endpoint'ler için.
  */

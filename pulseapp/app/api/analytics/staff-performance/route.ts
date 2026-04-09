@@ -1,33 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-
-async function verifyMembership(supabase: ReturnType<typeof createServerSupabaseClient>, userId: string, businessId: string) {
-  const { data } = await supabase
-    .from('staff_members')
-    .select('id, business_id')
-    .eq('user_id', userId)
-    .eq('business_id', businessId)
-    .single()
-  return data
-}
+import { requirePermission } from '@/lib/api/with-permission'
 
 // GET: Personel performans karnesi
 export async function GET(request: NextRequest) {
-  const supabase = createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
+  const auth = await requirePermission(request, 'analytics')
+  if (!auth.ok) return auth.response
+  const { businessId } = auth.ctx
 
   const { searchParams } = new URL(request.url)
-  const businessId = searchParams.get('businessId')
   const staffId = searchParams.get('staffId')
   const from = searchParams.get('from')
   const to = searchParams.get('to')
-
-  if (!businessId) return NextResponse.json({ error: 'businessId gerekli' }, { status: 400 })
-
-  const staff = await verifyMembership(supabase, user.id, businessId)
-  if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
 
   const admin = createAdminClient()
 
