@@ -849,13 +849,12 @@ export interface ServiceContraindication {
 
 // ── Referans / Tavsiye Sistemi ──
 
-export type ReferralStatus = 'pending' | 'converted' | 'expired'
+export type ReferralStatus = 'pending' | 'rewarded'
 export type RewardType = 'discount_percent' | 'discount_amount' | 'free_service' | 'points'
 
 export const REFERRAL_STATUS_LABELS: Record<ReferralStatus, string> = {
   pending: 'Bekliyor',
-  converted: 'Dönüştürüldü',
-  expired: 'Süresi Doldu',
+  rewarded: 'Ödül Verildi',
 }
 
 export const REWARD_TYPE_LABELS: Record<RewardType, string> = {

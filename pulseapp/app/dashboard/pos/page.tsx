@@ -152,7 +152,7 @@ export default function KasaPage() {
     }
     const fetchRewards = async () => {
       try {
-        const res = await fetch(`/api/referrals?businessId=${businessId}&referrerId=${selectedCustomerId}&status=converted&rewardClaimed=false`)
+        const res = await fetch(`/api/referrals?businessId=${businessId}&referrerId=${selectedCustomerId}&status=pending`)
         const json = await res.json()
         const rewards = (json.referrals || []).filter((r: Referral) => r.reward_type && r.reward_value)
         setAvailableRewards(rewards)
@@ -325,6 +325,15 @@ export default function KasaPage() {
         resourceId: data.transaction.id,
         details: { total: grandTotal, receipt: data.transaction.receipt_number },
       })
+
+      // Referans ödülü kullanıldıysa otomatik olarak 'rewarded' işaretle
+      if (appliedReferralId) {
+        await fetch('/api/referrals', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ businessId, id: appliedReferralId, status: 'rewarded' }),
+        })
+      }
 
       // Listeyi güncelle ve sepeti temizle
       setTransactions(prev => [data.transaction, ...prev])

@@ -97,14 +97,14 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ referral: data }, { status: 201 })
 }
 
-// PATCH: Referans güncelle (dönüştür, ödül işaretle)
+// PATCH: Referans güncelle (ödül ver)
 export async function PATCH(request: NextRequest) {
   const supabase = createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
 
   const body = await request.json()
-  const { businessId, id, status, referredCustomerId, rewardClaimed } = body
+  const { businessId, id, status, referredCustomerId } = body
 
   if (!businessId || !id) return NextResponse.json({ error: 'businessId ve id zorunlu' }, { status: 400 })
 
@@ -115,10 +115,12 @@ export async function PATCH(request: NextRequest) {
 
   if (status) {
     updateData.status = status
-    if (status === 'converted') updateData.converted_at = new Date().toISOString()
+    if (status === 'rewarded') {
+      updateData.converted_at = new Date().toISOString()
+      updateData.reward_claimed = true
+    }
   }
   if (referredCustomerId) updateData.referred_customer_id = referredCustomerId
-  if (rewardClaimed !== undefined) updateData.reward_claimed = rewardClaimed
 
   const { data, error } = await supabase
     .from('referrals')

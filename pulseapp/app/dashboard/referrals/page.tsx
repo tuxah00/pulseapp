@@ -16,8 +16,7 @@ import { cn } from '@/lib/utils'
 
 const STATUS_CONFIG: Record<ReferralStatus, { bg: string; text: string; icon: typeof CheckCircle }> = {
   pending: { bg: 'bg-yellow-50 dark:bg-yellow-900/20', text: 'text-yellow-600 dark:text-yellow-400', icon: Clock },
-  converted: { bg: 'bg-green-50 dark:bg-green-900/20', text: 'text-green-600 dark:text-green-400', icon: CheckCircle },
-  expired: { bg: 'bg-gray-50 dark:bg-gray-800', text: 'text-gray-500 dark:text-gray-400', icon: X },
+  rewarded: { bg: 'bg-green-50 dark:bg-green-900/20', text: 'text-green-600 dark:text-green-400', icon: CheckCircle },
 }
 
 const REWARD_TYPE_OPTIONS = [
@@ -116,9 +115,9 @@ export default function RewardsPage() {
   useEffect(() => { if (activeTab === 'referrals') fetchReferrals() }, [fetchReferrals, activeTab])
 
   const totalReferrals = referrals.length
-  const convertedCount = referrals.filter(r => r.status === 'converted').length
+  const rewardedCount = referrals.filter(r => r.status === 'rewarded').length
   const pendingRefCount = referrals.filter(r => r.status === 'pending').length
-  const conversionRate = totalReferrals > 0 ? Math.round((convertedCount / totalReferrals) * 100) : 0
+  const rewardRate = totalReferrals > 0 ? Math.round((rewardedCount / totalReferrals) * 100) : 0
 
   const handleRefCreate = async () => {
     if (!businessId || !formReferrerId) return
@@ -153,23 +152,14 @@ export default function RewardsPage() {
     setFormRewardType(''); setFormRewardValue('')
   }
 
-  const handleConvert = async (id: string) => {
+  const handleReward = async (id: string) => {
     if (!businessId) return
     await fetch('/api/referrals', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ businessId, id, status: 'converted' }),
+      body: JSON.stringify({ businessId, id, status: 'rewarded' }),
     })
-    fetchReferrals()
-  }
-
-  const handleClaimReward = async (id: string) => {
-    if (!businessId) return
-    await fetch('/api/referrals', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ businessId, id, rewardClaimed: true }),
-    })
+    toast.success('Ödül verildi')
     fetchReferrals()
   }
 
@@ -342,8 +332,8 @@ export default function RewardsPage() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div className="card p-4"><p className="text-xs text-gray-500 dark:text-gray-400">Toplam</p><p className="text-2xl font-bold text-gray-900 dark:text-white">{totalReferrals}</p></div>
             <div className="card p-4"><p className="text-xs text-gray-500 dark:text-gray-400">Bekleyen</p><p className="text-2xl font-bold text-yellow-600">{pendingRefCount}</p></div>
-            <div className="card p-4"><p className="text-xs text-gray-500 dark:text-gray-400">Dönüştürülen</p><p className="text-2xl font-bold text-green-600">{convertedCount}</p></div>
-            <div className="card p-4"><p className="text-xs text-gray-500 dark:text-gray-400">Dönüşüm Oranı</p><p className="text-2xl font-bold text-pulse-900">%{conversionRate}</p></div>
+            <div className="card p-4"><p className="text-xs text-gray-500 dark:text-gray-400">Ödül Verildi</p><p className="text-2xl font-bold text-green-600">{rewardedCount}</p></div>
+            <div className="card p-4"><p className="text-xs text-gray-500 dark:text-gray-400">Ödül Oranı</p><p className="text-2xl font-bold text-pulse-900">%{rewardRate}</p></div>
           </div>
 
           {/* Filters */}
@@ -353,7 +343,7 @@ export default function RewardsPage() {
               <input type="text" placeholder="Ara..." className="input pl-10 w-full" value={refSearch} onChange={e => setRefSearch(e.target.value)} />
             </div>
             <div className="flex gap-2 flex-wrap">
-              {(['all', 'pending', 'converted', 'expired'] as const).map(s => (
+              {(['all', 'pending', 'rewarded'] as const).map(s => (
                 <button key={s} onClick={() => setRefStatusFilter(s)}
                   className={`badge px-3 py-1.5 cursor-pointer transition-colors ${refStatusFilter === s ? 'bg-gray-900 dark:bg-gray-700 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}>
                   {s === 'all' ? 'Tümü' : REFERRAL_STATUS_LABELS[s]}
@@ -401,14 +391,11 @@ export default function RewardsPage() {
                         <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${sc.bg} ${sc.text}`}>
                           <Icon className="h-3 w-3" /> {REFERRAL_STATUS_LABELS[r.status]}
                         </span>
-                        {r.reward_claimed && <p className="text-[10px] text-green-500 mt-0.5">Ödül alındı</p>}
+                        {r.status === 'rewarded' && <p className="text-[10px] text-green-500 mt-0.5">Ödül verildi</p>}
                       </div>
                       <div className="flex-shrink-0 flex gap-1">
                         {r.status === 'pending' && (
-                          <button onClick={() => handleConvert(r.id)} className="text-xs px-2 py-1 rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200 transition-colors">Dönüştür</button>
-                        )}
-                        {r.status === 'converted' && r.reward_type && !r.reward_claimed && (
-                          <button onClick={() => handleClaimReward(r.id)} className="text-xs px-2 py-1 rounded bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 hover:bg-purple-200 transition-colors">Ödül Ver</button>
+                          <button onClick={() => handleReward(r.id)} className="text-xs px-2 py-1 rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200 transition-colors">Ödül Ver</button>
                         )}
                       </div>
                     </div>
