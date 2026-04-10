@@ -52,27 +52,27 @@ const SECTOR_ITEMS: Partial<Record<SectorType, SidebarItem[]>> = {
   dental_clinic: [
     { key: 'packages', name: 'Paket & Seans', href: '/dashboard/packages', iconName: 'Layers' },
     { key: 'records', name: 'Hasta Dosyalar\u0131', href: '/dashboard/records?type=patient_file', iconName: 'FolderOpen' },
-    { key: 'follow-ups', name: 'Takipler', href: '/dashboard/follow-ups', iconName: 'ClipboardCheck' },
+    { key: 'follow-ups', name: 'Takipler', href: '/dashboard/follow-ups', iconName: 'CalendarClock' },
     { key: 'reviews', name: 'Yorumlar', href: '/dashboard/reviews', iconName: 'Star' },
   ],
   medical_aesthetic: [
-    { key: 'protocols', name: 'Tedavi Protokolleri', href: '/dashboard/protocols', iconName: 'ClipboardCheck' },
+    { key: 'protocols', name: 'Tedavi Protokolleri', href: '/dashboard/protocols', iconName: 'Stethoscope' },
     { key: 'packages', name: 'Paket & Seans', href: '/dashboard/packages', iconName: 'Layers' },
     { key: 'records', name: 'Hasta Dosyalar\u0131', href: '/dashboard/records?type=patient_file', iconName: 'FolderOpen' },
-    { key: 'follow-ups', name: 'Takipler', href: '/dashboard/follow-ups', iconName: 'ClipboardCheck' },
+    { key: 'follow-ups', name: 'Takipler', href: '/dashboard/follow-ups', iconName: 'CalendarClock' },
     { key: 'rewards', name: 'Ödüller', href: '/dashboard/referrals', iconName: 'Gift' },
     { key: 'reviews', name: 'Yorumlar', href: '/dashboard/reviews', iconName: 'Star' },
   ],
   physiotherapy: [
     { key: 'packages', name: 'Paket & Seans', href: '/dashboard/packages', iconName: 'Layers' },
     { key: 'records', name: 'Hasta Dosyalar\u0131', href: '/dashboard/records?type=patient_file', iconName: 'FolderOpen' },
-    { key: 'follow-ups', name: 'Takipler', href: '/dashboard/follow-ups', iconName: 'ClipboardCheck' },
+    { key: 'follow-ups', name: 'Takipler', href: '/dashboard/follow-ups', iconName: 'CalendarClock' },
     { key: 'reviews', name: 'Yorumlar', href: '/dashboard/reviews', iconName: 'Star' },
   ],
   psychologist: [
     { key: 'packages', name: 'Paket & Seans', href: '/dashboard/packages', iconName: 'Layers' },
     { key: 'records', name: 'Dan\u0131\u015fan Dosyalar\u0131', href: '/dashboard/records?type=client_file', iconName: 'FolderOpen' },
-    { key: 'follow-ups', name: 'Takipler', href: '/dashboard/follow-ups', iconName: 'ClipboardCheck' },
+    { key: 'follow-ups', name: 'Takipler', href: '/dashboard/follow-ups', iconName: 'CalendarClock' },
   ],
   lawyer: [
     { key: 'records', name: 'Müvekkil Dosyaları', href: '/dashboard/records?type=case_file', iconName: 'Briefcase' },
@@ -91,13 +91,13 @@ const SECTOR_ITEMS: Partial<Record<SectorType, SidebarItem[]>> = {
   veterinary: [
     { key: 'packages', name: 'Paket & Seans', href: '/dashboard/packages', iconName: 'Layers' },
     { key: 'records', name: 'Hasta Dosyalar\u0131', href: '/dashboard/records?type=pet', iconName: 'PawPrint' },
-    { key: 'follow-ups', name: 'Takipler', href: '/dashboard/follow-ups', iconName: 'ClipboardCheck' },
+    { key: 'follow-ups', name: 'Takipler', href: '/dashboard/follow-ups', iconName: 'CalendarClock' },
     { key: 'reviews', name: 'Yorumlar', href: '/dashboard/reviews', iconName: 'Star' },
   ],
   dietitian: [
     { key: 'packages', name: 'Paket & Seans', href: '/dashboard/packages', iconName: 'Layers' },
     { key: 'records', name: 'Diyet Programlar\u0131', href: '/dashboard/records?type=diet_plan', iconName: 'ClipboardList' },
-    { key: 'follow-ups', name: 'Takipler', href: '/dashboard/follow-ups', iconName: 'ClipboardCheck' },
+    { key: 'follow-ups', name: 'Takipler', href: '/dashboard/follow-ups', iconName: 'CalendarClock' },
   ],
   fitness: [
     { key: 'packages', name: 'Paket & Seans', href: '/dashboard/packages', iconName: 'Layers' },
