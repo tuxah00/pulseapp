@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import {
   Plus, ClipboardCheck, Search, X, Calendar, User, Activity,
   ChevronRight, Loader2, Pause, Play, CheckCircle, XCircle, SkipForward,
-  Camera, FileText, Clock, Sparkles, Upload,
+  Camera, FileText, Clock, Sparkles, Upload, MessageSquare, Pencil, Save,
 } from 'lucide-react'
 import type {
   TreatmentProtocol, ProtocolSession, Customer, Service, ProtocolStatus, SessionStatus
@@ -404,9 +404,14 @@ function DetailPanel({
   const [aiLoading, setAiLoading] = useState(false)
   const [aiSuggestion, setAiSuggestion] = useState<string | null>(null)
   const [showAi, setShowAi] = useState(false)
-  const [uploadingPhoto, setUploadingPhoto] = useState<string | null>(null) // "sessionId-before" or "sessionId-after"
+  const [uploadingPhoto, setUploadingPhoto] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const pendingUpload = useRef<{ sessionId: string; type: 'before' | 'after' } | null>(null)
+
+  // Session notes inline edit
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
+  const [noteText, setNoteText] = useState('')
+  const [savingNote, setSavingNote] = useState(false)
 
   const customer = Array.isArray(protocol.customer) ? protocol.customer[0] : protocol.customer
   const service = Array.isArray(protocol.service) ? protocol.service[0] : protocol.service
@@ -477,6 +482,26 @@ function DetailPanel({
       setUploadingPhoto(null)
       pendingUpload.current = null
       if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
+  function openNoteEditor(sessionId: string, currentNote: string | null) {
+    setEditingNoteId(sessionId)
+    setNoteText(currentNote || '')
+  }
+
+  async function saveNote(sessionId: string) {
+    setSavingNote(true)
+    try {
+      await fetch(`/api/protocols/${protocol.id}/sessions`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ businessId, sessionId, notes: noteText }),
+      })
+      setEditingNoteId(null)
+      onRefresh(protocol.id)
+    } catch { /* ignore */ } finally {
+      setSavingNote(false)
     }
   }
 
@@ -591,7 +616,57 @@ function DetailPanel({
                       </span>
                     )}
                   </div>
-                  {session.notes && <p className="text-xs text-gray-500 mt-1">{session.notes}</p>}
+                  {/* Session notes */}
+                  {editingNoteId === session.id ? (
+                    <div className="mt-2 space-y-1.5">
+                      <textarea
+                        value={noteText}
+                        onChange={e => setNoteText(e.target.value)}
+                        rows={2}
+                        placeholder="Seans notu yazın..."
+                        className="w-full text-xs rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-pulse-900 resize-none"
+                        autoFocus
+                      />
+                      <div className="flex gap-1.5">
+                        <button
+                          onClick={() => saveNote(session.id)}
+                          disabled={savingNote}
+                          className="text-xs px-2 py-1 rounded bg-pulse-900 text-white hover:bg-pulse-800 transition-colors disabled:opacity-50 flex items-center gap-1"
+                        >
+                          {savingNote ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+                          Kaydet
+                        </button>
+                        <button
+                          onClick={() => setEditingNoteId(null)}
+                          className="text-xs px-2 py-1 rounded text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        >
+                          İptal
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mt-1.5">
+                      {session.notes ? (
+                        <button
+                          onClick={() => openNoteEditor(session.id, session.notes)}
+                          className="group/note flex items-start gap-1.5 text-left"
+                        >
+                          <MessageSquare className="h-3 w-3 text-gray-400 mt-0.5 flex-shrink-0" />
+                          <span className="text-xs text-gray-500 dark:text-gray-400 group-hover/note:text-gray-700 dark:group-hover/note:text-gray-200 transition-colors">
+                            {session.notes}
+                          </span>
+                          <Pencil className="h-3 w-3 text-gray-300 dark:text-gray-600 opacity-0 group-hover/note:opacity-100 transition-opacity mt-0.5 flex-shrink-0" />
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => openNoteEditor(session.id, null)}
+                          className="text-xs text-gray-400 hover:text-pulse-900 dark:hover:text-pulse-300 flex items-center gap-1 transition-colors"
+                        >
+                          <Plus className="h-3 w-3" /> Not ekle
+                        </button>
+                      )}
+                    </div>
+                  )}
 
                   {/* Session photos */}
                   <div className="flex gap-3 mt-2">
