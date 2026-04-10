@@ -44,6 +44,8 @@ export default function ProtocolsPage() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [selectedProtocol, setSelectedProtocol] = useState<TreatmentProtocol | null>(null)
+  const [isClosingDetail, setIsClosingDetail] = useState(false)
+  const closeDetail = () => setIsClosingDetail(true)
 
   // Create modal
   const [showCreate, setShowCreate] = useState(false)
@@ -223,90 +225,91 @@ export default function ProtocolsPage() {
       </div>
 
       {/* Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Protocol List */}
-        <div className={`${selectedProtocol ? 'lg:col-span-1' : 'lg:col-span-3'} space-y-3`}>
-          {loading ? (
-            <div className="flex items-center justify-center h-32"><Loader2 className="h-6 w-6 animate-spin text-pulse-900" /></div>
-          ) : filtered.length === 0 ? (
-            <div className="card p-8 text-center">
-              <ClipboardCheck className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-              <p className="text-gray-500 dark:text-gray-400">Henüz tedavi protokolü yok</p>
-              <button onClick={() => setShowCreate(true)} className="btn-primary mt-4 text-sm">
-                <Plus className="h-4 w-4 mr-1 inline" /> İlk Protokolü Oluştur
-              </button>
-            </div>
-          ) : (
-            filtered.map(p => {
-              const customer = Array.isArray(p.customer) ? p.customer[0] : p.customer
-              const service = Array.isArray(p.service) ? p.service[0] : p.service
-              const sessions = p.sessions || []
-              const progress = p.total_sessions > 0 ? (p.completed_sessions / p.total_sessions) * 100 : 0
-              const sc = STATUS_CONFIG[p.status]
-              const isSelected = selectedProtocol?.id === p.id
-
-              return (
-                <div
-                  key={p.id}
-                  onClick={() => setSelectedProtocol(p)}
-                  className={`card p-4 cursor-pointer transition-all ${
-                    isSelected ? 'ring-2 ring-pulse-900 shadow-md' : 'hover:shadow-sm'
-                  }`}>
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-gray-900 dark:text-white truncate">{p.name}</h3>
-                      <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1 mt-0.5">
-                        <User className="h-3 w-3" /> {customer?.name || '—'}
-                      </p>
-                    </div>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${sc.bg} ${sc.text}`}>
-                      {PROTOCOL_STATUS_LABELS[p.status]}
-                    </span>
-                  </div>
-
-                  {service && (
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mb-2 flex items-center gap-1">
-                      <Activity className="h-3 w-3" /> {service.name}
-                    </p>
-                  )}
-
-                  {/* Progress bar */}
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full h-2">
-                      <div
-                        className="bg-pulse-900 h-2 rounded-full transition-all"
-                        style={{ width: `${progress}%` }}
-                      />
-                    </div>
-                    <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                      {p.completed_sessions}/{p.total_sessions}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between mt-2">
-                    <span className="text-xs text-gray-400">{p.interval_days} gün aralık</span>
-                    <ChevronRight className="h-4 w-4 text-gray-300" />
-                  </div>
-                </div>
-              )
-            })
-          )}
-        </div>
-
-        {/* Detail Panel */}
-        {selectedProtocol && (
-          <div className="lg:col-span-2 card p-6 space-y-6">
-            <DetailPanel
-              protocol={selectedProtocol}
-              businessId={businessId!}
-              onClose={() => setSelectedProtocol(null)}
-              onUpdateStatus={updateProtocolStatus}
-              onUpdateSession={updateSession}
-              onDelete={handleDelete}
-            />
+      <div className="space-y-3">
+        {loading ? (
+          <div className="flex items-center justify-center h-32"><Loader2 className="h-6 w-6 animate-spin text-pulse-900" /></div>
+        ) : filtered.length === 0 ? (
+          <div className="card p-8 text-center">
+            <ClipboardCheck className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+            <p className="text-gray-500 dark:text-gray-400">Henüz tedavi protokolü yok</p>
+            <button onClick={() => setShowCreate(true)} className="btn-primary mt-4 text-sm">
+              <Plus className="h-4 w-4 mr-1 inline" /> İlk Protokolü Oluştur
+            </button>
           </div>
+        ) : (
+          filtered.map(p => {
+            const customer = Array.isArray(p.customer) ? p.customer[0] : p.customer
+            const service = Array.isArray(p.service) ? p.service[0] : p.service
+            const progress = p.total_sessions > 0 ? (p.completed_sessions / p.total_sessions) * 100 : 0
+            const sc = STATUS_CONFIG[p.status]
+            const isSelected = selectedProtocol?.id === p.id
+
+            return (
+              <div
+                key={p.id}
+                onClick={() => setSelectedProtocol(p)}
+                className={`card p-4 cursor-pointer transition-all ${
+                  isSelected ? 'ring-2 ring-pulse-900 shadow-md' : 'hover:shadow-sm'
+                }`}>
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-gray-900 dark:text-white truncate">{p.name}</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1 mt-0.5">
+                      <User className="h-3 w-3" /> {customer?.name || '—'}
+                    </p>
+                  </div>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${sc.bg} ${sc.text}`}>
+                    {PROTOCOL_STATUS_LABELS[p.status]}
+                  </span>
+                </div>
+
+                {service && (
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mb-2 flex items-center gap-1">
+                    <Activity className="h-3 w-3" /> {service.name}
+                  </p>
+                )}
+
+                {/* Progress bar */}
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full h-2">
+                    <div
+                      className="bg-pulse-900 h-2 rounded-full transition-all"
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
+                  <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                    {p.completed_sessions}/{p.total_sessions}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between mt-2">
+                  <span className="text-xs text-gray-400">{p.interval_days} gün aralık</span>
+                  <ChevronRight className="h-4 w-4 text-gray-300" />
+                </div>
+              </div>
+            )
+          })
         )}
       </div>
+
+      {/* Detail Panel — Slide-over */}
+      {(selectedProtocol || isClosingDetail) && selectedProtocol && (
+        <Portal>
+          <div className={`modal-overlay fixed inset-0 z-[60] bg-black/40 dark:bg-black/60 ${isClosingDetail ? 'closing' : ''}`} onClick={closeDetail} onAnimationEnd={() => { if (isClosingDetail) { setSelectedProtocol(null); setIsClosingDetail(false) } }} />
+          <div className={`slide-panel fixed inset-y-0 right-0 z-[61] w-full max-w-lg bg-white dark:bg-gray-900 shadow-2xl overflow-y-auto ${isClosingDetail ? 'closing' : ''}`}>
+            <div className="p-6 space-y-6">
+              <DetailPanel
+                protocol={selectedProtocol}
+                businessId={businessId!}
+                onClose={closeDetail}
+                onUpdateStatus={updateProtocolStatus}
+                onUpdateSession={updateSession}
+                onDelete={handleDelete}
+              />
+            </div>
+          </div>
+        </Portal>
+      )}
 
       {/* Create Modal */}
       {(showCreate || isClosingCreate) && (
