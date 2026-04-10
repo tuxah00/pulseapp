@@ -187,18 +187,21 @@ export default function BookingPage() {
         return
       }
 
-      // KVKK onayını kaydet
       if (kvkkConsent) {
-        fetch('/api/consent', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            businessId,
-            customerPhone: customerPhone.replace(/\s/g, ''),
-            consentType: 'kvkk',
-            method: 'online_form',
-          }),
-        }).catch(() => {}) // hata sessizce yut
+        try {
+          await fetch('/api/consent', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              businessId,
+              consentType: 'kvkk',
+              method: 'online_form',
+              customerPhone: customerPhone.replace(/\s/g, ''),
+            }),
+          })
+        } catch {
+          // Onay kaydı hatası randevu başarısını etkilememeli
+        }
       }
 
       setSubmitted(true)
@@ -269,6 +272,7 @@ export default function BookingPage() {
               setWaitlistDate('')
               setWaitlistStaffId('')
               setWaitlistEarliest(false)
+              setKvkkConsent(false)
               setSubmitted(false)
             }}
             className="mt-6 btn-secondary w-full"
@@ -599,24 +603,21 @@ export default function BookingPage() {
                   className="input"
                 />
               </div>
-
-              {/* KVKK Onayı */}
-              <div className="rounded-xl bg-blue-50 border border-blue-100 p-3.5">
-                <label className="flex items-start gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={kvkkConsent}
-                    onChange={(e) => setKvkkConsent(e.target.checked)}
-                    className="mt-0.5 h-4 w-4 flex-shrink-0 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <span className="text-xs text-gray-600 leading-relaxed">
-                    <a href="/privacy" target="_blank" rel="noopener noreferrer" className="font-medium text-blue-700 underline hover:text-blue-900">KVKK Aydınlatma Metni</a>
-                    &apos;ni okudum, kişisel verilerimin işlenmesine, randevu yönetimi ve iletişim
-                    amacıyla kullanılmasına onay veriyorum.
-                  </span>
-                </label>
-              </div>
             </div>
+            <label className="flex items-start gap-3 mt-4 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={kvkkConsent}
+                onChange={(e) => setKvkkConsent(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+                required
+              />
+              <span className="text-xs text-gray-500">
+                Kişisel verilerimin işlenmesine ilişkin{' '}
+                <span className="text-blue-500 font-medium">KVKK Aydınlatma Metni</span>&apos;ni
+                okudum ve kabul ediyorum.
+              </span>
+            </label>
             <div className="mt-5 pt-4 border-t border-gray-100 flex gap-2.5">
               <button onClick={() => setStep(2)} className="btn-secondary flex items-center gap-1 px-3">
                 <ChevronLeft className="h-4 w-4" />
@@ -674,7 +675,7 @@ export default function BookingPage() {
             )}
 
             <p className="mt-4 text-center text-xs text-gray-400">
-              KVKK onayınız kaydedilmiştir. Randevu iptal/değişikliği için {business.name} ile iletişime geçin.
+              Onaylayarak {business.name} ile iletişim kurulmasına izin vermiş olursunuz.
             </p>
           </div>
         )}

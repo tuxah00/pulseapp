@@ -184,9 +184,29 @@ Aşağıdaki özelliklerin kodu tamamlandı; aktif etmek için sadece ilgili hes
 
 - **Form validasyonu zayıf**: `zod` veya `react-hook-form` yok; validasyon sayfadan sayfaya değişiyor
 - **Test altyapısı yok**: Jest/Vitest/Cypress kurulu değil
-- **`error.tsx` dosyaları eksik**: App Router hata sınırları tanımlanmamış
-- **`any[]` kullanımı**: `DashboardPage` veri çekme sonuçlarında tip güvensizliği var
 - **Dil karışıklığı**: Kod içinde Türkçe (`vardiye`, `stoklar`) ve İngilizce isimlendirme karışık
+
+---
+
+## Özellik Entegrasyon Stratejisi
+
+### Sonraya Bırakılan (Dış Hesap/Abonelik Gerektiren)
+Bu özellikler altyapısı hazır ama dış servis hesabı açılmadan çalışmaz:
+- **PayTR Ödeme**: `PAYTR_MERCHANT_ID/KEY/SALT` — ödeme akışı, plan aktivasyonu
+- **Paraşüt e-Fatura**: `PARASUT_CLIENT_ID/SECRET/USERNAME/PASSWORD/COMPANY_ID` — e-fatura gönderimi
+- **Resend E-posta**: `RESEND_API_KEY` — e-posta bildirimleri (henüz hiç kod yok)
+- **Twilio SMS/WhatsApp**: `TWILIO_ACCOUNT_SID/AUTH_TOKEN/PHONE_NUMBER` — mesajlaşma
+- **Google Places**: `GOOGLE_PLACES_API_KEY` — işletme yorumları çekme
+- **Cron Otomasyonları**: Dış tetikleyici (Vercel Cron, cron-job.org) gerekli
+
+### Eklenecek (Dış Hesap Gerektirmeyen)
+Bu özellikler sadece DB + UI çalışması gerektirir, herhangi bir dış servis gerektirmez:
+- **KVKK Onay Yönetimi**: Dashboard sayfası + booking sayfasında onay checkbox'u (`consent_records` tablosu mevcut)
+- **Müşteri Alerji Yönetimi**: Müşteri detayında alerji kayıt/görüntüleme UI (`customer_allergies` tablosu mevcut)
+- **Hizmet Kontrendikasyonları**: Hizmet ayarlarında kontrendikasyon tanımlama UI (`service_contraindications` tablosu mevcut)
+- **Takip Kuyruğu**: Randevu sonrası takip planlaması UI (`follow_up_queue` tablosu mevcut)
+- **AI Photo Analysis**: Fotoğraf analizi route implementasyonu (ANTHROPIC_API_KEY zaten mevcut)
+- **AI Treatment Suggestion**: Tedavi önerisi route implementasyonu (ANTHROPIC_API_KEY zaten mevcut)
 
 ---
 

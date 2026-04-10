@@ -1,75 +1,68 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { requirePermission } from '@/lib/api/with-permission'
-import { getAnthropicClient, AI_MODEL } from '@/lib/ai/client'
-import { getPhotoAnalysisPrompt } from '@/lib/ai/photo-prompts'
-import type { SectorType } from '@/types'
+import { getAnthropicClient, AI_MODEL, MAX_TOKENS } from '@/lib/ai/client'
 
-// POST: Tek fotoğraf analizi
-export async function POST(req: NextRequest) {
-  const auth = await requirePermission(req, 'records')
-  if (!auth.ok) return auth.response
-  const { businessId } = auth.ctx
+export async function POST(request: NextRequest) {
+  const supabase = createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
 
-  const body = await req.json()
-  const { photoUrl, analysisType = 'single', customerId } = body
+  const body = await request.json()
+  const { businessId, imageUrl, title, category } = body
 
-  if (!photoUrl) {
-    return NextResponse.json({ error: 'photoUrl zorunlu' }, { status: 400 })
+  if (!businessId || !imageUrl) {
+    return NextResponse.json({ error: 'businessId ve imageUrl zorunlu' }, { status: 400 })
   }
 
-  const supabase = createServerSupabaseClient()
-
-  // İşletmenin sektörünü al
-  const { data: business } = await supabase
-    .from('businesses')
-    .select('sector')
-    .eq('id', businessId)
+  // Verify staff membership
+  const { data: staff } = await supabase
+    .from('staff_members')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('business_id', businessId)
     .single()
 
-  const sector = (business?.sector || null) as SectorType | null
-  const systemPrompt = getPhotoAnalysisPrompt(sector, analysisType)
+  if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
+
+  const prompt = `Sen bir profesyonel görsel analiz uzmanısın. Aşağıdaki görseli analiz et ve değerlendir.
+
+${title ? `Görsel Başlığı: ${title}` : ''}
+${category ? `Kategori: ${category}` : ''}
+
+Lütfen aşağıdaki başlıklar altında analiz yap:
+
+1. **Genel Değerlendirme**: Görselin genel kalitesi ve profesyonelliği
+2. **Teknik Analiz**: Işık, kompozisyon, renk dengesi
+3. **İyileştirme Önerileri**: Daha iyi sonuç için öneriler
+4. **Portfolyo Etkisi**: Bu görselin portfolyodaki etkisi ve müşteri çekme potansiyeli
+
+Türkçe ve kısa, öz yanıt ver. Her başlık 2-3 cümle olsun.`
 
   try {
     const anthropic = getAnthropicClient()
     const message = await anthropic.messages.create({
       model: AI_MODEL,
-      max_tokens: 1024,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'image',
-              source: {
-                type: 'url',
-                url: photoUrl,
-              },
-            },
-            {
-              type: 'text',
-              text: systemPrompt,
-            },
-          ],
-        },
-      ],
+      max_tokens: MAX_TOKENS,
+      messages: [{
+        role: 'user',
+        content: [
+          {
+            type: 'image',
+            source: { type: 'url', url: imageUrl },
+          },
+          { type: 'text', text: prompt },
+        ],
+      }],
     })
 
-    const analysis = message.content
-      .filter(b => b.type === 'text')
-      .map(b => b.type === 'text' ? b.text : '')
+    const responseText = message.content
+      .filter(block => block.type === 'text')
+      .map(block => block.type === 'text' ? block.text : '')
       .join('\n')
 
-    // Analiz sonucunu müşteri kaydına ekleyebilmek için customer_id döndür
-    return NextResponse.json({
-      analysis,
-      sector,
-      analysisType,
-      customerId: customerId || null,
-    })
-  } catch (err: unknown) {
+    return NextResponse.json({ analysis: responseText })
+  } catch (err) {
     console.error('AI fotoğraf analizi hatası:', err)
-    const message = err instanceof Error ? err.message : 'Analiz yapılamadı'
-    return NextResponse.json({ error: message }, { status: 500 })
+    return NextResponse.json({ error: 'AI analizi yapılamadı' }, { status: 500 })
   }
 }

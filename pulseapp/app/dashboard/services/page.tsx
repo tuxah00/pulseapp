@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useConfirm } from '@/lib/hooks/use-confirm'
-import { Plus, Pencil, Trash2, Loader2, Banknote, LayoutList, LayoutGrid, ArrowUpDown } from 'lucide-react'
+import { Plus, Pencil, Trash2, Loader2, Banknote, LayoutList, LayoutGrid, ArrowUpDown, X } from 'lucide-react'
 import { formatCurrency, cn } from '@/lib/utils'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
 import type { Service } from '@/types'
@@ -27,6 +27,7 @@ export default function ServicesPage() {
   const { confirm } = useConfirm()
   const [sortField, setSortField] = useState<string | null>(null)
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+  const [contraindications, setContraindications] = useState<any[]>([])
 
   // Form state
   const [name, setName] = useState('')
@@ -50,6 +51,17 @@ export default function ServicesPage() {
     setLoading(false)
   }, [businessId])
 
+  const fetchContraindications = useCallback(async (serviceId: string) => {
+    if (!businessId) return
+    const { data } = await supabase
+      .from('service_contraindications')
+      .select('*')
+      .eq('business_id', businessId)
+      .eq('service_id', serviceId)
+      .order('created_at', { ascending: false })
+    setContraindications(data || [])
+  }, [businessId])
+
   useEffect(() => {
     if (!ctxLoading) fetchServices()
   }, [fetchServices, ctxLoading])
@@ -61,6 +73,7 @@ export default function ServicesPage() {
     setDurationMinutes(30)
     setPrice('')
     setError(null)
+    setContraindications([])
     setShowModal(true)
   }
 
@@ -72,6 +85,7 @@ export default function ServicesPage() {
     setPrice(service.price ? String(service.price) : '')
     setError(null)
     setShowModal(true)
+    fetchContraindications(service.id)
   }
 
   async function handleSave(e: React.FormEvent) {
@@ -356,6 +370,56 @@ export default function ServicesPage() {
               {error && (
                 <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
                   {error}
+                </div>
+              )}
+
+              {editingService && (
+                <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+                  <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Kontrendikasyonlar</h4>
+                  <p className="text-xs text-gray-400 mb-3">Bu hizmet hangi alerjenlerde risk oluşturur?</p>
+
+                  {/* Existing contraindications */}
+                  {contraindications.map(c => (
+                    <div key={c.id} className="flex items-center justify-between p-2 mb-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/30">
+                      <div>
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{c.allergen}</span>
+                        <span className={`ml-2 text-xs badge ${c.risk_level === 'high' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : c.risk_level === 'medium' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'}`}>
+                          {c.risk_level === 'high' ? 'Yüksek' : c.risk_level === 'medium' ? 'Orta' : 'Düşük'}
+                        </span>
+                      </div>
+                      <button type="button" onClick={async () => {
+                        await supabase.from('service_contraindications').delete().eq('id', c.id)
+                        fetchContraindications(editingService.id)
+                      }} className="text-gray-300 hover:text-red-500 dark:text-gray-600 dark:hover:text-red-400">
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+
+                  {/* Add new */}
+                  <div className="flex gap-2 mt-2">
+                    <input placeholder="Alerjen" id="ci-allergen" className="input text-sm flex-1" />
+                    <select id="ci-risk" className="input text-sm w-24" defaultValue="high">
+                      <option value="low">Düşük</option>
+                      <option value="medium">Orta</option>
+                      <option value="high">Yüksek</option>
+                    </select>
+                    <button type="button" onClick={async () => {
+                      const allergen = (document.getElementById('ci-allergen') as HTMLInputElement).value.trim()
+                      const risk = (document.getElementById('ci-risk') as HTMLSelectElement).value
+                      if (!allergen || !businessId || !editingService) return
+                      await supabase.from('service_contraindications').insert({
+                        business_id: businessId,
+                        service_id: editingService.id,
+                        allergen,
+                        risk_level: risk,
+                      })
+                      ;(document.getElementById('ci-allergen') as HTMLInputElement).value = ''
+                      fetchContraindications(editingService.id)
+                    }} className="btn-secondary text-sm px-3">
+                      Ekle
+                    </button>
+                  </div>
                 </div>
               )}
 

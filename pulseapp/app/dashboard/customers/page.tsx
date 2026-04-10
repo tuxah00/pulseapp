@@ -101,6 +101,14 @@ export default function CustomersPage() {
   const [timeline, setTimeline] = useState<TimelineItem[]>([])
   const [timelineLoading, setTimelineLoading] = useState(false)
 
+  // Allergy state
+  const [allergies, setAllergies] = useState<any[]>([])
+  const [allergiesLoading, setAllergiesLoading] = useState(false)
+  const [showAllergyForm, setShowAllergyForm] = useState(false)
+  const [newAllergen, setNewAllergen] = useState('')
+  const [newSeverity, setNewSeverity] = useState<'mild' | 'moderate' | 'severe'>('moderate')
+  const [newReaction, setNewReaction] = useState('')
+
   const supabase = createClient()
 
   const fetchCustomers = useCallback(async () => {
@@ -307,6 +315,20 @@ export default function CustomersPage() {
     }
   }, [businessId])
 
+  // Alerji verisi çekme
+  const fetchAllergies = useCallback(async (customerId: string) => {
+    if (!businessId) return
+    setAllergiesLoading(true)
+    const { data } = await supabase
+      .from('customer_allergies')
+      .select('*')
+      .eq('business_id', businessId)
+      .eq('customer_id', customerId)
+      .order('created_at', { ascending: false })
+    setAllergies(data || [])
+    setAllergiesLoading(false)
+  }, [businessId, supabase])
+
   // Tab değiştiğinde geçmişi yükle
   useEffect(() => {
     if (panelTab === 'history' && selectedCustomer) {
@@ -319,6 +341,14 @@ export default function CustomersPage() {
   useEffect(() => {
     setPanelTab('info')
     setTimeline([])
+    setShowAllergyForm(false)
+    setNewAllergen('')
+    setNewReaction('')
+    if (selectedCustomer) {
+      fetchAllergies(selectedCustomer.id)
+    } else {
+      setAllergies([])
+    }
   }, [selectedCustomer?.id])
 
   useEffect(() => {
@@ -731,6 +761,93 @@ export default function CustomersPage() {
                       <p className="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">{selectedCustomer.notes}</p>
                     </div>
                   )}
+
+                  {/* Alerjiler */}
+                  <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                        <AlertTriangle className="h-3.5 w-3.5 text-red-500" />
+                        Alerjiler
+                      </h4>
+                      <button
+                        onClick={() => setShowAllergyForm(!showAllergyForm)}
+                        className="text-xs text-blue-500 hover:text-blue-600 font-medium"
+                      >
+                        {showAllergyForm ? 'İptal' : '+ Ekle'}
+                      </button>
+                    </div>
+
+                    {showAllergyForm && (
+                      <div className="space-y-2 mb-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                        <input
+                          placeholder="Alerjen (ör: Lateks, Penisilin)"
+                          value={newAllergen}
+                          onChange={(e) => setNewAllergen(e.target.value)}
+                          className="input text-sm"
+                        />
+                        <select value={newSeverity} onChange={(e) => setNewSeverity(e.target.value as any)} className="input text-sm">
+                          <option value="mild">Hafif</option>
+                          <option value="moderate">Orta</option>
+                          <option value="severe">Şiddetli</option>
+                        </select>
+                        <input
+                          placeholder="Reaksiyon (opsiyonel)"
+                          value={newReaction}
+                          onChange={(e) => setNewReaction(e.target.value)}
+                          className="input text-sm"
+                        />
+                        <button
+                          onClick={async () => {
+                            if (!newAllergen.trim() || !businessId || !selectedCustomer) return
+                            await supabase.from('customer_allergies').insert({
+                              business_id: businessId,
+                              customer_id: selectedCustomer.id,
+                              allergen: newAllergen.trim(),
+                              severity: newSeverity,
+                              reaction: newReaction.trim() || null,
+                              created_by: staffId,
+                            })
+                            setNewAllergen('')
+                            setNewReaction('')
+                            setShowAllergyForm(false)
+                            fetchAllergies(selectedCustomer.id)
+                          }}
+                          className="btn-primary text-sm w-full"
+                        >
+                          Kaydet
+                        </button>
+                      </div>
+                    )}
+
+                    {allergiesLoading ? (
+                      <p className="text-xs text-gray-400">Yükleniyor...</p>
+                    ) : allergies.length === 0 ? (
+                      <p className="text-xs text-gray-400">Kayıtlı alerji yok</p>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {allergies.map((a) => (
+                          <div key={a.id} className="flex items-center justify-between p-2 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30">
+                            <div className="flex items-center gap-2">
+                              <span className={`inline-block w-2 h-2 rounded-full ${
+                                a.severity === 'severe' ? 'bg-red-500' : a.severity === 'moderate' ? 'bg-amber-500' : 'bg-yellow-400'
+                              }`} />
+                              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{a.allergen}</span>
+                              {a.reaction && <span className="text-xs text-gray-400">— {a.reaction}</span>}
+                            </div>
+                            <button
+                              onClick={async () => {
+                                await supabase.from('customer_allergies').delete().eq('id', a.id)
+                                fetchAllergies(selectedCustomer!.id)
+                              }}
+                              className="text-gray-300 hover:text-red-500 transition-colors"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
 
                   <div className="border-t border-gray-200 dark:border-gray-700 pt-4 flex gap-2">
                     <button onClick={() => { openEditModal(selectedCustomer); setSelectedCustomer(null) }} className="btn-secondary flex-1 text-sm">
