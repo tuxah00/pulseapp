@@ -11,7 +11,7 @@ import {
   Clock, Star, MessageSquare, CheckCircle, XCircle, AlertTriangle, Info, Download,
   Gift, FileText, ChevronRight,
 } from 'lucide-react'
-import { formatPhone, formatDate, formatTime, formatCurrency, getSegmentColor, cn, getInitials, getAvatarColor } from '@/lib/utils'
+import { formatPhone, formatDate, formatTime, formatCurrency, getSegmentColor, cn, getInitials } from '@/lib/utils'
 import { SEGMENT_LABELS, STATUS_LABELS, REFERRAL_STATUS_LABELS, REWARD_TYPE_LABELS, type Customer, type CustomerSegment, type Referral, type RewardType } from '@/types'
 import type { AppointmentRow, MessageRow, ReviewRow } from '@/types/db'
 import { useForm } from 'react-hook-form'
@@ -687,7 +687,6 @@ export default function CustomersPage() {
         <AnimatedList className="space-y-2">
           {filteredCustomers.map((customer) => {
             const initials = getInitials(customer.name)
-            const avatarColor = getAvatarColor(customer.name)
             return (
               <AnimatedItem key={customer.id}>
                 <div onClick={() => setSelectedCustomer(customer)} className={cn(
