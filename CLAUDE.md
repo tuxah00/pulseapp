@@ -82,6 +82,14 @@ pulseapp-v2-fixed/
 
 ---
 
+## Test Hesabı
+
+Geliştirme ve doğrulama sırasında kullanılabilecek test hesabı:
+- **E-posta:** `pulseapp@gmail.com`
+- **Şifre:** `123123`
+
+---
+
 ## Mimari Kararlar
 
 ### Auth Akışı
