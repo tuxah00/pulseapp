@@ -5,9 +5,8 @@
       "name": "pulseapp (Next.js dev)",
       "runtimeExecutable": "npm.cmd",
       "runtimeArgs": ["run", "dev"],
-      "cwd": "pulseapp",
-      "port": 3000,
-      "autoPort": true
+      "cwd": "C:/Users/ahmet_58cdzcg/Documents/PulseApp/pulseapp-v2-fixed/.claude/worktrees/competent-nobel/pulseapp",
+      "port": 3000
     }
   ]
 }

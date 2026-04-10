@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/api/with-permission'
 import { validateBody } from '@/lib/api/validate'
 import { protocolCreateSchema } from '@/lib/schemas'
+import { logAuditServer } from '@/lib/utils/audit'
 
 // GET: Protokol listesi
 export async function GET(request: NextRequest) {
@@ -101,6 +102,23 @@ export async function POST(request: NextRequest) {
     `)
     .eq('id', protocol.id)
     .single()
+
+  // Audit log
+  const { data: staffInfo } = await supabase
+    .from('staff_members')
+    .select('name')
+    .eq('id', staffId)
+    .single()
+
+  await logAuditServer({
+    businessId,
+    staffId,
+    staffName: staffInfo?.name || null,
+    action: 'create',
+    resource: 'protocol',
+    resourceId: protocol.id,
+    details: { customer_name: fullProtocol?.customer?.name || null, name, total_sessions: totalSessions },
+  })
 
   return NextResponse.json({ protocol: fullProtocol }, { status: 201 })
 }

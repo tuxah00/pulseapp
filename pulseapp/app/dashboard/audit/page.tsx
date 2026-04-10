@@ -28,6 +28,9 @@ const ACTION_LABELS: Record<string, string> = {
   pay: 'Ödeme Aldı',
   cancel: 'İptal Etti',
   restore: 'Geri Yükledi',
+  assign: 'Atadı',
+  revoke: 'İptal Etti',
+  request: 'Talep Etti',
 }
 
 const RESOURCE_LABELS: Record<string, string> = {
@@ -59,6 +62,15 @@ const RESOURCE_LABELS: Record<string, string> = {
   review: 'Yorum',
   notification: 'Bildirim',
   order: 'Sipariş',
+  reward: 'Ödül Şablonu',
+  customer_reward: 'Müşteri Ödülü',
+  referral: 'Referans',
+  consent: 'KVKK Rızası',
+  data_deletion_request: 'Veri Silme Talebi',
+  staff_invitation: 'Personel Daveti',
+  follow_up: 'Takip',
+  protocol: 'Tedavi Protokolü',
+  allergy: 'Alerji',
 }
 
 const STATUS_LABELS_TR: Record<string, string> = {
@@ -203,6 +215,89 @@ function formatAuditDetail(log: AuditLog): string {
     return parts.join(' ')
   }
 
+  // Ödül şablonu
+  if (log.resource === 'reward') {
+    const parts: string[] = []
+    if (d.name) parts.push(String(d.name))
+    if (d.type) parts.push(String(d.type))
+    if (d.value !== undefined && d.value !== null) parts.push(`₺${d.value}`)
+    return parts.join(' · ')
+  }
+
+  // Müşteri ödülü
+  if (log.resource === 'customer_reward') {
+    const parts: string[] = []
+    if (d.customer_name) parts.push(String(d.customer_name))
+    if (d.reward_name) parts.push(String(d.reward_name))
+    if (d.status) {
+      const statusLabel = d.status === 'used' ? 'kullanıldı' : d.status === 'pending' ? 'bekliyor' : String(d.status)
+      parts.push(statusLabel)
+    }
+    return parts.join(' · ')
+  }
+
+  // Referans
+  if (log.resource === 'referral') {
+    const parts: string[] = []
+    if (d.referrer_name) parts.push(`Referans: ${d.referrer_name}`)
+    if (d.referred_name) parts.push(`→ ${d.referred_name}`)
+    if (d.status) parts.push(d.status === 'rewarded' ? 'Ödül Verildi' : 'Bekliyor')
+    return parts.join(' · ')
+  }
+
+  // KVKK Rızası
+  if (log.resource === 'consent') {
+    const typeLabels: Record<string, string> = { kvkk: 'KVKK', marketing: 'Pazarlama', health_data: 'Sağlık Verisi', whatsapp: 'WhatsApp' }
+    const parts: string[] = []
+    if (d.consent_type) parts.push(typeLabels[String(d.consent_type)] || String(d.consent_type))
+    if (d.method) parts.push(String(d.method))
+    if (d.customer_phone) parts.push(String(d.customer_phone))
+    return parts.join(' · ')
+  }
+
+  // Veri Silme Talebi
+  if (log.resource === 'data_deletion_request') {
+    const parts: string[] = []
+    if (d.customer_name) parts.push(String(d.customer_name))
+    if (d.customer_phone) parts.push(String(d.customer_phone))
+    return parts.join(' · ')
+  }
+
+  // Personel Daveti
+  if (log.resource === 'staff_invitation') {
+    const parts: string[] = []
+    if (d.email) parts.push(String(d.email))
+    if (d.role) parts.push(`(${d.role})`)
+    return parts.join(' ')
+  }
+
+  // Takip
+  if (log.resource === 'follow_up') {
+    const parts: string[] = []
+    if (d.customer_name) parts.push(String(d.customer_name))
+    if (d.type) parts.push(String(d.type))
+    if (d.scheduled_for) parts.push(String(d.scheduled_for))
+    return parts.join(' · ')
+  }
+
+  // Tedavi Protokolü
+  if (log.resource === 'protocol') {
+    const parts: string[] = []
+    if (d.customer_name) parts.push(String(d.customer_name))
+    if (d.name) parts.push(String(d.name))
+    if (d.total_sessions !== undefined) parts.push(`${d.total_sessions} seans`)
+    return parts.join(' · ')
+  }
+
+  // Alerji
+  if (log.resource === 'allergy') {
+    const parts: string[] = []
+    if (d.customer_name) parts.push(String(d.customer_name))
+    if (d.allergen) parts.push(String(d.allergen))
+    if (d.severity) parts.push(String(d.severity))
+    return parts.join(' · ')
+  }
+
   return ''
 }
 
@@ -216,6 +311,9 @@ const ACTION_COLORS: Record<string, string> = {
   pay: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
   cancel: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
   restore: 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300',
+  assign: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300',
+  revoke: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300',
+  request: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
 }
 
 export default function AuditPage() {

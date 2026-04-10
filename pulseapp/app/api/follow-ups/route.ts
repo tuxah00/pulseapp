@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { logAuditServer } from '@/lib/utils/audit'
 
-async function verifyMembership(supabase: ReturnType<typeof createServerSupabaseClient>, userId: string, businessId: string) {
+async function getStaffInfo(supabase: ReturnType<typeof createServerSupabaseClient>, userId: string, businessId: string) {
   const { data } = await supabase
     .from('staff_members')
-    .select('id, business_id')
+    .select('id, name, business_id')
     .eq('user_id', userId)
     .eq('business_id', businessId)
     .single()
@@ -23,7 +24,7 @@ export async function GET(request: NextRequest) {
 
   if (!businessId) return NextResponse.json({ error: 'businessId gerekli' }, { status: 400 })
 
-  const staff = await verifyMembership(supabase, user.id, businessId)
+  const staff = await getStaffInfo(supabase, user.id, businessId)
   if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
 
   const { data, error } = await supabase
@@ -56,7 +57,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Eksik alanlar' }, { status: 400 })
   }
 
-  const staff = await verifyMembership(supabase, user.id, businessId)
+  const staff = await getStaffInfo(supabase, user.id, businessId)
   if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
 
   const { data, error } = await supabase
@@ -74,6 +75,17 @@ export async function POST(request: NextRequest) {
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  await logAuditServer({
+    businessId,
+    staffId: staff?.id || null,
+    staffName: staff?.name || null,
+    action: 'create',
+    resource: 'follow_up',
+    resourceId: data.id,
+    details: { type, scheduled_for: scheduledFor },
+  })
+
   return NextResponse.json({ followUp: data }, { status: 201 })
 }
 
@@ -90,7 +102,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'businessId, id, status zorunlu' }, { status: 400 })
   }
 
-  const staff = await verifyMembership(supabase, user.id, businessId)
+  const staff = await getStaffInfo(supabase, user.id, businessId)
   if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
 
   const { data, error } = await supabase
@@ -102,5 +114,16 @@ export async function PATCH(request: NextRequest) {
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  await logAuditServer({
+    businessId,
+    staffId: staff?.id || null,
+    staffName: staff?.name || null,
+    action: 'status_change',
+    resource: 'follow_up',
+    resourceId: id,
+    details: { status },
+  })
+
   return NextResponse.json({ followUp: data })
 }

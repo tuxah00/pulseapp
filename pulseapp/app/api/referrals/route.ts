@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { logAuditServer } from '@/lib/utils/audit'
 
-async function verifyMembership(supabase: ReturnType<typeof createServerSupabaseClient>, userId: string, businessId: string) {
+async function getStaffInfo(supabase: ReturnType<typeof createServerSupabaseClient>, userId: string, businessId: string) {
   const { data } = await supabase
     .from('staff_members')
-    .select('id, business_id')
+    .select('id, name, business_id')
     .eq('user_id', userId)
     .eq('business_id', businessId)
     .single()
@@ -25,7 +26,7 @@ export async function GET(request: NextRequest) {
 
   if (!businessId) return NextResponse.json({ error: 'businessId gerekli' }, { status: 400 })
 
-  const staff = await verifyMembership(supabase, user.id, businessId)
+  const staff = await getStaffInfo(supabase, user.id, businessId)
   if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
 
   let query = supabase
@@ -60,7 +61,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'businessId ve referrerCustomerId zorunlu' }, { status: 400 })
   }
 
-  const staff = await verifyMembership(supabase, user.id, businessId)
+  const staff = await getStaffInfo(supabase, user.id, businessId)
   if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
 
   // Referred kişi zaten müşteri mi kontrol et
@@ -94,6 +95,17 @@ export async function POST(request: NextRequest) {
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  await logAuditServer({
+    businessId,
+    staffId: staff?.id || null,
+    staffName: staff?.name || null,
+    action: 'create',
+    resource: 'referral',
+    resourceId: data.id,
+    details: { referrer_name: data.referrer?.name || null, referred_name: referredName || null, referred_phone: referredPhone || null },
+  })
+
   return NextResponse.json({ referral: data }, { status: 201 })
 }
 
@@ -108,7 +120,7 @@ export async function PATCH(request: NextRequest) {
 
   if (!businessId || !id) return NextResponse.json({ error: 'businessId ve id zorunlu' }, { status: 400 })
 
-  const staff = await verifyMembership(supabase, user.id, businessId)
+  const staff = await getStaffInfo(supabase, user.id, businessId)
   if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
 
   const updateData: Record<string, unknown> = {}
@@ -135,5 +147,16 @@ export async function PATCH(request: NextRequest) {
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  await logAuditServer({
+    businessId,
+    staffId: staff?.id || null,
+    staffName: staff?.name || null,
+    action: 'status_change',
+    resource: 'referral',
+    resourceId: id,
+    details: { status: status || null, referrer_name: data.referrer?.name || null, referred_name: data.referred?.name || null },
+  })
+
   return NextResponse.json({ referral: data })
 }
