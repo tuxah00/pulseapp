@@ -46,6 +46,8 @@ export default function ProtocolsPage() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [selectedProtocol, setSelectedProtocol] = useState<TreatmentProtocol | null>(null)
+  const [panelClosing, setPanelClosing] = useState(false)
+  function closePanel() { setPanelClosing(true) }
 
   // Create modal
   const [showCreate, setShowCreate] = useState(false)
@@ -239,7 +241,7 @@ export default function ProtocolsPage() {
       {/* Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Protocol List */}
-        <div className={`${selectedProtocol ? 'lg:col-span-1' : 'lg:col-span-3'} space-y-3`}>
+        <div className="lg:col-span-3 space-y-3">
           {loading ? (
             <div className="flex items-center justify-center h-32"><Loader2 className="h-6 w-6 animate-spin text-pulse-900" /></div>
           ) : filtered.length === 0 ? (
@@ -307,27 +309,47 @@ export default function ProtocolsPage() {
           )}
         </div>
 
-        {/* Detail Panel */}
-        {selectedProtocol && (
-          <div className="lg:col-span-2 card p-6 space-y-6">
-            <DetailPanel
-              protocol={selectedProtocol}
-              onClose={() => setSelectedProtocol(null)}
-              onUpdateStatus={updateProtocolStatus}
-              onUpdateSession={updateSession}
-              onDelete={handleDelete}
-              onRefresh={async () => {
-                await fetchProtocols()
-                if (selectedProtocol) {
-                  const res = await fetch(`/api/protocols/${selectedProtocol.id}?businessId=${businessId}`)
-                  const json = await res.json()
-                  if (json.protocol) setSelectedProtocol(json.protocol)
-                }
-              }}
-            />
-          </div>
-        )}
       </div>
+
+      {/* Overlay Detail Panel — sağdan kayarak açılır */}
+      {(selectedProtocol || panelClosing) && (
+        <Portal>
+          <div
+            className={cn('fixed inset-0 z-[90] bg-black/30 dark:bg-black/50 transition-opacity', panelClosing ? 'animate-fade-out' : 'animate-fade-in')}
+            onClick={closePanel}
+          />
+          <div
+            className={cn(
+              'fixed top-0 right-0 z-[91] w-full max-w-2xl h-full bg-white dark:bg-gray-900 shadow-2xl border-l border-gray-200 dark:border-gray-700 overflow-y-auto',
+              panelClosing ? 'animate-slide-out-right' : 'animate-slide-in-right'
+            )}
+            onAnimationEnd={() => {
+              if (panelClosing) {
+                setPanelClosing(false)
+                setSelectedProtocol(null)
+              }
+            }}
+          >
+            <div className="p-6 space-y-6">
+              <DetailPanel
+                protocol={selectedProtocol!}
+                onClose={closePanel}
+                onUpdateStatus={updateProtocolStatus}
+                onUpdateSession={updateSession}
+                onDelete={handleDelete}
+                onRefresh={async () => {
+                  await fetchProtocols()
+                  if (selectedProtocol) {
+                    const res = await fetch(`/api/protocols/${selectedProtocol.id}?businessId=${businessId}`)
+                    const json = await res.json()
+                    if (json.protocol) setSelectedProtocol(json.protocol)
+                  }
+                }}
+              />
+            </div>
+          </div>
+        </Portal>
+      )}
 
       {/* Create Modal */}
       {(showCreate || isClosingCreate) && (
