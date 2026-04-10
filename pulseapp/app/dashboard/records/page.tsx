@@ -535,6 +535,10 @@ function RecordsPageInner() {
       const dataPayload: Record<string, any> = {}
       Object.entries(rest).forEach(([k, v]) => {
         if (typeof v === 'string' && v.trim()) dataPayload[k] = v.trim()
+        else if (typeof v === 'string' && !v.trim()) {
+          // Boş string'leri tamamen çıkar (tarih alanları dahil)
+          // Böylece veritabanı NULL yerine boş string görmez
+        }
       })
       // Mevcut dosyaları koru — kullanıcı yeni dosya yüklemese bile
       if (editingRecord?.data?.file_urls && Array.isArray(editingRecord.data.file_urls)) {
@@ -568,7 +572,15 @@ function RecordsPageInner() {
           body: JSON.stringify({ title: title.trim(), data: dataPayload, customer_id: selectedCustomerId || null }),
         })
         const json = await res.json()
-        if (!res.ok) { setFormError(json.error || 'Güncelleme hatası'); return }
+        if (!res.ok) {
+          let errorMsg = json.error || 'Güncelleme hatası'
+          // Tarih formatı hatalarını kullanıcı dostça mesaja çevir
+          if (errorMsg.includes('invalid input syntax for type date')) {
+            errorMsg = 'Tarih alanlarını lütfen doğru formatta doldurunuz (gün.ay.yıl)'
+          }
+          setFormError(errorMsg)
+          return
+        }
 
         // Upload files if any
         if (uploadFiles.length > 0) {
@@ -622,7 +634,15 @@ function RecordsPageInner() {
           }),
         })
         const json = await res.json()
-        if (!res.ok) { setFormError(json.error || 'Ekleme hatası'); return }
+        if (!res.ok) {
+          let errorMsg = json.error || 'Ekleme hatası'
+          // Tarih formatı hatalarını kullanıcı dostça mesaja çevir
+          if (errorMsg.includes('invalid input syntax for type date')) {
+            errorMsg = 'Tarih alanlarını lütfen doğru formatta doldurunuz (gün.ay.yıl)'
+          }
+          setFormError(errorMsg)
+          return
+        }
 
         // Upload files if any
         if (uploadFiles.length > 0 && json.record?.id) {
