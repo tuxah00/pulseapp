@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
+import { getCustomerLabelSingular } from '@/lib/config/sector-modules'
 import {
   Star, Loader2, MessageSquare, AlertTriangle,
   ExternalLink, Send, TrendingUp, Sparkles, Search,
@@ -15,7 +16,7 @@ type ReviewWithJoin = Review & {
 }
 
 export default function ReviewsPage() {
-  const { businessId, loading: ctxLoading, permissions } = useBusinessContext()
+  const { businessId, sector, loading: ctxLoading, permissions } = useBusinessContext()
   const [reviews, setReviews] = useState<ReviewWithJoin[]>([])
   const [loading, setLoading] = useState(true)
   const [filterRating, setFilterRating] = useState<number | null>(null)
@@ -168,7 +169,7 @@ export default function ReviewsPage() {
       {/* Arama */}
       <div className="mb-4 relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-        <input type="text" value={search} onChange={e => setSearch(e.target.value)} className="input pl-10" placeholder="Müşteri adı veya yorum ara..." />
+        <input type="text" value={search} onChange={e => setSearch(e.target.value)} className="input pl-10" placeholder={`${getCustomerLabelSingular(sector ?? undefined)} adı veya yorum ara...`} />
       </div>
 
       {/* Puan Dağılımı */}

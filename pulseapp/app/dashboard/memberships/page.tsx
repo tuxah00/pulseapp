@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
+import { getCustomerLabelSingular } from '@/lib/config/sector-modules'
 import { useDebounce } from '@/lib/hooks/use-debounce'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import {
@@ -69,7 +70,7 @@ function formatDate(dateStr: string | null): string {
 }
 
 export default function MembershipsPage() {
-  const { businessId, loading: ctxLoading, permissions } = useBusinessContext()
+  const { businessId, sector, loading: ctxLoading, permissions } = useBusinessContext()
   const [memberships, setMemberships] = useState<Membership[]>([])
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
@@ -275,7 +276,7 @@ export default function MembershipsPage() {
   const hasActiveFilters = statusFilter !== 'all'
 
   const SORT_OPTIONS = [
-    { value: 'customer_name', label: 'Müşteri adı' },
+    { value: 'customer_name', label: `${getCustomerLabelSingular(sector ?? undefined)} adı` },
     { value: 'plan_name', label: 'Plan adı' },
     { value: 'end_date', label: 'Bitiş tarihi' },
   ]
@@ -408,7 +409,7 @@ export default function MembershipsPage() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="input pl-10"
-            placeholder="Müşteri adına göre ara..."
+            placeholder={`${getCustomerLabelSingular(sector ?? undefined)} adına göre ara...`}
           />
         </div>
       )}
@@ -485,7 +486,7 @@ export default function MembershipsPage() {
             <form onSubmit={handleSave} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2 sm:col-span-1">
-                  <label className="label">Müşteri Adı</label>
+                  <label className="label">{`${getCustomerLabelSingular(sector ?? undefined)} Adı`}</label>
                   <input
                     type="text"
                     value={customerName}

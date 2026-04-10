@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
+import { getCustomerLabelSingular } from '@/lib/config/sector-modules'
 import { useDebounce } from '@/lib/hooks/use-debounce'
 import {
   MessageSquare, Search, Send, Loader2, Phone,
@@ -47,7 +48,7 @@ function formatConversationDate(dateStr: string): string {
 }
 
 export default function MessagesPage() {
-  const { businessId, loading: ctxLoading, permissions } = useBusinessContext()
+  const { businessId, sector, loading: ctxLoading, permissions } = useBusinessContext()
   const supabase = createClient()
 
   const [conversations, setConversations] = useState<Conversation[]>([])
@@ -349,7 +350,7 @@ export default function MessagesPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="input pl-10 py-2"
-                placeholder="Müşteri ara..."
+                placeholder={`${getCustomerLabelSingular(sector ?? undefined)} ara...`}
               />
             </div>
 
@@ -425,7 +426,7 @@ export default function MessagesPage() {
                 <p className="text-xs text-gray-500">
                   {search
                     ? 'Farklı bir arama terimi deneyin.'
-                    : 'Müşteri mesajları burada görünecek.'}
+                    : `${getCustomerLabelSingular(sector ?? undefined)} mesajları burada görünecek.`}
                 </p>
               </div>
             ) : (
@@ -531,7 +532,7 @@ export default function MessagesPage() {
                   <a
                     href={`/dashboard/customers`}
                     className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
-                    title="Müşteri profili"
+                    title={`${getCustomerLabelSingular(sector ?? undefined)} profili`}
                   >
                     <User className="h-4 w-4" />
                   </a>

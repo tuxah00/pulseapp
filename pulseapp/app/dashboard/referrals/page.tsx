@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
+import { getCustomerLabelSingular } from '@/lib/config/sector-modules'
 import {
   Plus, UserCheck, Search, X, Loader2, Gift, Phone, ArrowRight, CheckCircle, Clock, ShieldX
 } from 'lucide-react'
@@ -20,7 +21,7 @@ const STATUS_CONFIG: Record<ReferralStatus, { bg: string; text: string; icon: ty
 
 
 export default function ReferralsPage() {
-  const { businessId, loading: ctxLoading, permissions } = useBusinessContext()
+  const { businessId, sector, loading: ctxLoading, permissions } = useBusinessContext()
 
   const [referrals, setReferrals] = useState<Referral[]>([])
   const [loading, setLoading] = useState(true)
@@ -152,7 +153,7 @@ export default function ReferralsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Referanslar</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Müşteri tavsiye sistemi</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{`${getCustomerLabelSingular(sector ?? undefined)} tavsiye sistemi`}</p>
         </div>
         <button onClick={() => setShowCreate(true)} className="btn-primary flex items-center gap-2">
           <Plus className="h-4 w-4" /> Yeni Referans
@@ -290,12 +291,12 @@ export default function ReferralsPage() {
             </div>
             <div className="p-6 space-y-4">
               <div>
-                <label className="label">Tavsiye Eden Müşteri *</label>
+                <label className="label">{`Tavsiye Eden ${getCustomerLabelSingular(sector ?? undefined)} *`}</label>
                 <CustomerSearchSelect
                   value={formReferrerId}
                   onChange={v => setFormReferrerId(v)}
                   businessId={businessId!}
-                  placeholder="Müşteri seçin..."
+                  placeholder={`${getCustomerLabelSingular(sector ?? undefined)} seçin...`}
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">

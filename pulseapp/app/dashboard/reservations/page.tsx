@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
+import { getCustomerLabelSingular } from '@/lib/config/sector-modules'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import {
   Plus,
@@ -69,7 +70,7 @@ function formatTime(timeStr: string) {
 }
 
 export default function ReservationsPage() {
-  const { businessId, loading: ctxLoading, permissions } = useBusinessContext()
+  const { businessId, sector, loading: ctxLoading, permissions } = useBusinessContext()
   const [reservations, setReservations] = useState<TableReservation[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
@@ -155,7 +156,7 @@ export default function ReservationsPage() {
 
   async function handleSave() {
     if (!businessId) return
-    if (!formCustomerName.trim()) { setError('Müşteri adı zorunludur.'); return }
+    if (!formCustomerName.trim()) { setError(`${getCustomerLabelSingular(sector ?? undefined)} adı zorunludur.`); return }
     if (!formCustomerPhone.trim()) { setError('Telefon numarası zorunludur.'); return }
     if (!formDate) { setError('Tarih zorunludur.'); return }
     if (!formTime) { setError('Saat zorunludur.'); return }
@@ -235,7 +236,7 @@ export default function ReservationsPage() {
 
   const SORT_OPTIONS = [
     { value: 'reservation_time', label: 'Saat' },
-    { value: 'customer_name', label: 'Müşteri adı' },
+    { value: 'customer_name', label: `${getCustomerLabelSingular(sector ?? undefined)} adı` },
     { value: 'party_size', label: 'Misafir sayısı' },
   ]
 
@@ -497,7 +498,7 @@ export default function ReservationsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
                   <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Müşteri Adı <span className="text-red-500">*</span>
+                    {getCustomerLabelSingular(sector ?? undefined)} Adı <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"

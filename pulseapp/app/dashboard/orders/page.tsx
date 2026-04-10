@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
+import { getCustomerLabelSingular } from '@/lib/config/sector-modules'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { createClient } from '@/lib/supabase/client'
 import {
@@ -64,7 +65,7 @@ const FILTER_OPTIONS = [
 ]
 
 export default function OrdersPage() {
-  const { businessId, loading: ctxLoading, permissions } = useBusinessContext()
+  const { businessId, sector, loading: ctxLoading, permissions } = useBusinessContext()
   const { confirm } = useConfirm()
   const supabase = createClient()
 
@@ -338,7 +339,7 @@ export default function OrdersPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="label">Müşteri Adı</label>
+                <label className="label">{`${getCustomerLabelSingular(sector ?? undefined)} Adı`}</label>
                 <input
                   type="text"
                   value={customerName}

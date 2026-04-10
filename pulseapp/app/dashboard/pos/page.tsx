@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
+import { getCustomerLabelSingular } from '@/lib/config/sector-modules'
 import { useDebounce } from '@/lib/hooks/use-debounce'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { logAudit } from '@/lib/utils/audit'
@@ -46,7 +47,7 @@ function showToast(title: string, body?: string) {
 }
 
 export default function KasaPage() {
-  const { businessId, staffId, staffName, staffRole, permissions } = useBusinessContext()
+  const { businessId, staffId, staffName, staffRole, sector, permissions } = useBusinessContext()
   const supabaseRef = useRef(createClient())
   const supabase = supabaseRef.current
   const { confirm } = useConfirm()
@@ -543,7 +544,7 @@ export default function KasaPage() {
             value={selectedCustomerId ?? ''}
             onChange={id => setSelectedCustomerId(id || null)}
             businessId={businessId!}
-            placeholder="Müşteri seç (opsiyonel)..."
+            placeholder={`${getCustomerLabelSingular(sector ?? undefined)} seç (opsiyonel)...`}
           />
 
           {/* Referans ödülü banner */}
