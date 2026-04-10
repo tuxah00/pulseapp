@@ -11,7 +11,6 @@ import type { Referral, Customer, ReferralStatus, RewardType } from '@/types'
 import { REFERRAL_STATUS_LABELS, REWARD_TYPE_LABELS } from '@/types'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { CustomerSearchSelect } from '@/components/ui/customer-search-select'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 
 const STATUS_CONFIG: Record<ReferralStatus, { bg: string; text: string; icon: typeof CheckCircle }> = {
@@ -75,6 +74,7 @@ export default function RewardsPage() {
   const [refSearch, setRefSearch] = useState('')
   const [refStatusFilter, setRefStatusFilter] = useState<string>('all')
   const [showRefCreate, setShowRefCreate] = useState(false)
+  const [closingRefCreate, setClosingRefCreate] = useState(false)
   const [refSaving, setRefSaving] = useState(false)
   const [formReferrerId, setFormReferrerId] = useState('')
   const [formReferredName, setFormReferredName] = useState('')
@@ -88,7 +88,9 @@ export default function RewardsPage() {
   const [rwLoading, setRwLoading] = useState(true)
   const [rwStatusFilter, setRwStatusFilter] = useState<string>('all')
   const [showTemplateCreate, setShowTemplateCreate] = useState(false)
+  const [closingTemplateCreate, setClosingTemplateCreate] = useState(false)
   const [showAssign, setShowAssign] = useState(false)
+  const [closingAssign, setClosingAssign] = useState(false)
   const [rwSaving, setRwSaving] = useState(false)
   // Template form
   const [tName, setTName] = useState('')
@@ -502,83 +504,98 @@ export default function RewardsPage() {
       {/* ═══ Modals ═══ */}
 
       {/* Referans Oluştur */}
-      <Dialog open={showRefCreate} onOpenChange={(open) => { if (!open) { setShowRefCreate(false); resetRefForm() } }}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader><DialogTitle>Yeni Referans</DialogTitle></DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label className="label">{`Tavsiye Eden ${customerLabel} *`}</label>
-              <CustomerSearchSelect value={formReferrerId} onChange={v => setFormReferrerId(v)} businessId={businessId!} placeholder={`${customerLabel} seçin...`} />
+      {(showRefCreate || closingRefCreate) && (
+        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 ${closingRefCreate ? 'closing' : ''}`} onClick={() => { setClosingRefCreate(true) }} onAnimationEnd={() => { if (closingRefCreate) { setShowRefCreate(false); setClosingRefCreate(false); resetRefForm() } }}>
+          <div className={`modal-content card w-full max-w-lg dark:bg-gray-900 ${closingRefCreate ? 'closing' : ''}`} onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-medium">Yeni Referans</h3>
+              <button onClick={() => setClosingRefCreate(true)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"><X className="h-4 w-4" /></button>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div><label className="label">Tavsiye Edilen Ad</label><input className="input w-full" placeholder="Ad Soyad" value={formReferredName} onChange={e => setFormReferredName(e.target.value)} /></div>
-              <div><label className="label">Telefon</label><input className="input w-full" placeholder="05XX XXX XXXX" value={formReferredPhone} onChange={e => setFormReferredPhone(e.target.value)} /></div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-4">
               <div>
-                <label className="label">Ödül Tipi</label>
-                <CustomSelect options={(Object.entries(REWARD_TYPE_LABELS) as [RewardType, string][]).map(([k, v]) => ({ value: k, label: v }))} value={formRewardType} onChange={v => setFormRewardType(v as RewardType)} placeholder="Seçin (opsiyonel)" />
+                <label className="label">{`Tavsiye Eden ${customerLabel} *`}</label>
+                <CustomerSearchSelect value={formReferrerId} onChange={v => setFormReferrerId(v)} businessId={businessId!} placeholder={`${customerLabel} seçin...`} />
               </div>
-              <div><label className="label">Ödül Değeri</label><input type="number" className="input w-full" placeholder="Miktar" value={formRewardValue} onChange={e => setFormRewardValue(e.target.value)} /></div>
+              <div className="grid grid-cols-2 gap-4">
+                <div><label className="label">Tavsiye Edilen Ad</label><input className="input w-full" placeholder="Ad Soyad" value={formReferredName} onChange={e => setFormReferredName(e.target.value)} /></div>
+                <div><label className="label">Telefon</label><input className="input w-full" placeholder="05XX XXX XXXX" value={formReferredPhone} onChange={e => setFormReferredPhone(e.target.value)} /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="label">Ödül Tipi</label>
+                  <CustomSelect options={(Object.entries(REWARD_TYPE_LABELS) as [RewardType, string][]).map(([k, v]) => ({ value: k, label: v }))} value={formRewardType} onChange={v => setFormRewardType(v as RewardType)} placeholder="Seçin (opsiyonel)" />
+                </div>
+                <div><label className="label">Ödül Değeri</label><input type="number" className="input w-full" placeholder="Miktar" value={formRewardValue} onChange={e => setFormRewardValue(e.target.value)} /></div>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 mt-4">
+              <button onClick={() => setClosingRefCreate(true)} className="btn-secondary">İptal</button>
+              <button onClick={handleRefCreate} disabled={refSaving || !formReferrerId} className="btn-primary disabled:opacity-50">
+                {refSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1 inline" /> : <Plus className="h-4 w-4 mr-1 inline" />} Oluştur
+              </button>
             </div>
           </div>
-          <DialogFooter>
-            <button onClick={() => { setShowRefCreate(false); resetRefForm() }} className="btn-secondary">İptal</button>
-            <button onClick={handleRefCreate} disabled={refSaving || !formReferrerId} className="btn-primary disabled:opacity-50">
-              {refSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1 inline" /> : <Plus className="h-4 w-4 mr-1 inline" />} Oluştur
-            </button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
 
       {/* Ödül Şablonu Oluştur */}
-      <Dialog open={showTemplateCreate} onOpenChange={(open) => { if (!open) setShowTemplateCreate(false) }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle>Yeni Ödül Şablonu</DialogTitle></DialogHeader>
-          <div className="space-y-4">
-            <div><label className="label label-required">Ödül Adı</label><input className="input w-full" placeholder="ör. %10 İndirim Kuponu" value={tName} onChange={e => setTName(e.target.value)} /></div>
-            <div><label className="label label-required">Tip</label><CustomSelect options={REWARD_TYPE_OPTIONS} value={tType} onChange={v => setTType(v)} placeholder="Tip seçin" /></div>
-            <div className="grid grid-cols-2 gap-4">
-              <div><label className="label">Değer</label><input type="number" className="input w-full" placeholder="Miktar" value={tValue} onChange={e => setTValue(e.target.value)} /></div>
-              <div><label className="label">Geçerlilik (gün)</label><input type="number" className="input w-full" value={tValidDays} onChange={e => setTValidDays(e.target.value)} /></div>
+      {(showTemplateCreate || closingTemplateCreate) && (
+        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 ${closingTemplateCreate ? 'closing' : ''}`} onClick={() => setClosingTemplateCreate(true)} onAnimationEnd={() => { if (closingTemplateCreate) { setShowTemplateCreate(false); setClosingTemplateCreate(false) } }}>
+          <div className={`modal-content card w-full max-w-md dark:bg-gray-900 ${closingTemplateCreate ? 'closing' : ''}`} onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-medium">Yeni Ödül Şablonu</h3>
+              <button onClick={() => setClosingTemplateCreate(true)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"><X className="h-4 w-4" /></button>
             </div>
-            <div><label className="label">Açıklama</label><textarea className="input w-full" rows={2} placeholder="Opsiyonel açıklama..." value={tDesc} onChange={e => setTDesc(e.target.value)} /></div>
+            <div className="space-y-4">
+              <div><label className="label label-required">Ödül Adı</label><input className="input w-full" placeholder="ör. %10 İndirim Kuponu" value={tName} onChange={e => setTName(e.target.value)} /></div>
+              <div><label className="label label-required">Tip</label><CustomSelect options={REWARD_TYPE_OPTIONS} value={tType} onChange={v => setTType(v)} placeholder="Tip seçin" /></div>
+              <div className="grid grid-cols-2 gap-4">
+                <div><label className="label">Değer</label><input type="number" className="input w-full" placeholder="Miktar" value={tValue} onChange={e => setTValue(e.target.value)} /></div>
+                <div><label className="label">Geçerlilik (gün)</label><input type="number" className="input w-full" value={tValidDays} onChange={e => setTValidDays(e.target.value)} /></div>
+              </div>
+              <div><label className="label">Açıklama</label><textarea className="input w-full" rows={2} placeholder="Opsiyonel açıklama..." value={tDesc} onChange={e => setTDesc(e.target.value)} /></div>
+            </div>
+            <div className="flex justify-end gap-2 mt-4">
+              <button onClick={() => setClosingTemplateCreate(true)} className="btn-secondary">İptal</button>
+              <button onClick={handleCreateTemplate} disabled={rwSaving || !tName || !tType} className="btn-primary disabled:opacity-50">
+                {rwSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1 inline" /> : <Plus className="h-4 w-4 mr-1 inline" />} Oluştur
+              </button>
+            </div>
           </div>
-          <DialogFooter>
-            <button onClick={() => setShowTemplateCreate(false)} className="btn-secondary">İptal</button>
-            <button onClick={handleCreateTemplate} disabled={rwSaving || !tName || !tType} className="btn-primary disabled:opacity-50">
-              {rwSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1 inline" /> : <Plus className="h-4 w-4 mr-1 inline" />} Oluştur
-            </button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
 
       {/* Ödül Ata */}
-      <Dialog open={showAssign} onOpenChange={(open) => { if (!open) { setShowAssign(false); setACustomerId(''); setARewardId(''); setANotes('') } }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle>{customerLabel} Ödül Ver</DialogTitle></DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label className="label label-required">{customerLabel}</label>
-              <CustomerSearchSelect value={aCustomerId} onChange={v => setACustomerId(v)} businessId={businessId!} placeholder={`${customerLabel} seçin...`} />
+      {(showAssign || closingAssign) && (
+        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 ${closingAssign ? 'closing' : ''}`} onClick={() => { setClosingAssign(true) }} onAnimationEnd={() => { if (closingAssign) { setShowAssign(false); setClosingAssign(false); setACustomerId(''); setARewardId(''); setANotes('') } }}>
+          <div className={`modal-content card w-full max-w-md dark:bg-gray-900 ${closingAssign ? 'closing' : ''}`} onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-medium">{customerLabel} Ödül Ver</h3>
+              <button onClick={() => setClosingAssign(true)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"><X className="h-4 w-4" /></button>
             </div>
-            <div>
-              <label className="label label-required">Ödül</label>
-              <CustomSelect
-                options={rewardTemplates.filter(t => t.is_active).map(t => ({ value: t.id, label: `${t.name} (${REWARD_TYPE_OPTIONS.find(o => o.value === t.type)?.label || t.type})` }))}
-                value={aRewardId} onChange={v => setARewardId(v)} placeholder="Ödül seçin"
-              />
+            <div className="space-y-4">
+              <div>
+                <label className="label label-required">{customerLabel}</label>
+                <CustomerSearchSelect value={aCustomerId} onChange={v => setACustomerId(v)} businessId={businessId!} placeholder={`${customerLabel} seçin...`} />
+              </div>
+              <div>
+                <label className="label label-required">Ödül</label>
+                <CustomSelect
+                  options={rewardTemplates.filter(t => t.is_active).map(t => ({ value: t.id, label: `${t.name} (${REWARD_TYPE_OPTIONS.find(o => o.value === t.type)?.label || t.type})` }))}
+                  value={aRewardId} onChange={v => setARewardId(v)} placeholder="Ödül seçin"
+                />
+              </div>
+              <div><label className="label">Not</label><textarea className="input w-full" rows={2} placeholder="Opsiyonel not..." value={aNotes} onChange={e => setANotes(e.target.value)} /></div>
             </div>
-            <div><label className="label">Not</label><textarea className="input w-full" rows={2} placeholder="Opsiyonel not..." value={aNotes} onChange={e => setANotes(e.target.value)} /></div>
+            <div className="flex justify-end gap-2 mt-4">
+              <button onClick={() => setClosingAssign(true)} className="btn-secondary">İptal</button>
+              <button onClick={handleAssignReward} disabled={rwSaving || !aCustomerId || !aRewardId} className="btn-primary disabled:opacity-50">
+                {rwSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1 inline" /> : <Gift className="h-4 w-4 mr-1 inline" />} Ödül Ver
+              </button>
+            </div>
           </div>
-          <DialogFooter>
-            <button onClick={() => setShowAssign(false)} className="btn-secondary">İptal</button>
-            <button onClick={handleAssignReward} disabled={rwSaving || !aCustomerId || !aRewardId} className="btn-primary disabled:opacity-50">
-              {rwSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1 inline" /> : <Gift className="h-4 w-4 mr-1 inline" />} Ödül Ver
-            </button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
     </div>
   )
 }

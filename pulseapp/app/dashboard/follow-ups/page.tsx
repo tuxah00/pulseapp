@@ -5,12 +5,11 @@ import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import {
-  Plus, ClipboardCheck, Search, Loader2, Calendar, Send, Ban, Clock, CheckCircle, XCircle
+  Plus, ClipboardCheck, Search, Loader2, Calendar, Send, Ban, Clock, CheckCircle, XCircle, X
 } from 'lucide-react'
 import type { Customer } from '@/types'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { getCustomerLabelSingular } from '@/lib/config/sector-modules'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 
 interface FollowUp {
   id: string
@@ -57,6 +56,7 @@ export default function FollowUpsPage() {
 
   // Create modal
   const [showCreate, setShowCreate] = useState(false)
+  const [closingCreate, setClosingCreate] = useState(false)
   const [saving, setSaving] = useState(false)
   const [formCustomerId, setFormCustomerId] = useState('')
   const [formType, setFormType] = useState<string>('post_session')
@@ -297,59 +297,62 @@ export default function FollowUpsPage() {
       )}
 
       {/* Create Modal */}
-      <Dialog open={showCreate} onOpenChange={(open) => { if (!open) { setShowCreate(false); resetForm() } }}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Yeni Takip</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label className="label label-required">{customerLabel}</label>
-              <CustomSelect
-                options={customers.map(c => ({ value: c.id, label: `${c.name}${c.phone ? ` — ${c.phone}` : ''}` }))}
-                value={formCustomerId}
-                onChange={v => setFormCustomerId(v)}
-                placeholder={`${customerLabel} seçin`}
-              />
+      {(showCreate || closingCreate) && (
+        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 ${closingCreate ? 'closing' : ''}`} onClick={() => setClosingCreate(true)} onAnimationEnd={() => { if (closingCreate) { setShowCreate(false); setClosingCreate(false); resetForm() } }}>
+          <div className={`modal-content card w-full max-w-lg dark:bg-gray-900 ${closingCreate ? 'closing' : ''}`} onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-medium">Yeni Takip</h3>
+              <button onClick={() => setClosingCreate(true)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"><X className="h-4 w-4" /></button>
             </div>
-            <div>
-              <label className="label label-required">Takip Tipi</label>
-              <CustomSelect
-                options={Object.entries(TYPE_LABELS).map(([k, v]) => ({ value: k, label: v }))}
-                value={formType}
-                onChange={v => setFormType(v)}
-                placeholder="Tip seçin"
-              />
+            <div className="space-y-4">
+              <div>
+                <label className="label label-required">{customerLabel}</label>
+                <CustomSelect
+                  options={customers.map(c => ({ value: c.id, label: `${c.name}${c.phone ? ` — ${c.phone}` : ''}` }))}
+                  value={formCustomerId}
+                  onChange={v => setFormCustomerId(v)}
+                  placeholder={`${customerLabel} seçin`}
+                />
+              </div>
+              <div>
+                <label className="label label-required">Takip Tipi</label>
+                <CustomSelect
+                  options={Object.entries(TYPE_LABELS).map(([k, v]) => ({ value: k, label: v }))}
+                  value={formType}
+                  onChange={v => setFormType(v)}
+                  placeholder="Tip seçin"
+                />
+              </div>
+              <div>
+                <label className="label label-required">Planlanan Tarih</label>
+                <input
+                  type="datetime-local"
+                  className="input w-full"
+                  value={formDate}
+                  onChange={e => setFormDate(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="label">Mesaj (opsiyonel)</label>
+                <textarea
+                  className="input w-full"
+                  rows={3}
+                  placeholder="Takip mesajı..."
+                  value={formMessage}
+                  onChange={e => setFormMessage(e.target.value)}
+                />
+              </div>
             </div>
-            <div>
-              <label className="label label-required">Planlanan Tarih</label>
-              <input
-                type="datetime-local"
-                className="input w-full"
-                value={formDate}
-                onChange={e => setFormDate(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="label">Mesaj (opsiyonel)</label>
-              <textarea
-                className="input w-full"
-                rows={3}
-                placeholder="Takip mesajı..."
-                value={formMessage}
-                onChange={e => setFormMessage(e.target.value)}
-              />
+            <div className="flex justify-end gap-2 mt-4">
+              <button onClick={() => setClosingCreate(true)} className="btn-secondary">İptal</button>
+              <button onClick={handleCreate} disabled={saving || !formCustomerId || !formDate} className="btn-primary disabled:opacity-50">
+                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1 inline" /> : <Plus className="h-4 w-4 mr-1 inline" />}
+                Oluştur
+              </button>
             </div>
           </div>
-          <DialogFooter>
-            <button onClick={() => { setShowCreate(false); resetForm() }} className="btn-secondary">İptal</button>
-            <button onClick={handleCreate} disabled={saving || !formCustomerId || !formDate} className="btn-primary disabled:opacity-50">
-              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1 inline" /> : <Plus className="h-4 w-4 mr-1 inline" />}
-              Oluştur
-            </button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
     </div>
   )
 }

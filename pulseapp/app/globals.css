@@ -382,8 +382,8 @@
 .modal-overlay          { animation: fadeIn       0.15s ease-out; }
 .modal-content          { animation: scaleIn      0.2s  ease-out; }
 .slide-panel            { animation: slideInRight 0.2s  ease-out; }
-.modal-overlay.closing, .modal-overlay[data-closed]  { animation: fadeOut      0.2s  ease-in  forwards; }
-.modal-content.closing, .modal-content[data-closed]  { animation: scaleOut     0.2s  ease-in  forwards; }
+.modal-overlay.closing  { animation: fadeOut      0.2s  ease-in  forwards; }
+.modal-content.closing  { animation: scaleOut     0.2s  ease-in  forwards; }
 .slide-panel.closing    { animation: slideOutRight 0.15s ease-in forwards; }
 
 /* ── Liste öğesi animasyonu ── */
