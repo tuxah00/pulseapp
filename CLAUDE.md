@@ -218,6 +218,7 @@ Bu özellikler sadece DB + UI çalışması gerektirir, herhangi bir dış servi
 - Dark mode: `dark:` prefix'i Tailwind ile, `ThemeProvider` zaten dashboard layout'unda mevcut
 - Lucide icon'ları `lucide-react`'tan import et; dinamik ikonlar için `sector-modules.ts` pattern'ini takip et
 - Tüm modal/overlay'ler `components/ui/dialog.tsx` Dialog bileşeni kullanmalı. Custom `modal-overlay` div oluşturulmamalı — Portal desteği olmadığından stacking context sorunu oluşur ve overlay tam ekranı kaplamaz
+- Tüm dropdown/select elementleri `components/ui/custom-select.tsx` (`CustomSelect`) bileşenini kullanmalı. Native `<select>` kullanılmamalı — tarayıcı stillerine bağımlı olduğundan dark mode ve tema tutarlılığını bozar
 
 ---
 

@@ -28,6 +28,7 @@ export default function ServicesPage() {
   const [sortField, setSortField] = useState<string | null>(null)
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const [contraindications, setContraindications] = useState<any[]>([])
+  const [ciRisk, setCiRisk] = useState('high')
 
   // Form state
   const [name, setName] = useState('')
@@ -399,14 +400,19 @@ export default function ServicesPage() {
                   {/* Add new */}
                   <div className="flex gap-2 mt-2">
                     <input placeholder="Alerjen" id="ci-allergen" className="input text-sm flex-1" />
-                    <select id="ci-risk" className="input text-sm w-24" defaultValue="high">
-                      <option value="low">Düşük</option>
-                      <option value="medium">Orta</option>
-                      <option value="high">Yüksek</option>
-                    </select>
+                    <CustomSelect
+                      options={[
+                        { value: 'low', label: 'Düşük' },
+                        { value: 'medium', label: 'Orta' },
+                        { value: 'high', label: 'Yüksek' },
+                      ]}
+                      value={ciRisk}
+                      onChange={setCiRisk}
+                      className="w-28"
+                    />
                     <button type="button" onClick={async () => {
                       const allergen = (document.getElementById('ci-allergen') as HTMLInputElement).value.trim()
-                      const risk = (document.getElementById('ci-risk') as HTMLSelectElement).value
+                      const risk = ciRisk
                       if (!allergen || !businessId || !editingService) return
                       await supabase.from('service_contraindications').insert({
                         business_id: businessId,
