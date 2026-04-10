@@ -6,6 +6,7 @@ import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { Shield, ShieldX, Loader2, Search, Filter, ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { CustomSelect } from '@/components/ui/custom-select'
+import { getCustomerLabelSingular } from '@/lib/config/sector-modules'
 
 interface AuditLog {
   id: string
@@ -218,7 +219,15 @@ const ACTION_COLORS: Record<string, string> = {
 }
 
 export default function AuditPage() {
-  const { staffRole, businessId, loading: ctxLoading, permissions } = useBusinessContext()
+  const { staffRole, businessId, sector, loading: ctxLoading, permissions } = useBusinessContext()
+  const customerLabel = getCustomerLabelSingular(sector ?? undefined)
+
+  // RESOURCE_LABELS'ı dinamik hale getir (sector'e bağlı)
+  const resourceLabels: Record<string, string> = {
+    ...RESOURCE_LABELS,
+    customer: customerLabel,
+    customer_packages: `${customerLabel} Paketi`,
+  }
   const supabase = createClient()
   const [logs, setLogs] = useState<AuditLog[]>([])
   const [loading, setLoading] = useState(true)
@@ -288,7 +297,7 @@ export default function AuditPage() {
         <div className="flex flex-wrap gap-3 items-center">
           <Filter className="h-4 w-4 text-gray-400 flex-shrink-0" />
           <CustomSelect
-            options={Object.entries(RESOURCE_LABELS).map(([k, v]) => ({ value: k, label: v }))}
+            options={Object.entries(resourceLabels).map(([k, v]) => ({ value: k, label: v }))}
             value={resourceFilter}
             onChange={v => { setResourceFilter(v); setPage(0) }}
             placeholder="Tüm Kaynaklar"
@@ -320,7 +329,7 @@ export default function AuditPage() {
               type="text"
               value={searchText}
               onChange={e => { setSearchText(e.target.value); setPage(0) }}
-              placeholder="Personel, eylem, kaynak ara..."
+              placeholder="Personel, hasta, eylem, kaynak ara..."
               className="input py-1.5 pl-8 text-sm w-full"
             />
           </div>
@@ -373,7 +382,7 @@ export default function AuditPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
-                        {RESOURCE_LABELS[log.resource] ?? log.resource}
+                        {resourceLabels[log.resource] ?? log.resource}
                       </td>
                       <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs hidden md:table-cell max-w-xs truncate" title={formatAuditDetail(log)}>
                         {formatAuditDetail(log) || '—'}

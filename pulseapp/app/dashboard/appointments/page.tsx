@@ -37,6 +37,7 @@ type AppointmentView = AppointmentRow & {
   staff_members: { name: string } | null
 }
 import { logAudit } from '@/lib/utils/audit'
+import { getCustomerLabelSingular } from '@/lib/config/sector-modules'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import { ToolbarPopover, SortPopoverContent, FilterPopoverList } from '@/components/ui/toolbar-popover'
@@ -45,7 +46,8 @@ import { CustomerSearchSelect } from '@/components/ui/customer-search-select'
 import { Portal } from '@/components/ui/portal'
 
 export default function AppointmentsPage() {
-  const { businessId, staffId: currentStaffId, staffName: currentStaffName, loading: ctxLoading } = useBusinessContext()
+  const { businessId, staffId: currentStaffId, staffName: currentStaffName, sector, loading: ctxLoading } = useBusinessContext()
+  const customerLabel = getCustomerLabelSingular(sector ?? undefined)
   const { confirm } = useConfirm()
   const [appointments, setAppointments] = useState<AppointmentView[]>([])
   const [loading, setLoading] = useState(true)
@@ -735,7 +737,7 @@ export default function AppointmentsPage() {
         business_id: businessId,
         type: 'appointment',
         title: 'Randevu İptal Edildi',
-        body: `${apt.customers?.name || 'Müşteri'} — ${apt.services?.name || ''} — ${apt.appointment_date} ${apt.start_time}`,
+        body: `${apt.customers?.name || customerLabel} — ${apt.services?.name || ''} — ${apt.appointment_date} ${apt.start_time}`,
         is_read: false,
       })
     } catch { /* */ }
@@ -1009,7 +1011,7 @@ export default function AppointmentsPage() {
             <button onClick={() => changeDate(-1)} className="flex h-12 w-12 flex-shrink-0 items-center justify-center text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-600 transition-colors">
               <ChevronLeft className="h-5 w-5" />
             </button>
-            <div className="flex-1 text-center py-2.5 min-w-0">
+            <div className="flex-1 text-center py-2.5 min-w-0 min-h-[48px] flex flex-col items-center justify-center">
               {viewMode === 'week' ? (
                 <>
                   <p className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">{formatWeekRange()}</p>
@@ -1023,19 +1025,17 @@ export default function AppointmentsPage() {
               ) : viewMode === 'staff' ? (
                 <>
                   <p className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">{formatSelectedDate()} — Personel</p>
-                  {!isToday && <button onClick={goToday} className="text-xs text-pulse-900 dark:text-pulse-400 hover:underline mt-0.5">Bugüne Dön</button>}
+                  <button onClick={goToday} className={`text-xs text-pulse-900 dark:text-pulse-400 hover:underline mt-0.5 ${isToday ? 'invisible' : ''}`}>Bugüne Dön</button>
                 </>
               ) : viewMode === 'room' ? (
                 <>
                   <p className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">{formatSelectedDate()} — Odalar</p>
-                  {!isToday && <button onClick={goToday} className="text-xs text-pulse-900 dark:text-pulse-400 hover:underline mt-0.5">Bugüne Dön</button>}
+                  <button onClick={goToday} className={`text-xs text-pulse-900 dark:text-pulse-400 hover:underline mt-0.5 ${isToday ? 'invisible' : ''}`}>Bugüne Dön</button>
                 </>
               ) : (
                 <>
                   <p className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">{formatSelectedDate()}</p>
-                  {!isToday
-                    ? <button onClick={goToday} className="text-xs text-pulse-900 dark:text-pulse-400 hover:underline mt-0.5">Bugüne Dön</button>
-                    : <p className="text-xs text-pulse-900 dark:text-pulse-400 mt-0.5">Bugün</p>}
+                  <button onClick={goToday} className={`text-xs text-pulse-900 dark:text-pulse-400 hover:underline mt-0.5 ${isToday ? 'invisible' : ''}`}>{isToday ? 'Bugün' : 'Bugüne Dön'}</button>
                 </>
               )}
             </div>
@@ -1092,7 +1092,7 @@ export default function AppointmentsPage() {
               <SortPopoverContent
                 options={[
                   { value: 'start_time', label: 'Saat' },
-                  { value: 'customer_name', label: 'Müşteri adı' },
+                  { value: 'customer_name', label: `${customerLabel} adı` },
                   { value: 'service_name', label: 'Hizmet' },
                 ]}
                 sortField={sortField} sortDir={sortDir} onSortField={setSortField} onSortDir={setSortDir}
@@ -1113,7 +1113,7 @@ export default function AppointmentsPage() {
       {viewMode !== 'week' && viewMode !== 'month' && viewMode !== 'staff' && viewMode !== 'room' && (
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <input type="text" value={search} onChange={e => setSearch(e.target.value)} className="input pl-10" placeholder="Müşteri, hizmet veya personel ara..." />
+          <input type="text" value={search} onChange={e => setSearch(e.target.value)} className="input pl-10" placeholder={`${customerLabel}, hizmet veya personel ara...`} />
         </div>
       )}
 
@@ -2191,7 +2191,7 @@ export default function AppointmentsPage() {
 
               {/* Bilgiler */}
               <div className="space-y-3">
-                <DetailRow label="Müşteri" value={selectedAppointment.customers?.name || 'İsimsiz'} />
+                <DetailRow label={customerLabel} value={selectedAppointment.customers?.name || 'İsimsiz'} />
                 {selectedAppointment.customers?.phone && (
                   <DetailRow label="Telefon" value={
                     <a href={`tel:${selectedAppointment.customers.phone}`} className="text-pulse-900 hover:underline flex items-center gap-1">
@@ -2308,12 +2308,12 @@ export default function AppointmentsPage() {
             </div>
             <form onSubmit={handleSave} className="space-y-4">
               <div>
-                <label className="label">Müşteri</label>
+                <label className="label">{customerLabel}</label>
                 <CustomerSearchSelect
                   value={customerId}
                   onChange={v => setCustomerId(v)}
                   businessId={businessId!}
-                  placeholder="Müşteri seçin..."
+                  placeholder={`${customerLabel} seçin...`}
                 />
               </div>
               <div>
