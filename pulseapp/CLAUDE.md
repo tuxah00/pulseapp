@@ -185,10 +185,12 @@ Her yeni bileşen veya sayfa yazıldığında KULLANICININ SÖYLEMESİNE GEREK K
 **Kural**: Herhangi bir sayfada veya bileşende dark mode sorunu görürsen (hover çakışması, metin görünmez, kart çok koyu/açık), bunu kullanıcı söylemeden tespit edip düzelt.
 
 ## Modal Animasyonları & ESC
-- `globals.css` → `.modal-overlay` (fadeIn 0.15s), `.modal-content` (scaleIn 0.2s), `.slide-panel` (slideInRight 0.2s)
-- **Kapanma animasyonu:** `.modal-overlay.closing` (fadeOut 0.15s), `.modal-content.closing` (scaleOut 0.15s), `.slide-panel.closing` (slideOutRight 0.2s)
-- Modal backdrop div'e `modal-overlay`, içerik kartına `modal-content` class ekle
-- Kapanma pattern: `closing` state → `.closing` CSS class ekle → `onAnimationEnd` ile unmount
+- **Tek animasyon sistemi:** `globals.css` → `.modal-overlay` (fadeIn 0.15s), `.modal-content` (scaleIn 0.2s), `.slide-panel` (slideInRight 0.2s)
+- **Kapanma animasyonu:** `.closing` class VEYA `[data-closed]` attribute ile tetiklenir (her ikisi de desteklenir)
+- **Dialog bileşeni (`components/ui/dialog.tsx`)** aynı CSS animasyonlarını kullanır: Backdrop'a `modal-overlay`, Popup'a `modal-content` class verilir. Base UI `data-closed` attribute'u eklediğinde globals.css'teki kapanma animasyonu tetiklenir
+- **Tailwindcss-animate KULLANILMAMALI:** `animate-in`, `fade-in-0`, `zoom-in-95` gibi tailwindcss-animate class'ları modal'larda KULLANILMAZ — tüm modal'lar globals.css'teki `fadeIn`/`scaleIn` keyframe'leri ile tutarlı animasyon alır
+- Custom modal oluştururken: backdrop div'e `modal-overlay`, içerik kartına `modal-content` class ekle
+- Kapanma pattern (custom modal): `closing` state → `.closing` CSS class ekle → `onAnimationEnd` ile unmount
 - ESC ile kapatma: `useEffect(() => { if (!show) return; const h = (e) => { if (e.key === 'Escape') setShow(false) }; document.addEventListener('keydown', h); return () => document.removeEventListener('keydown', h) }, [show])`
 
 ## Onay Dialog Sistemi (ConfirmDialog)
