@@ -453,7 +453,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Sekmeler */}
-      <div className="sticky top-14 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 bg-gray-50 dark:bg-gray-950 flex gap-1 border-b border-gray-200 dark:border-gray-700 overflow-x-auto whitespace-nowrap hide-scrollbar">
+      <div className="sticky top-14 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 bg-gray-50 dark:bg-gray-950 flex flex-wrap gap-1 border-b border-gray-200 dark:border-gray-700">
         {([
           ['overview', 'Genel Bakış', <BarChart3 key="o" className="h-3.5 w-3.5" />],
           ['staff', 'Personel', <Users key="s" className="h-3.5 w-3.5" />],
@@ -463,7 +463,7 @@ export default function AnalyticsPage() {
           ['expenses', 'Gelir-Gider', <Wallet key="e" className="h-3.5 w-3.5" />],
         ] as const).map(([key, label, icon]) => (
           <button key={key} onClick={() => setActiveTab(key as AnalyticsTab)}
-            className={cn('flex-shrink-0 flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors',
+            className={cn('flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors',
               activeTab === key
                 ? 'border-pulse-900 text-pulse-900 dark:text-pulse-400'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
