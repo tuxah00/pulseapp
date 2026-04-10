@@ -356,7 +356,7 @@ export default function ReservationsPage() {
           </div>
         </div>
       ) : (
-        <>
+        <div key={viewMode} className="view-transition">
           {viewMode === 'list' && (
             <div className="rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 overflow-hidden">
               <ul className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -468,7 +468,7 @@ export default function ReservationsPage() {
               ))}
             </div>
           )}
-        </>
+        </div>
       )}
 
       {/* Modal */}

@@ -961,7 +961,9 @@ export default function PaketlerPage() {
                 {templates.length === 0 ? 'Önce paket şablonu oluşturun' : 'Paket satmak için "Paket Sat" butonunu kullanın'}
               </p>
             </div>
-          ) : viewMode === 'box' ? (
+          ) : (
+            <div key={viewMode} className="view-transition">
+            {viewMode === 'box' ? (
             // ── BOX MODE: Hastalar sayfasıyla aynı grid + tıklanan kartın yanında floating panel ──
             <div ref={gridContainerRef} className="relative">
               <AnimatedList className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 gap-2">
@@ -1099,6 +1101,8 @@ export default function PaketlerPage() {
                 )}
               </AnimatePresence>
             </div>
+          )}
+          </div>
           )}
 
           {/* Mobile slide-over (sadece box mode için) */}

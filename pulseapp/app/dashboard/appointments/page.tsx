@@ -1982,7 +1982,9 @@ export default function AppointmentsPage() {
           <p className="mb-1 font-medium text-gray-500 dark:text-gray-400">{search || statusFilter ? 'Filtreye uygun randevu bulunamadı' : 'Bu tarihte randevu yok'}</p>
           {!search && !statusFilter && <button onClick={() => openNewModal()} className="btn-primary mt-4"><Plus className="mr-2 h-4 w-4" />Randevu Ekle</button>}
         </div>
-      ) : viewMode === 'list' ? (
+      ) : (
+        <div key={viewMode} className="view-transition">
+        {viewMode === 'list' ? (
         <AnimatedList className="space-y-2">
           {filteredAppointments.map((apt) => {
             const timeState = getTimeState(apt)
@@ -2074,6 +2076,8 @@ export default function AppointmentsPage() {
             )
           })}
         </AnimatedList>
+        )}
+        </div>
       )) : null}
 
       {/* ── Detay Slide-Over Paneli ── */}

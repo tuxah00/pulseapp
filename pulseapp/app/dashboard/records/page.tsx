@@ -867,7 +867,7 @@ function RecordsPageInner() {
 
       {/* ── Record list ── */}
       {!dbError && records.length > 0 && (
-        <>
+        <div key={viewMode} className="view-transition">
           {viewMode === 'list' && (
             <AnimatedList className="space-y-3">
               {sortedRecords.map((record) => (
@@ -928,7 +928,7 @@ function RecordsPageInner() {
               ))}
             </AnimatedList>
           )}
-        </>
+        </div>
       )}
 
       {/* ── Kayıt Detay Modal ── */}

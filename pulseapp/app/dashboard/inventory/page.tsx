@@ -566,7 +566,9 @@ export default function StoklarPage() {
                 Filtreleri Temizle
               </button>
             </div>
-          ) : viewMode === 'list' ? (
+          ) : (
+            <div key={viewMode} className="view-transition">
+            {viewMode === 'list' ? (
             <AnimatedList className="space-y-3">
               {filteredProducts.map((product) => (
                 <AnimatedItem
@@ -617,6 +619,8 @@ export default function StoklarPage() {
                 </AnimatedItem>
               ))}
             </AnimatedList>
+            )}
+            </div>
           )}
         </>
       )}

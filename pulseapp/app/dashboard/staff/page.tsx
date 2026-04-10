@@ -485,6 +485,7 @@ export default function StaffPage() {
                 <h2 className="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">{group.label}</h2>
                 <span className="text-xs text-gray-400">({group.members.length})</span>
               </div>
+              <div key={viewMode} className="view-transition">
               {viewMode === 'box' ? (
                 <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 gap-2">
                   {group.members.map(renderStaffCard)}
@@ -494,6 +495,7 @@ export default function StaffPage() {
                   {group.members.map(renderStaffCard)}
                 </AnimatedList>
               )}
+              </div>
             </div>
           ))}
         </div>

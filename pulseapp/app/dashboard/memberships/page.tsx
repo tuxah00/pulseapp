@@ -432,7 +432,7 @@ export default function MembershipsPage() {
           )}
         </div>
       ) : !dbError ? (
-        <>
+        <div key={viewMode} className="view-transition">
           {viewMode === 'list' && (
             <AnimatedList className="space-y-3">
               {sortedMemberships.map(m => (
@@ -466,7 +466,7 @@ export default function MembershipsPage() {
           ))}
         </div>
           )}
-        </>
+        </div>
       ) : null}
 
       {/* Modal */}

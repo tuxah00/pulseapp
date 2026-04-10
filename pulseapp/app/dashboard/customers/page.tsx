@@ -542,7 +542,9 @@ export default function CustomersPage() {
           <p className="font-medium text-gray-500 dark:text-gray-400 mb-4">{search || dateFrom || dateTo || minVisits ? 'Filtreye uygun müşteri bulunamadı' : `Henüz ${singularLabel.toLowerCase()} eklenmemiş`}</p>
           {!search && !dateFrom && !dateTo && !minVisits && <button onClick={openNewModal} className="btn-primary"><Plus className="mr-2 h-4 w-4" />{`İlk ${singularLabel} Ekle`}</button>}
         </div>
-      ) : viewMode === 'list' ? (
+      ) : (
+        <div key={viewMode} className="view-transition">
+        {viewMode === 'list' ? (
         <AnimatedList className="space-y-2">
           {filteredCustomers.map((customer) => {
             const initials = getInitials(customer.name)
@@ -592,6 +594,8 @@ export default function CustomersPage() {
             </AnimatedItem>
           ))}
         </AnimatedList>
+        )}
+        </div>
       )}
 
       {/* ── Sayfalama ── */}
