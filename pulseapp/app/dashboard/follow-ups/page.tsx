@@ -10,6 +10,7 @@ import {
 import type { Customer } from '@/types'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { getCustomerLabelSingular } from '@/lib/config/sector-modules'
+import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 
 interface FollowUp {
   id: string
@@ -218,13 +219,13 @@ export default function FollowUpsPage() {
           <p className="text-gray-500 dark:text-gray-400">Henüz takip kaydı yok</p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <AnimatedList className="space-y-3">
           {filtered.map(f => {
             const sc = STATUS_CONFIG[f.status]
             const Icon = sc.icon
 
             return (
-              <div key={f.id} className="card p-4">
+              <AnimatedItem key={f.id} className="card p-4">
                 <div className="flex items-center gap-4">
                   {/* Customer */}
                   <div className="flex-1 min-w-0">
@@ -290,15 +291,15 @@ export default function FollowUpsPage() {
                     {f.message}
                   </p>
                 )}
-              </div>
+              </AnimatedItem>
             )
           })}
-        </div>
+        </AnimatedList>
       )}
 
       {/* Create Modal */}
       {(showCreate || closingCreate) && (
-        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 ${closingCreate ? 'closing' : ''}`} onClick={() => setClosingCreate(true)} onAnimationEnd={() => { if (closingCreate) { setShowCreate(false); setClosingCreate(false); resetForm() } }}>
+        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 ${closingCreate ? 'closing' : ''}`} onClick={() => setClosingCreate(true)} onAnimationEnd={() => { if (closingCreate) { setShowCreate(false); setClosingCreate(false); resetForm() } }}>
           <div className={`modal-content card w-full max-w-lg dark:bg-gray-900 ${closingCreate ? 'closing' : ''}`} onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-base font-medium">Yeni Takip</h3>
