@@ -644,6 +644,47 @@ export default function AppointmentsPage() {
     } catch { /* ignore */ }
   }
 
+  // Seçilen hücrelerdeki tüm blokları toplu kaldır
+  async function handleBulkUnblock(cells: { col: number; colId: string; date: string; hour: number }[]) {
+    if (!businessId || cells.length === 0) return
+    // Seçilen hücrelere denk gelen blok ID'lerini bul
+    const slotIds = new Set<string>()
+    for (const cell of cells) {
+      for (const bs of blockedSlots) {
+        if (bs.date !== cell.date) continue
+        const bsStartH = parseInt(bs.start_time.split(':')[0])
+        const bsEndH = parseInt(bs.end_time.split(':')[0])
+        if (cell.hour < bsStartH || cell.hour >= bsEndH) continue
+        if (selectionViewMode === 'staff' && cell.colId !== '__unassigned__' && bs.staff_id && bs.staff_id !== cell.colId) continue
+        if (selectionViewMode === 'room' && cell.colId !== '__unassigned__' && bs.room_id && bs.room_id !== cell.colId) continue
+        slotIds.add(bs.id)
+      }
+    }
+    try {
+      await Promise.all(Array.from(slotIds).map(id =>
+        fetch(`/api/blocked-slots?id=${id}&businessId=${businessId}`, { method: 'DELETE' })
+      ))
+      await fetchBlockedSlots()
+      window.dispatchEvent(new CustomEvent('pulse-toast', {
+        detail: { type: 'system', title: 'Bloklar Kaldırıldı', body: `${slotIds.size} blok kaldırıldı.` },
+      }))
+    } catch { /* ignore */ }
+  }
+
+  // Seçilen hücrelerin blok durumunu kontrol et
+  function getSelectionBlockStatus(cells: { col: number; colId: string; date: string; hour: number }[]): 'all_blocked' | 'some_blocked' | 'none_blocked' {
+    if (cells.length === 0) return 'none_blocked'
+    let blockedCount = 0
+    for (const cell of cells) {
+      const staffArg = selectionViewMode === 'staff' && cell.colId !== '__unassigned__' ? cell.colId : null
+      const roomArg = selectionViewMode === 'room' && cell.colId !== '__unassigned__' ? cell.colId : null
+      if (isHourBlocked(cell.date, cell.hour, staffArg, roomArg)) blockedCount++
+    }
+    if (blockedCount === cells.length) return 'all_blocked'
+    if (blockedCount > 0) return 'some_blocked'
+    return 'none_blocked'
+  }
+
   // Seçimi temizle
   function clearSelection() {
     setIsSelecting(false)
@@ -1942,32 +1983,67 @@ export default function AppointmentsPage() {
               }}
               onClick={(e) => e.stopPropagation()}
             >
-              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
-                {actionMenu.cells.length} saat seçildi
-              </p>
-              <div className="space-y-1">
-                <button
-                  onClick={() => {
-                    const firstCell = actionMenu.cells[0]
-                    openNewModal(firstCell.date, `${String(firstCell.hour).padStart(2, '0')}:00`)
-                    clearSelection()
-                  }}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                >
-                  <Plus className="h-4 w-4 text-pulse-900 dark:text-pulse-400" />
-                  Randevu Oluştur
-                </button>
-                <button
-                  onClick={() => {
-                    handleBlockSlots(actionMenu.cells)
-                    clearSelection()
-                  }}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                >
-                  <Lock className="h-4 w-4 text-red-500" />
-                  Saati Blokla
-                </button>
-              </div>
+              {(() => {
+                const blockStatus = getSelectionBlockStatus(actionMenu.cells)
+                const sortedCells = [...actionMenu.cells].sort((a, b) => a.hour - b.hour || a.col - b.col)
+                const minHour = sortedCells[0]?.hour ?? 0
+                const maxHour = sortedCells[sortedCells.length - 1]?.hour ?? 0
+                return (
+                  <>
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+                      {actionMenu.cells.length} saat seçildi
+                      <span className="text-gray-400 ml-1">({String(minHour).padStart(2, '0')}:00 – {String(maxHour + 1).padStart(2, '0')}:00)</span>
+                    </p>
+                    <div className="space-y-1">
+                      {blockStatus !== 'all_blocked' && (
+                        <button
+                          onClick={() => {
+                            const firstCell = sortedCells[0]
+                            const startTimeStr = `${String(minHour).padStart(2, '0')}:00`
+                            setEditingAppointment(null)
+                            setCustomerId(''); setServiceId(''); setStaffId(
+                              selectionViewMode === 'staff' && firstCell.colId !== '__unassigned__' ? firstCell.colId : ''
+                            ); setRoomId(
+                              selectionViewMode === 'room' && firstCell.colId !== '__unassigned__' ? firstCell.colId : ''
+                            )
+                            setDate(firstCell.date); setStartTime(startTimeStr); setNotes('')
+                            setIsRecurring(false); setRecurrenceFrequency('weekly'); setRecurrenceCount(4)
+                            setError(null); setShowModal(true)
+                            clearSelection()
+                          }}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                        >
+                          <Plus className="h-4 w-4 text-pulse-900 dark:text-pulse-400" />
+                          Randevu Oluştur
+                        </button>
+                      )}
+                      {blockStatus === 'all_blocked' ? (
+                        <button
+                          onClick={() => {
+                            handleBulkUnblock(actionMenu.cells)
+                            clearSelection()
+                          }}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                        >
+                          <Ban className="h-4 w-4 text-green-500" />
+                          Blok İptal
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            handleBlockSlots(actionMenu.cells)
+                            clearSelection()
+                          }}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                        >
+                          <Lock className="h-4 w-4 text-red-500" />
+                          Saati Blokla
+                        </button>
+                      )}
+                    </div>
+                  </>
+                )
+              })()}
             </div>
           </div>
         </Portal>
