@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, Suspense } from 'react'
+import { useState, useEffect, useCallback, Suspense, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useDebounce } from '@/lib/hooks/use-debounce'
@@ -401,6 +401,7 @@ function RecordsPageInner() {
   const [lightbox, setLightbox] = useState<{ images: string[]; index: number; metadata?: FileMetadataItem[] } | null>(null)
   const [fileDescPopup, setFileDescPopup] = useState<{ index: number; value: string; fileName: string; fileSize: string | null; editing: boolean } | null>(null)
   const [fileInfoPopup, setFileInfoPopup] = useState<{ index: number; url: string; meta: FileMetadataItem } | null>(null)
+  const [selectedTag, setSelectedTag] = useState<string | null>(null)
 
   // Dynamic form state: one string per field key
   const [formData, setFormData] = useState<Record<string, string>>({})
@@ -410,6 +411,7 @@ function RecordsPageInner() {
     setRecords([])
     setSelectedRecord(null)
     setSearch('')
+    setSelectedTag(null)
     setDbError(null)
   }, [recordType])
 
@@ -759,6 +761,15 @@ function RecordsPageInner() {
     return record.data[key] || ''
   }
 
+  // Must be before early returns (React hooks rules)
+  const allTags = useMemo(() => {
+    const set = new Set<string>()
+    records.forEach(r => {
+      if (r.data.tags) String(r.data.tags).split(',').map((t: string) => t.trim()).filter(Boolean).forEach((t: string) => set.add(t))
+    })
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'tr'))
+  }, [records])
+
   if (permissions && !permissions.records) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
@@ -793,6 +804,13 @@ function RecordsPageInner() {
         return sortDir === 'asc' ? cmp : -cmp
       })
     : records
+
+  const displayedRecords = selectedTag
+    ? sortedRecords.filter(r => {
+        const tags = r.data.tags ? String(r.data.tags).split(',').map((t: string) => t.trim()).filter(Boolean) : []
+        return tags.includes(selectedTag)
+      })
+    : sortedRecords
 
   return (
     <div>
@@ -845,6 +863,35 @@ function RecordsPageInner() {
         </div>
       )}
 
+      {/* ── Tag filter ── */}
+      {!dbError && allTags.length > 0 && (
+        <div className="mb-4 flex items-center gap-2 flex-wrap">
+          <Tag className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+          {allTags.map(tag => (
+            <button
+              key={tag}
+              onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
+              className={cn(
+                'px-2.5 py-1 rounded-full text-xs font-medium transition-colors',
+                selectedTag === tag
+                  ? 'bg-pulse-900 text-white'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+              )}
+            >
+              {tag}
+            </button>
+          ))}
+          {selectedTag && (
+            <button
+              onClick={() => setSelectedTag(null)}
+              className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 flex items-center gap-0.5"
+            >
+              <X className="h-3 w-3" /> Temizle
+            </button>
+          )}
+        </div>
+      )}
+
       {/* ── Empty state ── */}
       {!dbError && records.length === 0 && (
         <div className="card flex flex-col items-center justify-center py-24 text-center">
@@ -867,10 +914,10 @@ function RecordsPageInner() {
 
       {/* ── Record list ── */}
       {!dbError && records.length > 0 && (
-        <div key={viewMode} className="view-transition">
+        <>
           {viewMode === 'list' && (
             <AnimatedList className="space-y-3">
-              {sortedRecords.map((record) => (
+              {displayedRecords.map((record) => (
                 <AnimatedItem
                   key={record.id}
                   onClick={() => setSelectedRecord(record)}
@@ -891,6 +938,18 @@ function RecordsPageInner() {
                         {getSubtitle(record)}
                       </span>
                     )}
+                    {(() => {
+                      const recordTags = record.data.tags ? String(record.data.tags).split(',').map((t: string) => t.trim()).filter(Boolean) : []
+                      return recordTags.length > 0 ? (
+                        <div className="flex items-center gap-1 mt-1 flex-wrap">
+                          {recordTags.map((tag: string, i: number) => (
+                            <span key={i} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      ) : null
+                    })()}
                     <span className="text-xs text-gray-400 dark:text-gray-500">
                       {formatDate(record.created_at)}
                     </span>
@@ -915,20 +974,19 @@ function RecordsPageInner() {
             </AnimatedList>
           )}
           {viewMode === 'box' && (
-            <AnimatedList className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 gap-2">
-              {sortedRecords.map((record) => (
-                <AnimatedItem key={record.id}>
-                  <CompactBoxCard
-                    initials={record.title?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || 'D'}
-                    title={record.title}
-                    colorClass="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
-                    onClick={() => setSelectedRecord(record)}
-                  />
-                </AnimatedItem>
+            <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 gap-2">
+              {displayedRecords.map((record) => (
+                <CompactBoxCard
+                  key={record.id}
+                  initials={record.title?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || 'D'}
+                  title={record.title}
+                  colorClass="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                  onClick={() => setSelectedRecord(record)}
+                />
               ))}
-            </AnimatedList>
+            </div>
           )}
-        </div>
+        </>
       )}
 
       {/* ── Kayıt Detay Modal ── */}
@@ -1129,7 +1187,7 @@ function RecordsPageInner() {
                 {/* ── Section 4: Footer ── */}
                 <div className="border-t border-gray-200 dark:border-gray-700 px-6 py-4 flex gap-3 flex-shrink-0">
                   <button
-                    onClick={() => openEditModal(selectedRecord)}
+                    onClick={() => { openEditModal(selectedRecord); setSelectedRecord(null) }}
                     className="btn-secondary flex-1 text-sm"
                   >
                     <Pencil className="mr-1.5 h-3.5 w-3.5" />Düzenle
@@ -1168,8 +1226,7 @@ function RecordsPageInner() {
           ? new Date(meta.uploadedAt).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
           : null
         return (
-          <Portal>
-          <div className="modal-overlay fixed inset-0 z-[105] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4" onClick={() => setFileInfoPopup(null)}>
+          <div className="modal-overlay fixed inset-0 z-[85] flex items-center justify-center bg-black/50 p-4" onClick={() => setFileInfoPopup(null)}>
             <div className="modal-content card w-full max-w-sm dark:bg-gray-900" onClick={e => e.stopPropagation()}>
               {/* Header */}
               <div className="flex items-start justify-between mb-4">
@@ -1254,7 +1311,6 @@ function RecordsPageInner() {
               </div>
             </div>
           </div>
-          </Portal>
         )
       })()}
 
@@ -1306,7 +1362,7 @@ function RecordsPageInner() {
       {/* ── Create / Edit Modal ── */}
       {(showModal || isClosingModal) && (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[110] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
+        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
           <div className={`modal-content card w-full max-w-lg max-h-[90vh] overflow-y-auto ${isClosingModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
