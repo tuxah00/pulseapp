@@ -395,6 +395,12 @@
   animation: itemFadeIn 0.2s ease-out both;
 }
 
+/* Overlay panel animasyonlar */
+.animate-slide-in-right  { animation: slideInRight  0.3s ease-out forwards; }
+.animate-slide-out-right { animation: slideOutRight 0.2s ease-in  forwards; }
+.animate-fade-in         { animation: fadeIn        0.2s ease-out forwards; }
+.animate-fade-out        { animation: fadeOut       0.15s ease-in  forwards; }
+
 /* ── Toast animasyonlar ── */
 @keyframes toast-slide-in {
   from { transform: translateX(110%); opacity: 0; }
