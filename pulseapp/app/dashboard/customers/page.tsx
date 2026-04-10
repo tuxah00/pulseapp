@@ -697,7 +697,7 @@ export default function CustomersPage() {
                   selectedCustomer?.id === customer.id && 'ring-2 ring-pulse-900 border-pulse-300 dark:border-pulse-700',
                 )}>
                   <div className="flex items-center gap-3">
-                    <div className={cn('flex h-10 w-10 items-center justify-center rounded-xl text-gray-600 dark:text-gray-300 font-semibold text-sm flex-shrink-0', avatarColor)}>
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-pulse-50 dark:bg-pulse-900/20 text-pulse-900 dark:text-pulse-400 font-semibold text-sm flex-shrink-0">
                       {initials}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -725,7 +725,7 @@ export default function CustomersPage() {
               <CompactBoxCard
                 initials={customer.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                 title={customer.name}
-                colorClass={`${getAvatarColor(customer.name)} text-gray-600 dark:text-gray-300`}
+                colorClass="bg-pulse-50 dark:bg-pulse-900/20 text-pulse-900 dark:text-pulse-400"
                 badge={isBirthdayToday(customer.birthday) ? <Cake className="h-3.5 w-3.5 text-pink-500" /> : undefined}
                 selected={selectedCustomer?.id === customer.id}
                 onClick={() => setSelectedCustomer(customer)}
@@ -821,7 +821,7 @@ export default function CustomersPage() {
                 <>
                   {/* Avatar + isim */}
                   <div className="text-center">
-                    <div className={cn('mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-2xl text-gray-600 dark:text-gray-300 font-bold text-lg', getAvatarColor(selectedCustomer.name))}>
+                    <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-pulse-50 dark:bg-pulse-900/20 text-pulse-900 dark:text-pulse-400 font-bold text-lg">
                       {getInitials(selectedCustomer.name)}
                     </div>
                     <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{selectedCustomer.name}</h4>

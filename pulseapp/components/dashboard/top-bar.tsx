@@ -44,6 +44,7 @@ const ROUTE_LABELS: Record<string, string> = {
   kasa: 'Kasa',
   protocols: 'Tedavi Protokolleri',
   referrals: 'Referanslar',
+  kvkk: 'KVKK',
   new: 'Yeni',
 }
 

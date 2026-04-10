@@ -8,6 +8,7 @@ import {
   AlertTriangle, Loader2, X, ChevronDown,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { CustomSelect } from '@/components/ui/custom-select'
 
 interface ConsentRecord {
   id: string
@@ -241,16 +242,13 @@ export default function KvkkPage() {
           {/* Filtre */}
           <div className="card mb-4 p-3 flex items-center gap-3">
             <FileText className="h-4 w-4 text-gray-400 flex-shrink-0" />
-            <select
+            <CustomSelect
+              options={Object.entries(CONSENT_TYPE_LABELS).map(([key, label]) => ({ value: key, label }))}
               value={consentTypeFilter}
-              onChange={(e) => setConsentTypeFilter(e.target.value)}
-              className="input py-1.5 text-sm w-auto"
-            >
-              <option value="">Tüm Onay Türleri</option>
-              {Object.entries(CONSENT_TYPE_LABELS).map(([key, label]) => (
-                <option key={key} value={key}>{label}</option>
-              ))}
-            </select>
+              onChange={(v) => setConsentTypeFilter(v)}
+              placeholder="Tüm Onay Türleri"
+              className="w-48"
+            />
             {consentTypeFilter && (
               <button
                 onClick={() => setConsentTypeFilter('')}
@@ -405,23 +403,20 @@ export default function KvkkPage() {
                         <td className="px-4 py-3">
                           {(request.status === 'pending' || request.status === 'processing') && (
                             <div className="relative">
-                              <select
+                              <CustomSelect
+                                options={[
+                                  ...(request.status === 'pending' ? [{ value: 'processing', label: 'İşleniyor' }] : []),
+                                  { value: 'completed', label: 'Tamamlandı' },
+                                  { value: 'rejected', label: 'Reddedildi' },
+                                ]}
                                 value=""
-                                onChange={(e) => {
-                                  if (e.target.value) {
-                                    handleUpdateDeletionStatus(request.id, e.target.value)
-                                  }
+                                onChange={(v) => {
+                                  if (v) handleUpdateDeletionStatus(request.id, v)
                                 }}
+                                placeholder="Durum Değiştir"
                                 disabled={updatingId === request.id}
-                                className="input py-1 text-xs w-auto min-w-[120px] disabled:opacity-50"
-                              >
-                                <option value="">Durum Değiştir</option>
-                                {request.status === 'pending' && (
-                                  <option value="processing">İşleniyor</option>
-                                )}
-                                <option value="completed">Tamamlandı</option>
-                                <option value="rejected">Reddedildi</option>
-                              </select>
+                                className="min-w-[130px]"
+                              />
                               {updatingId === request.id && (
                                 <Loader2 className="absolute right-8 top-1/2 -translate-y-1/2 h-3 w-3 animate-spin text-gray-400" />
                               )}

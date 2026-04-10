@@ -983,7 +983,7 @@ export default function PaketlerPage() {
                       exit={{ opacity: 0, x: panelPosition.flip ? 6 : -6 }}
                       transition={{ duration: 0.16, ease: 'easeOut' }}
                       style={{ left: panelPosition.left, top: panelPosition.top }}
-                      className="absolute z-30 w-80 card space-y-4 max-h-[calc(100vh-10rem)] overflow-y-auto shadow-2xl"
+                      className="absolute z-30 w-80 card space-y-4 max-h-[calc(100vh-10rem)] overflow-y-auto"
                     >
                       {renderPackageDetail(selectedCp)}
                     </motion.div>
@@ -992,9 +992,8 @@ export default function PaketlerPage() {
               )}
             </div>
           ) : (
-            // ── LIST MODE: Mevcut sibling panel davranışı korundu ──
-            <div className="flex gap-4 items-start">
-              <div className="flex-1 min-w-0">
+            // ── LIST MODE ──
+            <div>
                 <AnimatedList className="space-y-2">
                   {sortedPackages.map(cp => {
                     const pct = Math.round((cp.sessions_used / cp.sessions_total) * 100)
@@ -1062,30 +1061,13 @@ export default function PaketlerPage() {
                     )
                   })}
                 </AnimatedList>
-              </div>
-
-              {/* List mode için sidebar panel (mevcut davranış) */}
-              <AnimatePresence>
-                {selectedCp && (
-                  <motion.div
-                    key={selectedCp.id}
-                    initial={{ opacity: 0, x: 16 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 16 }}
-                    transition={{ duration: 0.18, ease: 'easeOut' }}
-                    className="w-80 flex-shrink-0 card space-y-4 overflow-y-auto max-h-[calc(100vh-10rem)]"
-                  >
-                    {renderPackageDetail(selectedCp)}
-                  </motion.div>
-                )}
-              </AnimatePresence>
             </div>
           )}
           </div>
           )}
 
-          {/* Mobile slide-over (sadece box mode için) */}
-          {viewMode === 'box' && isMobile && selectedCp && (
+          {/* Slide-over panel (mobile + list mode desktop) */}
+          {(isMobile || viewMode === 'list') && selectedCp && (
             <Portal>
               <div className="fixed inset-0 z-[100] bg-black/50 dark:bg-black/70" onClick={closePanel} />
               <div className="slide-panel">
