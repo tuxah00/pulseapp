@@ -507,7 +507,6 @@ export default function AnalyticsPage() {
                 <div className="ml-10 overflow-y-visible pt-8">
                   <div className={cn(
                     'flex items-end gap-1 h-44 pb-1',
-                    '',
                     period === 'week' && 'justify-center gap-3'
                   )}>
                     {trendRevenue.map(({ label, revenue }, i) => {

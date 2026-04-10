@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import {
   Shield, FileText, Trash2, CheckCircle, Clock,
-  AlertTriangle, Loader2, X, ChevronDown,
+  AlertTriangle, Loader2, X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { CustomSelect } from '@/components/ui/custom-select'
