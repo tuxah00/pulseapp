@@ -1071,7 +1071,7 @@ export default function PaketlerPage() {
           {(isMobile || viewMode === 'list') && selectedCp && (
             <Portal>
               <div className="fixed inset-0 z-[100] bg-black/50 dark:bg-black/70" onClick={closePanel} />
-              <div className="slide-panel">
+              <div className="slide-panel !top-14">
                 <div className="p-5 space-y-4">
                   {renderPackageDetail(selectedCp)}
                 </div>

@@ -504,10 +504,10 @@ export default function AnalyticsPage() {
                   <span>{maxRevenue >= 1000 ? `${Math.round(maxRevenue / 2000)}k` : Math.round(maxRevenue / 2)}</span>
                   <span>0</span>
                 </div>
-                <div className="ml-10 overflow-x-auto overflow-y-visible pt-8">
+                <div className="ml-10 overflow-y-visible pt-8">
                   <div className={cn(
                     'flex items-end gap-1 h-44 pb-1',
-                    period === 'month' ? 'min-w-[600px]' : '',
+                    '',
                     period === 'week' && 'justify-center gap-3'
                   )}>
                     {trendRevenue.map(({ label, revenue }, i) => {

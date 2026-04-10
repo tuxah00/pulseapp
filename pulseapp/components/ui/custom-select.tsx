@@ -69,7 +69,7 @@ export function CustomSelect({
         disabled={disabled}
         onClick={() => !disabled && setOpen(v => !v)}
         className={cn(
-          'input w-full flex items-center justify-between gap-2 text-left',
+          'input w-full min-w-[140px] flex items-center justify-between gap-2 text-left',
           !selected && placeholder && 'text-gray-400 dark:text-gray-500',
           disabled && 'opacity-50 cursor-not-allowed pointer-events-none'
         )}
