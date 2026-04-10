@@ -57,3 +57,8 @@ CREATE POLICY "customer_rewards_business_access" ON customer_rewards
 ALTER TABLE referrals DROP CONSTRAINT IF EXISTS referrals_reward_type_check;
 ALTER TABLE referrals ADD CONSTRAINT referrals_reward_type_check
   CHECK (reward_type IN ('discount_percent','discount_amount','free_service','points','gift'));
+
+-- referrals tablosunda status constraint'ini güncelle (rewarded ekle)
+ALTER TABLE referrals DROP CONSTRAINT IF EXISTS referrals_status_check;
+ALTER TABLE referrals ADD CONSTRAINT referrals_status_check
+  CHECK (status IN ('pending','converted','expired','rewarded'));

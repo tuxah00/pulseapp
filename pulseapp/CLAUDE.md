@@ -126,6 +126,8 @@ const { businessId, userId, staffId, staffName, staffRole, permissions, sector, 
 | `customer_allergies` | Müşteri alerjileri (allergen, severity) |
 | `service_contraindications` | Hizmet-alerjen uyumsuzlukları |
 | `referrals` | Müşteri tavsiye sistemi (referrer → referred, ödül) |
+| `rewards` | Ödül şablonları (indirim, ücretsiz hizmet, puan, hediye) |
+| `customer_rewards` | Müşteriye atanmış ödüller (pending/used/expired) |
 | `follow_up_queue` | Seans sonrası takip kuyruğu (scheduled_for, status) |
 
 ## Dark Mode Stratejisi
@@ -306,7 +308,14 @@ CREATE INDEX IF NOT EXISTS idx_customers_birthday ON customers (birthday) WHERE 
 -- blocked_slots tablosu (randevu alınamayacak saatler), RLS, index'ler
 ```
 
-26. **Sektör enum genişletme** (yoga_pilates, spa_massage vb. için):
+26. **Ödül şablonları & müşteri ödülleri** (`035_rewards.sql`): ⏳ Supabase SQL Editor'de çalıştırılmalı
+```sql
+-- rewards, customer_rewards tabloları, RLS, index'ler
+-- referrals.reward_type constraint güncelleme (gift eklendi)
+-- referrals.status constraint güncelleme (rewarded eklendi)
+```
+
+27. **Sektör enum genişletme** (yoga_pilates, spa_massage vb. için):
 ```sql
 ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'spa_massage';
 ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'yoga_pilates';
