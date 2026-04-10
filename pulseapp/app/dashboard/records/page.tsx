@@ -20,6 +20,7 @@ import type { Customer } from '@/types'
 import CompactBoxCard from '@/components/ui/compact-box-card'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import { CustomSelect } from '@/components/ui/custom-select'
+import { CustomerSearchSelect } from '@/components/ui/customer-search-select'
 import { Portal } from '@/components/ui/portal'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -374,10 +375,9 @@ function RecordsPageInner() {
   const { businessId, staffId, staffName, loading: ctxLoading, permissions } = useBusinessContext()
   const { confirm } = useConfirm()
   const config = TYPE_CONFIG[recordType]
-  const supabase = createClient()
 
   const [records, setRecords] = useState<BusinessRecord[]>([])
-  const [customers, setCustomers] = useState<Customer[]>([])
+  const [selectedCustomerName, setSelectedCustomerName] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [dbError, setDbError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
@@ -436,18 +436,11 @@ function RecordsPageInner() {
     setLoading(false)
   }, [businessId, recordType, debouncedSearch])
 
-  const fetchCustomers = useCallback(async () => {
-    if (!businessId) return
-    const { data } = await supabase.from('customers').select('id, name, phone').eq('business_id', businessId).eq('is_active', true).order('name')
-    if (data) setCustomers(data as Customer[])
-  }, [businessId])
-
   useEffect(() => {
     if (!ctxLoading) {
       fetchRecords()
-      fetchCustomers()
     }
-  }, [fetchRecords, fetchCustomers, ctxLoading])
+  }, [fetchRecords, ctxLoading])
 
   // ESC tuşu ile detay modalını kapat (lightbox açıksa önce lightbox kapanır)
   useEffect(() => {
@@ -505,6 +498,7 @@ function RecordsPageInner() {
     setFormData(buildEmptyForm())
     setFormError(null)
     setSelectedCustomerId('')
+    setSelectedCustomerName('')
     setUploadFiles([])
     setFileDescriptions([])
     setShowModal(true)
@@ -606,9 +600,8 @@ function RecordsPageInner() {
       } else {
         // Auto-fill title from customer name if not set
         let finalTitle = title.trim()
-        if (!finalTitle && selectedCustomerId) {
-          const cust = customers.find(c => c.id === selectedCustomerId)
-          if (cust) finalTitle = cust.name
+        if (!finalTitle && selectedCustomerId && selectedCustomerName) {
+          finalTitle = selectedCustomerName
         }
         if (!finalTitle) {
           setFormError('Başlık alanı zorunludur.')
@@ -1322,20 +1315,21 @@ function RecordsPageInner() {
               {!editingRecord && (
                 <div>
                   <label className="label">Danışan Seç (opsiyonel)</label>
-                  <CustomSelect
-                    options={customers.map(c => ({ value: c.id, label: `${c.name}${c.phone ? ` (${c.phone})` : ''}` }))}
+                  <CustomerSearchSelect
                     value={selectedCustomerId}
-                    onChange={v => {
-                      setSelectedCustomerId(v)
-                      if (v) {
-                        const cust = customers.find(c => c.id === v)
-                        if (cust && !formData['title']) {
-                          setFormData(prev => ({ ...prev, title: cust.name }))
+                    onChange={setSelectedCustomerId}
+                    businessId={businessId!}
+                    placeholder="— Danışan seçin —"
+                    onCustomerSelect={(c) => {
+                      if (c) {
+                        setSelectedCustomerName(c.name)
+                        if (!formData['title']) {
+                          setFormData(prev => ({ ...prev, title: c.name }))
                         }
+                      } else {
+                        setSelectedCustomerName('')
                       }
                     }}
-                    placeholder="— Danışan seçin —"
-                    className="input"
                   />
                 </div>
               )}

@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
-import { createClient } from '@/lib/supabase/client'
 import {
   Plus, UserCheck, Search, X, Loader2, Gift, Phone, ArrowRight, CheckCircle, Clock, ShieldX
 } from 'lucide-react'
@@ -10,6 +9,7 @@ import type { Referral, Customer, ReferralStatus, RewardType } from '@/types'
 import { REFERRAL_STATUS_LABELS, REWARD_TYPE_LABELS } from '@/types'
 import { formatCurrency } from '@/lib/utils'
 import { CustomSelect } from '@/components/ui/custom-select'
+import { CustomerSearchSelect } from '@/components/ui/customer-search-select'
 import { Portal } from '@/components/ui/portal'
 
 const STATUS_CONFIG: Record<ReferralStatus, { bg: string; text: string; icon: typeof CheckCircle }> = {
@@ -23,7 +23,6 @@ export default function ReferralsPage() {
   const { businessId, loading: ctxLoading, permissions } = useBusinessContext()
 
   const [referrals, setReferrals] = useState<Referral[]>([])
-  const [customers, setCustomers] = useState<Customer[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
@@ -51,22 +50,7 @@ export default function ReferralsPage() {
     } catch { /* ignore */ } finally { setLoading(false) }
   }, [businessId, statusFilter])
 
-  const fetchCustomers = useCallback(async () => {
-    if (!businessId) return
-    try {
-      const supabase = createClient()
-      const { data } = await supabase
-        .from('customers')
-        .select('id, name, phone')
-        .eq('business_id', businessId)
-        .eq('is_active', true)
-        .order('name')
-      setCustomers((data as Customer[]) || [])
-    } catch { /* ignore */ }
-  }, [businessId])
-
   useEffect(() => { fetchReferrals() }, [fetchReferrals])
-  useEffect(() => { fetchCustomers() }, [fetchCustomers])
 
   useEffect(() => {
     if (!showCreate) return
@@ -307,11 +291,11 @@ export default function ReferralsPage() {
             <div className="p-6 space-y-4">
               <div>
                 <label className="label">Tavsiye Eden Müşteri *</label>
-                <CustomSelect
-                  options={customers.map(c => ({ value: c.id, label: `${c.name} — ${c.phone}` }))}
+                <CustomerSearchSelect
                   value={formReferrerId}
                   onChange={v => setFormReferrerId(v)}
-                  placeholder="Müşteri seçin"
+                  businessId={businessId!}
+                  placeholder="Müşteri seçin..."
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">

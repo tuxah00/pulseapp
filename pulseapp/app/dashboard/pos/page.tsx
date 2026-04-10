@@ -11,6 +11,7 @@ import { formatCurrency, formatDateTime, cn } from '@/lib/utils'
 import type { Service, POSItem, POSPayment, POSTransaction, POSSession, PaymentMethod, Referral, RewardType } from '@/types'
 import { REWARD_TYPE_LABELS } from '@/types'
 import { CustomSelect } from '@/components/ui/custom-select'
+import { CustomerSearchSelect } from '@/components/ui/customer-search-select'
 import { Portal } from '@/components/ui/portal'
 import {
   Loader2, Search, Plus, Minus, Trash2, X, Wallet,
@@ -55,7 +56,6 @@ export default function KasaPage() {
   // Data
   const [services, setServices] = useState<Service[]>([])
   const [products, setProducts] = useState<Product[]>([])
-  const [customers, setCustomers] = useState<{ id: string; name: string; phone: string }[]>([])
   const [transactions, setTransactions] = useState<POSTransaction[]>([])
   const [session, setSession] = useState<POSSession | null>(null)
   const [loading, setLoading] = useState(true)
@@ -81,9 +81,6 @@ export default function KasaPage() {
   const [itemTab, setItemTab] = useState<'services' | 'products'>('services')
   const [searchQuery, setSearchQuery] = useState('')
   const debouncedSearch = useDebounce(searchQuery, 300)
-  const [customerSearch, setCustomerSearch] = useState('')
-  const debouncedCustomerSearch = useDebounce(customerSearch, 300)
-  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false)
 
   // Session modal
   const [showSessionModal, setShowSessionModal] = useState(false)
@@ -98,17 +95,15 @@ export default function KasaPage() {
     if (!businessId) return
     setLoading(true)
 
-    const [svcRes, prodRes, custRes, txRes, sessRes] = await Promise.all([
+    const [svcRes, prodRes, txRes, sessRes] = await Promise.all([
       supabase.from('services').select('*').eq('business_id', businessId).eq('is_active', true).order('sort_order'),
       supabase.from('products').select('id, name, price, stock_quantity, category, is_active').eq('business_id', businessId).eq('is_active', true).order('name'),
-      supabase.from('customers').select('id, name, phone').eq('business_id', businessId).eq('is_active', true).order('name').limit(500),
       fetch(`/api/pos?businessId=${businessId}&from=${new Date().toISOString().split('T')[0]}`).then(r => r.json()),
       fetch(`/api/pos/sessions?businessId=${businessId}`).then(r => r.json()),
     ])
 
     setServices(svcRes.data || [])
     setProducts(prodRes.data || [])
-    setCustomers(custRes.data || [])
     setTransactions(txRes.transactions || [])
     setSession(sessRes.openSession || null)
     setLoading(false)
@@ -399,14 +394,6 @@ export default function KasaPage() {
     return products.filter(p => p.name.toLowerCase().includes(q))
   }, [products, debouncedSearch])
 
-  const filteredCustomers = useMemo(() => {
-    if (!debouncedCustomerSearch) return customers.slice(0, 10)
-    const q = debouncedCustomerSearch.toLowerCase()
-    return customers.filter(c => c.name.toLowerCase().includes(q) || c.phone.includes(q)).slice(0, 10)
-  }, [customers, debouncedCustomerSearch])
-
-  const selectedCustomer = customers.find(c => c.id === selectedCustomerId)
-
   if (permissions && !permissions.pos) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
@@ -552,48 +539,12 @@ export default function KasaPage() {
           </div>
 
           {/* Müşteri seçimi */}
-          <div className="relative">
-            {selectedCustomer ? (
-              <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <User className="h-4 w-4 text-gray-400" />
-                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{selectedCustomer.name}</span>
-                <span className="text-xs text-gray-400">{selectedCustomer.phone}</span>
-                <button onClick={() => { setSelectedCustomerId(null); setCustomerSearch('') }} className="ml-auto">
-                  <X className="h-4 w-4 text-gray-400 hover:text-gray-600" />
-                </button>
-              </div>
-            ) : (
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  type="text"
-                  value={customerSearch}
-                  onChange={(e) => { setCustomerSearch(e.target.value); setShowCustomerDropdown(true) }}
-                  onFocus={() => setShowCustomerDropdown(true)}
-                  placeholder="Müşteri seç (opsiyonel)..."
-                  className="input pl-9 w-full"
-                />
-                {showCustomerDropdown && filteredCustomers.length > 0 && (
-                  <div className="absolute z-20 top-full mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                    {filteredCustomers.map(c => (
-                      <button
-                        key={c.id}
-                        onClick={() => {
-                          setSelectedCustomerId(c.id)
-                          setCustomerSearch('')
-                          setShowCustomerDropdown(false)
-                        }}
-                        className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-between"
-                      >
-                        <span className="font-medium text-gray-900 dark:text-gray-100">{c.name}</span>
-                        <span className="text-xs text-gray-400">{c.phone}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+          <CustomerSearchSelect
+            value={selectedCustomerId ?? ''}
+            onChange={id => setSelectedCustomerId(id || null)}
+            businessId={businessId!}
+            placeholder="Müşteri seç (opsiyonel)..."
+          />
 
           {/* Referans ödülü banner */}
           {availableRewards.length > 0 && !appliedReferralId && (

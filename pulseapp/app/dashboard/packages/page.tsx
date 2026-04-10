@@ -20,6 +20,7 @@ import { useViewMode } from '@/lib/hooks/use-view-mode'
 import CompactBoxCard from '@/components/ui/compact-box-card'
 import type { ServicePackage, CustomerPackage, Service, PackageStatus, Customer, StaffMember } from '@/types'
 import { CustomSelect } from '@/components/ui/custom-select'
+import { CustomerSearchSelect } from '@/components/ui/customer-search-select'
 import { Portal } from '@/components/ui/portal'
 
 type PageTab = 'templates' | 'customer'
@@ -89,7 +90,6 @@ export default function PaketlerPage() {
   const [sExpiryDate, setSExpiryDate] = useState('')
   const [savingSell, setSavingSell] = useState(false)
   const [sellError, setSellError] = useState<string | null>(null)
-  const [sellCustomers, setSellCustomers] = useState<{id:string;name:string;phone:string|null}[]>([])
   const [sCustomerId, setSCustomerId] = useState('')
   const [sCreateCustomer, setSCreateCustomer] = useState(true)
 
@@ -109,7 +109,6 @@ export default function PaketlerPage() {
   const [aptNotes, setAptNotes] = useState('')
   const [savingApt, setSavingApt] = useState(false)
   const [aptError, setAptError] = useState<string | null>(null)
-  const [aptCustomers, setAptCustomers] = useState<Pick<Customer, 'id' | 'name'>[]>([])
   const [aptCustomerId, setAptCustomerId] = useState('')
   const [aptStaffMembers, setAptStaffMembers] = useState<Pick<StaffMember, 'id' | 'name'>[]>([])
   const [aptStaffId, setAptStaffId] = useState('')
@@ -244,15 +243,7 @@ export default function PaketlerPage() {
     setSTemplateId(templateId ?? templates[0]?.id ?? '')
     setSCustomerName(''); setSCustomerPhone(''); setSPricePaid('')
     setSNotes(''); setSPurchaseDate(new Date().toISOString().split('T')[0]); setSExpiryDate('')
-    setSellError(null); setSCustomerId(''); setSellCustomers([]); setSCreateCustomer(true)
-    // Fetch customers for dropdown
-    const { data } = await supabase
-      .from('customers')
-      .select('id, name, phone')
-      .eq('business_id', businessId!)
-      .eq('is_active', true)
-      .order('name')
-    setSellCustomers((data || []) as {id:string;name:string;phone:string|null}[])
+    setSellError(null); setSCustomerId(''); setSCreateCustomer(true)
     setShowSellModal(true)
   }
 
@@ -425,16 +416,9 @@ export default function PaketlerPage() {
     setAptIntervalDays(7)
     const remaining = Math.max(1, cp.sessions_total - cp.sessions_used)
     setAptSessionCount(remaining)
-    // Fetch customers and staff for dropdowns
-    const [custRes, staffRes] = await Promise.all([
-      supabase.from('customers').select('id, name').eq('business_id', businessId!).eq('is_active', true).order('name'),
-      supabase.from('staff_members').select('id, name').eq('business_id', businessId!).eq('is_active', true).order('name'),
-    ])
-    setAptCustomers(custRes.data || [])
+    const staffRes = await supabase.from('staff_members').select('id, name').eq('business_id', businessId!).eq('is_active', true).order('name')
     setAptStaffMembers(staffRes.data || [])
-    // Pre-select customer if found by name
-    const matchedCust = (custRes.data || []).find((c: Pick<Customer, 'id' | 'name'>) => c.name.toLowerCase() === cp.customer_name.toLowerCase())
-    setAptCustomerId(matchedCust?.id || '')
+    setAptCustomerId('')
     setAptStaffId('')
     setSelectedCp(cp)
     setShowAptModal(true)
@@ -448,12 +432,7 @@ export default function PaketlerPage() {
     setAptBulkCreate(true)
     setAptIntervalDays(7)
     setAptSessionCount(Math.max(1, t.sessions_total))
-    // Fetch customers and staff for dropdowns
-    const [custRes, staffRes] = await Promise.all([
-      supabase.from('customers').select('id, name').eq('business_id', businessId!).eq('is_active', true).order('name'),
-      supabase.from('staff_members').select('id, name').eq('business_id', businessId!).eq('is_active', true).order('name'),
-    ])
-    setAptCustomers(custRes.data || [])
+    const staffRes = await supabase.from('staff_members').select('id, name').eq('business_id', businessId!).eq('is_active', true).order('name')
     setAptStaffMembers(staffRes.data || [])
     setAptCustomerId('')
     setAptStaffId('')
@@ -1257,23 +1236,20 @@ export default function PaketlerPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Müşteri Seç</label>
-                <CustomSelect
-                  options={sellCustomers.map(c => ({ value: c.id, label: `${c.name}${c.phone ? ` — ${c.phone}` : ''}` }))}
+                <CustomerSearchSelect
                   value={sCustomerId}
-                  onChange={id => {
-                    setSCustomerId(id)
-                    if (id) {
-                      const found = sellCustomers.find(c => c.id === id)
-                      if (found) {
-                        setSCustomerName(found.name)
-                        setSCustomerPhone(found.phone || '')
-                      }
+                  onChange={id => setSCustomerId(id)}
+                  businessId={businessId!}
+                  placeholder="— Müşteri Seç —"
+                  onCustomerSelect={c => {
+                    if (c) {
+                      setSCustomerName(c.name)
+                      setSCustomerPhone(c.phone || '')
                     } else {
                       setSCustomerName('')
                       setSCustomerPhone('')
                     }
                   }}
-                  placeholder="— Müşteri Seç —"
                 />
               </div>
 
@@ -1456,17 +1432,15 @@ export default function PaketlerPage() {
             {/* ── Adım 1: Form ── */}
             {!aptPreview && (
             <form onSubmit={handleCreateApt} className="space-y-3">
-              {aptCustomers.length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Müşteri</label>
-                  <CustomSelect
-                    options={aptCustomers.map(c => ({ value: c.id, label: c.name }))}
-                    value={aptCustomerId}
-                    onChange={v => setAptCustomerId(v)}
-                    placeholder="— Seçin —"
-                  />
-                </div>
-              )}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Müşteri</label>
+                <CustomerSearchSelect
+                  value={aptCustomerId}
+                  onChange={v => setAptCustomerId(v)}
+                  businessId={businessId!}
+                  placeholder="— Seçin —"
+                />
+              </div>
 
               {aptStaffMembers.length > 0 && (
                 <div>
