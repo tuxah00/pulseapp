@@ -2121,7 +2121,7 @@ export default function AppointmentsPage() {
           })}
         </AnimatedList>
       ) : (
-        <AnimatedList className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 220px))' }}>
+        <AnimatedList className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(190px,220px))]">
           {filteredAppointments.map((apt) => {
             const timeState = getTimeState(apt)
             return (
