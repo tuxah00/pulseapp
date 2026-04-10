@@ -1415,50 +1415,101 @@ export default function AppointmentsPage() {
                               />
                             )
                           })}
-                          {/* Randevu blokları — çakışma tespiti ile yan yana kolon */}
-                          {computeOverlapLayout(dayAppointments).map(({ apt, column, totalColumns }) => {
-                            const startMin = toMinutes(apt.start_time) - startHour * 60
-                            const endMin = toMinutes(apt.end_time) - startHour * 60
-                            const top = (startMin / 60) * hourHeight
-                            const height = Math.max(((endMin - startMin) / 60) * hourHeight, 20)
-                            const colorIdx = getStaffColorIndex(apt.staff_id)
-                            const colWidth = 100 / totalColumns
-                            const colLeft = column * colWidth
+                          {/* Randevu blokları — 3+ çakışmada tek blok göster */}
+                          {(() => {
+                            const layout = computeOverlapLayout(dayAppointments)
+                            // 3+ çakışan grupları bul
+                            const mergedGroups = new Map<string, typeof layout>()
+                            for (const item of layout) {
+                              if (item.totalColumns >= 3) {
+                                const overlapping = layout.filter(o =>
+                                  o.totalColumns >= 3 &&
+                                  o.apt.start_time < item.apt.end_time &&
+                                  o.apt.end_time > item.apt.start_time
+                                )
+                                const key = overlapping.map(o => o.apt.id).sort().join(',')
+                                if (!mergedGroups.has(key)) mergedGroups.set(key, overlapping)
+                              }
+                            }
+                            const mergedIds = new Set<string>()
+                            mergedGroups.forEach(items => items.forEach(i => mergedIds.add(i.apt.id)))
 
                             return (
-                              <div
-                                key={apt.id}
-                                draggable
-                                onDragStart={(e) => {
-                                  e.dataTransfer.setData('text/plain', apt.id)
-                                  e.dataTransfer.effectAllowed = 'move'
-                                  setDraggingId(apt.id)
-                                }}
-                                onDragEnd={() => setDraggingId(null)}
-                                className={cn(
-                                  'absolute rounded-md px-1.5 py-0.5 overflow-hidden cursor-grab active:cursor-grabbing hover:opacity-90 transition-opacity border border-white/20',
-                                  staffColors[colorIdx],
-                                  draggingId === apt.id && 'opacity-50'
-                                )}
-                                style={{ top, height, left: `${colLeft}%`, width: `${colWidth - 1}%` }}
-                                onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
-                              >
-                                <p className={cn('text-[10px] font-semibold truncate', staffTextColors[colorIdx])}>
-                                  {apt.customers?.name || 'İsimsiz'}
-                                </p>
-                                {height > 30 && (
-                                  <p className={cn('text-[9px] truncate opacity-75', staffTextColors[colorIdx])}>
-                                    {apt.services?.name || ''} · {formatTime(apt.start_time)}
-                                  </p>
-                                )}
-                                {apt.staff_members?.name && height > 24 && (
-                                  <p className={cn('text-[8px] truncate opacity-60 absolute bottom-0.5 right-1 max-w-[90%] text-right', staffTextColors[colorIdx])}>
-                                    {apt.staff_members.name}
-                                  </p>
-                                )}
-                              </div>
+                              <>
+                                {/* Birleştirilmiş bloklar */}
+                                {Array.from(mergedGroups.values()).map((items) => {
+                                  const apts = items.map(i => i.apt)
+                                  const earliest = Math.min(...apts.map(a => toMinutes(a.start_time)))
+                                  const latest = Math.max(...apts.map(a => toMinutes(a.end_time)))
+                                  const topPos = ((earliest - startHour * 60) / 60) * hourHeight
+                                  const h = Math.max(((latest - earliest) / 60) * hourHeight, 28)
+                                  const colorIdx = getStaffColorIndex(apts[0].staff_id)
+                                  return (
+                                    <div
+                                      key={`mg-${apts[0].id}`}
+                                      className={cn(
+                                        'absolute left-0 right-0 rounded-md px-2 py-1 cursor-pointer hover:opacity-90 transition-opacity border border-white/20 flex items-center justify-center',
+                                        staffColors[colorIdx]
+                                      )}
+                                      style={{ top: topPos, height: h }}
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        const hour = Math.floor(earliest / 60)
+                                        setSlotPopup({ day, hour, apts, x: e.clientX, y: e.clientY })
+                                      }}
+                                    >
+                                      <p className={cn('text-[11px] font-bold', staffTextColors[colorIdx])}>
+                                        {apts.length} randevu
+                                      </p>
+                                    </div>
+                                  )
+                                })}
+                                {/* Bireysel bloklar (1-2 çakışan) */}
+                                {layout.filter(i => !mergedIds.has(i.apt.id)).map(({ apt, column, totalColumns }) => {
+                                  const startMin = toMinutes(apt.start_time) - startHour * 60
+                                  const endMin = toMinutes(apt.end_time) - startHour * 60
+                                  const topPos = (startMin / 60) * hourHeight
+                                  const h = Math.max(((endMin - startMin) / 60) * hourHeight, 20)
+                                  const colorIdx = getStaffColorIndex(apt.staff_id)
+                                  const colWidth = 100 / totalColumns
+                                  const colLeft = column * colWidth
+                                  return (
+                                    <div
+                                      key={apt.id}
+                                      draggable
+                                      onDragStart={(e) => {
+                                        e.dataTransfer.setData('text/plain', apt.id)
+                                        e.dataTransfer.effectAllowed = 'move'
+                                        setDraggingId(apt.id)
+                                      }}
+                                      onDragEnd={() => setDraggingId(null)}
+                                      className={cn(
+                                        'absolute rounded-md px-1.5 py-0.5 overflow-hidden cursor-grab active:cursor-grabbing hover:opacity-90 transition-opacity border border-white/20',
+                                        staffColors[colorIdx],
+                                        draggingId === apt.id && 'opacity-50'
+                                      )}
+                                      style={{ top: topPos, height: h, left: `${colLeft}%`, width: `${colWidth - 1}%` }}
+                                      onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
+                                    >
+                                      <p className={cn('text-[10px] font-semibold truncate', staffTextColors[colorIdx])}>
+                                        {apt.customers?.name || 'İsimsiz'}
+                                      </p>
+                                      {h > 30 && (
+                                        <p className={cn('text-[9px] truncate opacity-75', staffTextColors[colorIdx])}>
+                                          {apt.services?.name || ''} · {formatTime(apt.start_time)}
+                                        </p>
+                                      )}
+                                      {apt.staff_members?.name && h > 24 && (
+                                        <p className={cn('text-[8px] truncate opacity-60 absolute bottom-0.5 right-1 max-w-[90%] text-right', staffTextColors[colorIdx])}>
+                                          {apt.staff_members.name}
+                                        </p>
+                                      )}
+                                    </div>
+                                  )
+                                })}
+                              </>
                             )
-                          })}
+                          })()}
 
                           {/* Şu anki saat çizgisi (sadece bugün) */}
                           {isDayToday && (() => {
