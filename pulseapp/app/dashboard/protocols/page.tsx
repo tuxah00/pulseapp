@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { createClient } from '@/lib/supabase/client'
 import {
   Plus, ClipboardCheck, Search, X, Calendar, User, Activity,
   ChevronRight, Loader2, Pause, Play, CheckCircle, XCircle, SkipForward,
-  Camera, FileText, Clock, Sparkles,
+  Camera, FileText, Clock, Sparkles, Upload,
 } from 'lucide-react'
 import type {
   TreatmentProtocol, ProtocolSession, Customer, Service, ProtocolStatus, SessionStatus
@@ -157,6 +157,18 @@ export default function ProtocolsPage() {
     } catch { /* ignore */ }
   }
 
+  // Refresh single protocol (for photo uploads etc.)
+  const refreshProtocol = useCallback(async (protocolId: string) => {
+    if (!businessId) return
+    try {
+      const [, detailJson] = await Promise.all([
+        fetchProtocols(),
+        fetch(`/api/protocols/${protocolId}?businessId=${businessId}`).then(r => r.json()),
+      ])
+      if (detailJson.protocol) setSelectedProtocol(detailJson.protocol)
+    } catch { /* ignore */ }
+  }, [businessId, fetchProtocols])
+
   // Delete protocol
   const handleDelete = async (protocolId: string) => {
     if (!businessId) return
@@ -305,6 +317,7 @@ export default function ProtocolsPage() {
                 onUpdateStatus={updateProtocolStatus}
                 onUpdateSession={updateSession}
                 onDelete={handleDelete}
+                onRefresh={refreshProtocol}
               />
             </div>
           </div>
@@ -378,7 +391,7 @@ export default function ProtocolsPage() {
 
 // Detail panel component
 function DetailPanel({
-  protocol, businessId, onClose, onUpdateStatus, onUpdateSession, onDelete
+  protocol, businessId, onClose, onUpdateStatus, onUpdateSession, onDelete, onRefresh
 }: {
   protocol: TreatmentProtocol
   businessId: string
@@ -386,10 +399,14 @@ function DetailPanel({
   onUpdateStatus: (id: string, status: ProtocolStatus) => void
   onUpdateSession: (protocolId: string, sessionId: string, status: SessionStatus) => void
   onDelete: (id: string) => void
+  onRefresh: (protocolId: string) => void
 }) {
   const [aiLoading, setAiLoading] = useState(false)
   const [aiSuggestion, setAiSuggestion] = useState<string | null>(null)
   const [showAi, setShowAi] = useState(false)
+  const [uploadingPhoto, setUploadingPhoto] = useState<string | null>(null) // "sessionId-before" or "sessionId-after"
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const pendingUpload = useRef<{ sessionId: string; type: 'before' | 'after' } | null>(null)
 
   const customer = Array.isArray(protocol.customer) ? protocol.customer[0] : protocol.customer
   const service = Array.isArray(protocol.service) ? protocol.service[0] : protocol.service
@@ -421,8 +438,53 @@ function DetailPanel({
     }
   }
 
+  function triggerPhotoUpload(sessionId: string, type: 'before' | 'after') {
+    pendingUpload.current = { sessionId, type }
+    fileInputRef.current?.click()
+  }
+
+  async function handlePhotoFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !pendingUpload.current) return
+    const { sessionId, type } = pendingUpload.current
+    const uploadKey = `${sessionId}-${type}`
+    setUploadingPhoto(uploadKey)
+
+    try {
+      const supabase = createClient()
+      const ext = file.name.split('.').pop()
+      const path = `${businessId}/protocols/${protocol.id}/${sessionId}_${type}_${Date.now()}.${ext}`
+      const { error: storageError } = await supabase.storage.from('customer-photos').upload(path, file)
+      if (storageError) { console.error(storageError); return }
+
+      const { data: { publicUrl } } = supabase.storage.from('customer-photos').getPublicUrl(path)
+
+      await fetch(`/api/protocols/${protocol.id}/sessions`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          businessId,
+          sessionId,
+          ...(type === 'before' ? { beforePhotoUrl: publicUrl } : { afterPhotoUrl: publicUrl }),
+        }),
+      })
+
+      // Refresh protocol detail + list
+      onRefresh(protocol.id)
+    } catch (err) {
+      console.error('Fotoğraf yükleme hatası:', err)
+    } finally {
+      setUploadingPhoto(null)
+      pendingUpload.current = null
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
   return (
     <>
+      {/* Hidden file input for photo uploads */}
+      <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoFile} />
+
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
@@ -532,13 +594,62 @@ function DetailPanel({
                   {session.notes && <p className="text-xs text-gray-500 mt-1">{session.notes}</p>}
 
                   {/* Session photos */}
-                  <div className="flex gap-2 mt-1">
-                    {session.before_photo_url && (
-                      <span className="text-xs text-blue-500 flex items-center gap-0.5"><Camera className="h-3 w-3" /> Öncesi</span>
-                    )}
-                    {session.after_photo_url && (
-                      <span className="text-xs text-green-500 flex items-center gap-0.5"><Camera className="h-3 w-3" /> Sonrası</span>
-                    )}
+                  <div className="flex gap-3 mt-2">
+                    {/* Before photo */}
+                    <div className="flex flex-col items-center gap-1">
+                      {session.before_photo_url ? (
+                        <div className="relative group/photo">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={session.before_photo_url} alt="Öncesi" className="w-16 h-16 rounded-lg object-cover border border-gray-200 dark:border-gray-700" />
+                          <button
+                            onClick={() => triggerPhotoUpload(session.id, 'before')}
+                            className="absolute inset-0 bg-black/40 rounded-lg opacity-0 group-hover/photo:opacity-100 transition-opacity flex items-center justify-center"
+                          >
+                            <Camera className="h-4 w-4 text-white" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => triggerPhotoUpload(session.id, 'before')}
+                          disabled={uploadingPhoto === `${session.id}-before`}
+                          className="w-16 h-16 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 flex flex-col items-center justify-center gap-0.5
+                                     hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors disabled:opacity-50"
+                        >
+                          {uploadingPhoto === `${session.id}-before`
+                            ? <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                            : <Upload className="h-4 w-4 text-gray-400" />}
+                        </button>
+                      )}
+                      <span className="text-[10px] text-gray-400">Öncesi</span>
+                    </div>
+
+                    {/* After photo */}
+                    <div className="flex flex-col items-center gap-1">
+                      {session.after_photo_url ? (
+                        <div className="relative group/photo">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={session.after_photo_url} alt="Sonrası" className="w-16 h-16 rounded-lg object-cover border border-gray-200 dark:border-gray-700" />
+                          <button
+                            onClick={() => triggerPhotoUpload(session.id, 'after')}
+                            className="absolute inset-0 bg-black/40 rounded-lg opacity-0 group-hover/photo:opacity-100 transition-opacity flex items-center justify-center"
+                          >
+                            <Camera className="h-4 w-4 text-white" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => triggerPhotoUpload(session.id, 'after')}
+                          disabled={uploadingPhoto === `${session.id}-after`}
+                          className="w-16 h-16 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 flex flex-col items-center justify-center gap-0.5
+                                     hover:border-green-400 hover:bg-green-50 dark:hover:bg-green-900/10 transition-colors disabled:opacity-50"
+                        >
+                          {uploadingPhoto === `${session.id}-after`
+                            ? <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                            : <Upload className="h-4 w-4 text-gray-400" />}
+                        </button>
+                      )}
+                      <span className="text-[10px] text-gray-400">Sonrası</span>
+                    </div>
                   </div>
 
                   {/* Session actions */}
