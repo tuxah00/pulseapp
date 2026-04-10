@@ -398,31 +398,31 @@ export default function ServicesPage() {
                   ))}
 
                   {/* Add new */}
-                  <div className="flex gap-2 mt-2">
-                    <input placeholder="Alerjen" id="ci-allergen" className="input text-sm flex-1" />
-                    <CustomSelect
-                      options={[
-                        { value: 'low', label: 'Düşük' },
-                        { value: 'medium', label: 'Orta' },
-                        { value: 'high', label: 'Yüksek' },
-                      ]}
-                      value={ciRisk}
-                      onChange={setCiRisk}
-                      className="w-28"
-                    />
+                  <div className="flex items-end gap-2 mt-2">
+                    <input placeholder="Alerjen" id="ci-allergen" className="input text-sm flex-1 min-w-0" />
+                    <div className="w-28 flex-shrink-0">
+                      <CustomSelect
+                        value={ciRisk}
+                        onChange={setCiRisk}
+                        options={[
+                          { value: 'low', label: 'Düşük' },
+                          { value: 'medium', label: 'Orta' },
+                          { value: 'high', label: 'Yüksek' },
+                        ]}
+                      />
+                    </div>
                     <button type="button" onClick={async () => {
                       const allergen = (document.getElementById('ci-allergen') as HTMLInputElement).value.trim()
-                      const risk = ciRisk
                       if (!allergen || !businessId || !editingService) return
                       await supabase.from('service_contraindications').insert({
                         business_id: businessId,
                         service_id: editingService.id,
                         allergen,
-                        risk_level: risk,
+                        risk_level: ciRisk,
                       })
                       ;(document.getElementById('ci-allergen') as HTMLInputElement).value = ''
                       fetchContraindications(editingService.id)
-                    }} className="btn-secondary text-sm px-3">
+                    }} className="btn-secondary text-sm px-3 flex-shrink-0">
                       Ekle
                     </button>
                   </div>
