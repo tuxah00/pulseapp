@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import { Toaster, toast } from 'sonner'
+import { motion } from 'framer-motion'
+import { SidebarProvider, useSidebar } from '@/lib/hooks/sidebar-context'
 import Sidebar from './sidebar'
 import TopBar from './top-bar'
 
@@ -21,7 +23,17 @@ interface DashboardShellProps {
   permissions: StaffPermissions
 }
 
-export default function DashboardShell({
+const SIDEBAR_SPRING = { type: 'spring' as const, stiffness: 400, damping: 40 }
+
+export default function DashboardShell(props: DashboardShellProps) {
+  return (
+    <SidebarProvider>
+      <DashboardShellInner {...props} />
+    </SidebarProvider>
+  )
+}
+
+function DashboardShellInner({
   children,
   businessName,
   userName,
@@ -29,7 +41,18 @@ export default function DashboardShell({
   plan,
   permissions,
 }: DashboardShellProps) {
+  const { collapsed } = useSidebar()
   const [commandOpen, setCommandOpen] = useState(false)
+  const [isDesktop, setIsDesktop] = useState(false)
+
+  // Breakpoint detection
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)')
+    setIsDesktop(mq.matches)
+    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
 
   // Global Ctrl+K / Cmd+K shortcut
   useEffect(() => {
@@ -63,6 +86,8 @@ export default function DashboardShell({
     return () => window.removeEventListener('pulse-toast', handlePulseToast)
   }, [])
 
+  const paddingLeft = isDesktop ? (collapsed ? 72 : 256) : 0
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Sidebar
@@ -73,7 +98,11 @@ export default function DashboardShell({
         permissions={permissions}
       />
 
-      <main className="lg:pl-64 transition-[padding] duration-200">
+      <motion.main
+        animate={{ paddingLeft }}
+        transition={SIDEBAR_SPRING}
+        className="min-h-screen"
+      >
         <TopBar
           businessName={businessName}
           userName={userName}
@@ -82,7 +111,7 @@ export default function DashboardShell({
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
           {children}
         </div>
-      </main>
+      </motion.main>
 
       <CommandPalette open={commandOpen} onClose={() => setCommandOpen(false)} />
 

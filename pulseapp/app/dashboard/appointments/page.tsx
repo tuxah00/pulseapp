@@ -645,29 +645,90 @@ export default function AppointmentsPage() {
   }
 
   // Seçilen hücrelerdeki tüm blokları toplu kaldır
-  async function handleBulkUnblock(cells: { col: number; colId: string; date: string; hour: number }[]) {
-    if (!businessId || cells.length === 0) return
-    // Seçilen hücrelere denk gelen blok ID'lerini bul
-    const slotIds = new Set<string>()
-    for (const cell of cells) {
-      for (const bs of blockedSlots) {
-        if (bs.date !== cell.date) continue
-        const bsStartH = parseInt(bs.start_time.split(':')[0])
-        const bsEndH = parseInt(bs.end_time.split(':')[0])
-        if (cell.hour < bsStartH || cell.hour >= bsEndH) continue
-        if (selectionViewMode === 'week' && (bs.staff_id || bs.room_id)) continue
-        if (selectionViewMode === 'staff' && cell.colId !== '__unassigned__' && bs.staff_id && bs.staff_id !== cell.colId) continue
-        if (selectionViewMode === 'room' && cell.colId !== '__unassigned__' && bs.room_id && bs.room_id !== cell.colId) continue
-        slotIds.add(bs.id)
+  function computeRemainingIntervals(blockStartH: number, blockEndH: number, selectedHours: Set<number>): { startH: number; endH: number }[] {
+    const intervals: { startH: number; endH: number }[] = []
+    let rangeStart: number | null = null
+    for (let h = blockStartH; h < blockEndH; h++) {
+      if (!selectedHours.has(h)) {
+        if (rangeStart === null) rangeStart = h
+      } else {
+        if (rangeStart !== null) {
+          intervals.push({ startH: rangeStart, endH: h })
+          rangeStart = null
+        }
       }
     }
+    if (rangeStart !== null) intervals.push({ startH: rangeStart, endH: blockEndH })
+    return intervals
+  }
+
+  async function handleBulkUnblock(cells: { col: number; colId: string; date: string; hour: number }[]) {
+    if (!businessId || cells.length === 0) return
+
+    // Seçili hücreleri date+colId bazında grupla
+    const grouped = new Map<string, { date: string; colId: string; hours: Set<number> }>()
+    for (const cell of cells) {
+      const key = `${cell.date}_${cell.colId}`
+      if (!grouped.has(key)) grouped.set(key, { date: cell.date, colId: cell.colId, hours: new Set() })
+      grouped.get(key)!.hours.add(cell.hour)
+    }
+
+    const toDelete = new Set<string>()
+    const toCreate: Array<{ date: string; start_time: string; end_time: string; staff_id?: string; room_id?: string; reason?: string }> = []
+
+    for (const g of grouped.values()) {
+      for (const bs of blockedSlots) {
+        if (bs.date !== g.date) continue
+        if (toDelete.has(bs.id)) continue
+        if (selectionViewMode === 'week' && (bs.staff_id || bs.room_id)) continue
+        if (selectionViewMode === 'staff' && g.colId !== '__unassigned__' && bs.staff_id && bs.staff_id !== g.colId) continue
+        if (selectionViewMode === 'room' && g.colId !== '__unassigned__' && bs.room_id && bs.room_id !== g.colId) continue
+
+        const bsStartH = parseInt(bs.start_time.split(':')[0])
+        const bsEndH = parseInt(bs.end_time.split(':')[0])
+
+        // Seçili saatlerle kesişim kontrolü
+        let hasOverlap = false
+        for (let h = bsStartH; h < bsEndH; h++) {
+          if (g.hours.has(h)) { hasOverlap = true; break }
+        }
+        if (!hasOverlap) continue
+
+        toDelete.add(bs.id)
+
+        // Kalan aralıkları hesapla (split)
+        const remaining = computeRemainingIntervals(bsStartH, bsEndH, g.hours)
+        for (const r of remaining) {
+          toCreate.push({
+            date: bs.date,
+            start_time: `${String(r.startH).padStart(2, '0')}:00`,
+            end_time: `${String(r.endH).padStart(2, '0')}:00`,
+            staff_id: bs.staff_id || undefined,
+            room_id: bs.room_id || undefined,
+            reason: bs.reason || undefined,
+          })
+        }
+      }
+    }
+
+    if (toDelete.size === 0) return
+
     try {
-      await Promise.all(Array.from(slotIds).map(id =>
+      // Eski blokları sil
+      await Promise.all(Array.from(toDelete).map(id =>
         fetch(`/api/blocked-slots?id=${id}&businessId=${businessId}`, { method: 'DELETE' })
       ))
+      // Kalan parçaları oluştur
+      if (toCreate.length > 0) {
+        await fetch('/api/blocked-slots', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ businessId, slots: toCreate }),
+        })
+      }
       await fetchBlockedSlots()
       window.dispatchEvent(new CustomEvent('pulse-toast', {
-        detail: { type: 'system', title: 'Bloklar Kaldırıldı', body: `${slotIds.size} blok kaldırıldı.` },
+        detail: { type: 'system', title: 'Bloklar Kaldırıldı', body: `${toDelete.size} blok güncellendi.` },
       }))
     } catch { /* ignore */ }
   }

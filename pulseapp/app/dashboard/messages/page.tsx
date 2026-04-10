@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useDebounce } from '@/lib/hooks/use-debounce'
+import { useSidebar } from '@/lib/hooks/sidebar-context'
+import { motion } from 'framer-motion'
 import {
   MessageSquare, Search, Send, Loader2, Phone,
   Bot, User, ChevronLeft, Clock, ArrowDownCircle,
@@ -48,7 +50,17 @@ function formatConversationDate(dateStr: string): string {
 
 export default function MessagesPage() {
   const { businessId, loading: ctxLoading, permissions } = useBusinessContext()
+  const { collapsed } = useSidebar()
   const supabase = createClient()
+  const [isDesktop, setIsDesktop] = useState(false)
+
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)')
+    setIsDesktop(mq.matches)
+    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
 
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [messages, setMessages] = useState<Message[]>([])
@@ -324,7 +336,11 @@ export default function MessagesPage() {
   }
 
   return (
-    <div className="fixed inset-0 lg:left-64 top-14 z-30 bg-white dark:!bg-gray-950">
+    <motion.div
+      className="fixed inset-0 top-14 z-30 bg-white dark:!bg-gray-950"
+      animate={{ left: isDesktop ? (collapsed ? 72 : 256) : 0 }}
+      transition={{ type: 'spring', stiffness: 400, damping: 40 }}
+    >
       <div className="flex h-full">
 
         {/* Sol Panel — Konuşma Listesi */}
@@ -765,7 +781,7 @@ export default function MessagesPage() {
           )}
         </div>
       </div>
-    </div>
+    </motion.div>
   )
 }
 

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useSidebar } from '@/lib/hooks/sidebar-context'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -100,7 +101,7 @@ interface SidebarProps {
 export default function Sidebar({ businessName, userName, sector, plan, permissions }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
-  const [collapsed, setCollapsed] = useState(false)
+  const { collapsed, setCollapsed } = useSidebar()
   const [mobileOpen, setMobileOpen] = useState(false)
 
   const rawSections = getSidebarSections(sector, plan)

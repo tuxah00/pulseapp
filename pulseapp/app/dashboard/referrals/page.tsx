@@ -2,72 +2,128 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
+import { getCustomerLabelSingular } from '@/lib/config/sector-modules'
+import { toast } from 'sonner'
 import {
-  Plus, UserCheck, Search, X, Loader2, Gift, Phone, ArrowRight, CheckCircle, Clock, ShieldX
+  Plus, UserCheck, Search, Loader2, Gift, Phone, ArrowRight, CheckCircle, Clock, ShieldX, Trash2, Award, X
 } from 'lucide-react'
 import type { Referral, Customer, ReferralStatus, RewardType } from '@/types'
 import { REFERRAL_STATUS_LABELS, REWARD_TYPE_LABELS } from '@/types'
-import { formatCurrency } from '@/lib/utils'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { CustomerSearchSelect } from '@/components/ui/customer-search-select'
-import { Portal } from '@/components/ui/portal'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { cn } from '@/lib/utils'
 
 const STATUS_CONFIG: Record<ReferralStatus, { bg: string; text: string; icon: typeof CheckCircle }> = {
   pending: { bg: 'bg-yellow-50 dark:bg-yellow-900/20', text: 'text-yellow-600 dark:text-yellow-400', icon: Clock },
-  converted: { bg: 'bg-green-50 dark:bg-green-900/20', text: 'text-green-600 dark:text-green-400', icon: CheckCircle },
+  converted: { bg: 'bg-blue-50 dark:bg-blue-900/20', text: 'text-blue-600 dark:text-blue-400', icon: ArrowRight },
   expired: { bg: 'bg-gray-50 dark:bg-gray-800', text: 'text-gray-500 dark:text-gray-400', icon: X },
+  rewarded: { bg: 'bg-green-50 dark:bg-green-900/20', text: 'text-green-600 dark:text-green-400', icon: CheckCircle },
 }
 
+const REWARD_TYPE_OPTIONS = [
+  { value: 'discount_percent', label: '% İndirim' },
+  { value: 'discount_amount', label: '₺ İndirim' },
+  { value: 'free_service', label: 'Ücretsiz Hizmet' },
+  { value: 'points', label: 'Puan' },
+  { value: 'gift', label: 'Hediye' },
+]
 
-export default function ReferralsPage() {
-  const { businessId, loading: ctxLoading, permissions } = useBusinessContext()
+const REWARD_STATUS_LABELS: Record<string, string> = {
+  pending: 'Bekliyor',
+  used: 'Kullanıldı',
+  expired: 'Süresi Doldu',
+}
 
+interface RewardTemplate {
+  id: string
+  business_id: string
+  name: string
+  type: string
+  value: number | null
+  description: string | null
+  valid_days: number
+  is_active: boolean
+  created_at: string
+}
+
+interface CustomerReward {
+  id: string
+  business_id: string
+  customer_id: string
+  reward_id: string
+  status: string
+  given_at: string
+  used_at: string | null
+  expires_at: string | null
+  notes: string | null
+  rewards?: { name: string; type: string; value: number | null; description: string | null } | null
+  customers?: { name: string; phone: string | null } | null
+}
+
+type TabType = 'referrals' | 'rewards'
+
+export default function RewardsPage() {
+  const { businessId, sector, loading: ctxLoading, permissions } = useBusinessContext()
+  const customerLabel = getCustomerLabelSingular(sector ?? undefined)
+
+  const [activeTab, setActiveTab] = useState<TabType>('referrals')
+
+  // ── Referrals State ──
   const [referrals, setReferrals] = useState<Referral[]>([])
-  const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState<string>('all')
-
-  // Create modal
-  const [showCreate, setShowCreate] = useState(false)
-  const [isClosingCreate, setIsClosingCreate] = useState(false)
-  const closeCreate = () => setIsClosingCreate(true)
-  const [saving, setSaving] = useState(false)
+  const [refLoading, setRefLoading] = useState(true)
+  const [refSearch, setRefSearch] = useState('')
+  const [refStatusFilter, setRefStatusFilter] = useState<string>('all')
+  const [showRefCreate, setShowRefCreate] = useState(false)
+  const [refSaving, setRefSaving] = useState(false)
   const [formReferrerId, setFormReferrerId] = useState('')
   const [formReferredName, setFormReferredName] = useState('')
   const [formReferredPhone, setFormReferredPhone] = useState('')
   const [formRewardType, setFormRewardType] = useState<RewardType | ''>('')
   const [formRewardValue, setFormRewardValue] = useState('')
 
+  // ── Rewards State ──
+  const [rewardTemplates, setRewardTemplates] = useState<RewardTemplate[]>([])
+  const [customerRewards, setCustomerRewards] = useState<CustomerReward[]>([])
+  const [rwLoading, setRwLoading] = useState(true)
+  const [rwStatusFilter, setRwStatusFilter] = useState<string>('all')
+  const [showTemplateCreate, setShowTemplateCreate] = useState(false)
+  const [showAssign, setShowAssign] = useState(false)
+  const [rwSaving, setRwSaving] = useState(false)
+  // Template form
+  const [tName, setTName] = useState('')
+  const [tType, setTType] = useState('')
+  const [tValue, setTValue] = useState('')
+  const [tDesc, setTDesc] = useState('')
+  const [tValidDays, setTValidDays] = useState('30')
+  // Assign form
+  const [aCustomerId, setACustomerId] = useState('')
+  const [aRewardId, setARewardId] = useState('')
+  const [aNotes, setANotes] = useState('')
+
+  // ── Referrals Logic ──
   const fetchReferrals = useCallback(async () => {
     if (!businessId) return
-    setLoading(true)
+    setRefLoading(true)
     try {
       const params = new URLSearchParams({ businessId })
-      if (statusFilter !== 'all') params.set('status', statusFilter)
+      if (refStatusFilter !== 'all') params.set('status', refStatusFilter)
       const res = await fetch(`/api/referrals?${params}`)
       const json = await res.json()
       setReferrals(json.referrals || [])
-    } catch { /* ignore */ } finally { setLoading(false) }
-  }, [businessId, statusFilter])
+    } catch { /* ignore */ } finally { setRefLoading(false) }
+  }, [businessId, refStatusFilter])
 
-  useEffect(() => { fetchReferrals() }, [fetchReferrals])
+  useEffect(() => { if (activeTab === 'referrals') fetchReferrals() }, [fetchReferrals, activeTab])
 
-  useEffect(() => {
-    if (!showCreate) return
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') closeCreate() }
-    document.addEventListener('keydown', h)
-    return () => document.removeEventListener('keydown', h)
-  }, [showCreate])
-
-  // Stats
   const totalReferrals = referrals.length
-  const convertedCount = referrals.filter(r => r.status === 'converted').length
-  const pendingCount = referrals.filter(r => r.status === 'pending').length
-  const conversionRate = totalReferrals > 0 ? Math.round((convertedCount / totalReferrals) * 100) : 0
+  const rewardedCount = referrals.filter(r => r.status === 'rewarded').length
+  const pendingRefCount = referrals.filter(r => r.status === 'pending').length
+  const rewardRate = totalReferrals > 0 ? Math.round((rewardedCount / totalReferrals) * 100) : 0
 
-  const handleCreate = async () => {
+  const handleRefCreate = async () => {
     if (!businessId || !formReferrerId) return
-    setSaving(true)
+    setRefSaving(true)
     try {
       const res = await fetch('/api/referrals', {
         method: 'POST',
@@ -82,44 +138,36 @@ export default function ReferralsPage() {
         }),
       })
       if (res.ok) {
-        closeCreate()
-        resetForm()
+        toast.success('Referans oluşturuldu')
+        setShowRefCreate(false)
+        resetRefForm()
         fetchReferrals()
+      } else {
+        const json = await res.json()
+        toast.error(json.error || 'Referans oluşturulamadı')
       }
-    } catch { /* ignore */ } finally { setSaving(false) }
+    } catch { toast.error('Bağlantı hatası') } finally { setRefSaving(false) }
   }
 
-  const resetForm = () => {
-    setFormReferrerId('')
-    setFormReferredName('')
-    setFormReferredPhone('')
-    setFormRewardType('')
-    setFormRewardValue('')
+  const resetRefForm = () => {
+    setFormReferrerId(''); setFormReferredName(''); setFormReferredPhone('')
+    setFormRewardType(''); setFormRewardValue('')
   }
 
-  const handleConvert = async (referralId: string) => {
+  const handleReward = async (id: string) => {
     if (!businessId) return
     await fetch('/api/referrals', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ businessId, id: referralId, status: 'converted' }),
+      body: JSON.stringify({ businessId, id, status: 'rewarded' }),
     })
+    toast.success('Ödül verildi')
     fetchReferrals()
   }
 
-  const handleClaimReward = async (referralId: string) => {
-    if (!businessId) return
-    await fetch('/api/referrals', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ businessId, id: referralId, rewardClaimed: true }),
-    })
-    fetchReferrals()
-  }
-
-  const filtered = referrals.filter(r => {
-    if (!search) return true
-    const q = search.toLowerCase()
+  const filteredRefs = referrals.filter(r => {
+    if (!refSearch) return true
+    const q = refSearch.toLowerCase()
     const referrer = (Array.isArray(r.referrer) ? r.referrer[0] : r.referrer) as Customer | undefined
     const referred = (Array.isArray(r.referred) ? r.referred[0] : r.referred) as Customer | undefined
     return (
@@ -130,13 +178,101 @@ export default function ReferralsPage() {
     )
   })
 
+  // ── Rewards Logic ──
+  const fetchRewardTemplates = useCallback(async () => {
+    if (!businessId) return
+    try {
+      const res = await fetch('/api/rewards?type=templates')
+      const json = await res.json()
+      setRewardTemplates(json.rewards || [])
+    } catch { /* ignore */ }
+  }, [businessId])
+
+  const fetchCustomerRewards = useCallback(async () => {
+    if (!businessId) return
+    setRwLoading(true)
+    try {
+      const params = new URLSearchParams({ type: 'assigned' })
+      if (rwStatusFilter !== 'all') params.set('status', rwStatusFilter)
+      const res = await fetch(`/api/rewards?${params}`)
+      const json = await res.json()
+      setCustomerRewards(json.rewards || [])
+    } catch { /* ignore */ } finally { setRwLoading(false) }
+  }, [businessId, rwStatusFilter])
+
+  useEffect(() => {
+    if (activeTab === 'rewards') { fetchRewardTemplates(); fetchCustomerRewards() }
+  }, [activeTab, fetchRewardTemplates, fetchCustomerRewards])
+
+  const handleCreateTemplate = async () => {
+    if (!tName || !tType) return
+    setRwSaving(true)
+    try {
+      const res = await fetch('/api/rewards', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: tName, type: tType, value: tValue ? Number(tValue) : null, description: tDesc || null, validDays: Number(tValidDays) || 30 }),
+      })
+      if (res.ok) {
+        toast.success('Ödül şablonu oluşturuldu')
+        setShowTemplateCreate(false)
+        setTName(''); setTType(''); setTValue(''); setTDesc(''); setTValidDays('30')
+        fetchRewardTemplates()
+      } else {
+        const json = await res.json()
+        toast.error(json.error || 'Ödül oluşturulamadı')
+      }
+    } catch { toast.error('Bağlantı hatası') } finally { setRwSaving(false) }
+  }
+
+  const handleAssignReward = async () => {
+    if (!aCustomerId || !aRewardId) return
+    setRwSaving(true)
+    try {
+      const res = await fetch('/api/rewards', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'assign', customerId: aCustomerId, rewardId: aRewardId, notes: aNotes || null }),
+      })
+      if (res.ok) {
+        toast.success('Ödül atandı')
+        setShowAssign(false)
+        setACustomerId(''); setARewardId(''); setANotes('')
+        fetchCustomerRewards()
+      } else {
+        const json = await res.json()
+        toast.error(json.error || 'Ödül atanamadı')
+      }
+    } catch { toast.error('Bağlantı hatası') } finally { setRwSaving(false) }
+  }
+
+  const handleMarkUsed = async (id: string) => {
+    await fetch('/api/rewards', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, table: 'customer_rewards', status: 'used' }),
+    })
+    toast.success('Ödül kullanıldı olarak işaretlendi')
+    fetchCustomerRewards()
+  }
+
+  const handleDeleteTemplate = async (id: string) => {
+    const res = await fetch(`/api/rewards?id=${id}`, { method: 'DELETE' })
+    if (res.ok) {
+      toast.success('Ödül şablonu silindi')
+      fetchRewardTemplates()
+    } else {
+      toast.error('Silinemedi')
+    }
+  }
+
+  // ── Permission Check ──
   if (permissions && !permissions.referrals) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <div className="text-center space-y-3">
           <ShieldX className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto" />
           <p className="text-lg font-medium text-gray-500 dark:text-gray-400">Bu sayfaya erişim yetkiniz bulunmamaktadır.</p>
-          <p className="text-sm text-gray-400 dark:text-gray-500">İşletme sahibinizle iletişime geçin.</p>
         </div>
       </div>
     )
@@ -151,190 +287,298 @@ export default function ReferralsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Referanslar</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Müşteri tavsiye sistemi</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Ödüller</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Referanslar ve ödül yönetimi</p>
         </div>
-        <button onClick={() => setShowCreate(true)} className="btn-primary flex items-center gap-2">
-          <Plus className="h-4 w-4" /> Yeni Referans
-        </button>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="card p-4">
-          <p className="text-xs text-gray-500 dark:text-gray-400">Toplam</p>
-          <p className="text-2xl font-bold text-gray-900 dark:text-white">{totalReferrals}</p>
-        </div>
-        <div className="card p-4">
-          <p className="text-xs text-gray-500 dark:text-gray-400">Bekleyen</p>
-          <p className="text-2xl font-bold text-yellow-600">{pendingCount}</p>
-        </div>
-        <div className="card p-4">
-          <p className="text-xs text-gray-500 dark:text-gray-400">Dönüştürülen</p>
-          <p className="text-2xl font-bold text-green-600">{convertedCount}</p>
-        </div>
-        <div className="card p-4">
-          <p className="text-xs text-gray-500 dark:text-gray-400">Dönüşüm Oranı</p>
-          <p className="text-2xl font-bold text-pulse-900">%{conversionRate}</p>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3 items-center">
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <input type="text" placeholder="Ara..." className="input pl-10 w-full" value={search} onChange={e => setSearch(e.target.value)} />
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          {(['all', 'pending', 'converted', 'expired'] as const).map(s => (
-            <button key={s}
-              onClick={() => setStatusFilter(s)}
-              className={`badge px-3 py-1.5 cursor-pointer transition-colors ${
-                statusFilter === s
-                  ? 'bg-gray-900 dark:bg-gray-700 text-white'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-              }`}>
-              {s === 'all' ? 'Tümü' : REFERRAL_STATUS_LABELS[s]}
+        <div className="flex gap-2">
+          {activeTab === 'referrals' && (
+            <button onClick={() => setShowRefCreate(true)} className="btn-primary flex items-center gap-2">
+              <Plus className="h-4 w-4" /> Yeni Referans
             </button>
-          ))}
+          )}
+          {activeTab === 'rewards' && (
+            <>
+              <button onClick={() => setShowTemplateCreate(true)} className="btn-secondary flex items-center gap-2">
+                <Plus className="h-4 w-4" /> Ödül Tanımla
+              </button>
+              <button onClick={() => setShowAssign(true)} className="btn-primary flex items-center gap-2">
+                <Gift className="h-4 w-4" /> Ödül Ver
+              </button>
+            </>
+          )}
         </div>
       </div>
 
-      {/* List */}
-      {loading ? (
-        <div className="flex items-center justify-center h-32"><Loader2 className="h-6 w-6 animate-spin text-pulse-900" /></div>
-      ) : filtered.length === 0 ? (
-        <div className="card p-8 text-center">
-          <UserCheck className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-          <p className="text-gray-500 dark:text-gray-400">Henüz referans yok</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {filtered.map(r => {
-            const referrer = (Array.isArray(r.referrer) ? r.referrer[0] : r.referrer) as Customer | undefined
-            const referred = (Array.isArray(r.referred) ? r.referred[0] : r.referred) as Customer | undefined
-            const sc = STATUS_CONFIG[r.status]
-            const Icon = sc.icon
+      {/* Tabs */}
+      <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 w-fit">
+        {([
+          { key: 'referrals' as TabType, label: 'Referanslar', icon: UserCheck },
+          { key: 'rewards' as TabType, label: 'Ödüller', icon: Gift },
+        ]).map(tab => {
+          const TabIcon = tab.icon
+          return (
+            <button key={tab.key} onClick={() => setActiveTab(tab.key)}
+              className={cn('flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-colors',
+                activeTab === tab.key ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'
+              )}>
+              <TabIcon className="h-4 w-4" /> {tab.label}
+            </button>
+          )
+        })}
+      </div>
 
-            return (
-              <div key={r.id} className="card p-4">
-                <div className="flex items-center gap-4">
-                  {/* Referrer */}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-gray-400 mb-0.5">Tavsiye Eden</p>
-                    <p className="font-medium text-gray-900 dark:text-white truncate">{referrer?.name || '—'}</p>
-                    {referrer?.phone && (
-                      <p className="text-xs text-gray-500 flex items-center gap-1"><Phone className="h-3 w-3" /> {referrer.phone}</p>
-                    )}
-                  </div>
+      {/* ═══ Referanslar Tab ═══ */}
+      {activeTab === 'referrals' && (
+        <>
+          {/* Stats */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="card p-4"><p className="text-xs text-gray-500 dark:text-gray-400">Toplam</p><p className="text-2xl font-bold text-gray-900 dark:text-white">{totalReferrals}</p></div>
+            <div className="card p-4"><p className="text-xs text-gray-500 dark:text-gray-400">Bekleyen</p><p className="text-2xl font-bold text-yellow-600">{pendingRefCount}</p></div>
+            <div className="card p-4"><p className="text-xs text-gray-500 dark:text-gray-400">Ödül Verildi</p><p className="text-2xl font-bold text-green-600">{rewardedCount}</p></div>
+            <div className="card p-4"><p className="text-xs text-gray-500 dark:text-gray-400">Ödül Oranı</p><p className="text-2xl font-bold text-pulse-900">%{rewardRate}</p></div>
+          </div>
 
-                  <ArrowRight className="h-4 w-4 text-gray-300 flex-shrink-0" />
-
-                  {/* Referred */}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-gray-400 mb-0.5">Tavsiye Edilen</p>
-                    <p className="font-medium text-gray-900 dark:text-white truncate">
-                      {referred?.name || r.referred_name || '—'}
-                    </p>
-                    {(referred?.phone || r.referred_phone) && (
-                      <p className="text-xs text-gray-500 flex items-center gap-1">
-                        <Phone className="h-3 w-3" /> {referred?.phone || r.referred_phone}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Reward */}
-                  <div className="flex-shrink-0 text-right">
-                    {r.reward_type && (
-                      <p className="text-xs text-purple-600 dark:text-purple-400 flex items-center gap-1 justify-end mb-0.5">
-                        <Gift className="h-3 w-3" />
-                        {r.reward_value}{r.reward_type === 'discount_percent' ? '%' : r.reward_type === 'discount_amount' ? '₺' : ''} {REWARD_TYPE_LABELS[r.reward_type]}
-                      </p>
-                    )}
-                    <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${sc.bg} ${sc.text}`}>
-                      <Icon className="h-3 w-3" /> {REFERRAL_STATUS_LABELS[r.status]}
-                    </span>
-                    {r.reward_claimed && (
-                      <p className="text-[10px] text-green-500 mt-0.5">Ödül alındı</p>
-                    )}
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex-shrink-0 flex gap-1">
-                    {r.status === 'pending' && (
-                      <button onClick={() => handleConvert(r.id)} className="text-xs px-2 py-1 rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200 transition-colors">
-                        Dönüştür
-                      </button>
-                    )}
-                    {r.status === 'converted' && r.reward_type && !r.reward_claimed && (
-                      <button onClick={() => handleClaimReward(r.id)} className="text-xs px-2 py-1 rounded bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 hover:bg-purple-200 transition-colors">
-                        Ödül Ver
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      )}
-
-      {/* Create Modal */}
-      {(showCreate || isClosingCreate) && (
-        <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[100] bg-black/60 dark:bg-black/70 flex items-center justify-center p-4 ${isClosingCreate ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingCreate) { setShowCreate(false); setIsClosingCreate(false) } }}>
-          <div className={`modal-content bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-lg ${isClosingCreate ? 'closing' : ''}`}>
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Yeni Referans</h2>
-              <button onClick={() => { closeCreate(); resetForm() }} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
+          {/* Filters */}
+          <div className="flex flex-wrap gap-3 items-center">
+            <div className="relative flex-1 min-w-[200px] max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input type="text" placeholder="Ara..." className="input pl-10 w-full" value={refSearch} onChange={e => setRefSearch(e.target.value)} />
             </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="label">Tavsiye Eden Müşteri *</label>
-                <CustomerSearchSelect
-                  value={formReferrerId}
-                  onChange={v => setFormReferrerId(v)}
-                  businessId={businessId!}
-                  placeholder="Müşteri seçin..."
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="label">Tavsiye Edilen Ad</label>
-                  <input className="input w-full" placeholder="Ad Soyad" value={formReferredName} onChange={e => setFormReferredName(e.target.value)} />
-                </div>
-                <div>
-                  <label className="label">Telefon</label>
-                  <input className="input w-full" placeholder="05XX XXX XXXX" value={formReferredPhone} onChange={e => setFormReferredPhone(e.target.value)} />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="label">Ödül Tipi</label>
-                  <CustomSelect
-                    options={(Object.entries(REWARD_TYPE_LABELS) as [RewardType, string][]).map(([k, v]) => ({ value: k, label: v }))}
-                    value={formRewardType}
-                    onChange={v => setFormRewardType(v as RewardType)}
-                    placeholder="Seçin (opsiyonel)"
-                  />
-                </div>
-                <div>
-                  <label className="label">Ödül Değeri</label>
-                  <input type="number" className="input w-full" placeholder="Miktar" value={formRewardValue} onChange={e => setFormRewardValue(e.target.value)} />
-                </div>
-              </div>
-            </div>
-            <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
-              <button onClick={() => { closeCreate(); resetForm() }} className="btn-secondary">İptal</button>
-              <button onClick={handleCreate} disabled={saving || !formReferrerId} className="btn-primary disabled:opacity-50">
-                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1 inline" /> : <Plus className="h-4 w-4 mr-1 inline" />}
-                Oluştur
-              </button>
+            <div className="flex gap-2 flex-wrap">
+              {(['all', 'pending', 'rewarded'] as const).map(s => (
+                <button key={s} onClick={() => setRefStatusFilter(s)}
+                  className={`badge px-3 py-1.5 cursor-pointer transition-colors ${refStatusFilter === s ? 'bg-gray-900 dark:bg-gray-700 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}>
+                  {s === 'all' ? 'Tümü' : REFERRAL_STATUS_LABELS[s]}
+                </button>
+              ))}
             </div>
           </div>
-        </div>
-        </Portal>
+
+          {/* List */}
+          {refLoading ? (
+            <div className="flex items-center justify-center h-32"><Loader2 className="h-6 w-6 animate-spin text-pulse-900" /></div>
+          ) : filteredRefs.length === 0 ? (
+            <div className="card p-8 text-center">
+              <UserCheck className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+              <p className="text-gray-500 dark:text-gray-400">Henüz referans yok</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredRefs.map(r => {
+                const referrer = (Array.isArray(r.referrer) ? r.referrer[0] : r.referrer) as Customer | undefined
+                const referred = (Array.isArray(r.referred) ? r.referred[0] : r.referred) as Customer | undefined
+                const sc = STATUS_CONFIG[r.status]
+                const Icon = sc.icon
+                return (
+                  <div key={r.id} className="card p-4">
+                    <div className="flex items-center gap-4">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-gray-400 mb-0.5">Tavsiye Eden</p>
+                        <p className="font-medium text-gray-900 dark:text-white truncate">{referrer?.name || '—'}</p>
+                        {referrer?.phone && <p className="text-xs text-gray-500 flex items-center gap-1"><Phone className="h-3 w-3" /> {referrer.phone}</p>}
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-gray-300 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-gray-400 mb-0.5">Tavsiye Edilen</p>
+                        <p className="font-medium text-gray-900 dark:text-white truncate">{referred?.name || r.referred_name || '—'}</p>
+                        {(referred?.phone || r.referred_phone) && <p className="text-xs text-gray-500 flex items-center gap-1"><Phone className="h-3 w-3" /> {referred?.phone || r.referred_phone}</p>}
+                      </div>
+                      <div className="flex-shrink-0 text-right">
+                        {r.reward_type && (
+                          <p className="text-xs text-purple-600 dark:text-purple-400 flex items-center gap-1 justify-end mb-0.5">
+                            <Gift className="h-3 w-3" />
+                            {r.reward_value}{r.reward_type === 'discount_percent' ? '%' : r.reward_type === 'discount_amount' ? '₺' : ''} {REWARD_TYPE_LABELS[r.reward_type]}
+                          </p>
+                        )}
+                        <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${sc.bg} ${sc.text}`}>
+                          <Icon className="h-3 w-3" /> {REFERRAL_STATUS_LABELS[r.status]}
+                        </span>
+                        {r.status === 'rewarded' && <p className="text-[10px] text-green-500 mt-0.5">Ödül verildi</p>}
+                      </div>
+                      <div className="flex-shrink-0 flex gap-1">
+                        {r.status === 'pending' && (
+                          <button onClick={() => handleReward(r.id)} className="text-xs px-2 py-1 rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200 transition-colors">Ödül Ver</button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </>
       )}
+
+      {/* ═══ Ödüller Tab ═══ */}
+      {activeTab === 'rewards' && (
+        <>
+          {/* Reward Templates */}
+          <div>
+            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Ödül Şablonları</h2>
+            {rewardTemplates.length === 0 ? (
+              <div className="card p-6 text-center">
+                <Award className="h-10 w-10 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+                <p className="text-sm text-gray-500 dark:text-gray-400">Henüz ödül şablonu tanımlanmamış</p>
+                <p className="text-xs text-gray-400 mt-1">&ldquo;Ödül Tanımla&rdquo; butonuyla başlayın</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {rewardTemplates.map(t => (
+                  <div key={t.id} className="card p-4">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="font-medium text-gray-900 dark:text-white">{t.name}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          {REWARD_TYPE_OPTIONS.find(o => o.value === t.type)?.label || t.type}
+                          {t.value ? ` — ${t.value}${t.type === 'discount_percent' ? '%' : t.type === 'discount_amount' ? '₺' : ''}` : ''}
+                        </p>
+                        {t.description && <p className="text-xs text-gray-400 mt-1">{t.description}</p>}
+                        <p className="text-[10px] text-gray-400 mt-1">Geçerlilik: {t.valid_days} gün</p>
+                      </div>
+                      <button onClick={() => handleDeleteTemplate(t.id)} className="text-gray-400 hover:text-red-500 transition-colors p-1" title="Sil">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Assigned Rewards */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Atanmış Ödüller</h2>
+              <div className="flex gap-2">
+                {(['all', 'pending', 'used', 'expired'] as const).map(s => (
+                  <button key={s} onClick={() => setRwStatusFilter(s)}
+                    className={`badge px-2.5 py-1 cursor-pointer text-xs transition-colors ${rwStatusFilter === s ? 'bg-gray-900 dark:bg-gray-700 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}>
+                    {s === 'all' ? 'Tümü' : REWARD_STATUS_LABELS[s]}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {rwLoading ? (
+              <div className="flex items-center justify-center h-24"><Loader2 className="h-5 w-5 animate-spin text-pulse-900" /></div>
+            ) : customerRewards.length === 0 ? (
+              <div className="card p-6 text-center">
+                <Gift className="h-10 w-10 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+                <p className="text-sm text-gray-500 dark:text-gray-400">Henüz atanmış ödül yok</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {customerRewards.map(cr => (
+                  <div key={cr.id} className="card p-3">
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm text-gray-900 dark:text-white truncate">{cr.customers?.name || '—'}</p>
+                        <p className="text-xs text-gray-500">{cr.rewards?.name || '—'} — {REWARD_TYPE_OPTIONS.find(o => o.value === cr.rewards?.type)?.label || ''}</p>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                          cr.status === 'pending' ? 'bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400'
+                          : cr.status === 'used' ? 'bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400'
+                          : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
+                        }`}>
+                          {REWARD_STATUS_LABELS[cr.status] || cr.status}
+                        </span>
+                        {cr.expires_at && <p className="text-[10px] text-gray-400 mt-0.5">Son: {new Date(cr.expires_at).toLocaleDateString('tr-TR')}</p>}
+                      </div>
+                      {cr.status === 'pending' && (
+                        <button onClick={() => handleMarkUsed(cr.id)} className="text-xs px-2 py-1 rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200 transition-colors flex-shrink-0">
+                          Kullanıldı
+                        </button>
+                      )}
+                    </div>
+                    {cr.notes && <p className="text-xs text-gray-400 mt-1 pl-1 border-l-2 border-gray-200 dark:border-gray-700">{cr.notes}</p>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* ═══ Modals ═══ */}
+
+      {/* Referans Oluştur */}
+      <Dialog open={showRefCreate} onOpenChange={(open) => { if (!open) { setShowRefCreate(false); resetRefForm() } }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader><DialogTitle>Yeni Referans</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="label">{`Tavsiye Eden ${customerLabel} *`}</label>
+              <CustomerSearchSelect value={formReferrerId} onChange={v => setFormReferrerId(v)} businessId={businessId!} placeholder={`${customerLabel} seçin...`} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div><label className="label">Tavsiye Edilen Ad</label><input className="input w-full" placeholder="Ad Soyad" value={formReferredName} onChange={e => setFormReferredName(e.target.value)} /></div>
+              <div><label className="label">Telefon</label><input className="input w-full" placeholder="05XX XXX XXXX" value={formReferredPhone} onChange={e => setFormReferredPhone(e.target.value)} /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="label">Ödül Tipi</label>
+                <CustomSelect options={(Object.entries(REWARD_TYPE_LABELS) as [RewardType, string][]).map(([k, v]) => ({ value: k, label: v }))} value={formRewardType} onChange={v => setFormRewardType(v as RewardType)} placeholder="Seçin (opsiyonel)" />
+              </div>
+              <div><label className="label">Ödül Değeri</label><input type="number" className="input w-full" placeholder="Miktar" value={formRewardValue} onChange={e => setFormRewardValue(e.target.value)} /></div>
+            </div>
+          </div>
+          <DialogFooter>
+            <button onClick={() => { setShowRefCreate(false); resetRefForm() }} className="btn-secondary">İptal</button>
+            <button onClick={handleRefCreate} disabled={refSaving || !formReferrerId} className="btn-primary disabled:opacity-50">
+              {refSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1 inline" /> : <Plus className="h-4 w-4 mr-1 inline" />} Oluştur
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Ödül Şablonu Oluştur */}
+      <Dialog open={showTemplateCreate} onOpenChange={(open) => { if (!open) setShowTemplateCreate(false) }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader><DialogTitle>Yeni Ödül Şablonu</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div><label className="label label-required">Ödül Adı</label><input className="input w-full" placeholder="ör. %10 İndirim Kuponu" value={tName} onChange={e => setTName(e.target.value)} /></div>
+            <div><label className="label label-required">Tip</label><CustomSelect options={REWARD_TYPE_OPTIONS} value={tType} onChange={v => setTType(v)} placeholder="Tip seçin" /></div>
+            <div className="grid grid-cols-2 gap-4">
+              <div><label className="label">Değer</label><input type="number" className="input w-full" placeholder="Miktar" value={tValue} onChange={e => setTValue(e.target.value)} /></div>
+              <div><label className="label">Geçerlilik (gün)</label><input type="number" className="input w-full" value={tValidDays} onChange={e => setTValidDays(e.target.value)} /></div>
+            </div>
+            <div><label className="label">Açıklama</label><textarea className="input w-full" rows={2} placeholder="Opsiyonel açıklama..." value={tDesc} onChange={e => setTDesc(e.target.value)} /></div>
+          </div>
+          <DialogFooter>
+            <button onClick={() => setShowTemplateCreate(false)} className="btn-secondary">İptal</button>
+            <button onClick={handleCreateTemplate} disabled={rwSaving || !tName || !tType} className="btn-primary disabled:opacity-50">
+              {rwSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1 inline" /> : <Plus className="h-4 w-4 mr-1 inline" />} Oluştur
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Ödül Ata */}
+      <Dialog open={showAssign} onOpenChange={(open) => { if (!open) { setShowAssign(false); setACustomerId(''); setARewardId(''); setANotes('') } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader><DialogTitle>{customerLabel} Ödül Ver</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="label label-required">{customerLabel}</label>
+              <CustomerSearchSelect value={aCustomerId} onChange={v => setACustomerId(v)} businessId={businessId!} placeholder={`${customerLabel} seçin...`} />
+            </div>
+            <div>
+              <label className="label label-required">Ödül</label>
+              <CustomSelect
+                options={rewardTemplates.filter(t => t.is_active).map(t => ({ value: t.id, label: `${t.name} (${REWARD_TYPE_OPTIONS.find(o => o.value === t.type)?.label || t.type})` }))}
+                value={aRewardId} onChange={v => setARewardId(v)} placeholder="Ödül seçin"
+              />
+            </div>
+            <div><label className="label">Not</label><textarea className="input w-full" rows={2} placeholder="Opsiyonel not..." value={aNotes} onChange={e => setANotes(e.target.value)} /></div>
+          </div>
+          <DialogFooter>
+            <button onClick={() => setShowAssign(false)} className="btn-secondary">İptal</button>
+            <button onClick={handleAssignReward} disabled={rwSaving || !aCustomerId || !aRewardId} className="btn-primary disabled:opacity-50">
+              {rwSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1 inline" /> : <Gift className="h-4 w-4 mr-1 inline" />} Ödül Ver
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
