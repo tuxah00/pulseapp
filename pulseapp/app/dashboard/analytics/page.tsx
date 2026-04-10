@@ -453,7 +453,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Sekmeler */}
-      <div className="sticky top-14 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 bg-gray-50 dark:bg-gray-950 flex gap-1 border-b border-gray-200 dark:border-gray-700 overflow-x-auto whitespace-nowrap hide-scrollbar">
+      <div className="sticky top-14 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 bg-gray-50 dark:bg-gray-950 flex gap-1 border-b border-gray-200 dark:border-gray-700 overflow-x-hidden whitespace-nowrap">
         {([
           ['overview', 'Genel Bakış', <BarChart3 key="o" className="h-3.5 w-3.5" />],
           ['staff', 'Personel', <Users key="s" className="h-3.5 w-3.5" />],

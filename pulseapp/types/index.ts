@@ -849,12 +849,14 @@ export interface ServiceContraindication {
 
 // ── Referans / Tavsiye Sistemi ──
 
-export type ReferralStatus = 'pending' | 'rewarded'
-export type RewardType = 'discount_percent' | 'discount_amount' | 'free_service' | 'points'
+export type ReferralStatus = 'pending' | 'converted' | 'expired' | 'rewarded'
+export type RewardType = 'discount_percent' | 'discount_amount' | 'free_service' | 'points' | 'gift'
 
 export const REFERRAL_STATUS_LABELS: Record<ReferralStatus, string> = {
   pending: 'Bekliyor',
-  rewarded: 'Ödül Verildi',
+  converted: 'Dönüştürüldü',
+  expired: 'Süresi Doldu',
+  rewarded: 'Ödüllendirildi',
 }
 
 export const REWARD_TYPE_LABELS: Record<RewardType, string> = {
@@ -862,6 +864,7 @@ export const REWARD_TYPE_LABELS: Record<RewardType, string> = {
   discount_amount: '₺ İndirim',
   free_service: 'Ücretsiz Hizmet',
   points: 'Puan',
+  gift: 'Hediye',
 }
 
 export interface Referral {
