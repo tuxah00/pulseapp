@@ -21,6 +21,30 @@ Do not include claude.ai session links in commit messages.
 
 ---
 
+## İletişim Kuralı — Teknik Terimler
+
+Kullanıcı teknik terimlere yabancıdır. Bu nedenle:
+- Her yeni teknik terim ilk kullanımında **parantez içinde Türkçe açıklamasıyla** verilecek.
+- Örnek: "main'e merge (birleştirme) ettim", "commit (kayıt) oluşturuldu", "deploy (yayına alma) tamamlandı"
+- Aşağıdaki terimler için standart açıklamalar kullanılacak:
+
+| Terim | Açıklama |
+|-------|----------|
+| commit | Kod değişikliklerini kaydetme |
+| push | Değişiklikleri GitHub'a gönderme |
+| pull | GitHub'daki güncel kodu indirme |
+| branch | Paralel çalışma kolu |
+| merge | İki branch'i birleştirme |
+| main | Canlıdaki ana kod kolu |
+| PR / Pull Request | Branch'i main'e eklemek için açılan inceleme isteği |
+| deploy | Kodun sunucuya yüklenerek kullanıcılara açılması |
+| worktree | Ayrı izole çalışma klasörü |
+| revert | Değişikliği geri alma |
+| migration | Veritabanı yapı değişikliği (tablo/kolon ekleme) |
+| build | Kodun production'a hazır hale getirilmesi |
+
+---
+
 ## Proje: PulseApp
 
 İşletmelere yönelik randevu, müşteri ve mesajlaşma yönetim platformu. Çok sektörlü (kuaför, klinik, oto servis vb.) çalışacak şekilde tasarlanmış.
