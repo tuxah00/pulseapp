@@ -10,12 +10,13 @@ import {
   Camera, FileText, Clock, Sparkles, Upload, MessageSquare, Pencil, Save,
 } from 'lucide-react'
 import type {
-  TreatmentProtocol, ProtocolSession, Customer, Service, ProtocolStatus, SessionStatus
+  TreatmentProtocol, ProtocolSession, Service, ProtocolStatus, SessionStatus
 } from '@/types'
 import { cn } from '@/lib/utils'
 import { PROTOCOL_STATUS_LABELS, SESSION_STATUS_LABELS } from '@/types'
 import { formatCurrency } from '@/lib/utils'
 import { CustomSelect } from '@/components/ui/custom-select'
+import { CustomerSearchSelect } from '@/components/ui/customer-search-select'
 import { Portal } from '@/components/ui/portal'
 
 const STATUS_CONFIG: Record<ProtocolStatus, { bg: string; text: string }> = {
@@ -38,7 +39,6 @@ export default function ProtocolsPage() {
 
   // State
   const [protocols, setProtocols] = useState<TreatmentProtocol[]>([])
-  const [customers, setCustomers] = useState<Customer[]>([])
   const [services, setServices] = useState<Service[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -75,11 +75,7 @@ export default function ProtocolsPage() {
   const fetchMeta = useCallback(async () => {
     if (!businessId) return
     const supabase = createClient()
-    const [{ data: custsData }, { data: svcsData }] = await Promise.all([
-      supabase.from('customers').select('*').eq('business_id', businessId).eq('is_active', true).order('name'),
-      supabase.from('services').select('*').eq('business_id', businessId).eq('is_active', true).order('sort_order'),
-    ])
-    setCustomers(custsData || [])
+    const { data: svcsData } = await supabase.from('services').select('*').eq('business_id', businessId).eq('is_active', true).order('sort_order')
     setServices(svcsData || [])
   }, [businessId])
 
@@ -339,11 +335,11 @@ export default function ProtocolsPage() {
             <div className="p-6 space-y-4">
               <div>
                 <label className="label">Hasta *</label>
-                <CustomSelect
-                  options={customers.map(c => ({ value: c.id, label: `${c.name} — ${c.phone}` }))}
+                <CustomerSearchSelect
                   value={formCustomerId}
                   onChange={v => setFormCustomerId(v)}
-                  placeholder="Hasta seçin"
+                  businessId={businessId!}
+                  placeholder="Hasta seçin..."
                 />
               </div>
               <div>

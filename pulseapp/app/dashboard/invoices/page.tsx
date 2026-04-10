@@ -18,6 +18,7 @@ import { logAudit } from '@/lib/utils/audit'
 import type { Invoice, InvoiceItem, InvoiceStatus, PaymentMethod, InvoicePayment, InvoicePaymentType, InstallmentFrequency } from '@/types'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import { CustomSelect } from '@/components/ui/custom-select'
+import { CustomerSearchSelect } from '@/components/ui/customer-search-select'
 import { Portal } from '@/components/ui/portal'
 
 interface SimpleCustomer {
@@ -51,7 +52,6 @@ const PAYMENT_TYPE_LABELS: Record<string, string> = {
 export default function InvoicesPage() {
   const { businessId, staffId, staffName, loading: ctxLoading, permissions } = useBusinessContext()
   const [invoices, setInvoices] = useState<Invoice[]>([])
-  const [customers, setCustomers] = useState<SimpleCustomer[]>([])
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [search, setSearch] = useState('')
@@ -143,18 +143,6 @@ export default function InvoicesPage() {
     setDeletedLoading(false)
   }, [businessId])
 
-  const fetchCustomers = useCallback(async () => {
-    if (!businessId) return
-    const { data } = await supabase
-      .from('customers')
-      .select('id, name, phone')
-      .eq('business_id', businessId)
-      .eq('is_active', true)
-      .order('name')
-    setCustomers(data || [])
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [businessId])
-
   const fetchPayments = useCallback(async (invoiceId: string) => {
     setLoadingPayments(true)
     const res = await fetch(`/api/invoices/payments?invoiceId=${invoiceId}`)
@@ -166,9 +154,8 @@ export default function InvoicesPage() {
   useEffect(() => {
     if (!ctxLoading) {
       fetchInvoices()
-      fetchCustomers()
     }
-  }, [fetchInvoices, fetchCustomers, ctxLoading])
+  }, [fetchInvoices, ctxLoading])
 
   useEffect(() => {
     if (showDeleted) fetchDeletedInvoices()
@@ -552,11 +539,11 @@ export default function InvoicesPage() {
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
               <div>
                 <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Müşteri</label>
-                <CustomSelect
+                <CustomerSearchSelect
                   value={filterCustomerId}
                   onChange={v => setFilterCustomerId(v)}
+                  businessId={businessId!}
                   placeholder="Tümü"
-                  options={customers.map(c => ({ value: c.id, label: c.name }))}
                 />
               </div>
               <div>
@@ -1032,11 +1019,11 @@ export default function InvoicesPage() {
               {/* Müşteri Seç */}
               <div>
                 <label className="label">Müşteri (opsiyonel)</label>
-                <CustomSelect
+                <CustomerSearchSelect
                   value={formCustomerId}
                   onChange={v => setFormCustomerId(v)}
+                  businessId={businessId!}
                   placeholder="— Müşteri seçin —"
-                  options={customers.map(c => ({ value: c.id, label: `${c.name} • ${c.phone}` }))}
                 />
               </div>
 

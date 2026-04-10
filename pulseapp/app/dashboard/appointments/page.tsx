@@ -28,7 +28,7 @@ import {
   Users, Building2, Ban, Lock,
 } from 'lucide-react'
 import { formatTime, formatDate, getStatusColor, formatCurrency, cn } from '@/lib/utils'
-import { STATUS_LABELS, type AppointmentStatus, type Customer, type Service, type StaffMember, type WorkingHours, type BlockedSlot } from '@/types'
+import { STATUS_LABELS, type AppointmentStatus, type Service, type StaffMember, type WorkingHours, type BlockedSlot } from '@/types'
 import type { AppointmentRow } from '@/types/db'
 
 type AppointmentView = AppointmentRow & {
@@ -41,6 +41,7 @@ import { useConfirm } from '@/lib/hooks/use-confirm'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import { ToolbarPopover, SortPopoverContent, FilterPopoverList } from '@/components/ui/toolbar-popover'
 import { CustomSelect } from '@/components/ui/custom-select'
+import { CustomerSearchSelect } from '@/components/ui/customer-search-select'
 import { Portal } from '@/components/ui/portal'
 
 export default function AppointmentsPage() {
@@ -77,7 +78,6 @@ export default function AppointmentsPage() {
   const [sortField, setSortField] = useState<string | null>(null)
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
 
-  const [customers, setCustomers] = useState<Customer[]>([])
   const [services, setServices] = useState<Service[]>([])
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>([])
   const [rooms, setRooms] = useState<{ id: string; name: string; color: string }[]>([])
@@ -184,14 +184,12 @@ export default function AppointmentsPage() {
 
   const fetchFormData = useCallback(async () => {
     if (!businessId) return
-    const [custRes, svcRes, staffRes, bizRes, roomsRes] = await Promise.all([
-      supabase.from('customers').select('*').eq('business_id', businessId).eq('is_active', true).order('name'),
+    const [svcRes, staffRes, bizRes, roomsRes] = await Promise.all([
       supabase.from('services').select('*').eq('business_id', businessId).eq('is_active', true).order('sort_order'),
       supabase.from('staff_members').select('*').eq('business_id', businessId).eq('is_active', true).order('name'),
       supabase.from('businesses').select('working_hours').eq('id', businessId).single(),
       fetch(`/api/rooms`).then(r => r.ok ? r.json() : { rooms: [] }).catch(() => ({ rooms: [] })),
     ])
-    if (custRes.data) setCustomers(custRes.data)
     if (svcRes.data) setServices(svcRes.data)
     if (staffRes.data) setStaffMembers(staffRes.data)
     if (bizRes.data?.working_hours) setWorkingHours(bizRes.data.working_hours)
@@ -442,7 +440,8 @@ export default function AppointmentsPage() {
     }
     setSaving(false); closeModal()
     await fetchAppointments()
-    const auditCustomer = customers.find(c => c.id === customerId)
+    const auditCustRes = customerId ? await supabase.from('customers').select('name').eq('id', customerId).single() : null
+    const auditCustomer = auditCustRes?.data || null
     const auditService = services.find(s => s.id === serviceId)
     const auditStaff = staffMembers.find(s => s.id === staffId)
     await logAudit({
@@ -2234,14 +2233,12 @@ export default function AppointmentsPage() {
             <form onSubmit={handleSave} className="space-y-4">
               <div>
                 <label className="label">Müşteri</label>
-                <CustomSelect
-                  options={customers.map(c => ({ value: c.id, label: `${c.name} — ${c.phone}` }))}
+                <CustomerSearchSelect
                   value={customerId}
                   onChange={v => setCustomerId(v)}
+                  businessId={businessId!}
                   placeholder="Müşteri seçin..."
-                  className="input"
                 />
-                {customers.length === 0 && <p className="text-xs text-amber-600 mt-1">Önce müşteri eklemelisiniz.</p>}
               </div>
               <div>
                 <label className="label">Hizmet</label>
