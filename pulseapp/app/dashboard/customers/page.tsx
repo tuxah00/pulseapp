@@ -893,11 +893,16 @@ export default function CustomersPage() {
                           onChange={(e) => setNewAllergen(e.target.value)}
                           className="input text-sm"
                         />
-                        <select value={newSeverity} onChange={(e) => setNewSeverity(e.target.value as any)} className="input text-sm">
-                          <option value="mild">Hafif</option>
-                          <option value="moderate">Orta</option>
-                          <option value="severe">Şiddetli</option>
-                        </select>
+                        <CustomSelect
+                          options={[
+                            { value: 'mild', label: 'Hafif' },
+                            { value: 'moderate', label: 'Orta' },
+                            { value: 'severe', label: 'Şiddetli' },
+                          ]}
+                          value={newSeverity}
+                          onChange={(v) => setNewSeverity(v as any)}
+                          className="w-28"
+                        />
                         <input
                           placeholder="Reaksiyon (opsiyonel)"
                           value={newReaction}
