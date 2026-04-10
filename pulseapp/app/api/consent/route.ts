@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { logAuditServer } from '@/lib/utils/audit'
 
 // POST: Rıza kaydı oluştur (public — randevu formu vb. için kimlik doğrulama gerekmez)
 export async function POST(req: NextRequest) {
@@ -38,6 +39,17 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  await logAuditServer({
+    businessId,
+    staffId: null,
+    staffName: null,
+    action: 'create',
+    resource: 'consent',
+    resourceId: data.id,
+    details: { consent_type: consentType, method, customer_phone: customerPhone || null },
+    ipAddress: ip,
+  })
 
   // Müşteri kaydında kvkk_consent_given'ı güncelle
   if (customerId && consentType === 'kvkk') {
@@ -111,6 +123,18 @@ export async function DELETE(req: NextRequest) {
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req.headers.get('x-real-ip') || null
+  await logAuditServer({
+    businessId,
+    staffId: null,
+    staffName: null,
+    action: 'request',
+    resource: 'data_deletion_request',
+    resourceId: data.id,
+    details: { customer_name: customerName || null, customer_phone: customerPhone || null, notes: notes || null },
+    ipAddress: ip,
+  })
 
   return NextResponse.json({ request: data }, { status: 201 })
 }

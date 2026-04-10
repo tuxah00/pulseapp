@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { logAuditServer } from '@/lib/utils/audit'
 
-async function verifyMembership(supabase: ReturnType<typeof createServerSupabaseClient>, userId: string, businessId: string) {
+async function getStaffInfo(supabase: ReturnType<typeof createServerSupabaseClient>, userId: string, businessId: string) {
   const { data } = await supabase
     .from('staff_members')
-    .select('id, business_id')
+    .select('id, name, business_id')
     .eq('user_id', userId)
     .eq('business_id', businessId)
     .single()
@@ -23,7 +24,7 @@ export async function GET(request: NextRequest) {
 
   if (!businessId) return NextResponse.json({ error: 'businessId gerekli' }, { status: 400 })
 
-  const staff = await verifyMembership(supabase, user.id, businessId)
+  const staff = await getStaffInfo(supabase, user.id, businessId)
   if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
 
   let query = supabase
@@ -53,7 +54,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'businessId, customerId, allergen zorunlu' }, { status: 400 })
   }
 
-  const staff = await verifyMembership(supabase, user.id, businessId)
+  const staff = await getStaffInfo(supabase, user.id, businessId)
   if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
 
   const { data, error } = await supabase
@@ -71,6 +72,17 @@ export async function POST(request: NextRequest) {
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  await logAuditServer({
+    businessId,
+    staffId: staff?.id || null,
+    staffName: staff?.name || null,
+    action: 'create',
+    resource: 'allergy',
+    resourceId: data.id,
+    details: { allergen, severity: severity || 'moderate' },
+  })
+
   return NextResponse.json({ allergy: data }, { status: 201 })
 }
 
@@ -86,8 +98,15 @@ export async function DELETE(request: NextRequest) {
 
   if (!businessId || !id) return NextResponse.json({ error: 'businessId ve id gerekli' }, { status: 400 })
 
-  const staff = await verifyMembership(supabase, user.id, businessId)
+  const staff = await getStaffInfo(supabase, user.id, businessId)
   if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
+
+  // Silmeden önce bilgiyi al (audit için)
+  const { data: allergyData } = await supabase
+    .from('customer_allergies')
+    .select('allergen, severity')
+    .eq('id', id)
+    .single()
 
   const { error } = await supabase
     .from('customer_allergies')
@@ -96,5 +115,16 @@ export async function DELETE(request: NextRequest) {
     .eq('business_id', businessId)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  await logAuditServer({
+    businessId,
+    staffId: staff?.id || null,
+    staffName: staff?.name || null,
+    action: 'delete',
+    resource: 'allergy',
+    resourceId: id,
+    details: { allergen: allergyData?.allergen || null, severity: allergyData?.severity || null },
+  })
+
   return NextResponse.json({ success: true })
 }

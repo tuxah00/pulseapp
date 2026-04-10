@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { logAuditServer } from '@/lib/utils/audit'
 
 // POST: Create invitation
 export async function POST(req: NextRequest) {
@@ -10,7 +11,7 @@ export async function POST(req: NextRequest) {
 
   const { data: staff } = await supabase
     .from('staff_members')
-    .select('id, business_id, role')
+    .select('id, name, business_id, role')
     .eq('user_id', user.id)
     .eq('is_active', true)
     .single()
@@ -33,6 +34,15 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  await logAuditServer({
+    businessId: staff.business_id,
+    staffId: staff.id,
+    staffName: staff.name,
+    action: 'create',
+    resource: 'staff_invitation',
+    details: { email: email || null, role },
+  })
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://pulseapp.vercel.app'
   return NextResponse.json({

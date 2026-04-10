@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
   if (action) query = query.eq('action', action)
   if (fromDate) query = query.gte('created_at', `${fromDate}T00:00:00`)
   if (toDate) query = query.lte('created_at', `${toDate}T23:59:59`)
-  if (searchText) query = query.or(`staff_name.ilike.%${searchText}%,action.ilike.%${searchText}%,resource.ilike.%${searchText}%,details->>customer_name.ilike.%${searchText}%`)
+  if (searchText) query = query.or(`staff_name.ilike.%${searchText}%,action.ilike.%${searchText}%,resource.ilike.%${searchText}%,details->>customer_name.ilike.%${searchText}%,details->>name.ilike.%${searchText}%,details->>email.ilike.%${searchText}%,details->>allergen.ilike.%${searchText}%,details->>referrer_name.ilike.%${searchText}%`)
 
   const { data, count, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

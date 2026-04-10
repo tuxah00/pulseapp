@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { logAuditServer } from '@/lib/utils/audit'
 
 async function getStaffBusiness() {
   const supabase = await createServerSupabaseClient()
@@ -7,11 +8,11 @@ async function getStaffBusiness() {
   if (!user) return null
   const { data: staff } = await supabase
     .from('staff_members')
-    .select('business_id')
+    .select('id, name, business_id')
     .eq('user_id', user.id)
     .eq('is_active', true)
     .single()
-  return staff ? { supabase, businessId: staff.business_id } : null
+  return staff ? { supabase, businessId: staff.business_id, staffId: staff.id, staffName: staff.name } : null
 }
 
 // GET — Ödül şablonları + müşteriye atanmış ödüller
@@ -63,10 +64,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'customerId ve rewardId zorunlu' }, { status: 400 })
     }
 
-    // Ödül bilgisini al (valid_days)
+    // Ödül bilgisini al (valid_days + name)
     const { data: reward } = await ctx.supabase
       .from('rewards')
-      .select('valid_days')
+      .select('name, valid_days')
       .eq('id', rewardId)
       .single()
 
@@ -88,6 +89,17 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    await logAuditServer({
+      businessId: ctx.businessId,
+      staffId: ctx.staffId,
+      staffName: ctx.staffName,
+      action: 'assign',
+      resource: 'customer_reward',
+      resourceId: data.id,
+      details: { customer_name: data.customers?.name || null, reward_name: reward?.name || null, notes: notes || null },
+    })
+
     return NextResponse.json({ reward: data })
   }
 
@@ -111,6 +123,17 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  await logAuditServer({
+    businessId: ctx.businessId,
+    staffId: ctx.staffId,
+    staffName: ctx.staffName,
+    action: 'create',
+    resource: 'reward',
+    resourceId: data.id,
+    details: { name, type, value: value || null },
+  })
+
   return NextResponse.json({ reward: data })
 }
 
@@ -136,6 +159,17 @@ export async function PATCH(req: NextRequest) {
       .eq('id', id)
       .eq('business_id', ctx.businessId)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    await logAuditServer({
+      businessId: ctx.businessId,
+      staffId: ctx.staffId,
+      staffName: ctx.staffName,
+      action: 'status_change',
+      resource: 'customer_reward',
+      resourceId: id,
+      details: { status: body.status, reward_name: body.rewardName || null },
+    })
+
     return NextResponse.json({ ok: true })
   }
 
@@ -154,6 +188,17 @@ export async function PATCH(req: NextRequest) {
     .eq('id', id)
     .eq('business_id', ctx.businessId)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  await logAuditServer({
+    businessId: ctx.businessId,
+    staffId: ctx.staffId,
+    staffName: ctx.staffName,
+    action: 'update',
+    resource: 'reward',
+    resourceId: id,
+    details: { name: body.name || null, changed_fields: Object.keys(updates).join(', ') },
+  })
+
   return NextResponse.json({ ok: true })
 }
 
@@ -165,11 +210,29 @@ export async function DELETE(req: NextRequest) {
   const id = req.nextUrl.searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'id zorunlu' }, { status: 400 })
 
+  // Silmeden önce adını al (audit için)
+  const { data: reward } = await ctx.supabase
+    .from('rewards')
+    .select('name')
+    .eq('id', id)
+    .single()
+
   const { error } = await ctx.supabase
     .from('rewards')
     .delete()
     .eq('id', id)
     .eq('business_id', ctx.businessId)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  await logAuditServer({
+    businessId: ctx.businessId,
+    staffId: ctx.staffId,
+    staffName: ctx.staffName,
+    action: 'delete',
+    resource: 'reward',
+    resourceId: id,
+    details: { name: reward?.name || null },
+  })
+
   return NextResponse.json({ ok: true })
 }
