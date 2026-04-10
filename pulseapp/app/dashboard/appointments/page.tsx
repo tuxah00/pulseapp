@@ -655,6 +655,7 @@ export default function AppointmentsPage() {
         const bsStartH = parseInt(bs.start_time.split(':')[0])
         const bsEndH = parseInt(bs.end_time.split(':')[0])
         if (cell.hour < bsStartH || cell.hour >= bsEndH) continue
+        if (selectionViewMode === 'week' && (bs.staff_id || bs.room_id)) continue
         if (selectionViewMode === 'staff' && cell.colId !== '__unassigned__' && bs.staff_id && bs.staff_id !== cell.colId) continue
         if (selectionViewMode === 'room' && cell.colId !== '__unassigned__' && bs.room_id && bs.room_id !== cell.colId) continue
         slotIds.add(bs.id)
@@ -930,7 +931,7 @@ export default function AppointmentsPage() {
     const iconCls = size === 'sm' ? 'h-3.5 w-3.5' : 'h-4 w-4'
 
     return (
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 flex-wrap">
         {(apt.status === 'confirmed' || apt.status === 'pending') && (
           <>
             <button onClick={(e) => openEditModal(apt, e)} title="Düzenle" className={cn(btnCls, 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700')}>
@@ -1389,6 +1390,11 @@ export default function AppointmentsPage() {
                                     {apt.services?.name || ''} · {formatTime(apt.start_time)}
                                   </p>
                                 )}
+                                {apt.staff_members?.name && height > 24 && (
+                                  <p className={cn('text-[8px] truncate opacity-60 absolute bottom-0.5 right-1 max-w-[90%] text-right', staffTextColors[colorIdx])}>
+                                    {apt.staff_members.name}
+                                  </p>
+                                )}
                               </div>
                             )
                           })}
@@ -1714,6 +1720,11 @@ export default function AppointmentsPage() {
                                   {apt.services?.name} · {formatTime(apt.start_time)}
                                 </p>
                               )}
+                              {apt.staff_members?.name && height > 24 && (
+                                <p className={cn('text-[8px] truncate opacity-60 absolute bottom-0.5 right-1 max-w-[90%] text-right', staffTextColors[col.colorIdx])}>
+                                  {apt.staff_members.name}
+                                </p>
+                              )}
                             </div>
                           )
                         })}
@@ -1747,7 +1758,7 @@ export default function AppointmentsPage() {
               <div className="card flex flex-col items-center justify-center py-16 text-center">
                 <Building2 className="h-10 w-10 text-gray-300 mb-3" />
                 <p className="text-gray-500 font-medium">Henüz oda tanımlanmamış</p>
-                <p className="text-xs text-gray-400 mt-1 max-w-xs">Ayarlar → İşletme Bilgileri bölümünden odaları ekleyin. Migration 031 çalıştırıldı mı kontrol edin.</p>
+                <p className="text-xs text-gray-400 mt-1 max-w-xs">Ayarlar → İşletme Bilgileri bölümünden odaları ekleyin.</p>
               </div>
             )
           }
@@ -1917,6 +1928,11 @@ export default function AppointmentsPage() {
                               <p className="text-[10px] font-semibold truncate">{apt.customers?.name || 'İsimsiz'}</p>
                               {height > 30 && (
                                 <p className="text-[9px] truncate opacity-80">{apt.services?.name} · {formatTime(apt.start_time)}</p>
+                              )}
+                              {apt.staff_members?.name && height > 24 && (
+                                <p className="text-[8px] truncate opacity-60 absolute bottom-0.5 right-1 max-w-[90%] text-right">
+                                  {apt.staff_members.name}
+                                </p>
                               )}
                             </div>
                           )

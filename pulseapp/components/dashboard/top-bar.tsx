@@ -45,6 +45,7 @@ const ROUTE_LABELS: Record<string, string> = {
   protocols: 'Tedavi Protokolleri',
   referrals: 'Referanslar',
   kvkk: 'KVKK',
+  'follow-ups': 'Takipler',
   new: 'Yeni',
 }
 
@@ -129,7 +130,7 @@ export default function TopBar({ businessName, userName, onOpenCommand }: TopBar
                        px-4 sm:px-6">
 
       {/* Breadcrumb */}
-      <nav className="hidden sm:flex items-center gap-1 text-sm min-w-0 flex-1" aria-label="Breadcrumb">
+      <nav className="hidden sm:flex items-center gap-1 text-sm min-w-0 flex-1 overflow-hidden" aria-label="Breadcrumb">
         {crumbs.map((crumb, i) => (
           <span key={crumb.href} className="flex items-center gap-1 min-w-0">
             {i === 0 ? (
@@ -142,7 +143,7 @@ export default function TopBar({ businessName, userName, onOpenCommand }: TopBar
                 <span className="hidden sm:inline">{crumb.label}</span>
               </Link>
             ) : crumb.isLast ? (
-              <span className="font-semibold text-gray-800 dark:text-gray-100 truncate px-1">
+              <span className="font-semibold text-gray-800 dark:text-gray-100 truncate px-1 max-w-[160px] sm:max-w-none">
                 {crumb.label}
               </span>
             ) : (
