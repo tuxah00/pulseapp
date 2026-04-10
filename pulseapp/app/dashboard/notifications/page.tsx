@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { getCustomerLabelSingular } from '@/lib/config/sector-modules'
 
 interface Notification {
   id: string
@@ -44,7 +45,8 @@ const FILTER_OPTIONS = [
 const PAGE_SIZE = 20
 
 export default function NotificationsPage() {
-  const { loading: ctxLoading } = useBusinessContext()
+  const { sector, loading: ctxLoading } = useBusinessContext()
+  const customerLabel = getCustomerLabelSingular(sector ?? undefined)
   const router = useRouter()
 
   const [notifications, setNotifications] = useState<Notification[]>([])
@@ -177,7 +179,7 @@ export default function NotificationsPage() {
                 : 'bg-white dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-600 hover:border-gray-400'
             )}
           >
-            {opt.label}
+            {opt.value === 'customer' ? customerLabel : opt.label}
           </button>
         ))}
       </div>

@@ -41,6 +41,7 @@ import {
   X,
   ClipboardCheck,
   UserCheck,
+  Gift,
   type LucideIcon,
 } from 'lucide-react'
 import type { SectorType, PlanType, StaffPermissions } from '@/types'
@@ -53,7 +54,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Shield, Settings, LogOut, Scissors, Package, FolderOpen,
   Briefcase, Car, PawPrint, ClipboardList, CreditCard,
   CalendarDays, CheckSquare, BookOpen, Image, Receipt, Layers, Wallet,
-  ClipboardCheck, UserCheck,
+  ClipboardCheck, UserCheck, Gift,
 }
 
 const bottomNav = [

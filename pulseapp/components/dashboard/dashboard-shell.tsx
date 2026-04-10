@@ -73,7 +73,7 @@ export default function DashboardShell({
         permissions={permissions}
       />
 
-      <main className="lg:pl-64 transition-[padding] duration-200">
+      <main className="lg:pl-64">
         <TopBar
           businessName={businessName}
           userName={userName}

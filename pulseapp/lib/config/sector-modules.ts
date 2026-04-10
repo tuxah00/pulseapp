@@ -60,7 +60,7 @@ const SECTOR_ITEMS: Partial<Record<SectorType, SidebarItem[]>> = {
     { key: 'packages', name: 'Paket & Seans', href: '/dashboard/packages', iconName: 'Layers' },
     { key: 'records', name: 'Hasta Dosyalar\u0131', href: '/dashboard/records?type=patient_file', iconName: 'FolderOpen' },
     { key: 'follow-ups', name: 'Takipler', href: '/dashboard/follow-ups', iconName: 'ClipboardCheck' },
-    { key: 'referrals', name: 'Referanslar', href: '/dashboard/referrals', iconName: 'UserCheck' },
+    { key: 'rewards', name: 'Ödüller', href: '/dashboard/referrals', iconName: 'Gift' },
     { key: 'reviews', name: 'Yorumlar', href: '/dashboard/reviews', iconName: 'Star' },
   ],
   physiotherapy: [
