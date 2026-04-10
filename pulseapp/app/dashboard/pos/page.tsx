@@ -273,9 +273,14 @@ export default function KasaPage() {
     const existingIdx = paymentRows.findIndex(p => p.method === method)
     if (existingIdx >= 0) {
       // Var olan satırın tutarını artır
-      setPaymentRows(prev => prev.map((p, i) =>
-        i === existingIdx ? { ...p, amount: p.amount + remaining } : p
-      ))
+      if (remaining > 0) {
+        setPaymentRows(prev => prev.map((p, i) =>
+          i === existingIdx ? { ...p, amount: p.amount + remaining } : p
+        ))
+      }
+    } else if (remaining <= 0 && paymentRows.length === 1) {
+      // Tek satır varsa ve kalan 0 ise → yöntemi değiştir (hızlı geçiş)
+      setPaymentRows([{ method, amount: paymentRows[0].amount }])
     } else {
       setPaymentRows(prev => [...prev, { method, amount: remaining }])
     }
@@ -767,7 +772,7 @@ export default function KasaPage() {
               <button
                 key={pm.key}
                 onClick={() => addPaymentRow(pm.key)}
-                disabled={cart.length === 0 || remaining <= 0}
+                disabled={cart.length === 0}
                 className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-40 text-sm font-medium"
               >
                 {pm.icon} {pm.label}
