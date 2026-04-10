@@ -9,9 +9,10 @@ import {
   Plus, Search, Loader2, Phone, Mail, Calendar, Cake, Filter, ArrowUpDown,
   X, Pencil, Trash2, User, LayoutList, LayoutGrid,
   Clock, Star, MessageSquare, CheckCircle, XCircle, AlertTriangle, Info, Download,
+  Gift, FileText, ChevronRight,
 } from 'lucide-react'
 import { formatPhone, formatDate, formatTime, formatCurrency, getSegmentColor, cn, getInitials, getAvatarColor } from '@/lib/utils'
-import { SEGMENT_LABELS, STATUS_LABELS, type Customer, type CustomerSegment } from '@/types'
+import { SEGMENT_LABELS, STATUS_LABELS, REFERRAL_STATUS_LABELS, REWARD_TYPE_LABELS, type Customer, type CustomerSegment, type Referral, type RewardType } from '@/types'
 import type { AppointmentRow, MessageRow, ReviewRow } from '@/types/db'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -37,6 +38,7 @@ import { exportToCSV } from '@/lib/utils/export'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { Portal } from '@/components/ui/portal'
 
+import { useRouter } from 'next/navigation'
 import { getCustomerLabel, getCustomerLabelSingular } from '@/lib/config/sector-modules'
 import ToothChart from '@/components/dashboard/tooth-chart'
 
@@ -97,6 +99,23 @@ export default function CustomersPage() {
   const [panelTab, setPanelTab] = useState<'info' | 'history' | 'teeth'>('info')
   const [timeline, setTimeline] = useState<TimelineItem[]>([])
   const [timelineLoading, setTimelineLoading] = useState(false)
+
+  // Detay paneli ek veriler
+  const [upcomingAppointments, setUpcomingAppointments] = useState<AppointmentTimelineData[]>([])
+  const [customerReferrals, setCustomerReferrals] = useState<Referral[]>([])
+  const [customerReviews, setCustomerReviews] = useState<ReviewRow[]>([])
+  const [customerRecordsCount, setCustomerRecordsCount] = useState(0)
+  const [detailLoading, setDetailLoading] = useState(false)
+
+  // Ödül verme modalı
+  const [showRewardModal, setShowRewardModal] = useState(false)
+  const [isClosingReward, setIsClosingReward] = useState(false)
+  const closeRewardModal = () => setIsClosingReward(true)
+  const [rewardType, setRewardType] = useState<RewardType>('discount_percent')
+  const [rewardValue, setRewardValue] = useState('')
+  const [rewardSaving, setRewardSaving] = useState(false)
+
+  const router = useRouter()
 
   const supabase = createClient()
 
@@ -299,6 +318,92 @@ export default function CustomersPage() {
     }
   }, [businessId])
 
+  // Müşteri detay verilerini çek (info tab için)
+  const fetchCustomerDetail = useCallback(async (customerId: string) => {
+    if (!businessId) return
+    setDetailLoading(true)
+    try {
+      const today = new Date()
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+
+      const [aptsRes, refsRes, revsRes, recsRes] = await Promise.all([
+        // Yaklaşan randevular
+        supabase
+          .from('appointments')
+          .select('id, appointment_date, start_time, end_time, status, notes, services(name), staff_members(name)')
+          .eq('business_id', businessId)
+          .eq('customer_id', customerId)
+          .is('deleted_at', null)
+          .in('status', ['pending', 'confirmed'])
+          .gte('appointment_date', todayStr)
+          .order('appointment_date', { ascending: true })
+          .order('start_time', { ascending: true })
+          .limit(5),
+        // Referanslar
+        supabase
+          .from('referrals')
+          .select('*')
+          .eq('business_id', businessId)
+          .eq('referrer_customer_id', customerId)
+          .order('created_at', { ascending: false })
+          .limit(10),
+        // Yorumlar
+        supabase
+          .from('reviews')
+          .select('id, rating, comment, created_at')
+          .eq('business_id', businessId)
+          .eq('customer_id', customerId)
+          .order('created_at', { ascending: false })
+          .limit(5),
+        // Hasta dosyaları sayısı
+        supabase
+          .from('business_records')
+          .select('id', { count: 'exact', head: true })
+          .eq('business_id', businessId)
+          .eq('customer_id', customerId),
+      ])
+
+      setUpcomingAppointments((aptsRes.data as unknown as AppointmentTimelineData[]) || [])
+      setCustomerReferrals((refsRes.data as Referral[]) || [])
+      setCustomerReviews((revsRes.data as ReviewRow[]) || [])
+      setCustomerRecordsCount(recsRes.count || 0)
+    } catch (err) {
+      console.error('Detay veri çekme hatası:', err)
+    } finally {
+      setDetailLoading(false)
+    }
+  }, [businessId])
+
+  // Ödül verme
+  async function handleGiveReward() {
+    if (!selectedCustomer || !businessId || !rewardValue) return
+    setRewardSaving(true)
+    try {
+      const res = await fetch('/api/referrals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          businessId,
+          referrerCustomerId: selectedCustomer.id,
+          referredName: 'Manuel Ödül',
+          rewardType,
+          rewardValue: parseFloat(rewardValue),
+          status: 'converted',
+          rewardClaimed: true,
+        }),
+      })
+      if (res.ok) {
+        closeRewardModal()
+        setRewardValue('')
+        fetchCustomerDetail(selectedCustomer.id)
+      }
+    } catch (err) {
+      console.error('Ödül verme hatası:', err)
+    } finally {
+      setRewardSaving(false)
+    }
+  }
+
   // Tab değiştiğinde geçmişi yükle
   useEffect(() => {
     if (panelTab === 'history' && selectedCustomer) {
@@ -306,11 +411,17 @@ export default function CustomersPage() {
     }
   }, [panelTab, selectedCustomer?.id])
 
-  // Müşteri değiştiğinde tab'ı sıfırla (dental_clinic'te teeth tab'ı kalabilir)
-
+  // Müşteri değiştiğinde tab'ı sıfırla + detay verilerini çek
   useEffect(() => {
     setPanelTab('info')
     setTimeline([])
+    setUpcomingAppointments([])
+    setCustomerReferrals([])
+    setCustomerReviews([])
+    setCustomerRecordsCount(0)
+    if (selectedCustomer) {
+      fetchCustomerDetail(selectedCustomer.id)
+    }
   }, [selectedCustomer?.id])
 
   useEffect(() => {
@@ -693,6 +804,120 @@ export default function CustomersPage() {
                     </div>
                   )}
 
+                  {/* ── 1. Yaklaşan Randevular ── */}
+                  {detailLoading ? (
+                    <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-pulse-900" /></div>
+                  ) : upcomingAppointments.length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-1.5">
+                        <Calendar className="h-3.5 w-3.5" /> Yaklaşan Randevular
+                      </p>
+                      <div className="space-y-2">
+                        {upcomingAppointments.map((apt) => (
+                          <div key={apt.id} className="rounded-lg bg-blue-50 dark:bg-blue-900/20 p-3">
+                            <p className="text-sm font-medium text-blue-900 dark:text-blue-200">{apt.services?.name || 'Randevu'}</p>
+                            <p className="text-xs text-blue-700 dark:text-blue-300 mt-0.5">
+                              {formatDate(apt.appointment_date)} · {formatTime(apt.start_time)} – {formatTime(apt.end_time)}
+                              {apt.staff_members?.name && ` · ${apt.staff_members.name}`}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── 2. Referans Ödülleri ── */}
+                  {!detailLoading && customerReferrals.length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-1.5">
+                        <Gift className="h-3.5 w-3.5" /> Referans Ödülleri
+                      </p>
+                      <div className="space-y-2">
+                        {customerReferrals.map((ref) => (
+                          <div key={ref.id} className="rounded-lg bg-gray-50 dark:bg-gray-700/50 p-3 flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{ref.referred_name || 'İsimsiz'}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                {REFERRAL_STATUS_LABELS[ref.status]} · {ref.reward_type ? REWARD_TYPE_LABELS[ref.reward_type] : '—'}
+                                {ref.reward_value ? ` (${ref.reward_value})` : ''}
+                              </p>
+                            </div>
+                            <span className={cn(
+                              'badge text-xs',
+                              ref.reward_claimed
+                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                                : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300'
+                            )}>
+                              {ref.reward_claimed ? 'Alındı' : 'Bekliyor'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── 3. Yorumlar ── */}
+                  {!detailLoading && customerReviews.length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-1.5">
+                        <Star className="h-3.5 w-3.5" /> Yorumlar
+                      </p>
+                      <div className="space-y-2">
+                        {customerReviews.map((rev) => (
+                          <div key={rev.id} className="rounded-lg bg-gray-50 dark:bg-gray-700/50 p-3">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm text-amber-500">{'★'.repeat(rev.rating)}{'☆'.repeat(5 - rev.rating)}</span>
+                              <span className="text-xs text-gray-400">{rev.created_at ? formatDate(rev.created_at) : ''}</span>
+                            </div>
+                            {rev.comment && <p className="text-xs text-gray-600 dark:text-gray-300 mt-1 line-clamp-3">{rev.comment}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── 4. Toplam Getiri + Ödül Verme ── */}
+                  {!detailLoading && (
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-1.5">
+                        <Gift className="h-3.5 w-3.5" /> Toplam Getiri
+                      </p>
+                      <div className="rounded-lg bg-gradient-to-r from-pulse-50 to-blue-50 dark:from-pulse-900/20 dark:to-blue-900/20 p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-2xl font-bold text-pulse-900 dark:text-pulse-300">{formatCurrency(selectedCustomer.total_revenue)}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{selectedCustomer.total_visits} ziyarette</p>
+                          </div>
+                          <button
+                            onClick={() => { setRewardType('discount_percent'); setRewardValue(''); setShowRewardModal(true) }}
+                            className="btn-primary text-sm px-3 py-1.5"
+                          >
+                            <Gift className="mr-1.5 h-3.5 w-3.5" /> Ödül Ver
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── 5. Hasta Dosyaları Yönlendirme ── */}
+                  {!detailLoading && customerRecordsCount > 0 && (
+                    <div>
+                      <button
+                        onClick={() => router.push(`/dashboard/records?customerId=${selectedCustomer.id}`)}
+                        className="w-full rounded-lg bg-gray-50 dark:bg-gray-700/50 p-3 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <FileText className="h-4 w-4 text-gray-400" />
+                          <div>
+                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Hasta Dosyaları</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{customerRecordsCount} kayıt mevcut</p>
+                          </div>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-gray-400" />
+                      </button>
+                    </div>
+                  )}
+
                   <div className="border-t border-gray-200 dark:border-gray-700 pt-4 flex gap-2">
                     <button onClick={() => { openEditModal(selectedCustomer); setSelectedCustomer(null) }} className="btn-secondary flex-1 text-sm">
                       <Pencil className="mr-1.5 h-3.5 w-3.5" />Düzenle
@@ -804,6 +1029,53 @@ export default function CustomersPage() {
             </form>
           </div>
         </div>
+        </Portal>
+      )}
+
+      {/* Ödül Verme Modalı */}
+      {(showRewardModal || isClosingReward) && (
+        <Portal>
+          <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4 ${isClosingReward ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingReward) { setShowRewardModal(false); setIsClosingReward(false) } }}>
+            <div className={`modal-content card w-full max-w-sm dark:bg-gray-900 ${isClosingReward ? 'closing' : ''}`}>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+                <Gift className="h-5 w-5 text-pulse-900 dark:text-pulse-300" /> Ödül Ver
+              </h2>
+              <div className="space-y-4">
+                <div>
+                  <label className="label">Ödül Tipi</label>
+                  <CustomSelect
+                    options={[
+                      { value: 'discount_percent', label: REWARD_TYPE_LABELS.discount_percent },
+                      { value: 'discount_amount', label: REWARD_TYPE_LABELS.discount_amount },
+                      { value: 'free_service', label: REWARD_TYPE_LABELS.free_service },
+                      { value: 'points', label: REWARD_TYPE_LABELS.points },
+                    ]}
+                    value={rewardType}
+                    onChange={v => setRewardType(v as RewardType)}
+                    className="input"
+                  />
+                </div>
+                <div>
+                  <label className="label">Değer</label>
+                  <input
+                    type="number"
+                    value={rewardValue}
+                    onChange={e => setRewardValue(e.target.value)}
+                    className="input"
+                    placeholder={rewardType === 'discount_percent' ? 'Ör: 10' : rewardType === 'discount_amount' ? 'Ör: 50' : rewardType === 'points' ? 'Ör: 100' : 'Ör: 1'}
+                    min={0}
+                  />
+                </div>
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button type="button" onClick={closeRewardModal} className="btn-secondary flex-1">İptal</button>
+                <button type="button" onClick={handleGiveReward} disabled={rewardSaving || !rewardValue} className="btn-primary flex-1">
+                  {rewardSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Ödül Ver
+                </button>
+              </div>
+            </div>
+          </div>
         </Portal>
       )}
     </div>
