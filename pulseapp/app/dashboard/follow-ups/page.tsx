@@ -3,11 +3,14 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { createClient } from '@/lib/supabase/client'
+import { toast } from 'sonner'
 import {
-  Plus, ClipboardCheck, Search, X, Loader2, Calendar, Send, Ban, Clock, CheckCircle, XCircle
+  Plus, ClipboardCheck, Search, Loader2, Calendar, Send, Ban, Clock, CheckCircle, XCircle
 } from 'lucide-react'
 import type { Customer } from '@/types'
 import { CustomSelect } from '@/components/ui/custom-select'
+import { getCustomerLabelSingular } from '@/lib/config/sector-modules'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 
 interface FollowUp {
   id: string
@@ -42,7 +45,8 @@ const STATUS_CONFIG: Record<string, { bg: string; text: string; icon: typeof Clo
 }
 
 export default function FollowUpsPage() {
-  const { businessId, loading: ctxLoading } = useBusinessContext()
+  const { businessId, sector, loading: ctxLoading } = useBusinessContext()
+  const customerLabel = getCustomerLabelSingular(sector ?? undefined)
   const supabase = createClient()
 
   const [followUps, setFollowUps] = useState<FollowUp[]>([])
@@ -53,8 +57,6 @@ export default function FollowUpsPage() {
 
   // Create modal
   const [showCreate, setShowCreate] = useState(false)
-  const [isClosingCreate, setIsClosingCreate] = useState(false)
-  const closeCreate = () => setIsClosingCreate(true)
   const [saving, setSaving] = useState(false)
   const [formCustomerId, setFormCustomerId] = useState('')
   const [formType, setFormType] = useState<string>('post_session')
@@ -96,13 +98,6 @@ export default function FollowUpsPage() {
   useEffect(() => { fetchFollowUps() }, [fetchFollowUps])
   useEffect(() => { fetchCustomers() }, [fetchCustomers])
 
-  useEffect(() => {
-    if (!showCreate) return
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') closeCreate() }
-    document.addEventListener('keydown', h)
-    return () => document.removeEventListener('keydown', h)
-  }, [showCreate])
-
   // Stats
   const totalCount = followUps.length
   const pendingCount = followUps.filter(f => f.status === 'pending').length
@@ -120,12 +115,19 @@ export default function FollowUpsPage() {
         status: 'pending',
         message: formMessage || null,
       })
-      if (!error) {
-        closeCreate()
-        resetForm()
-        fetchFollowUps()
+      if (error) {
+        console.error('Follow-up insert error:', error)
+        toast.error('Takip oluşturulamadı', { description: error.message })
+        return
       }
-    } catch { /* ignore */ } finally { setSaving(false) }
+      toast.success('Takip başarıyla oluşturuldu')
+      setShowCreate(false)
+      resetForm()
+      fetchFollowUps()
+    } catch (err) {
+      console.error('Follow-up creation error:', err)
+      toast.error('Takip oluşturulamadı', { description: 'Bağlantı hatası' })
+    } finally { setSaving(false) }
   }
 
   const resetForm = () => {
@@ -295,62 +297,59 @@ export default function FollowUpsPage() {
       )}
 
       {/* Create Modal */}
-      {(showCreate || isClosingCreate) && (
-        <div className={`modal-overlay fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 ${isClosingCreate ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingCreate) { setShowCreate(false); setIsClosingCreate(false) } }}>
-          <div className={`modal-content bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-lg ${isClosingCreate ? 'closing' : ''}`}>
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Yeni Takip</h2>
-              <button onClick={() => { closeCreate(); resetForm() }} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"><X className="h-5 w-5" /></button>
+      <Dialog open={showCreate} onOpenChange={(open) => { if (!open) { setShowCreate(false); resetForm() } }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Yeni Takip</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="label label-required">{customerLabel}</label>
+              <CustomSelect
+                options={customers.map(c => ({ value: c.id, label: `${c.name}${c.phone ? ` — ${c.phone}` : ''}` }))}
+                value={formCustomerId}
+                onChange={v => setFormCustomerId(v)}
+                placeholder={`${customerLabel} seçin`}
+              />
             </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="label label-required">Müşteri</label>
-                <CustomSelect
-                  options={customers.map(c => ({ value: c.id, label: `${c.name}${c.phone ? ` — ${c.phone}` : ''}` }))}
-                  value={formCustomerId}
-                  onChange={v => setFormCustomerId(v)}
-                  placeholder="Müşteri seçin"
-                />
-              </div>
-              <div>
-                <label className="label label-required">Takip Tipi</label>
-                <CustomSelect
-                  options={Object.entries(TYPE_LABELS).map(([k, v]) => ({ value: k, label: v }))}
-                  value={formType}
-                  onChange={v => setFormType(v)}
-                  placeholder="Tip seçin"
-                />
-              </div>
-              <div>
-                <label className="label label-required">Planlanan Tarih</label>
-                <input
-                  type="datetime-local"
-                  className="input w-full"
-                  value={formDate}
-                  onChange={e => setFormDate(e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="label">Mesaj (opsiyonel)</label>
-                <textarea
-                  className="input w-full"
-                  rows={3}
-                  placeholder="Takip mesajı..."
-                  value={formMessage}
-                  onChange={e => setFormMessage(e.target.value)}
-                />
-              </div>
+            <div>
+              <label className="label label-required">Takip Tipi</label>
+              <CustomSelect
+                options={Object.entries(TYPE_LABELS).map(([k, v]) => ({ value: k, label: v }))}
+                value={formType}
+                onChange={v => setFormType(v)}
+                placeholder="Tip seçin"
+              />
             </div>
-            <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
-              <button onClick={() => { closeCreate(); resetForm() }} className="btn-secondary">İptal</button>
-              <button onClick={handleCreate} disabled={saving || !formCustomerId || !formDate} className="btn-primary disabled:opacity-50">
-                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1 inline" /> : <Plus className="h-4 w-4 mr-1 inline" />}
-                Oluştur
-              </button>
+            <div>
+              <label className="label label-required">Planlanan Tarih</label>
+              <input
+                type="datetime-local"
+                className="input w-full"
+                value={formDate}
+                onChange={e => setFormDate(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="label">Mesaj (opsiyonel)</label>
+              <textarea
+                className="input w-full"
+                rows={3}
+                placeholder="Takip mesajı..."
+                value={formMessage}
+                onChange={e => setFormMessage(e.target.value)}
+              />
             </div>
           </div>
-        </div>
-      )}
+          <DialogFooter>
+            <button onClick={() => { setShowCreate(false); resetForm() }} className="btn-secondary">İptal</button>
+            <button onClick={handleCreate} disabled={saving || !formCustomerId || !formDate} className="btn-primary disabled:opacity-50">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1 inline" /> : <Plus className="h-4 w-4 mr-1 inline" />}
+              Oluştur
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

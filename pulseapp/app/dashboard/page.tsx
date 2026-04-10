@@ -17,6 +17,8 @@ import {
 import { addDays, format } from 'date-fns'
 import { formatCurrency } from '@/lib/utils'
 import { SEGMENT_LABELS } from '@/types'
+import { getCustomerLabel, getCustomerLabelSingular } from '@/lib/config/sector-modules'
+import type { SectorType } from '@/types'
 import type {
   AppointmentRow,
   BusinessStatsView,
@@ -47,12 +49,15 @@ export default async function DashboardPage() {
 
   const { data: staff } = await supabase
     .from('staff_members')
-    .select('business_id, name')
+    .select('business_id, name, businesses(sector)')
     .eq('user_id', user.id)
     .single()
 
   if (!staff) redirect('/auth/register')
   const businessId = staff.business_id
+  const sector = ((staff as unknown as { businesses: { sector?: string } }).businesses?.sector || 'other') as SectorType
+  const customerLabelPlural = getCustomerLabel(sector)
+  const customerLabel = getCustomerLabelSingular(sector)
 
   const today = new Date().toISOString().split('T')[0]
   const d7 = new Date(); d7.setDate(d7.getDate() - 6)
@@ -236,7 +241,7 @@ export default async function DashboardPage() {
           trend={getTrend(ratingTrend)}
         />
         <StatCard
-          title="Riskli Müşteriler"
+          title={`Riskli ${customerLabelPlural}`}
           value={riskCustomers.length}
           subtitle={riskCustomers.length > 0 ? 'dikkat gerektiren' : 'sorun yok'}
           icon={<AlertTriangle className="h-5 w-5" />}
@@ -249,7 +254,7 @@ export default async function DashboardPage() {
 
       {/* ── Onboarding (yeni işletme) ── */}
       {s.total_customers === 0 && s.today_appointments === 0 && (
-        <OnboardingCard bookingUrl={bookingUrl} />
+        <OnboardingCard bookingUrl={bookingUrl} customerLabel={customerLabel} customerLabelPlural={customerLabelPlural} />
       )}
 
       {/* ── Online booking banner ── */}
@@ -348,7 +353,7 @@ export default async function DashboardPage() {
                   <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                 </div>
                 <h2 className="text-sm font-semibold text-amber-900 dark:text-amber-300">
-                  Riskli Müşteriler
+                  Riskli {customerLabelPlural}
                 </h2>
               </div>
               <div className="space-y-2">
@@ -369,7 +374,7 @@ export default async function DashboardPage() {
                 href="/dashboard/customers"
                 className="mt-3 block text-center text-xs font-medium text-amber-700 dark:text-amber-400 hover:underline"
               >
-                Müşterilere git →
+                {customerLabelPlural} sayfasına git →
               </a>
             </div>
           )}
@@ -380,7 +385,7 @@ export default async function DashboardPage() {
 }
 
 // ── Onboarding Card ──
-function OnboardingCard({ bookingUrl }: { bookingUrl: string }) {
+function OnboardingCard({ bookingUrl, customerLabel, customerLabelPlural }: { bookingUrl: string; customerLabel: string; customerLabelPlural: string }) {
   const steps = [
     {
       icon: <Scissors className="h-5 w-5" />,
@@ -394,8 +399,8 @@ function OnboardingCard({ bookingUrl }: { bookingUrl: string }) {
       icon: <UserPlus className="h-5 w-5" />,
       iconBg: 'bg-emerald-500/10',
       iconColor: 'text-emerald-600 dark:text-emerald-400',
-      title: 'Müşteri Ekle',
-      desc: 'İlk müşterini ekle veya randevu bağla',
+      title: `${customerLabel} Ekle`,
+      desc: `İlk kaydını ekle veya randevu bağla`,
       href: '/dashboard/customers',
     },
     {
@@ -411,7 +416,7 @@ function OnboardingCard({ bookingUrl }: { bookingUrl: string }) {
       iconBg: 'bg-amber-500/10',
       iconColor: 'text-amber-600 dark:text-amber-400',
       title: 'Online Randevu Linkini Paylaş',
-      desc: 'Müşterilerin senden kolayca randevu alsın',
+      desc: `${customerLabelPlural} senden kolayca randevu alsın`,
       href: bookingUrl,
       external: true,
     },

@@ -19,6 +19,7 @@ import type { Invoice, InvoiceItem, InvoiceStatus, PaymentMethod, InvoicePayment
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { CustomerSearchSelect } from '@/components/ui/customer-search-select'
+import { getCustomerLabelSingular } from '@/lib/config/sector-modules'
 import { Portal } from '@/components/ui/portal'
 
 interface SimpleCustomer {
@@ -50,7 +51,8 @@ const PAYMENT_TYPE_LABELS: Record<string, string> = {
 }
 
 export default function InvoicesPage() {
-  const { businessId, staffId, staffName, loading: ctxLoading, permissions } = useBusinessContext()
+  const { businessId, staffId, staffName, sector, loading: ctxLoading, permissions } = useBusinessContext()
+  const customerLabel = getCustomerLabelSingular(sector ?? undefined)
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState<string>('all')
@@ -370,7 +372,7 @@ export default function InvoicesPage() {
       'fatura-listesi',
       [
         { key: 'invoice_number', label: 'Fatura No' },
-        { key: 'customer', label: 'Müşteri' },
+        { key: 'customer', label: customerLabel },
         { key: 'subtotal', label: 'Ara Toplam (TL)' },
         { key: 'tax_rate', label: 'KDV Oranı (%)' },
         { key: 'tax_amount', label: 'KDV Tutarı (TL)' },
@@ -631,7 +633,7 @@ export default function InvoicesPage() {
                       </span>
                     </div>
                     <div className="mt-0.5 text-sm text-gray-400">
-                      {invoice.customers?.name || 'Müşterisiz'} &bull; {formatCurrency(invoice.total)} &bull; Silinme: {invoice.deleted_at ? new Date(invoice.deleted_at).toLocaleDateString('tr-TR') : '—'}
+                      {invoice.customers?.name || `${customerLabel}siz`} &bull; {formatCurrency(invoice.total)} &bull; Silinme: {invoice.deleted_at ? new Date(invoice.deleted_at).toLocaleDateString('tr-TR') : '—'}
                     </div>
                   </div>
                   <button
@@ -697,7 +699,7 @@ export default function InvoicesPage() {
                     )}
                   </div>
                   <div className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
-                    {invoice.customers?.name || 'Müşterisiz'} &bull; {new Date(invoice.created_at).toLocaleDateString('tr-TR')}
+                    {invoice.customers?.name || `${customerLabel}siz`} &bull; {new Date(invoice.created_at).toLocaleDateString('tr-TR')}
                     {invoice.due_date && ` \u00B7 Son: ${new Date(invoice.due_date).toLocaleDateString('tr-TR')}`}
                   </div>
                   {hasPaidProgress && (
@@ -1018,12 +1020,12 @@ export default function InvoicesPage() {
             <form onSubmit={handleCreate} className="space-y-4">
               {/* Müşteri Seç */}
               <div>
-                <label className="label">Müşteri (opsiyonel)</label>
+                <label className="label">{customerLabel} (opsiyonel)</label>
                 <CustomerSearchSelect
                   value={formCustomerId}
                   onChange={v => setFormCustomerId(v)}
                   businessId={businessId!}
-                  placeholder="— Müşteri seçin —"
+                  placeholder={`— ${customerLabel} seçin —`}
                 />
               </div>
 

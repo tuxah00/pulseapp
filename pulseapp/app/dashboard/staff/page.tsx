@@ -13,6 +13,7 @@ import type { StaffMember, StaffRole, StaffPermissions } from '@/types'
 import { logAudit } from '@/lib/utils/audit'
 import { DEFAULT_PERMISSIONS, getEffectivePermissions } from '@/types'
 import { CustomSelect } from '@/components/ui/custom-select'
+import { getCustomerLabel } from '@/lib/config/sector-modules'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 
 const ROLE_LABELS: Record<StaffRole, string> = {
@@ -75,7 +76,8 @@ function canEditPermissions(myRole: StaffRole, targetRole: StaffRole): boolean {
 }
 
 export default function StaffPage() {
-  const { businessId, staffId: currentStaffId, staffName: currentStaffName, loading: ctxLoading, staffRole: currentUserRole, permissions } = useBusinessContext()
+  const { businessId, staffId: currentStaffId, staffName: currentStaffName, sector, loading: ctxLoading, staffRole: currentUserRole, permissions } = useBusinessContext()
+  const permissionLabels = { ...PERMISSION_LABELS, customers: sector ? getCustomerLabel(sector) : 'Müşteriler' }
   const [staff, setStaff] = useState<StaffMember[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
@@ -238,7 +240,7 @@ export default function StaffPage() {
         details: {
           target_name: member.name,
           target_role: ROLE_LABELS[member.role],
-          permission_label: PERMISSION_LABELS[key],
+          permission_label: permissionLabels[key],
           permission_key: key,
           enabled: value,
         },
@@ -251,7 +253,7 @@ export default function StaffPage() {
     setPermsSaving(true)
     setPermsSaved(false)
     const newPerms: StaffPermissions = {} as StaffPermissions
-    for (const key of Object.keys(PERMISSION_LABELS) as (keyof StaffPermissions)[]) {
+    for (const key of Object.keys(permissionLabels) as (keyof StaffPermissions)[]) {
       newPerms[key] = value
     }
     const { error: err } = await supabase
@@ -361,7 +363,7 @@ export default function StaffPage() {
     const canEdit = canEditMember(currentUserRole as StaffRole, member.role)
     const canPerms = canEditPermissions(currentUserRole as StaffRole, member.role)
     const permCount = getPermissionCount(member)
-    const totalPerms = Object.keys(PERMISSION_LABELS).length
+    const totalPerms = Object.keys(permissionLabels).length
 
     if (viewMode === 'box') {
       return (
@@ -574,7 +576,7 @@ export default function StaffPage() {
                           const checked = localPerms[key] === true
                           return (
                             <label key={key} className="flex items-center justify-between py-1.5 cursor-pointer group">
-                              <span className="text-sm text-gray-700 dark:text-gray-300">{PERMISSION_LABELS[key]}</span>
+                              <span className="text-sm text-gray-700 dark:text-gray-300">{permissionLabels[key]}</span>
                               <div className="relative">
                                 <input
                                   type="checkbox"
@@ -697,7 +699,7 @@ export default function StaffPage() {
                       const checked = perms[key] ?? false
                       return (
                         <label key={key} className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors">
-                          <span className="text-sm text-gray-700 dark:text-gray-300">{PERMISSION_LABELS[key]}</span>
+                          <span className="text-sm text-gray-700 dark:text-gray-300">{permissionLabels[key]}</span>
                           <div className="relative">
                             <input
                               type="checkbox"
@@ -730,7 +732,7 @@ export default function StaffPage() {
                   <Check className="h-3.5 w-3.5" /> Kaydedildi
                 </span>
               ) : (
-                <span className="text-xs text-gray-400">{getPermissionCount(permPopupStaff)}/{Object.keys(PERMISSION_LABELS).length} yetki açık</span>
+                <span className="text-xs text-gray-400">{getPermissionCount(permPopupStaff)}/{Object.keys(permissionLabels).length} yetki açık</span>
               )}
               <button onClick={closePermPopup} className="btn-secondary text-sm py-1.5 px-4">Kapat</button>
             </div>

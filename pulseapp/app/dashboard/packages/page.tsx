@@ -16,6 +16,7 @@ import { formatCurrency, formatDate, cn } from '@/lib/utils'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import { ToolbarPopover, SortPopoverContent } from '@/components/ui/toolbar-popover'
 import { logAudit } from '@/lib/utils/audit'
+import { getCustomerLabelSingular, getCustomerLabel } from '@/lib/config/sector-modules'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
 import CompactBoxCard from '@/components/ui/compact-box-card'
 import type { ServicePackage, CustomerPackage, Service, PackageStatus, Customer, StaffMember } from '@/types'
@@ -34,7 +35,7 @@ const STATUS_CONFIG: Record<PackageStatus, { label: string; color: string; icon:
 }
 
 export default function PaketlerPage() {
-  const { businessId, staffId, staffName, loading: ctxLoading, permissions } = useBusinessContext()
+  const { businessId, staffId, staffName, sector, loading: ctxLoading, permissions } = useBusinessContext()
   const { confirm } = useConfirm()
   const supabase = createClient()
   const [viewMode, setViewMode] = useViewMode('paketler', 'list')
@@ -264,7 +265,7 @@ export default function PaketlerPage() {
 
   async function handleSellPackage(e: React.FormEvent) {
     e.preventDefault(); setSavingSell(true); setSellError(null)
-    if (!sCustomerName.trim()) { setSellError('Müşteri adı zorunlu'); setSavingSell(false); return }
+    if (!sCustomerName.trim()) { setSellError(`${getCustomerLabelSingular(sector ?? undefined)} adı zorunlu`); setSavingSell(false); return }
     if (!sTemplateId) { setSellError('Paket şablonu seçin'); setSavingSell(false); return }
 
     const tmpl = templates.find(t => t.id === sTemplateId)!
@@ -778,7 +779,7 @@ export default function PaketlerPage() {
               <ToolbarPopover icon={<ArrowUpDown className="h-4 w-4" />} label="Sırala" active={sortField !== null}>
                 <SortPopoverContent
                   options={[
-                    { value: 'customer_name', label: 'Müşteri adı' },
+                    { value: 'customer_name', label: `${getCustomerLabelSingular(sector ?? undefined)} adı` },
                     { value: 'sessions_used', label: 'Seans kullanımı' },
                     { value: 'purchase_date', label: 'Satın alma tarihi' },
                     { value: 'status', label: 'Durum' },
@@ -809,7 +810,7 @@ export default function PaketlerPage() {
         <nav className="flex gap-1 whitespace-nowrap -mb-px">
           {([
             { key: 'templates', label: 'Paket Şablonları', count: templates.length },
-            { key: 'customer', label: 'Müşteri Paketleri' },
+            { key: 'customer', label: `${getCustomerLabelSingular(sector ?? undefined)} Paketleri` },
           ] as { key: PageTab; label: string; count?: number }[]).map(tab => (
             <button
               key={tab.key}
@@ -841,7 +842,7 @@ export default function PaketlerPage() {
             <div className="card flex flex-col items-center justify-center py-16 text-center">
               <Package className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-3" />
               <p className="font-medium text-gray-900 dark:text-gray-100">Henüz paket şablonu yok</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-4">Müşterilere satmak için paket tanımlayın</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-4">{`${getCustomerLabel(sector!)} için satılacak paket tanımlayın`}</p>
               <button onClick={openNewTemplate} className="btn-primary flex items-center gap-2">
                 <Plus className="h-4 w-4" /> Yeni Paket Şablonu
               </button>
@@ -923,7 +924,7 @@ export default function PaketlerPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
               type="text"
-              placeholder="Müşteri ara..."
+              placeholder={`${getCustomerLabelSingular(sector ?? undefined)} ara...`}
               value={search}
               onChange={e => setSearch(e.target.value)}
               className="input pl-9 text-sm w-full"
@@ -935,7 +936,7 @@ export default function PaketlerPage() {
           ) : customerPackages.length === 0 ? (
             <div className="card flex flex-col items-center justify-center py-16 text-center">
               <Users className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-3" />
-              <p className="font-medium text-gray-900 dark:text-gray-100">Müşteri paketi bulunamadı</p>
+              <p className="font-medium text-gray-900 dark:text-gray-100">{`${getCustomerLabelSingular(sector ?? undefined)} paketi bulunamadı`}</p>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                 {templates.length === 0 ? 'Önce paket şablonu oluşturun' : 'Paket satmak için "Paket Sat" butonunu kullanın'}
               </p>
@@ -1217,12 +1218,12 @@ export default function PaketlerPage() {
               )}
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Müşteri Seç</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{`${getCustomerLabelSingular(sector ?? undefined)} Seç`}</label>
                 <CustomerSearchSelect
                   value={sCustomerId}
                   onChange={id => setSCustomerId(id)}
                   businessId={businessId!}
-                  placeholder="— Müşteri Seç —"
+                  placeholder={`— ${getCustomerLabelSingular(sector ?? undefined)} Seç —`}
                   onCustomerSelect={c => {
                     if (c) {
                       setSCustomerName(c.name)

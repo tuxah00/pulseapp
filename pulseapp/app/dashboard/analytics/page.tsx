@@ -23,6 +23,7 @@ import type {
   InvoiceRow,
 } from '@/types/db'
 import { CustomSelect } from '@/components/ui/custom-select'
+import { getCustomerLabelSingular, getCustomerLabel } from '@/lib/config/sector-modules'
 
 type AnalyticsTab = 'overview' | 'staff' | 'customers' | 'sources' | 'services' | 'expenses'
 
@@ -70,7 +71,9 @@ function getPeriodDates(period: 'week' | 'month' | 'year', offset = 0): { start:
 }
 
 export default function AnalyticsPage() {
-  const { businessId, staffId, staffName, loading: ctxLoading, permissions } = useBusinessContext()
+  const { businessId, staffId, staffName, sector, loading: ctxLoading, permissions } = useBusinessContext()
+  const customerLabel = getCustomerLabelSingular(sector ?? undefined)
+  const customerLabelPlural = sector ? getCustomerLabel(sector) : 'Müşteriler'
   const { confirm } = useConfirm()
   const [loading, setLoading] = useState(true)
   const [period, setPeriod] = useState<'week' | 'month' | 'year'>('month')
@@ -443,7 +446,7 @@ export default function AnalyticsPage() {
       <div className="grid grid-cols-3 gap-4">
         <KPICard icon={<DollarSign className="h-5 w-5" />} label={invoiceOnlyRevenue > 0 ? 'Toplam Gelir' : 'Gelir'}
           value={formatCurrency(totalRevenue)} trend={revenueTrend} color="green" currency />
-        <KPICard icon={<Users className="h-5 w-5" />} label="Ort. Müşteri Değeri"
+        <KPICard icon={<Users className="h-5 w-5" />} label={`Ort. ${customerLabel} Değeri`}
           value={formatCurrency(avgCLV)} color="purple" currency />
         <KPICard icon={<UserCheck className="h-5 w-5" />} label="Tamamlanan"
           value={completed.length} color="blue" />
@@ -454,7 +457,7 @@ export default function AnalyticsPage() {
         {([
           ['overview', 'Genel Bakış', <BarChart3 key="o" className="h-3.5 w-3.5" />],
           ['staff', 'Personel', <Users key="s" className="h-3.5 w-3.5" />],
-          ['customers', 'Müşteriler', <UserCheck key="c" className="h-3.5 w-3.5" />],
+          ['customers', customerLabelPlural, <UserCheck key="c" className="h-3.5 w-3.5" />],
           ['sources', 'Kaynak', <PieChart key="sr" className="h-3.5 w-3.5" />],
           ['services', 'Hizmet', <Layers key="sv" className="h-3.5 w-3.5" />],
           ['expenses', 'Gelir-Gider', <Wallet key="e" className="h-3.5 w-3.5" />],
@@ -477,11 +480,11 @@ export default function AnalyticsPage() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <KPICard icon={<TrendingUp className="h-5 w-5" />} label="Tahmini Aylık Gelir"
               value={formatCurrency(Math.round(totalRevenue * periodMultiplier))} color="green" currency />
-            <KPICard icon={<Star className="h-5 w-5" />} label="Müşteri Memnuniyeti"
+            <KPICard icon={<Star className="h-5 w-5" />} label={`${customerLabel} Memnuniyeti`}
               value={avgRating !== '—' ? `${avgRating} / 5` : '—'} color="amber" />
             <KPICard icon={<Clock className="h-5 w-5" />} label="Tamamlanma Oranı"
               value={`%${completionRate}`} color="blue" />
-            <KPICard icon={<AlertTriangle className="h-5 w-5" />} label="Risk Müşteriler"
+            <KPICard icon={<AlertTriangle className="h-5 w-5" />} label={`Risk ${customerLabelPlural}`}
               value={riskCustomers.length} color="amber" />
           </div>
           {/* Gelir Trendi */}
@@ -604,13 +607,13 @@ export default function AnalyticsPage() {
             </div>
             <div className="card p-4 text-center">
               <p className="text-2xl font-bold text-purple-600">{formatCurrency(avgCLV)}</p>
-              <p className="text-xs text-gray-500 mt-1">Ortalama Müşteri Değeri</p>
+              <p className="text-xs text-gray-500 mt-1">Ortalama {customerLabel} Değeri</p>
             </div>
           </div>
 
           {/* Segment Dağılımı */}
           <div className="card p-4">
-            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Müşteri Segmentleri</h3>
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">{customerLabel} Segmentleri</h3>
             <div className="space-y-3">
               {segmentData.map(({ segment, label, count }) => {
                 const pct = totalCustomers > 0 ? Math.round((count / totalCustomers) * 100) : 0
@@ -636,7 +639,7 @@ export default function AnalyticsPage() {
               <div className="flex items-center gap-2 mb-2">
                 <AlertTriangle className="h-5 w-5 text-amber-600" />
                 <h3 className="text-sm font-semibold text-amber-800 dark:text-amber-400">
-                  {riskCustomers.length} Müşteri Risk Altında
+                  {riskCustomers.length} {customerLabel} Risk Altında
                 </h3>
               </div>
               <div className="flex flex-wrap gap-2 mt-3">

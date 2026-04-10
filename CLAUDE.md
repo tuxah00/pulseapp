@@ -217,6 +217,7 @@ Bu özellikler sadece DB + UI çalışması gerektirir, herhangi bir dış servi
 - Supabase sorguları doğrudan sayfada yazılabilir (Server Component); karmaşıklaşırsa `lib/` altına taşı
 - Dark mode: `dark:` prefix'i Tailwind ile, `ThemeProvider` zaten dashboard layout'unda mevcut
 - Lucide icon'ları `lucide-react`'tan import et; dinamik ikonlar için `sector-modules.ts` pattern'ini takip et
+- Tüm modal/overlay'ler `components/ui/dialog.tsx` Dialog bileşeni kullanmalı. Custom `modal-overlay` div oluşturulmamalı — Portal desteği olmadığından stacking context sorunu oluşur ve overlay tam ekranı kaplamaz
 
 ---
 
@@ -235,6 +236,7 @@ Bu özellikler sadece DB + UI çalışması gerektirir, herhangi bir dış servi
 
 Aşağıdaki migration'lar Supabase SQL Editor'de manuel olarak çalıştırılmalıdır:
 - `008_fix_shifts_trigger.sql` — shifts tablosunun updated_at trigger'ını moddatetime'dan bağımsız hale getirir (vardiye kaydetme için kritik)
+- `035_rewards.sql` — `rewards` ve `customer_rewards` tabloları, RLS politikaları (ödül sistemi için gerekli)
 
 ### Uygulanan Migration'lar (Supabase'de çalıştırıldı)
 - `006_create_shifts.sql` + `008_fix_shifts_trigger.sql` → **✅ Uygulandı (2026-03-19)**

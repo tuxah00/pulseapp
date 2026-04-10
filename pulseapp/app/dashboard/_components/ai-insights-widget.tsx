@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { useBusinessContext } from '@/lib/hooks/use-business-context'
+import { getCustomerLabelSingular } from '@/lib/config/sector-modules'
 import { Sparkles, Loader2, Send, X, MessageSquare, Users, TrendingUp, Calendar } from 'lucide-react'
 import type { CampaignSuggestion } from '@/app/api/ai/campaign-suggest/route'
 import { cn } from '@/lib/utils'
@@ -14,6 +16,8 @@ const CAMPAIGN_TYPE_CONFIG: Record<string, { label: string; color: string }> = {
 }
 
 export default function AiInsightsWidget() {
+  const { sector } = useBusinessContext()
+  const customerLabel = getCustomerLabelSingular(sector ?? undefined)
   const [loading, setLoading] = useState(false)
   const [suggestions, setSuggestions] = useState<CampaignSuggestion[] | null>(null)
   const [stats, setStats] = useState<{ totalCustomers: number; riskCount: number; upcomingBirthdays: number } | null>(null)
@@ -57,7 +61,7 @@ export default function AiInsightsWidget() {
           </div>
           <div>
             <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">AI Kampanya Önerileri</p>
-            <p className="text-xs text-gray-400">Müşteri segmentlerine göre hedefli mesajlar</p>
+            <p className="text-xs text-gray-400">{customerLabel} segmentlerine göre hedefli mesajlar</p>
           </div>
         </div>
       </button>
