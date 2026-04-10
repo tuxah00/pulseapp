@@ -1,0 +1,356 @@
+'use client'
+
+import { useState, useEffect, useCallback } from 'react'
+import { useBusinessContext } from '@/lib/hooks/use-business-context'
+import { createClient } from '@/lib/supabase/client'
+import {
+  Plus, ClipboardCheck, Search, X, Loader2, Calendar, Send, Ban, Clock, CheckCircle, XCircle
+} from 'lucide-react'
+import type { Customer } from '@/types'
+import { CustomSelect } from '@/components/ui/custom-select'
+
+interface FollowUp {
+  id: string
+  business_id: string
+  appointment_id: string | null
+  customer_id: string
+  protocol_id: string | null
+  type: 'post_session' | 'next_session_reminder' | 'protocol_completion'
+  scheduled_for: string
+  status: 'pending' | 'sent' | 'cancelled'
+  message: string | null
+  created_at: string
+  customers?: { name: string; phone: string } | null
+}
+
+const TYPE_LABELS: Record<string, string> = {
+  post_session: 'Seans Sonrası',
+  next_session_reminder: 'Sonraki Seans Hatırlatma',
+  protocol_completion: 'Protokol Tamamlama',
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  pending: 'Bekliyor',
+  sent: 'Gönderildi',
+  cancelled: 'İptal',
+}
+
+const STATUS_CONFIG: Record<string, { bg: string; text: string; icon: typeof Clock }> = {
+  pending: { bg: 'bg-yellow-50 dark:bg-yellow-900/20', text: 'text-yellow-600 dark:text-yellow-400', icon: Clock },
+  sent: { bg: 'bg-green-50 dark:bg-green-900/20', text: 'text-green-600 dark:text-green-400', icon: CheckCircle },
+  cancelled: { bg: 'bg-gray-50 dark:bg-gray-800', text: 'text-gray-500 dark:text-gray-400', icon: XCircle },
+}
+
+export default function FollowUpsPage() {
+  const { businessId, loading: ctxLoading } = useBusinessContext()
+  const supabase = createClient()
+
+  const [followUps, setFollowUps] = useState<FollowUp[]>([])
+  const [customers, setCustomers] = useState<Customer[]>([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+
+  // Create modal
+  const [showCreate, setShowCreate] = useState(false)
+  const [isClosingCreate, setIsClosingCreate] = useState(false)
+  const closeCreate = () => setIsClosingCreate(true)
+  const [saving, setSaving] = useState(false)
+  const [formCustomerId, setFormCustomerId] = useState('')
+  const [formType, setFormType] = useState<string>('post_session')
+  const [formDate, setFormDate] = useState('')
+  const [formMessage, setFormMessage] = useState('')
+
+  const fetchFollowUps = useCallback(async () => {
+    if (!businessId) return
+    setLoading(true)
+    try {
+      let query = supabase
+        .from('follow_up_queue')
+        .select('*, customers(name, phone)')
+        .eq('business_id', businessId)
+        .order('scheduled_for', { ascending: true })
+
+      if (statusFilter !== 'all') {
+        query = query.eq('status', statusFilter)
+      }
+
+      const { data } = await query
+      setFollowUps((data as FollowUp[]) || [])
+    } catch { /* ignore */ } finally { setLoading(false) }
+  }, [businessId, statusFilter])
+
+  const fetchCustomers = useCallback(async () => {
+    if (!businessId) return
+    try {
+      const { data } = await supabase
+        .from('customers')
+        .select('id, name, phone')
+        .eq('business_id', businessId)
+        .eq('is_active', true)
+        .order('name')
+      setCustomers((data as Customer[]) || [])
+    } catch { /* ignore */ }
+  }, [businessId])
+
+  useEffect(() => { fetchFollowUps() }, [fetchFollowUps])
+  useEffect(() => { fetchCustomers() }, [fetchCustomers])
+
+  useEffect(() => {
+    if (!showCreate) return
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') closeCreate() }
+    document.addEventListener('keydown', h)
+    return () => document.removeEventListener('keydown', h)
+  }, [showCreate])
+
+  // Stats
+  const totalCount = followUps.length
+  const pendingCount = followUps.filter(f => f.status === 'pending').length
+  const sentCount = followUps.filter(f => f.status === 'sent').length
+
+  const handleCreate = async () => {
+    if (!businessId || !formCustomerId || !formDate) return
+    setSaving(true)
+    try {
+      const { error } = await supabase.from('follow_up_queue').insert({
+        business_id: businessId,
+        customer_id: formCustomerId,
+        type: formType,
+        scheduled_for: new Date(formDate).toISOString(),
+        status: 'pending',
+        message: formMessage || null,
+      })
+      if (!error) {
+        closeCreate()
+        resetForm()
+        fetchFollowUps()
+      }
+    } catch { /* ignore */ } finally { setSaving(false) }
+  }
+
+  const resetForm = () => {
+    setFormCustomerId('')
+    setFormType('post_session')
+    setFormDate('')
+    setFormMessage('')
+  }
+
+  const handleMarkSent = async (id: string) => {
+    await supabase.from('follow_up_queue').update({ status: 'sent' }).eq('id', id)
+    fetchFollowUps()
+  }
+
+  const handleCancel = async (id: string) => {
+    await supabase.from('follow_up_queue').update({ status: 'cancelled' }).eq('id', id)
+    fetchFollowUps()
+  }
+
+  const filtered = followUps.filter(f => {
+    if (!search) return true
+    const q = search.toLowerCase()
+    const customerName = f.customers?.name?.toLowerCase() || ''
+    const msg = f.message?.toLowerCase() || ''
+    return customerName.includes(q) || msg.includes(q)
+  })
+
+  if (ctxLoading) {
+    return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-pulse-900" /></div>
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Takipler</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Seans sonrası takip ve hatırlatma kuyruğu</p>
+        </div>
+        <button onClick={() => setShowCreate(true)} className="btn-primary flex items-center gap-2">
+          <Plus className="h-4 w-4" /> Yeni Takip
+        </button>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        <div className="card p-4">
+          <p className="text-xs text-gray-500 dark:text-gray-400">Toplam</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white">{totalCount}</p>
+        </div>
+        <div className="card p-4">
+          <p className="text-xs text-gray-500 dark:text-gray-400">Bekleyen</p>
+          <p className="text-2xl font-bold text-yellow-600">{pendingCount}</p>
+        </div>
+        <div className="card p-4">
+          <p className="text-xs text-gray-500 dark:text-gray-400">Gönderilen</p>
+          <p className="text-2xl font-bold text-green-600">{sentCount}</p>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3 items-center">
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <input type="text" placeholder="Ara..." className="input pl-10 w-full" value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          {(['all', 'pending', 'sent', 'cancelled'] as const).map(s => (
+            <button key={s}
+              onClick={() => setStatusFilter(s)}
+              className={`badge px-3 py-1.5 cursor-pointer transition-colors ${
+                statusFilter === s
+                  ? 'bg-gray-900 dark:bg-gray-700 text-white'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}>
+              {s === 'all' ? 'Tümü' : STATUS_LABELS[s]}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* List */}
+      {loading ? (
+        <div className="flex items-center justify-center h-32"><Loader2 className="h-6 w-6 animate-spin text-pulse-900" /></div>
+      ) : filtered.length === 0 ? (
+        <div className="card p-8 text-center">
+          <ClipboardCheck className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+          <p className="text-gray-500 dark:text-gray-400">Henüz takip kaydı yok</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {filtered.map(f => {
+            const sc = STATUS_CONFIG[f.status]
+            const Icon = sc.icon
+
+            return (
+              <div key={f.id} className="card p-4">
+                <div className="flex items-center gap-4">
+                  {/* Customer */}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-900 dark:text-white truncate">
+                      {f.customers?.name || 'Bilinmeyen'}
+                    </p>
+                    {f.customers?.phone && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{f.customers.phone}</p>
+                    )}
+                  </div>
+
+                  {/* Type */}
+                  <div className="flex-shrink-0">
+                    <span className="text-xs px-2 py-1 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
+                      {TYPE_LABELS[f.type] || f.type}
+                    </span>
+                  </div>
+
+                  {/* Scheduled date */}
+                  <div className="flex-shrink-0 text-right">
+                    <p className="text-sm text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                      <Calendar className="h-3.5 w-3.5 text-gray-400" />
+                      {new Date(f.scheduled_for).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      {new Date(f.scheduled_for).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </div>
+
+                  {/* Status */}
+                  <div className="flex-shrink-0">
+                    <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${sc.bg} ${sc.text}`}>
+                      <Icon className="h-3 w-3" /> {STATUS_LABELS[f.status]}
+                    </span>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex-shrink-0 flex gap-1">
+                    {f.status === 'pending' && (
+                      <>
+                        <button
+                          onClick={() => handleMarkSent(f.id)}
+                          className="text-xs px-2 py-1 rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors flex items-center gap-1"
+                          title="Gönderildi olarak işaretle"
+                        >
+                          <Send className="h-3 w-3" /> Gönder
+                        </button>
+                        <button
+                          onClick={() => handleCancel(f.id)}
+                          className="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center gap-1"
+                          title="İptal et"
+                        >
+                          <Ban className="h-3 w-3" /> İptal
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Message */}
+                {f.message && (
+                  <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 pl-1 border-l-2 border-gray-200 dark:border-gray-700 ml-1">
+                    {f.message}
+                  </p>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Create Modal */}
+      {(showCreate || isClosingCreate) && (
+        <div className={`modal-overlay fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 ${isClosingCreate ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingCreate) { setShowCreate(false); setIsClosingCreate(false) } }}>
+          <div className={`modal-content bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-lg ${isClosingCreate ? 'closing' : ''}`}>
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Yeni Takip</h2>
+              <button onClick={() => { closeCreate(); resetForm() }} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="label label-required">Müşteri</label>
+                <CustomSelect
+                  options={customers.map(c => ({ value: c.id, label: `${c.name}${c.phone ? ` — ${c.phone}` : ''}` }))}
+                  value={formCustomerId}
+                  onChange={v => setFormCustomerId(v)}
+                  placeholder="Müşteri seçin"
+                />
+              </div>
+              <div>
+                <label className="label label-required">Takip Tipi</label>
+                <CustomSelect
+                  options={Object.entries(TYPE_LABELS).map(([k, v]) => ({ value: k, label: v }))}
+                  value={formType}
+                  onChange={v => setFormType(v)}
+                  placeholder="Tip seçin"
+                />
+              </div>
+              <div>
+                <label className="label label-required">Planlanan Tarih</label>
+                <input
+                  type="datetime-local"
+                  className="input w-full"
+                  value={formDate}
+                  onChange={e => setFormDate(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="label">Mesaj (opsiyonel)</label>
+                <textarea
+                  className="input w-full"
+                  rows={3}
+                  placeholder="Takip mesajı..."
+                  value={formMessage}
+                  onChange={e => setFormMessage(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+              <button onClick={() => { closeCreate(); resetForm() }} className="btn-secondary">İptal</button>
+              <button onClick={handleCreate} disabled={saving || !formCustomerId || !formDate} className="btn-primary disabled:opacity-50">
+                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1 inline" /> : <Plus className="h-4 w-4 mr-1 inline" />}
+                Oluştur
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

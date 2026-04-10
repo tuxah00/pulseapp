@@ -13,6 +13,8 @@ import {
   X,
   Filter,
   Tag,
+  Sparkles,
+  Loader2,
 } from 'lucide-react'
 
 interface PortfolioItem {
@@ -58,6 +60,15 @@ export default function PortfolioPage() {
   const closeDeleteConfirm = () => setIsClosingDeleteConfirm(true)
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // AI Analysis state
+  const [analyzingId, setAnalyzingId] = useState<string | null>(null)
+  const [analysisResult, setAnalysisResult] = useState<string | null>(null)
+  const [analysisItem, setAnalysisItem] = useState<PortfolioItem | null>(null)
+  const [showAnalysis, setShowAnalysis] = useState(false)
+  const [isClosingAnalysis, setIsClosingAnalysis] = useState(false)
+  const closeAnalysis = () => setIsClosingAnalysis(true)
+  const onAnalysisClosed = () => { setShowAnalysis(false); setIsClosingAnalysis(false); setAnalysisResult(null); setAnalysisItem(null) }
 
   const categories = ['all', ...Array.from(new Set(items.map((i) => i.category).filter(Boolean) as string[]))]
 
@@ -210,6 +221,37 @@ export default function PortfolioPage() {
     }
   }
 
+  async function handleAnalyze(item: PortfolioItem) {
+    if (!businessId || !item.image_url) return
+    setAnalyzingId(item.id)
+    setAnalysisItem(item)
+    try {
+      const res = await fetch('/api/ai/photo-analysis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          businessId,
+          imageUrl: item.image_url,
+          title: item.title,
+          category: item.category,
+        }),
+      })
+      const json = await res.json()
+      if (res.ok) {
+        setAnalysisResult(json.analysis)
+        setShowAnalysis(true)
+      } else {
+        setAnalysisResult(json.error || 'Analiz yapılamadı')
+        setShowAnalysis(true)
+      }
+    } catch {
+      setAnalysisResult('Beklenmeyen bir hata oluştu')
+      setShowAnalysis(true)
+    } finally {
+      setAnalyzingId(null)
+    }
+  }
+
   if (permissions && !permissions.portfolio) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
@@ -302,6 +344,20 @@ export default function PortfolioPage() {
 
                 {/* Overlay actions */}
                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                  {item.image_url && (
+                    <button
+                      onClick={() => handleAnalyze(item)}
+                      disabled={analyzingId === item.id}
+                      title="AI Analiz"
+                      className="p-2 bg-white/90 rounded-full hover:bg-white transition-colors disabled:opacity-60"
+                    >
+                      {analyzingId === item.id ? (
+                        <Loader2 className="w-4 h-4 text-pulse-900 animate-spin" />
+                      ) : (
+                        <Sparkles className="w-4 h-4 text-pulse-900" />
+                      )}
+                    </button>
+                  )}
                   <button
                     onClick={() => toggleFeatured(item)}
                     title={item.is_featured ? 'Öne çıkarmayı kaldır' : 'Öne çıkar'}
@@ -482,6 +538,50 @@ export default function PortfolioPage() {
                     Yükle
                   </>
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI Analysis Modal */}
+      {showAnalysis && analysisItem && (
+        <div className={`fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 modal-overlay ${isClosingAnalysis ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingAnalysis) onAnalysisClosed() }}>
+          <div className={`bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto modal-content ${isClosingAnalysis ? 'closing' : ''}`}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-pulse-900" />
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">AI Görsel Analizi</h2>
+              </div>
+              <button onClick={closeAnalysis} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="px-6 py-4 space-y-4">
+              {/* Image preview */}
+              {analysisItem.image_url && (
+                <div className="rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={analysisItem.image_url} alt={analysisItem.title} className="w-full max-h-48 object-cover" />
+                </div>
+              )}
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{analysisItem.title}</p>
+
+              {/* Analysis result */}
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4">
+                <div className="prose prose-sm dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                  {analysisResult}
+                </div>
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+              <button
+                onClick={closeAnalysis}
+                className="w-full bg-pulse-900 hover:bg-pulse-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              >
+                Kapat
               </button>
             </div>
           </div>

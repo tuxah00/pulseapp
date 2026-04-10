@@ -100,6 +100,7 @@ export default function BookingPage() {
   const [waitlistStaffId, setWaitlistStaffId] = useState('')
   const [waitlistEarliest, setWaitlistEarliest] = useState(false)
 
+  const [kvkkConsent, setKvkkConsent] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
@@ -186,6 +187,23 @@ export default function BookingPage() {
         return
       }
 
+      if (kvkkConsent) {
+        try {
+          await fetch('/api/consent', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              businessId,
+              consentType: 'kvkk',
+              method: 'online_form',
+              customerPhone: customerPhone.replace(/\s/g, ''),
+            }),
+          })
+        } catch {
+          // Onay kaydı hatası randevu başarısını etkilememeli
+        }
+      }
+
       setSubmitted(true)
     } catch {
       setSubmitError('Bir hata oluştu. Lütfen tekrar deneyin.')
@@ -254,6 +272,7 @@ export default function BookingPage() {
               setWaitlistDate('')
               setWaitlistStaffId('')
               setWaitlistEarliest(false)
+              setKvkkConsent(false)
               setSubmitted(false)
             }}
             className="mt-6 btn-secondary w-full"
@@ -585,13 +604,27 @@ export default function BookingPage() {
                 />
               </div>
             </div>
+            <label className="flex items-start gap-3 mt-4 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={kvkkConsent}
+                onChange={(e) => setKvkkConsent(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+                required
+              />
+              <span className="text-xs text-gray-500">
+                Kişisel verilerimin işlenmesine ilişkin{' '}
+                <span className="text-blue-500 font-medium">KVKK Aydınlatma Metni</span>&apos;ni
+                okudum ve kabul ediyorum.
+              </span>
+            </label>
             <div className="mt-5 pt-4 border-t border-gray-100 flex gap-2.5">
               <button onClick={() => setStep(2)} className="btn-secondary flex items-center gap-1 px-3">
                 <ChevronLeft className="h-4 w-4" />
               </button>
               <button
                 onClick={() => setStep(4)}
-                disabled={!customerName.trim() || !customerPhone.trim()}
+                disabled={!customerName.trim() || !customerPhone.trim() || !kvkkConsent}
                 className="btn-primary flex-1"
               >
                 Devam Et
