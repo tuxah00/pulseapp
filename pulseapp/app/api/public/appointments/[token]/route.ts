@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { isValidUUID } from '@/lib/utils/validate'
 
 // GET: Token ile randevu bilgilerini getir (public — auth gerektirmez)
 export async function GET(_request: NextRequest, { params }: { params: { token: string } }) {
+  if (!isValidUUID(params.token)) {
+    return NextResponse.json({ error: 'Geçersiz istek' }, { status: 400 })
+  }
+
   const admin = createAdminClient()
 
   const { data: appointment, error } = await admin
@@ -49,6 +54,10 @@ export async function GET(_request: NextRequest, { params }: { params: { token: 
 
 // PATCH: Randevu tarih/saat değiştir
 export async function PATCH(request: NextRequest, { params }: { params: { token: string } }) {
+  if (!isValidUUID(params.token)) {
+    return NextResponse.json({ error: 'Geçersiz istek' }, { status: 400 })
+  }
+
   const admin = createAdminClient()
 
   // Token doğrulama
@@ -123,6 +132,10 @@ export async function PATCH(request: NextRequest, { params }: { params: { token:
 
 // DELETE: Randevu iptal
 export async function DELETE(request: NextRequest, { params }: { params: { token: string } }) {
+  if (!isValidUUID(params.token)) {
+    return NextResponse.json({ error: 'Geçersiz istek' }, { status: 400 })
+  }
+
   const admin = createAdminClient()
 
   const { data: appointment } = await admin

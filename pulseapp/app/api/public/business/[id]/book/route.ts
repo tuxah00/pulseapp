@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { isValidUUID } from '@/lib/utils/validate'
 
 const supabase = createAdminClient()
 
@@ -15,6 +16,10 @@ export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  if (!isValidUUID(params.id)) {
+    return NextResponse.json({ error: 'Geçersiz istek' }, { status: 400 })
+  }
+
   const body = await req.json()
   const { name, phone, serviceId, staffId, date, startTime, notes } = body
 

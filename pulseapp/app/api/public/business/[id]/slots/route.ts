@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { WorkingHours } from '@/types'
+import { isValidUUID } from '@/lib/utils/validate'
 
 const supabase = createAdminClient()
 
@@ -43,6 +44,10 @@ export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  if (!isValidUUID(params.id)) {
+    return NextResponse.json({ error: 'Geçersiz istek' }, { status: 400 })
+  }
+
   const { searchParams } = new URL(req.url)
   const date = searchParams.get('date')
   const durationStr = searchParams.get('duration')
