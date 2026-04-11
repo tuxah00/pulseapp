@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { parsePaginationParams } from '@/lib/api/validate'
 
 export async function GET(req: NextRequest) {
   try {
@@ -16,21 +17,19 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url)
     const status = searchParams.get('status')
-    const page = parseInt(searchParams.get('page') || '0', 10)
-    const pageSize = Math.min(parseInt(searchParams.get('pageSize') || '50', 10), 100)
+    const { page, pageSize, from, to } = parsePaginationParams(searchParams)
 
     let query = supabase
       .from('orders')
       .select('*', { count: 'exact' })
       .eq('business_id', staff.business_id)
       .order('created_at', { ascending: false })
-      .range(page * pageSize, (page + 1) * pageSize - 1)
 
     if (status && status !== 'all') {
       query = query.eq('status', status)
     }
 
-    const { data, error, count } = await query
+    const { data, error, count } = await query.range(from, to)
     if (error) throw error
 
     return NextResponse.json({ orders: data || [], total: count || 0 })

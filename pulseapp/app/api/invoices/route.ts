@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/api/with-permission'
-import { validateBody } from '@/lib/api/validate'
+import { validateBody, parsePaginationParams } from '@/lib/api/validate'
 import { invoiceCreateSchema, invoicePatchSchema } from '@/lib/schemas'
 import type { InvoiceItem } from '@/types'
 
@@ -13,8 +13,8 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url)
   const status = searchParams.get('status')
-  const from = searchParams.get('from')
-  const to = searchParams.get('to')
+  const fromDate = searchParams.get('from')
+  const toDate = searchParams.get('to')
   const customerId = searchParams.get('customer_id')
   const paymentMethod = searchParams.get('payment_method')
   const paymentType = searchParams.get('payment_type')
@@ -22,8 +22,7 @@ export async function GET(req: NextRequest) {
   const amountMax = searchParams.get('amount_max')
   const sortBy = searchParams.get('sort_by') || 'created_at'
   const sortOrder = searchParams.get('sort_order') || 'desc'
-  const page = parseInt(searchParams.get('page') || '0', 10)
-  const pageSize = Math.min(parseInt(searchParams.get('pageSize') || '50', 10), 100)
+  const { page, pageSize, from, to } = parsePaginationParams(searchParams)
 
   const showDeleted = searchParams.get('showDeleted') === 'true'
 
@@ -40,8 +39,8 @@ export async function GET(req: NextRequest) {
   }
 
   if (!showDeleted && status && status !== 'all') query = query.eq('status', status)
-  if (from) query = query.gte('created_at', from)
-  if (to) query = query.lte('created_at', to + 'T23:59:59Z')
+  if (fromDate) query = query.gte('created_at', fromDate)
+  if (toDate) query = query.lte('created_at', toDate + 'T23:59:59Z')
   if (customerId) query = query.eq('customer_id', customerId)
   if (paymentMethod) query = query.eq('payment_method', paymentMethod)
   if (paymentType) query = query.eq('payment_type', paymentType)
@@ -52,7 +51,7 @@ export async function GET(req: NextRequest) {
   const validSortFields = ['created_at', 'total', 'due_date', 'paid_amount']
   const field = validSortFields.includes(sortBy) ? sortBy : 'created_at'
   query = query.order(field, { ascending })
-    .range(page * pageSize, (page + 1) * pageSize - 1)
+    .range(from, to)
 
   const { data, error, count } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

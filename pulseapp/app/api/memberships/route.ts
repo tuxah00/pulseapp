@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { validateBody } from '@/lib/api/validate'
+import { validateBody, parsePaginationParams } from '@/lib/api/validate'
 import { membershipCreateSchema, membershipPatchSchema } from '@/lib/schemas'
 
 export async function GET(req: NextRequest) {
@@ -9,8 +9,7 @@ export async function GET(req: NextRequest) {
   const businessId = searchParams.get('businessId')
   const status = searchParams.get('status') // active | expired | frozen | cancelled | all
   const search = searchParams.get('search') || ''
-  const page = parseInt(searchParams.get('page') || '0', 10)
-  const pageSize = Math.min(parseInt(searchParams.get('pageSize') || '50', 10), 100)
+  const { page, pageSize, from, to } = parsePaginationParams(searchParams)
 
   if (!businessId) return NextResponse.json({ error: 'businessId required' }, { status: 400 })
 
@@ -23,7 +22,7 @@ export async function GET(req: NextRequest) {
   if (status && status !== 'all') query = query.eq('status', status)
   if (search) query = query.ilike('customer_name', `%${search}%`)
 
-  const { data, count, error } = await query.range(page * pageSize, (page + 1) * pageSize - 1)
+  const { data, count, error } = await query.range(from, to)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ memberships: data, total: count || 0 })
 }
