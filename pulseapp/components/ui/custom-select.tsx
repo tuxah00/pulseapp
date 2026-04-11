@@ -87,7 +87,7 @@ export function CustomSelect({
 
       {/* Dropdown panel */}
       {open && (
-        <div className="absolute left-0 right-0 top-full mt-1 z-[70] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xl rounded-xl overflow-hidden modal-content">
+        <div className="absolute left-0 right-0 top-full mt-1 z-[200] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xl rounded-xl overflow-hidden modal-content">
           <div className="max-h-52 overflow-y-auto py-1">
             {/* Placeholder / "Tümü" seçeneği */}
             {placeholder !== undefined && (
