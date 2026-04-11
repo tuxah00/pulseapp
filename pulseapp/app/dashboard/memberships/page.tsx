@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { Portal } from '@/components/ui/portal'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { getCustomerLabelSingular } from '@/lib/config/sector-modules'
 import { useDebounce } from '@/lib/hooks/use-debounce'
@@ -472,7 +473,8 @@ export default function MembershipsPage() {
 
       {/* Modal */}
       {showModal && (
-        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
+        <Portal>
+        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
           <div className={`modal-content card w-full max-w-lg max-h-[90vh] overflow-y-auto dark:bg-gray-900 ${isClosingModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -602,6 +604,7 @@ export default function MembershipsPage() {
             </form>
           </div>
         </div>
+        </Portal>
       )}
     </div>
   )

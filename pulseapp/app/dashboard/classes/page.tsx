@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { Portal } from '@/components/ui/portal'
 import { useRouter } from 'next/navigation'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useConfirm } from '@/lib/hooks/use-confirm'
@@ -362,7 +363,8 @@ export default function ClassesPage() {
 
       {/* Modal */}
       {showModal && (
-        <div className={`fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4 modal-overlay ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
+        <Portal>
+        <div className={`fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4 modal-overlay ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
           <div className={`bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-md p-6 modal-content ${isClosingModal ? 'closing' : ''}`}>
             <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
               {editingClass ? 'Sınıfı Düzenle' : 'Yeni Sınıf Ekle'}
@@ -471,6 +473,7 @@ export default function ClassesPage() {
             </div>
           </div>
         </div>
+        </Portal>
       )}
     </div>
   )

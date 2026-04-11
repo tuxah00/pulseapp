@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { Portal } from '@/components/ui/portal'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useConfirm } from '@/lib/hooks/use-confirm'
@@ -800,7 +801,8 @@ export default function StoklarPage() {
 
       {/* Ürün Ekle / Düzenleme Modal */}
       {showModal && (
-        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
+        <Portal>
+        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
           <div className={`modal-content card w-full max-w-md max-h-[90vh] overflow-y-auto dark:bg-gray-900 ${isClosingModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -912,11 +914,13 @@ export default function StoklarPage() {
             </form>
           </div>
         </div>
+        </Portal>
       )}
 
       {/* Tedarikçi Ekle / Düzenle Modal */}
       {showSupplierModal && (
-        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 ${isClosingSupplierModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingSupplierModal) { setShowSupplierModal(false); setIsClosingSupplierModal(false) } }}>
+        <Portal>
+        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 ${isClosingSupplierModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingSupplierModal) { setShowSupplierModal(false); setIsClosingSupplierModal(false) } }}>
           <div className={`modal-content card w-full max-w-md ${isClosingSupplierModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -953,6 +957,7 @@ export default function StoklarPage() {
             </form>
           </div>
         </div>
+        </Portal>
       )}
     </div>
   )
