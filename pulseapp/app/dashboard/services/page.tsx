@@ -30,7 +30,6 @@ export default function ServicesPage() {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const [contraindications, setContraindications] = useState<any[]>([])
   const [pendingContraindications, setPendingContraindications] = useState<{allergen: string, risk_level: string}[]>([])
-  const [ciRisk, setCiRisk] = useState('high')
 
   // Form state
   const [name, setName] = useState('')
@@ -78,7 +77,6 @@ export default function ServicesPage() {
     setError(null)
     setContraindications([])
     setPendingContraindications([])
-    setCiRisk('high')
     setShowModal(true)
   }
 
@@ -400,12 +398,7 @@ export default function ServicesPage() {
                 {/* Mevcut kontrendikasyonlar (düzenleme modu) */}
                 {editingService && contraindications.map(c => (
                   <div key={c.id} className="flex items-center justify-between p-2 mb-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/30">
-                    <div>
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{c.allergen}</span>
-                      <span className={`ml-2 text-xs badge ${c.risk_level === 'high' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : c.risk_level === 'medium' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'}`}>
-                        {c.risk_level === 'high' ? 'Yüksek' : c.risk_level === 'medium' ? 'Orta' : 'Düşük'}
-                      </span>
-                    </div>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{c.allergen}</span>
                     <button type="button" onClick={async () => {
                       await supabase.from('service_contraindications').delete().eq('id', c.id)
                       fetchContraindications(editingService.id)
@@ -418,12 +411,7 @@ export default function ServicesPage() {
                 {/* Bekleyen kontrendikasyonlar (yeni hizmet modu) */}
                 {!editingService && pendingContraindications.map((c, i) => (
                   <div key={i} className="flex items-center justify-between p-2 mb-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/30">
-                    <div>
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{c.allergen}</span>
-                      <span className={`ml-2 text-xs badge ${c.risk_level === 'high' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : c.risk_level === 'medium' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'}`}>
-                        {c.risk_level === 'high' ? 'Yüksek' : c.risk_level === 'medium' ? 'Orta' : 'Düşük'}
-                      </span>
-                    </div>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{c.allergen}</span>
                     <button type="button" onClick={() => setPendingContraindications(prev => prev.filter((_, idx) => idx !== i))} className="text-gray-300 hover:text-red-500 dark:text-gray-600 dark:hover:text-red-400">
                       <X className="h-3.5 w-3.5" />
                     </button>
@@ -431,20 +419,8 @@ export default function ServicesPage() {
                 ))}
 
                 {/* Yeni ekle */}
-                <div className="flex items-end gap-2 mt-2">
+                <div className="flex items-center gap-2 mt-2">
                   <input placeholder="Alerjen" id="ci-allergen" className="input text-sm flex-1 min-w-0" />
-                  <div className="w-28 flex-shrink-0">
-                    <CustomSelect
-                      value={ciRisk}
-                      onChange={setCiRisk}
-                      dropUp
-                      options={[
-                        { value: 'low', label: 'Düşük' },
-                        { value: 'medium', label: 'Orta' },
-                        { value: 'high', label: 'Yüksek' },
-                      ]}
-                    />
-                  </div>
                   <button type="button" onClick={async () => {
                     const allergen = (document.getElementById('ci-allergen') as HTMLInputElement).value.trim()
                     if (!allergen) return
@@ -453,11 +429,11 @@ export default function ServicesPage() {
                         business_id: businessId,
                         service_id: editingService.id,
                         allergen,
-                        risk_level: ciRisk,
+                        risk_level: 'high',
                       })
                       fetchContraindications(editingService.id)
                     } else {
-                      setPendingContraindications(prev => [...prev, { allergen, risk_level: ciRisk }])
+                      setPendingContraindications(prev => [...prev, { allergen, risk_level: 'high' }])
                     }
                     ;(document.getElementById('ci-allergen') as HTMLInputElement).value = ''
                   }} className="btn-secondary text-sm px-3 flex-shrink-0">
