@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const auth = await requirePermission(req, 'invoices')
   if (!auth.ok) return auth.response
-  const { businessId, staffId } = auth.ctx
+  const { businessId, staffId, userId } = auth.ctx
 
   const result = await validateBody(req, invoiceCreateSchema)
   if (!result.ok) return result.response
@@ -78,16 +78,22 @@ export async function POST(req: NextRequest) {
   const tax_amount = Math.round(subtotal * tax_rate) / 100
   const total = subtotal + tax_amount
 
-  // Fatura numarası oluştur: INV-YYYY-XXXX
+  // Fatura numarası oluştur: INV-YYYY-XXXX (yıl bazlı sıralı, silinen dahil)
   const supabase = createServerSupabaseClient()
   const year = new Date().getFullYear()
-  const { count } = await supabase
+  const { data: lastInvoice } = await supabase
     .from('invoices')
-    .select('*', { count: 'exact', head: true })
+    .select('invoice_number')
     .eq('business_id', business_id)
-    .is('deleted_at', null)
+    .like('invoice_number', `INV-${year}-%`)
+    .order('invoice_number', { ascending: false })
+    .limit(1)
+    .single()
 
-  const invoiceNumber = `INV-${year}-${String((count || 0) + 1).padStart(4, '0')}`
+  const lastSeq = lastInvoice
+    ? parseInt(lastInvoice.invoice_number.split('-')[2]) || 0
+    : 0
+  const invoiceNumber = `INV-${year}-${String(lastSeq + 1).padStart(4, '0')}`
 
   // Kapora varsa paid_amount ve status belirle
   let initialPaidAmount = 0
@@ -137,6 +143,36 @@ export async function POST(req: NextRequest) {
     })
   }
 
+  // Kaparo ile tam ödeme yapıldıysa stok düş
+  if (initialStatus === 'paid' && invoice?.items && Array.isArray(invoice.items)) {
+    for (const item of invoice.items as InvoiceItem[]) {
+      if (item.product_id && item.type === 'product') {
+        const { data: product } = await supabase
+          .from('products')
+          .select('stock_quantity')
+          .eq('id', item.product_id)
+          .single()
+
+        if (product) {
+          const newQty = Math.max(0, (product.stock_quantity || 0) - item.quantity)
+          await supabase
+            .from('products')
+            .update({ stock_quantity: newQty, updated_at: new Date().toISOString() })
+            .eq('id', item.product_id)
+
+          await supabase.from('stock_movements').insert({
+            business_id,
+            product_id: item.product_id,
+            type: 'out',
+            quantity: item.quantity,
+            notes: `Fatura ${invoiceNumber} ile satış`,
+            created_by: userId,
+          })
+        }
+      }
+    }
+  }
+
   return NextResponse.json({ invoice })
 }
 
@@ -181,12 +217,12 @@ export async function PATCH(req: NextRequest) {
   if (body.due_date !== undefined) updateObj.due_date = body.due_date
   if (body.paid_amount !== undefined) updateObj.paid_amount = body.paid_amount
 
+  // Mevcut faturayı al (güncelleme öncesi değerler için)
+  const { data: existing } = await supabase.from('invoices').select('total, paid_amount, status').eq('id', id).single()
+
   // Tam ödeme durumunda paid_amount'u total'e eşitle
-  if (body.status === 'paid') {
-    const { data: existing } = await supabase.from('invoices').select('total').eq('id', id).single()
-    if (existing) {
-      updateObj.paid_amount = existing.total
-    }
+  if (body.status === 'paid' && existing) {
+    updateObj.paid_amount = existing.total
   }
 
   const { data: invoice, error } = await supabase
@@ -198,8 +234,8 @@ export async function PATCH(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Fatura ödendi → ürün kalemlerini stoktan düş
-  if (body.status === 'paid' && invoice?.items && Array.isArray(invoice.items)) {
+  // Fatura ödendi → ürün kalemlerini stoktan düş (sadece önceden ödenmemişse)
+  if (body.status === 'paid' && existing?.status !== 'paid' && invoice?.items && Array.isArray(invoice.items)) {
     for (const item of invoice.items as InvoiceItem[]) {
       if (item.product_id && item.type === 'product') {
         const { data: product } = await supabase
@@ -227,12 +263,14 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
-    // Tam ödeme kaydı oluştur (eğer body'de payment_method varsa)
-    if (body.payment_method && invoice) {
+    // Tam ödeme kaydı oluştur (kalan tutar > 0 ise)
+    const previousPaid = parseFloat(String(existing?.paid_amount || 0))
+    const remainingAmount = (existing?.total || 0) - previousPaid
+    if (body.payment_method && invoice && remainingAmount > 0) {
       await supabase.from('invoice_payments').insert({
         business_id: invoice.business_id,
         invoice_id: invoice.id,
-        amount: invoice.total - (invoice.paid_amount || 0) + (invoice.total || 0), // kalan tutar
+        amount: remainingAmount,
         method: body.payment_method,
         payment_type: 'payment',
         staff_id: body.staff_id || null,

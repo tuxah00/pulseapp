@@ -14,6 +14,7 @@ import { useConfirm } from '@/lib/hooks/use-confirm'
 import { SEGMENT_LABELS } from '@/types'
 import { exportToCSV } from '@/lib/utils/export'
 import type { Expense, Income } from '@/types'
+import { expandRecurring } from '@/lib/utils/recurring'
 import type {
   AppointmentRow,
   CustomerRow,
@@ -39,7 +40,7 @@ type StaffSummary = Pick<StaffMemberRow, 'id' | 'name'>
 
 type AnalyticsInvoice = Pick<
   InvoiceRow,
-  'id' | 'total' | 'appointment_id' | 'paid_at' | 'created_at'
+  'id' | 'total' | 'paid_amount' | 'status' | 'appointment_id' | 'paid_at' | 'created_at'
 >
 
 function getPeriodDates(period: 'week' | 'month' | 'year', offset = 0): { start: string; end: string } {
@@ -126,16 +127,16 @@ export default function AnalyticsPage() {
 
     const [aptRes, prevAptRes, custRes, revRes, svcRes, staffRes, invRes] = await Promise.all([
       supabase.from('appointments').select('*, services(name, price)')
-        .eq('business_id', businessId).gte('appointment_date', start).lte('appointment_date', end).order('appointment_date'),
+        .eq('business_id', businessId).is('deleted_at', null).gte('appointment_date', start).lte('appointment_date', end).order('appointment_date'),
       supabase.from('appointments').select('status, services(price)')
-        .eq('business_id', businessId).gte('appointment_date', prevStart).lte('appointment_date', prevEnd),
-      supabase.from('customers').select('*').eq('business_id', businessId).eq('is_active', true),
+        .eq('business_id', businessId).is('deleted_at', null).gte('appointment_date', prevStart).lte('appointment_date', prevEnd),
+      supabase.from('customers').select('id, name, segment, total_revenue').eq('business_id', businessId).eq('is_active', true),
       supabase.from('reviews').select('*').eq('business_id', businessId).gte('created_at', start + 'T00:00:00'),
       supabase.from('services').select('*').eq('business_id', businessId).eq('is_active', true),
       supabase.from('staff_members').select('id, name').eq('business_id', businessId).eq('is_active', true),
-      // Ödenen faturalar (dönem filtresine göre)
-      supabase.from('invoices').select('id, total, appointment_id, paid_at, created_at')
-        .eq('business_id', businessId).eq('status', 'paid')
+      // Ödenen + kısmi ödenen faturalar (dönem filtresine göre)
+      supabase.from('invoices').select('id, total, paid_amount, status, appointment_id, paid_at, created_at')
+        .eq('business_id', businessId).in('status', ['paid', 'partial']).is('deleted_at', null)
         .gte('paid_at', start + 'T00:00:00').lte('paid_at', end + 'T23:59:59'),
     ])
 
@@ -170,11 +171,11 @@ export default function AnalyticsPage() {
   }, [businessId, period])
 
   useEffect(() => {
-    if (activeTab === 'expenses' && businessId) {
+    if (businessId) {
       fetchExpenses()
       fetchIncome()
     }
-  }, [activeTab, fetchExpenses, fetchIncome, businessId])
+  }, [fetchExpenses, fetchIncome, businessId])
 
   async function handleAddExpense(e: React.FormEvent) {
     e.preventDefault()
@@ -288,9 +289,13 @@ export default function AnalyticsPage() {
   const completedAptIds = new Set(completed.map(a => a.id))
   const invoiceOnlyRevenue = paidInvoices
     .filter(inv => !inv.appointment_id || !completedAptIds.has(inv.appointment_id))
-    .reduce((s, inv) => s + (inv.total || 0), 0)
-  const manualIncome = incomes.reduce((s, i) => s + i.amount, 0)
-  const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0)
+    .reduce((s, inv) => s + (inv.paid_amount || inv.total || 0), 0)
+  // Tekrarlayan gelir/gider açılımı (sentetik kayıtlar üretir)
+  const { start: periodStart, end: periodEnd } = getPeriodDates(period, 0)
+  const expandedExpenses = expandRecurring(expenses, periodStart, periodEnd)
+  const expandedIncomes = expandRecurring(incomes, periodStart, periodEnd)
+  const manualIncome = expandedIncomes.reduce((s, i) => s + i.amount, 0)
+  const totalExpenses = expandedExpenses.reduce((s, e) => s + e.amount, 0)
   const totalRevenue = appointmentRevenue + invoiceOnlyRevenue + manualIncome
 
   const completionRate = total > 0 ? Math.round((completed.length / total) * 100) : 0
@@ -364,15 +369,17 @@ export default function AnalyticsPage() {
       })
   const maxTrend = Math.max(...trendDays.map(d => d.count), 1)
 
-  // Gelir trendi
+  // Gelir trendi (çift sayımı önle: completedAptIds filtresi uygulanır)
+  const nonDuplicateInvoices = paidInvoices.filter(inv => !inv.appointment_id || !completedAptIds.has(inv.appointment_id))
   const trendRevenue = period === 'year'
     ? Array.from({ length: 12 }, (_, i) => {
         const d = new Date(startDate); d.setMonth(d.getMonth() + i)
         const label = d.toLocaleDateString('tr-TR', { month: 'short' })
         const ym = d.toISOString().slice(0, 7)
         const rev = completed.filter(a => a.appointment_date?.startsWith(ym)).reduce((s, a) => s + (a.services?.price || 0), 0)
-        const invRev = paidInvoices.filter(inv => inv.paid_at?.startsWith(ym)).reduce((s, inv) => s + (inv.total || 0), 0)
-        return { label, revenue: rev + invRev }
+        const invRev = nonDuplicateInvoices.filter(inv => inv.paid_at?.startsWith(ym)).reduce((s, inv) => s + (inv.paid_amount || inv.total || 0), 0)
+        const incRev = expandedIncomes.filter(inc => inc.date.startsWith(ym)).reduce((s, inc) => s + inc.amount, 0)
+        return { label, revenue: rev + invRev + incRev }
       })
     : Array.from({ length: dayCount }, (_, i) => {
         const d = new Date(startDate); d.setDate(d.getDate() + i)
@@ -381,10 +388,23 @@ export default function AnalyticsPage() {
           ? ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'][d.getDay() === 0 ? 6 : d.getDay() - 1]
           : String(d.getDate())
         const rev = completed.filter(a => a.appointment_date === dateStr).reduce((s, a) => s + (a.services?.price || 0), 0)
-        const invRev = paidInvoices.filter(inv => inv.paid_at?.split('T')[0] === dateStr).reduce((s, inv) => s + (inv.total || 0), 0)
-        return { label, revenue: rev + invRev }
+        const invRev = nonDuplicateInvoices.filter(inv => inv.paid_at?.split('T')[0] === dateStr).reduce((s, inv) => s + (inv.paid_amount || inv.total || 0), 0)
+        const incRev = expandedIncomes.filter(inc => inc.date === dateStr).reduce((s, inc) => s + inc.amount, 0)
+        return { label, revenue: rev + invRev + incRev }
       })
-  const maxRevenue = Math.max(...trendRevenue.map(d => d.revenue), 1)
+  // Gider trendi (açılmış tekrarlayan giderlerle)
+  const trendExpenses = period === 'year'
+    ? Array.from({ length: 12 }, (_, i) => {
+        const d = new Date(startDate); d.setMonth(d.getMonth() + i)
+        const ym = d.toISOString().slice(0, 7)
+        return expandedExpenses.filter(e => e.date.startsWith(ym)).reduce((s, e) => s + e.amount, 0)
+      })
+    : Array.from({ length: dayCount }, (_, i) => {
+        const d = new Date(startDate); d.setDate(d.getDate() + i)
+        const dateStr = d.toISOString().split('T')[0]
+        return expandedExpenses.filter(e => e.date === dateStr).reduce((s, e) => s + e.amount, 0)
+      })
+  const maxRevenue = Math.max(...trendRevenue.map(d => d.revenue), ...trendExpenses, 1)
 
   // Saat dağılımı
   const hourDist = Array.from({ length: 14 }, (_, i) => {
@@ -443,11 +463,13 @@ export default function AnalyticsPage() {
       </div>
 
       {/* KPI Kartları (dönem karşılaştırmalı) */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard icon={<DollarSign className="h-5 w-5" />} label={invoiceOnlyRevenue > 0 ? 'Toplam Gelir' : 'Gelir'}
           value={formatCurrency(totalRevenue)} trend={revenueTrend} color="green" currency />
-        <KPICard icon={<Users className="h-5 w-5" />} label={`Ort. ${customerLabel} Değeri`}
-          value={formatCurrency(avgCLV)} color="purple" currency />
+        <KPICard icon={<TrendingDown className="h-5 w-5" />} label="Toplam Gider"
+          value={formatCurrency(totalExpenses)} color="amber" currency />
+        <KPICard icon={<Wallet className="h-5 w-5" />} label="Net Kâr"
+          value={formatCurrency(totalRevenue - totalExpenses)} color={(totalRevenue - totalExpenses) >= 0 ? 'blue' : 'red'} currency />
         <KPICard icon={<UserCheck className="h-5 w-5" />} label="Tamamlanan"
           value={completed.length} color="blue" />
       </div>
@@ -487,14 +509,20 @@ export default function AnalyticsPage() {
             <KPICard icon={<AlertTriangle className="h-5 w-5" />} label={`Risk ${customerLabelPlural}`}
               value={riskCustomers.length} color="amber" />
           </div>
-          {/* Gelir Trendi */}
+          {/* Gelir-Gider Trendi */}
           <div className="card p-4">
-            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
-              <Activity className="h-4 w-4" /> Gelir Trendi — {periodLabel}
-            </h3>
-            {trendRevenue.every(d => d.revenue === 0) ? (
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                <Activity className="h-4 w-4" /> Gelir-Gider Trendi — {periodLabel}
+              </h3>
+              <div className="flex items-center gap-3 text-[10px] text-gray-500">
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500" /> Gelir</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400" /> Gider</span>
+              </div>
+            </div>
+            {trendRevenue.every(d => d.revenue === 0) && trendExpenses.every(e => e === 0) ? (
               <div className="flex items-center justify-center h-44 text-sm text-gray-400">
-                Bu dönem için gelir verisi bulunmuyor
+                Bu dönem için veri bulunmuyor
               </div>
             ) : (
               <div className="relative">
@@ -510,19 +538,24 @@ export default function AnalyticsPage() {
                     period === 'week' && 'justify-center gap-3'
                   )}>
                     {trendRevenue.map(({ label, revenue }, i) => {
-                      const pct = (revenue / maxRevenue) * 100
-                      const opacity = pct > 70 ? '' : pct > 40 ? 'opacity-80' : 'opacity-60'
+                      const expense = trendExpenses[i] || 0
+                      const revPct = (revenue / maxRevenue) * 100
+                      const expPct = (expense / maxRevenue) * 100
                       return (
                         <div key={i} className={cn('flex-1 min-w-[18px] flex flex-col items-center h-full group relative', period === 'week' && 'max-w-[40px]')}>
                           {/* Hover tooltip */}
-                          {revenue > 0 && (
+                          {(revenue > 0 || expense > 0) && (
                             <div className="absolute -top-8 left-1/2 -translate-x-1/2 hidden group-hover:block bg-gray-900 text-white text-[10px] px-2 py-1 rounded shadow-lg whitespace-nowrap z-10">
-                              {new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 }).format(revenue)}
+                              {revenue > 0 && <span className="text-emerald-300">{new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 }).format(revenue)}</span>}
+                              {revenue > 0 && expense > 0 && ' / '}
+                              {expense > 0 && <span className="text-red-300">{new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 }).format(expense)}</span>}
                             </div>
                           )}
-                          <div className="flex-1 w-full flex items-end">
-                            <div className={cn('w-full bg-pulse-400 dark:bg-pulse-900 rounded-t-sm transition-all hover:bg-pulse-900 dark:hover:bg-pulse-400', opacity)}
-                              style={{ height: `${pct}%`, minHeight: revenue > 0 ? '4px' : '0' }} />
+                          <div className="flex-1 w-full flex items-end gap-px">
+                            <div className="flex-1 bg-emerald-400 dark:bg-emerald-600 rounded-t-sm transition-all"
+                              style={{ height: `${revPct}%`, minHeight: revenue > 0 ? '4px' : '0' }} />
+                            <div className="flex-1 bg-red-300 dark:bg-red-500 rounded-t-sm transition-all"
+                              style={{ height: `${expPct}%`, minHeight: expense > 0 ? '4px' : '0' }} />
                           </div>
                           <span className="text-[9px] text-gray-400 truncate w-full text-center flex-shrink-0">{label}</span>
                         </div>
@@ -1113,6 +1146,7 @@ function KPICard({ icon, label, value, trend, color, currency }: {
     green:  { icon: 'bg-green-500/10 dark:bg-green-500/20 text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-950/40', gradient: 'from-emerald-500 to-teal-600' },
     purple: { icon: 'bg-purple-500/10 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-950/40', gradient: 'from-purple-500 to-violet-600' },
     amber:  { icon: 'bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400',  bg: 'bg-amber-50 dark:bg-amber-950/40',  gradient: 'from-amber-500 to-orange-600' },
+    red:    { icon: 'bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400',        bg: 'bg-red-50 dark:bg-red-950/40',     gradient: 'from-red-500 to-rose-600' },
   }
   const cfg = colorMap[color] || colorMap.blue
   return (
