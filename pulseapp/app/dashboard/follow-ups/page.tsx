@@ -7,8 +7,8 @@ import { toast } from 'sonner'
 import {
   Plus, ClipboardCheck, Search, Loader2, Calendar, Send, Ban, Clock, CheckCircle, XCircle, X
 } from 'lucide-react'
-import type { Customer } from '@/types'
 import { CustomSelect } from '@/components/ui/custom-select'
+import { CustomerSearchSelect } from '@/components/ui/customer-search-select'
 import { getCustomerLabelSingular } from '@/lib/config/sector-modules'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import { Portal } from '@/components/ui/portal'
@@ -51,7 +51,6 @@ export default function FollowUpsPage() {
   const supabase = createClient()
 
   const [followUps, setFollowUps] = useState<FollowUp[]>([])
-  const [customers, setCustomers] = useState<Customer[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
@@ -84,21 +83,7 @@ export default function FollowUpsPage() {
     } catch { /* ignore */ } finally { setLoading(false) }
   }, [businessId, statusFilter])
 
-  const fetchCustomers = useCallback(async () => {
-    if (!businessId) return
-    try {
-      const { data } = await supabase
-        .from('customers')
-        .select('id, name, phone')
-        .eq('business_id', businessId)
-        .eq('is_active', true)
-        .order('name')
-      setCustomers((data as Customer[]) || [])
-    } catch { /* ignore */ }
-  }, [businessId])
-
   useEffect(() => { fetchFollowUps() }, [fetchFollowUps])
-  useEffect(() => { fetchCustomers() }, [fetchCustomers])
 
   // Stats
   const totalCount = followUps.length
@@ -310,11 +295,11 @@ export default function FollowUpsPage() {
             <div className="space-y-4">
               <div>
                 <label className="label label-required">{customerLabel}</label>
-                <CustomSelect
-                  options={customers.map(c => ({ value: c.id, label: `${c.name}${c.phone ? ` — ${c.phone}` : ''}` }))}
+                <CustomerSearchSelect
                   value={formCustomerId}
                   onChange={v => setFormCustomerId(v)}
-                  placeholder={`${customerLabel} seçin`}
+                  businessId={businessId!}
+                  placeholder={`${customerLabel} seçin...`}
                 />
               </div>
               <div>
