@@ -16,6 +16,7 @@ import {
   type Room,
 } from '@/types'
 import { formatCurrency, cn } from '@/lib/utils'
+import { Portal } from '@/components/ui/portal'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { logAudit } from '@/lib/utils/audit'
@@ -917,8 +918,9 @@ export default function BusinessSettingsPage() {
 
       {/* Oda Ekle/Düzenle Modal */}
       {showRoomModal && (
+        <Portal>
         <div
-          className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 ${isClosingRoomModal ? 'closing' : ''}`}
+          className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 ${isClosingRoomModal ? 'closing' : ''}`}
           onAnimationEnd={() => {
             if (isClosingRoomModal) {
               setShowRoomModal(false)
@@ -1009,6 +1011,7 @@ export default function BusinessSettingsPage() {
             </div>
           </div>
         </div>
+        </Portal>
       )}
 
       {/* Abonelik */}

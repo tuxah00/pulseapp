@@ -6,6 +6,7 @@ import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { Plus, Pencil, Trash2, Loader2, Banknote, LayoutList, LayoutGrid, ArrowUpDown, X } from 'lucide-react'
 import { formatCurrency, cn } from '@/lib/utils'
+import { Portal } from '@/components/ui/portal'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
 import type { Service } from '@/types'
 import { logAudit } from '@/lib/utils/audit'
@@ -307,7 +308,8 @@ export default function ServicesPage() {
 
       {/* Modal */}
       {showModal && (
-        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
+        <Portal>
+        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
           <div className={`modal-content card w-full max-w-md ${isClosingModal ? 'closing' : ''}`}>
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
               {editingService ? 'Hizmeti Düzenle' : 'Yeni Hizmet Ekle'}
@@ -445,6 +447,7 @@ export default function ServicesPage() {
             </form>
           </div>
         </div>
+        </Portal>
       )}
     </div>
   )
