@@ -546,9 +546,9 @@ export default function AnalyticsPage() {
                           {/* Hover tooltip */}
                           {(revenue > 0 || expense > 0) && (
                             <div className="absolute -top-8 left-1/2 -translate-x-1/2 hidden group-hover:block bg-gray-900 text-white text-[10px] px-2 py-1 rounded shadow-lg whitespace-nowrap z-10">
-                              {revenue > 0 && <span className="text-emerald-300">{new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 }).format(revenue)}</span>}
+                              {revenue > 0 && <span className="text-emerald-300">{formatCurrency(revenue)}</span>}
                               {revenue > 0 && expense > 0 && ' / '}
-                              {expense > 0 && <span className="text-red-300">{new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 }).format(expense)}</span>}
+                              {expense > 0 && <span className="text-red-300">{formatCurrency(expense)}</span>}
                             </div>
                           )}
                           <div className="flex-1 w-full flex items-end gap-px">

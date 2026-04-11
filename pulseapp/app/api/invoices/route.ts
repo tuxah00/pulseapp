@@ -4,6 +4,39 @@ import { requirePermission } from '@/lib/api/with-permission'
 import { validateBody, parsePaginationParams } from '@/lib/api/validate'
 import { invoiceCreateSchema, invoicePatchSchema } from '@/lib/schemas'
 import type { InvoiceItem } from '@/types'
+import type { SupabaseClient } from '@supabase/supabase-js'
+
+/** Fatura kalemlerindeki ürünleri stoktan düşer + stock_movements kaydı oluşturur */
+async function deductStock(
+  supabase: SupabaseClient,
+  items: InvoiceItem[],
+  ctx: { businessId: string; invoiceNumber: string; userId: string },
+) {
+  for (const item of items) {
+    if (!item.product_id || item.type !== 'product') continue
+    const { data: product } = await supabase
+      .from('products')
+      .select('stock_quantity')
+      .eq('id', item.product_id)
+      .single()
+    if (!product) continue
+
+    const newQty = Math.max(0, (product.stock_quantity || 0) - item.quantity)
+    await supabase
+      .from('products')
+      .update({ stock_quantity: newQty, updated_at: new Date().toISOString() })
+      .eq('id', item.product_id)
+
+    await supabase.from('stock_movements').insert({
+      business_id: ctx.businessId,
+      product_id: item.product_id,
+      type: 'out',
+      quantity: item.quantity,
+      notes: `Fatura ${ctx.invoiceNumber} ile satış`,
+      created_by: ctx.userId,
+    })
+  }
+}
 
 // GET: Fatura listesi (gelişmiş filtreler)
 export async function GET(req: NextRequest) {
@@ -75,7 +108,6 @@ export async function POST(req: NextRequest) {
   } = result.data
   const business_id = businessId
 
-  // Hesapla (indirim dahil)
   const subtotal = items.reduce((sum, item) => sum + item.total, 0)
   const discountValue = discount_type === 'percentage'
     ? Math.round(subtotal * (discountInput || 0)) / 100
@@ -157,32 +189,9 @@ export async function POST(req: NextRequest) {
 
   // Kaparo ile tam ödeme yapıldıysa stok düş
   if (initialStatus === 'paid' && invoice?.items && Array.isArray(invoice.items)) {
-    for (const item of invoice.items as InvoiceItem[]) {
-      if (item.product_id && item.type === 'product') {
-        const { data: product } = await supabase
-          .from('products')
-          .select('stock_quantity')
-          .eq('id', item.product_id)
-          .single()
-
-        if (product) {
-          const newQty = Math.max(0, (product.stock_quantity || 0) - item.quantity)
-          await supabase
-            .from('products')
-            .update({ stock_quantity: newQty, updated_at: new Date().toISOString() })
-            .eq('id', item.product_id)
-
-          await supabase.from('stock_movements').insert({
-            business_id,
-            product_id: item.product_id,
-            type: 'out',
-            quantity: item.quantity,
-            notes: `Fatura ${invoiceNumber} ile satış`,
-            created_by: userId,
-          })
-        }
-      }
-    }
+    await deductStock(supabase, invoice.items as InvoiceItem[], {
+      businessId: business_id, invoiceNumber, userId,
+    })
   }
 
   return NextResponse.json({ invoice })
@@ -248,32 +257,9 @@ export async function PATCH(req: NextRequest) {
 
   // Fatura ödendi → ürün kalemlerini stoktan düş (sadece önceden ödenmemişse)
   if (body.status === 'paid' && existing?.status !== 'paid' && invoice?.items && Array.isArray(invoice.items)) {
-    for (const item of invoice.items as InvoiceItem[]) {
-      if (item.product_id && item.type === 'product') {
-        const { data: product } = await supabase
-          .from('products')
-          .select('stock_quantity')
-          .eq('id', item.product_id)
-          .single()
-
-        if (product) {
-          const newQty = Math.max(0, (product.stock_quantity || 0) - item.quantity)
-          await supabase
-            .from('products')
-            .update({ stock_quantity: newQty, updated_at: new Date().toISOString() })
-            .eq('id', item.product_id)
-
-          await supabase.from('stock_movements').insert({
-            business_id: invoice.business_id,
-            product_id: item.product_id,
-            type: 'out',
-            quantity: item.quantity,
-            notes: `Fatura ${invoice.invoice_number} ile satış`,
-            created_by: userId,
-          })
-        }
-      }
-    }
+    await deductStock(supabase, invoice.items as InvoiceItem[], {
+      businessId: invoice.business_id, invoiceNumber: invoice.invoice_number, userId,
+    })
 
     // Tam ödeme kaydı oluştur (kalan tutar > 0 ise)
     const previousPaid = parseFloat(String(existing?.paid_amount || 0))
