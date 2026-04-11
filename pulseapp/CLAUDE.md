@@ -17,7 +17,7 @@ PulseApp, çok sektörlü SaaS işletme yönetim platformu. Next.js 14, Supabase
 ## Supabase Migration Kuralı
 - **Migration dosyası oluşturduktan sonra Supabase Management API ile otomatik olarak çalıştır**
 - Endpoint: `POST https://api.supabase.com/v1/projects/dtahmvtmwtqodgypvopn/database/query`
-- Auth: `Bearer sbp_4d4f274fcd822f54235d5e733a5f67641c5506fa`
+- Auth: `Bearer sbp_2a92d448c5b8a647fdc878bcdc3266675e2386c4`
 - Node.js ile her SQL statement'ı ayrı ayrı gönder (tek request'te birden fazla statement hata verebilir)
 - Başarılı response: HTTP 201, body `[]`
 - Migration çalıştırıldıktan sonra `CLAUDE.md` SQL Migration Gereksinimleri bölümüne ekle
@@ -308,11 +308,16 @@ CREATE INDEX IF NOT EXISTS idx_customers_birthday ON customers (birthday) WHERE 
 -- blocked_slots tablosu (randevu alınamayacak saatler), RLS, index'ler
 ```
 
-26. **Ödül şablonları & müşteri ödülleri** (`035_rewards.sql`): ⏳ Supabase SQL Editor'de çalıştırılmalı
+26. **Ödül şablonları & müşteri ödülleri** (`035_rewards.sql`): ✅ Uygulandı (2026-04-04, tablo manuel oluşturulmuş)
 ```sql
 -- rewards, customer_rewards tabloları, RLS, index'ler
 -- referrals.reward_type constraint güncelleme (gift eklendi)
 -- referrals.status constraint güncelleme (rewarded eklendi)
+```
+
+27-b. **Rewards type constraint düzeltmesi** (`036_fix_rewards_type_constraint.sql`): ✅ Uygulandı (2026-04-11)
+```sql
+-- rewards.type constraint'ine discount_amount eklendi (DB'de discount_fixed vardı, kod discount_amount kullanıyor)
 ```
 
 27. **Sektör enum genişletme** (yoga_pilates, spa_massage vb. için):
