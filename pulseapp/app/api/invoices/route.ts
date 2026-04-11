@@ -22,13 +22,15 @@ export async function GET(req: NextRequest) {
   const amountMax = searchParams.get('amount_max')
   const sortBy = searchParams.get('sort_by') || 'created_at'
   const sortOrder = searchParams.get('sort_order') || 'desc'
+  const page = parseInt(searchParams.get('page') || '0', 10)
+  const pageSize = Math.min(parseInt(searchParams.get('pageSize') || '50', 10), 100)
 
   const showDeleted = searchParams.get('showDeleted') === 'true'
 
   const supabase = createServerSupabaseClient()
   let query = supabase
     .from('invoices')
-    .select('*, customers(name, phone)')
+    .select('*, customers(name, phone)', { count: 'exact' })
     .eq('business_id', businessId)
 
   if (showDeleted) {
@@ -50,10 +52,11 @@ export async function GET(req: NextRequest) {
   const validSortFields = ['created_at', 'total', 'due_date', 'paid_amount']
   const field = validSortFields.includes(sortBy) ? sortBy : 'created_at'
   query = query.order(field, { ascending })
+    .range(page * pageSize, (page + 1) * pageSize - 1)
 
-  const { data, error } = await query
+  const { data, error, count } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ invoices: data })
+  return NextResponse.json({ invoices: data, total: count || 0 })
 }
 
 // POST: Yeni fatura oluştur

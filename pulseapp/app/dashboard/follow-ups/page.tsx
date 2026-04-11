@@ -50,10 +50,13 @@ export default function FollowUpsPage() {
   const customerLabel = getCustomerLabelSingular(sector ?? undefined)
   const supabase = createClient()
 
+  const PAGE_SIZE = 50
   const [followUps, setFollowUps] = useState<FollowUp[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [page, setPage] = useState(0)
+  const [totalCount, setTotalCount] = useState(0)
 
   // Create modal
   const [showCreate, setShowCreate] = useState(false)
@@ -70,7 +73,7 @@ export default function FollowUpsPage() {
     try {
       let query = supabase
         .from('follow_up_queue')
-        .select('*, customers(name, phone)')
+        .select('*, customers(name, phone)', { count: 'exact' })
         .eq('business_id', businessId)
         .order('scheduled_for', { ascending: true })
 
@@ -78,15 +81,20 @@ export default function FollowUpsPage() {
         query = query.eq('status', statusFilter)
       }
 
-      const { data } = await query
+      query = query.range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
+
+      const { data, count } = await query
       setFollowUps((data as FollowUp[]) || [])
+      if (count !== null) setTotalCount(count)
     } catch { /* ignore */ } finally { setLoading(false) }
-  }, [businessId, statusFilter])
+  }, [businessId, statusFilter, page])
 
   useEffect(() => { fetchFollowUps() }, [fetchFollowUps])
 
+  useEffect(() => { setPage(0) }, [statusFilter])
+
   // Stats
-  const totalCount = followUps.length
+  const statsTotal = totalCount
   const pendingCount = followUps.filter(f => f.status === 'pending').length
   const sentCount = followUps.filter(f => f.status === 'sent').length
 
@@ -163,7 +171,7 @@ export default function FollowUpsPage() {
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
         <div className="card p-4">
           <p className="text-xs text-gray-500 dark:text-gray-400">Toplam</p>
-          <p className="text-2xl font-bold text-gray-900 dark:text-white">{totalCount}</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white">{statsTotal}</p>
         </div>
         <div className="card p-4">
           <p className="text-xs text-gray-500 dark:text-gray-400">Bekleyen</p>
@@ -281,6 +289,23 @@ export default function FollowUpsPage() {
             )
           })}
         </AnimatedList>
+      )}
+
+      {/* Pagination */}
+      {totalCount > PAGE_SIZE && (
+        <div className="flex items-center justify-between pt-2">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, totalCount)} / {totalCount}
+          </p>
+          <div className="flex gap-2">
+            <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed">
+              Önceki
+            </button>
+            <button onClick={() => setPage(p => p + 1)} disabled={(page + 1) * PAGE_SIZE >= totalCount} className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed">
+              Sonraki
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Create Modal */}

@@ -70,6 +70,9 @@ export default function OrdersPage() {
   const { confirm } = useConfirm()
   const supabase = createClient()
 
+  const PAGE_SIZE = 50
+  const [page, setPage] = useState(0)
+  const [totalCount, setTotalCount] = useState(0)
   const [orders, setOrders] = useState<Order[]>([])
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
@@ -85,18 +88,23 @@ export default function OrdersPage() {
   const [orderNotes, setOrderNotes] = useState('')
   const [saving, setSaving] = useState(false)
 
+  useEffect(() => { setPage(0) }, [filter])
+
   const fetchOrders = useCallback(async () => {
     setLoading(true)
     try {
       const params = new URLSearchParams()
       if (filter !== 'all') params.set('status', filter)
+      params.set('page', String(page))
+      params.set('pageSize', String(PAGE_SIZE))
       const res = await fetch(`/api/orders?${params}`)
       const json = await res.json()
       setOrders(json.orders || [])
+      setTotalCount(json.total || 0)
     } finally {
       setLoading(false)
     }
-  }, [filter])
+  }, [filter, page])
 
   const fetchProducts = useCallback(async () => {
     if (!businessId) return
@@ -324,6 +332,23 @@ export default function OrdersPage() {
               </div>
             )
           })}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {totalCount > PAGE_SIZE && (
+        <div className="flex items-center justify-between pt-2">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, totalCount)} / {totalCount}
+          </p>
+          <div className="flex gap-2">
+            <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed">
+              Önceki
+            </button>
+            <button onClick={() => setPage(p => p + 1)} disabled={(page + 1) * PAGE_SIZE >= totalCount} className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed">
+              Sonraki
+            </button>
+          </div>
         </div>
       )}
 

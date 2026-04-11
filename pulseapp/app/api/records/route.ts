@@ -12,6 +12,8 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const type = searchParams.get('type')
   const search = searchParams.get('search') || ''
+  const page = parseInt(searchParams.get('page') || '0', 10)
+  const pageSize = Math.min(parseInt(searchParams.get('pageSize') || '50', 10), 100)
 
   if (!type) {
     return NextResponse.json({ error: 'type is required' }, { status: 400 })
@@ -20,18 +22,19 @@ export async function GET(req: NextRequest) {
   const admin = createAdminClient()
   let query = admin
     .from('business_records')
-    .select('*')
+    .select('*', { count: 'exact' })
     .eq('business_id', businessId)
     .eq('type', type)
     .order('created_at', { ascending: false })
+    .range(page * pageSize, (page + 1) * pageSize - 1)
 
   if (search) {
     query = query.ilike('title', `%${search}%`)
   }
 
-  const { data, error } = await query
+  const { data, count, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ records: data })
+  return NextResponse.json({ records: data, total: count || 0 })
 }
 
 export async function POST(req: NextRequest) {

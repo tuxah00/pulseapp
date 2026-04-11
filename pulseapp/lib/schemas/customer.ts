@@ -7,7 +7,7 @@ import { MSG } from './messages'
  * boşluk/parantez/tire/+ karakterlerini soyup 10 haneli "5XXXXXXXXX"
  * formatına normalize eder.
  */
-const phoneField = z
+export const phoneField = z
   .string()
   .trim()
   .min(1, MSG.REQUIRED)
