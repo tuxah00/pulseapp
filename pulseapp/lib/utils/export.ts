@@ -60,6 +60,11 @@ export function printInvoicePDF(params: {
   createdAt: string
   dueDate?: string | null
   notes?: string | null
+  discountAmount?: number
+  discountDescription?: string | null
+  customerTaxId?: string | null
+  customerTaxOffice?: string | null
+  customerCompanyName?: string | null
 }): void {
   const formatCurrency = (n: number) =>
     new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(n)
@@ -141,8 +146,11 @@ export function printInvoicePDF(params: {
         ${params.customerName ? `
         <div class="section">
           <div class="section-title">Müşteri</div>
-          <div class="section-value">${params.customerName}</div>
+          <div class="section-value">${params.customerCompanyName || params.customerName}</div>
+          ${params.customerCompanyName && params.customerName ? `<div style="color:#6b7280;margin-top:2px">${params.customerName}</div>` : ''}
           ${params.customerPhone ? `<div style="color:#6b7280;margin-top:2px">${params.customerPhone}</div>` : ''}
+          ${params.customerTaxId ? `<div style="color:#6b7280;margin-top:4px;font-size:11px">VKN/TCKN: ${params.customerTaxId}</div>` : ''}
+          ${params.customerTaxOffice ? `<div style="color:#6b7280;font-size:11px">Vergi Dairesi: ${params.customerTaxOffice}</div>` : ''}
         </div>
         ` : '<div></div>'}
         <div class="section" style="text-align:right">
@@ -176,6 +184,12 @@ export function printInvoicePDF(params: {
           <span>Ara Toplam</span>
           <span>${formatCurrency(params.subtotal)}</span>
         </div>
+        ${(params.discountAmount ?? 0) > 0 ? `
+        <div class="totals-row" style="color:#059669">
+          <span>İndirim${params.discountDescription ? ` (${params.discountDescription})` : ''}</span>
+          <span>-${formatCurrency(params.discountAmount!)}</span>
+        </div>
+        ` : ''}
         ${params.taxRate > 0 ? `
         <div class="totals-row">
           <span>KDV (%${params.taxRate})</span>

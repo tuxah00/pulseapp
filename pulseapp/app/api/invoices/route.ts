@@ -70,13 +70,19 @@ export async function POST(req: NextRequest) {
     customer_id, appointment_id, items, tax_rate, notes, due_date,
     staff_name, payment_type, installment_count, installment_frequency,
     deposit_amount, payment_method,
+    discount_amount: discountInput, discount_type, discount_description,
+    customer_tax_id, customer_tax_office, customer_company_name,
   } = result.data
   const business_id = businessId
 
-  // Hesapla
+  // Hesapla (indirim dahil)
   const subtotal = items.reduce((sum, item) => sum + item.total, 0)
-  const tax_amount = Math.round(subtotal * tax_rate) / 100
-  const total = subtotal + tax_amount
+  const discountValue = discount_type === 'percentage'
+    ? Math.round(subtotal * (discountInput || 0)) / 100
+    : (discountInput || 0)
+  const taxableAmount = subtotal - discountValue
+  const tax_amount = Math.round(taxableAmount * tax_rate) / 100
+  const total = taxableAmount + tax_amount
 
   // Fatura numarası oluştur: INV-YYYY-XXXX (yıl bazlı sıralı, silinen dahil)
   const supabase = createServerSupabaseClient()
@@ -124,6 +130,12 @@ export async function POST(req: NextRequest) {
       payment_type: payment_type || 'standard',
       installment_count: installment_count || null,
       installment_frequency: installment_frequency || null,
+      discount_amount: discountValue,
+      discount_type: discount_type || null,
+      discount_description: discount_description || null,
+      customer_tax_id: customer_tax_id || null,
+      customer_tax_office: customer_tax_office || null,
+      customer_company_name: customer_company_name || null,
     })
     .select('*, customers(name, phone)')
     .single()
