@@ -42,9 +42,12 @@ type PageTab = 'products' | 'suppliers'
 
 export default function StoklarPage() {
   const { businessId, staffId, staffName, loading: ctxLoading, permissions } = useBusinessContext()
+  const PAGE_SIZE = 50
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [dbError, setDbError] = useState<string | null>(null)
+  const [page, setPage] = useState(0)
+  const [totalCount, setTotalCount] = useState(0)
   const [showModal, setShowModal] = useState(false)
   const [isClosingModal, setIsClosingModal] = useState(false)
   const closeModal = () => setIsClosingModal(true)
@@ -101,12 +104,13 @@ export default function StoklarPage() {
     setLoading(true)
     const query = supabase
       .from('products')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('business_id', businessId)
       .eq('is_active', true)
       .order('name')
+      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
 
-    const { data, error } = await query
+    const { data, error, count } = await query
     if (error) {
       if (error.message.includes('relation "public.products" does not exist') ||
           error.message.includes('does not exist')) {
@@ -116,10 +120,11 @@ export default function StoklarPage() {
       }
     } else {
       setProducts(data || [])
+      if (count !== null) setTotalCount(count)
       setDbError(null)
     }
     setLoading(false)
-  }, [businessId])
+  }, [businessId, page])
 
   const fetchSuppliers = useCallback(async () => {
     if (!businessId) return
@@ -139,6 +144,8 @@ export default function StoklarPage() {
       fetchSuppliers()
     }
   }, [fetchProducts, fetchSuppliers, ctxLoading])
+
+  useEffect(() => { setPage(0) }, [debouncedSearch, categoryFilter, stockFilter])
 
   useEffect(() => {
     if (!showModal) return
@@ -623,6 +630,22 @@ export default function StoklarPage() {
             )}
             </div>
           )}
+        {/* Pagination */}
+        {totalCount > PAGE_SIZE && (
+          <div className="flex items-center justify-between pt-2">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, totalCount)} / {totalCount}
+            </p>
+            <div className="flex gap-2">
+              <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed">
+                Önceki
+              </button>
+              <button onClick={() => setPage(p => p + 1)} disabled={(page + 1) * PAGE_SIZE >= totalCount} className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed">
+                Sonraki
+              </button>
+            </div>
+          </div>
+        )}
         </>
       )}
 
