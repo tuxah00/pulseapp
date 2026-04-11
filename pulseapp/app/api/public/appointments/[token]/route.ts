@@ -80,7 +80,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { token:
     return NextResponse.json({ error: 'Bu randevu artık düzenlenemez' }, { status: 400 })
   }
 
-  const rl = checkRateLimit(request as NextRequest, RATE_LIMITS.publicBooking)
+  const rl = checkRateLimit(request, RATE_LIMITS.publicBooking)
   if (rl.limited) return rl.response
 
   const patchResult = await validateBody(request, publicAppointmentPatchSchema)
@@ -157,7 +157,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { token
     return NextResponse.json({ error: 'Bu randevu zaten iptal edilmiş veya tamamlanmış' }, { status: 400 })
   }
 
-  const rl = checkRateLimit(request as NextRequest, RATE_LIMITS.publicBooking)
+  const rl = checkRateLimit(request, RATE_LIMITS.publicBooking)
   if (rl.limited) return rl.response
 
   const rawBody = await request.json().catch(() => ({}))

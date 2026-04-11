@@ -51,7 +51,7 @@ export async function GET(
     return NextResponse.json({ error: 'Geçersiz istek' }, { status: 400 })
   }
 
-  const rl = checkRateLimit(req as NextRequest, RATE_LIMITS.general)
+  const rl = checkRateLimit(req, RATE_LIMITS.general)
   if (rl.limited) return rl.response
 
   const { searchParams } = new URL(req.url)

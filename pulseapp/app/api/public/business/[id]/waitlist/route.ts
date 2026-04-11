@@ -15,7 +15,7 @@ export async function POST(
     return NextResponse.json({ error: 'Geçersiz istek' }, { status: 400 })
   }
 
-  const rl = checkRateLimit(request as NextRequest, RATE_LIMITS.publicBooking)
+  const rl = checkRateLimit(request, RATE_LIMITS.publicBooking)
   if (rl.limited) return rl.response
 
   const result = await validateBody(request, waitlistCreateSchema)

@@ -16,7 +16,7 @@ export const slotsQuerySchema = z.object({
         .number({ message: MSG.INVALID_NUMBER })
         .int()
         .min(5, MSG.MIN_VALUE(5))
-        .max(480, MSG.MIN_VALUE(480)),
+        .max(480, MSG.MAX_VALUE(480)),
     ),
   staffId: z.string().uuid(MSG.INVALID_UUID).optional(),
 })

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/api/with-permission'
-import { validateBody } from '@/lib/api/validate'
+import { validateBody, parsePaginationParams } from '@/lib/api/validate'
 import { protocolCreateSchema } from '@/lib/schemas'
 import { logAuditServer } from '@/lib/utils/audit'
 
@@ -14,8 +14,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const customerId = searchParams.get('customerId')
   const status = searchParams.get('status')
-  const page = parseInt(searchParams.get('page') || '0', 10)
-  const pageSize = Math.min(parseInt(searchParams.get('pageSize') || '50', 10), 100)
+  const { page, pageSize, from, to } = parsePaginationParams(searchParams)
 
   const supabase = createServerSupabaseClient()
   let query = supabase
@@ -29,7 +28,7 @@ export async function GET(request: NextRequest) {
     `, { count: 'exact' })
     .eq('business_id', businessId)
     .order('created_at', { ascending: false })
-    .range(page * pageSize, (page + 1) * pageSize - 1)
+    .range(from, to)
 
   if (customerId) query = query.eq('customer_id', customerId)
   if (status) query = query.eq('status', status)

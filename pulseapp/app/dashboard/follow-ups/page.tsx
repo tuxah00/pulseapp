@@ -12,6 +12,7 @@ import { CustomerSearchSelect } from '@/components/ui/customer-search-select'
 import { getCustomerLabelSingular } from '@/lib/config/sector-modules'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import { Portal } from '@/components/ui/portal'
+import { Pagination } from '@/components/ui/pagination'
 
 interface FollowUp {
   id: string
@@ -57,6 +58,8 @@ export default function FollowUpsPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [page, setPage] = useState(0)
   const [totalCount, setTotalCount] = useState(0)
+  const [pendingCount, setPendingCount] = useState(0)
+  const [sentCount, setSentCount] = useState(0)
 
   // Create modal
   const [showCreate, setShowCreate] = useState(false)
@@ -83,9 +86,15 @@ export default function FollowUpsPage() {
 
       query = query.range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
 
-      const { data, count } = await query
+      const [{ data, count }, { count: pCount }, { count: sCount }] = await Promise.all([
+        query,
+        supabase.from('follow_up_queue').select('id', { count: 'exact', head: true }).eq('business_id', businessId).eq('status', 'pending'),
+        supabase.from('follow_up_queue').select('id', { count: 'exact', head: true }).eq('business_id', businessId).eq('status', 'sent'),
+      ])
       setFollowUps((data as FollowUp[]) || [])
       if (count !== null) setTotalCount(count)
+      setPendingCount(pCount ?? 0)
+      setSentCount(sCount ?? 0)
     } catch { /* ignore */ } finally { setLoading(false) }
   }, [businessId, statusFilter, page])
 
@@ -93,10 +102,7 @@ export default function FollowUpsPage() {
 
   useEffect(() => { setPage(0) }, [statusFilter])
 
-  // Stats
   const statsTotal = totalCount
-  const pendingCount = followUps.filter(f => f.status === 'pending').length
-  const sentCount = followUps.filter(f => f.status === 'sent').length
 
   const handleCreate = async () => {
     if (!businessId || !formCustomerId || !formDate) return
@@ -292,21 +298,7 @@ export default function FollowUpsPage() {
       )}
 
       {/* Pagination */}
-      {totalCount > PAGE_SIZE && (
-        <div className="flex items-center justify-between pt-2">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, totalCount)} / {totalCount}
-          </p>
-          <div className="flex gap-2">
-            <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed">
-              Önceki
-            </button>
-            <button onClick={() => setPage(p => p + 1)} disabled={(page + 1) * PAGE_SIZE >= totalCount} className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed">
-              Sonraki
-            </button>
-          </div>
-        </div>
-      )}
+      <Pagination page={page} pageSize={PAGE_SIZE} totalCount={totalCount} onPageChange={setPage} />
 
       {/* Create Modal */}
       {(showCreate || closingCreate) && (

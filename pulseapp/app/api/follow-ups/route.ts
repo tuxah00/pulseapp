@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { parsePaginationParams } from '@/lib/api/validate'
 import { logAuditServer } from '@/lib/utils/audit'
 
 async function getStaffInfo(supabase: ReturnType<typeof createServerSupabaseClient>, userId: string, businessId: string) {
@@ -21,8 +22,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const businessId = searchParams.get('businessId')
   const status = searchParams.get('status') || 'pending'
-  const page = parseInt(searchParams.get('page') || '0', 10)
-  const pageSize = Math.min(parseInt(searchParams.get('pageSize') || '50', 10), 100)
+  const { page, pageSize, from, to } = parsePaginationParams(searchParams)
 
   if (!businessId) return NextResponse.json({ error: 'businessId gerekli' }, { status: 400 })
 
@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
     .eq('business_id', businessId)
     .eq('status', status)
     .order('scheduled_for', { ascending: true })
-    .range(page * pageSize, (page + 1) * pageSize - 1)
+    .range(from, to)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ followUps: data, total: count || 0 })
