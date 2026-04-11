@@ -9,22 +9,19 @@ import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import {
   LayoutDashboard,
-  Calendar,
   CalendarCheck,
   Users,
-  UserPlus,
+  UserCog,
   MessageSquare,
-  MessageCircle,
   Star,
   BarChart3,
-  TrendingUp,
-  Shield,
+  ShieldCheck,
   Settings,
   LogOut,
   ChevronLeft,
   Menu,
-  Zap,
-  Scissors,
+  Banknote,
+  ListChecks,
   Package,
   FolderOpen,
   Briefcase,
@@ -33,15 +30,18 @@ import {
   ClipboardList,
   CreditCard,
   CalendarDays,
+  CalendarClock,
   CheckSquare,
   BookOpen,
   Image,
   Receipt,
   Layers,
-  Wallet,
+  Lock,
+  Clock,
+  Stethoscope,
+  Gift,
+  Zap,
   X,
-  ClipboardCheck,
-  UserCheck,
   type LucideIcon,
 } from 'lucide-react'
 import type { SectorType, PlanType, StaffPermissions } from '@/types'
@@ -49,12 +49,12 @@ import { getSidebarSections } from '@/lib/config/sector-modules'
 
 
 const ICON_MAP: Record<string, LucideIcon> = {
-  LayoutDashboard, Calendar, CalendarCheck, Users, UserPlus,
-  MessageSquare, MessageCircle, Star, BarChart3, TrendingUp,
-  Shield, Settings, LogOut, Scissors, Package, FolderOpen,
+  LayoutDashboard, CalendarCheck, Users, UserCog,
+  MessageSquare, Star, BarChart3, ShieldCheck,
+  Settings, LogOut, ListChecks, Package, FolderOpen,
   Briefcase, Car, PawPrint, ClipboardList, CreditCard,
-  CalendarDays, CheckSquare, BookOpen, Image, Receipt, Layers, Wallet,
-  ClipboardCheck, UserCheck,
+  CalendarDays, CalendarClock, CheckSquare, BookOpen, Image,
+  Receipt, Layers, Banknote, Lock, Clock, Stethoscope, Gift,
 }
 
 const bottomNav = [
