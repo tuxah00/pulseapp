@@ -12,6 +12,7 @@ import { REFERRAL_STATUS_LABELS, REWARD_TYPE_LABELS } from '@/types'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { CustomerSearchSelect } from '@/components/ui/customer-search-select'
 import { cn } from '@/lib/utils'
+import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 
 const STATUS_CONFIG: Record<ReferralStatus, { bg: string; text: string; icon: typeof CheckCircle }> = {
   pending: { bg: 'bg-yellow-50 dark:bg-yellow-900/20', text: 'text-yellow-600 dark:text-yellow-400', icon: Clock },
@@ -365,14 +366,14 @@ export default function RewardsPage() {
               <p className="text-gray-500 dark:text-gray-400">Henüz referans yok</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <AnimatedList className="space-y-3">
               {filteredRefs.map(r => {
                 const referrer = (Array.isArray(r.referrer) ? r.referrer[0] : r.referrer) as Customer | undefined
                 const referred = (Array.isArray(r.referred) ? r.referred[0] : r.referred) as Customer | undefined
                 const sc = STATUS_CONFIG[r.status]
                 const Icon = sc.icon
                 return (
-                  <div key={r.id} className="card p-4">
+                  <AnimatedItem key={r.id} className="card p-4">
                     <div className="flex items-center gap-4">
                       <div className="flex-1 min-w-0">
                         <p className="text-xs text-gray-400 mb-0.5">Tavsiye Eden</p>
@@ -403,10 +404,10 @@ export default function RewardsPage() {
                         )}
                       </div>
                     </div>
-                  </div>
+                  </AnimatedItem>
                 )
               })}
-            </div>
+            </AnimatedList>
           )}
         </>
       )}
@@ -424,9 +425,9 @@ export default function RewardsPage() {
                 <p className="text-xs text-gray-400 mt-1">&ldquo;Ödül Tanımla&rdquo; butonuyla başlayın</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <AnimatedList className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {rewardTemplates.map(t => (
-                  <div key={t.id} className="card p-4">
+                  <AnimatedItem key={t.id} className="card p-4">
                     <div className="flex items-start justify-between">
                       <div>
                         <p className="font-medium text-gray-900 dark:text-white">{t.name}</p>
@@ -441,9 +442,9 @@ export default function RewardsPage() {
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
                     </div>
-                  </div>
+                  </AnimatedItem>
                 ))}
-              </div>
+              </AnimatedList>
             )}
           </div>
 
@@ -468,9 +469,9 @@ export default function RewardsPage() {
                 <p className="text-sm text-gray-500 dark:text-gray-400">Henüz atanmış ödül yok</p>
               </div>
             ) : (
-              <div className="space-y-2">
+              <AnimatedList className="space-y-2">
                 {customerRewards.map(cr => (
-                  <div key={cr.id} className="card p-3">
+                  <AnimatedItem key={cr.id} className="card p-3">
                     <div className="flex items-center gap-3">
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm text-gray-900 dark:text-white truncate">{cr.customers?.name || '—'}</p>
@@ -493,9 +494,9 @@ export default function RewardsPage() {
                       )}
                     </div>
                     {cr.notes && <p className="text-xs text-gray-400 mt-1 pl-1 border-l-2 border-gray-200 dark:border-gray-700">{cr.notes}</p>}
-                  </div>
+                  </AnimatedItem>
                 ))}
-              </div>
+              </AnimatedList>
             )}
           </div>
         </>
@@ -505,7 +506,7 @@ export default function RewardsPage() {
 
       {/* Referans Oluştur */}
       {(showRefCreate || closingRefCreate) && (
-        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 ${closingRefCreate ? 'closing' : ''}`} onClick={() => { setClosingRefCreate(true) }} onAnimationEnd={() => { if (closingRefCreate) { setShowRefCreate(false); setClosingRefCreate(false); resetRefForm() } }}>
+        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 ${closingRefCreate ? 'closing' : ''}`} onClick={() => { setClosingRefCreate(true) }} onAnimationEnd={() => { if (closingRefCreate) { setShowRefCreate(false); setClosingRefCreate(false); resetRefForm() } }}>
           <div className={`modal-content card w-full max-w-lg dark:bg-gray-900 ${closingRefCreate ? 'closing' : ''}`} onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-base font-medium">Yeni Referans</h3>
@@ -540,7 +541,7 @@ export default function RewardsPage() {
 
       {/* Ödül Şablonu Oluştur */}
       {(showTemplateCreate || closingTemplateCreate) && (
-        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 ${closingTemplateCreate ? 'closing' : ''}`} onClick={() => setClosingTemplateCreate(true)} onAnimationEnd={() => { if (closingTemplateCreate) { setShowTemplateCreate(false); setClosingTemplateCreate(false) } }}>
+        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 ${closingTemplateCreate ? 'closing' : ''}`} onClick={() => setClosingTemplateCreate(true)} onAnimationEnd={() => { if (closingTemplateCreate) { setShowTemplateCreate(false); setClosingTemplateCreate(false) } }}>
           <div className={`modal-content card w-full max-w-md dark:bg-gray-900 ${closingTemplateCreate ? 'closing' : ''}`} onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-base font-medium">Yeni Ödül Şablonu</h3>
@@ -567,7 +568,7 @@ export default function RewardsPage() {
 
       {/* Ödül Ata */}
       {(showAssign || closingAssign) && (
-        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 ${closingAssign ? 'closing' : ''}`} onClick={() => { setClosingAssign(true) }} onAnimationEnd={() => { if (closingAssign) { setShowAssign(false); setClosingAssign(false); setACustomerId(''); setARewardId(''); setANotes('') } }}>
+        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 ${closingAssign ? 'closing' : ''}`} onClick={() => { setClosingAssign(true) }} onAnimationEnd={() => { if (closingAssign) { setShowAssign(false); setClosingAssign(false); setACustomerId(''); setARewardId(''); setANotes('') } }}>
           <div className={`modal-content card w-full max-w-md dark:bg-gray-900 ${closingAssign ? 'closing' : ''}`} onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-base font-medium">{customerLabel} Ödül Ver</h3>
