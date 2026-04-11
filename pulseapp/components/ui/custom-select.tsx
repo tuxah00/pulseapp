@@ -65,7 +65,7 @@ export function CustomSelect({
   }, [open])
 
   return (
-    <div ref={ref} className={cn('relative', className)}>
+    <div ref={ref} className={cn('relative', open && 'z-[70]', className)}>
       {/* Trigger */}
       <button
         type="button"

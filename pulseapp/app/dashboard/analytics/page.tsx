@@ -352,16 +352,19 @@ export default function AnalyticsPage() {
   const { start } = getPeriodDates(period, 0)
   const startDate = new Date(start + 'T00:00:00')
   const dayCount = period === 'week' ? 7 : period === 'month' ? 30 : 12
+  /** Yerel tarih formatı: YYYY-MM-DD (UTC kayması önlenir) */
+  const toLocalDate = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
   const trendDays = period === 'year'
     ? Array.from({ length: 12 }, (_, i) => {
         const d = new Date(startDate); d.setMonth(d.getMonth() + i)
         const label = d.toLocaleDateString('tr-TR', { month: 'short' })
-        const ym = d.toISOString().slice(0, 7)
+        const ym = toLocalDate(d).slice(0, 7)
         return { label, count: appointments.filter(a => a.appointment_date?.startsWith(ym)).length }
       })
     : Array.from({ length: dayCount }, (_, i) => {
         const d = new Date(startDate); d.setDate(d.getDate() + i)
-        const dateStr = d.toISOString().split('T')[0]
+        const dateStr = toLocalDate(d)
         const label = period === 'week'
           ? ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'][d.getDay() === 0 ? 6 : d.getDay() - 1]
           : String(d.getDate())
@@ -375,7 +378,7 @@ export default function AnalyticsPage() {
     ? Array.from({ length: 12 }, (_, i) => {
         const d = new Date(startDate); d.setMonth(d.getMonth() + i)
         const label = d.toLocaleDateString('tr-TR', { month: 'short' })
-        const ym = d.toISOString().slice(0, 7)
+        const ym = toLocalDate(d).slice(0, 7)
         const rev = completed.filter(a => a.appointment_date?.startsWith(ym)).reduce((s, a) => s + (a.services?.price || 0), 0)
         const invRev = nonDuplicateInvoices.filter(inv => inv.paid_at?.startsWith(ym)).reduce((s, inv) => s + (inv.paid_amount || inv.total || 0), 0)
         const incRev = expandedIncomes.filter(inc => inc.date.startsWith(ym)).reduce((s, inc) => s + inc.amount, 0)
@@ -383,7 +386,7 @@ export default function AnalyticsPage() {
       })
     : Array.from({ length: dayCount }, (_, i) => {
         const d = new Date(startDate); d.setDate(d.getDate() + i)
-        const dateStr = d.toISOString().split('T')[0]
+        const dateStr = toLocalDate(d)
         const label = period === 'week'
           ? ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'][d.getDay() === 0 ? 6 : d.getDay() - 1]
           : String(d.getDate())
@@ -396,12 +399,12 @@ export default function AnalyticsPage() {
   const trendExpenses = period === 'year'
     ? Array.from({ length: 12 }, (_, i) => {
         const d = new Date(startDate); d.setMonth(d.getMonth() + i)
-        const ym = d.toISOString().slice(0, 7)
+        const ym = toLocalDate(d).slice(0, 7)
         return expandedExpenses.filter(e => e.date.startsWith(ym)).reduce((s, e) => s + e.amount, 0)
       })
     : Array.from({ length: dayCount }, (_, i) => {
         const d = new Date(startDate); d.setDate(d.getDate() + i)
-        const dateStr = d.toISOString().split('T')[0]
+        const dateStr = toLocalDate(d)
         return expandedExpenses.filter(e => e.date === dateStr).reduce((s, e) => s + e.amount, 0)
       })
   const maxRevenue = Math.max(...trendRevenue.map(d => d.revenue), ...trendExpenses, 1)
@@ -520,7 +523,7 @@ export default function AnalyticsPage() {
                 <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400" /> Gider</span>
               </div>
             </div>
-            {trendRevenue.every(d => d.revenue === 0) && trendExpenses.every(e => e === 0) ? (
+            {trendRevenue.every(d => d.revenue === 0) && trendExpenses.every(e => e === 0) && totalRevenue === 0 && totalExpenses === 0 ? (
               <div className="flex items-center justify-center h-44 text-sm text-gray-400">
                 Bu dönem için veri bulunmuyor
               </div>
