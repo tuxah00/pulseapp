@@ -402,6 +402,9 @@ function RecordsPageInner() {
   const [fileDescPopup, setFileDescPopup] = useState<{ index: number; value: string; fileName: string; fileSize: string | null; editing: boolean } | null>(null)
   const [fileInfoPopup, setFileInfoPopup] = useState<{ index: number; url: string; meta: FileMetadataItem } | null>(null)
   const [selectedTag, setSelectedTag] = useState<string | null>(null)
+  const [page, setPage] = useState(0)
+  const [totalCount, setTotalCount] = useState(0)
+  const PAGE_SIZE = 50
 
   // Dynamic form state: one string per field key
   const [formData, setFormData] = useState<Record<string, string>>({})
@@ -413,7 +416,11 @@ function RecordsPageInner() {
     setSearch('')
     setSelectedTag(null)
     setDbError(null)
+    setPage(0)
   }, [recordType])
+
+  // Reset page when search changes
+  useEffect(() => { setPage(0) }, [debouncedSearch])
 
   const fetchRecords = useCallback(async () => {
     if (!businessId) return
@@ -421,6 +428,8 @@ function RecordsPageInner() {
 
     const params = new URLSearchParams({ businessId, type: recordType })
     if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim())
+    params.set('page', String(page))
+    params.set('pageSize', String(PAGE_SIZE))
 
     const res = await fetch(`/api/records?${params.toString()}`)
     const json = await res.json()
@@ -433,10 +442,11 @@ function RecordsPageInner() {
       }
     } else {
       setRecords(json.records || [])
+      setTotalCount(json.total || 0)
       setDbError(null)
     }
     setLoading(false)
-  }, [businessId, recordType, debouncedSearch])
+  }, [businessId, recordType, debouncedSearch, page])
 
   useEffect(() => {
     if (!ctxLoading) {
@@ -999,6 +1009,21 @@ function RecordsPageInner() {
               ))}
             </div>
           )}
+        {totalCount > PAGE_SIZE && (
+          <div className="flex items-center justify-between pt-2">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, totalCount)} / {totalCount}
+            </p>
+            <div className="flex gap-2">
+              <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed">
+                Önceki
+              </button>
+              <button onClick={() => setPage(p => p + 1)} disabled={(page + 1) * PAGE_SIZE >= totalCount} className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed">
+                Sonraki
+              </button>
+            </div>
+          </div>
+        )}
         </>
       )}
 

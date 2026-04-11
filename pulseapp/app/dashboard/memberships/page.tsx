@@ -87,6 +87,9 @@ export default function MembershipsPage() {
   const [viewMode, setViewMode] = useViewMode('memberships', 'list')
   const [sortField, setSortField] = useState<string | null>(null)
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+  const [page, setPage] = useState(0)
+  const [totalCount, setTotalCount] = useState(0)
+  const PAGE_SIZE = 50
   const { confirm } = useConfirm()
 
   // Form state
@@ -106,6 +109,8 @@ export default function MembershipsPage() {
       const params = new URLSearchParams({ businessId })
       if (statusFilter !== 'all') params.set('status', statusFilter)
       if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim())
+      params.set('page', String(page))
+      params.set('pageSize', String(PAGE_SIZE))
 
       const res = await fetch(`/api/memberships?${params}`)
       const json = await res.json()
@@ -117,17 +122,20 @@ export default function MembershipsPage() {
         }
       } else {
         setMemberships(json.memberships || [])
+        setTotalCount(json.total || 0)
         setDbError(null)
       }
     } catch {
       setDbError('Sunucuya bağlanılamadı.')
     }
     setLoading(false)
-  }, [businessId, statusFilter, debouncedSearch])
+  }, [businessId, statusFilter, debouncedSearch, page])
 
   useEffect(() => {
     if (!ctxLoading) fetchMemberships()
   }, [fetchMemberships, ctxLoading])
+
+  useEffect(() => { setPage(0) }, [statusFilter, debouncedSearch])
 
   useEffect(() => {
     if (!showModal) return
@@ -272,8 +280,6 @@ export default function MembershipsPage() {
     const now = new Date()
     return end.getFullYear() === now.getFullYear() && end.getMonth() === now.getMonth()
   }).length
-  const totalCount = memberships.length
-
   const hasActiveFilters = statusFilter !== 'all'
 
   const SORT_OPTIONS = [
@@ -470,6 +476,22 @@ export default function MembershipsPage() {
           )}
         </div>
       ) : null}
+
+      {!dbError && totalCount > PAGE_SIZE && (
+        <div className="flex items-center justify-between pt-2">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, totalCount)} / {totalCount}
+          </p>
+          <div className="flex gap-2">
+            <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed">
+              Önceki
+            </button>
+            <button onClick={() => setPage(p => p + 1)} disabled={(page + 1) * PAGE_SIZE >= totalCount} className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed">
+              Sonraki
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Modal */}
       {showModal && (
