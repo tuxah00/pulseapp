@@ -674,7 +674,7 @@ export default function InvoicesPage() {
                       </span>
                     </div>
                     <div className="mt-0.5 text-sm text-gray-400">
-                      {invoice.customers?.name || `${customerLabel}siz`} &bull; {formatCurrency(invoice.total)} &bull; Silinme: {invoice.deleted_at ? new Date(invoice.deleted_at).toLocaleDateString('tr-TR') : '—'}
+                      {invoice.customers?.name || `${customerLabel} belirtilmedi`} &bull; {formatCurrency(invoice.total)} &bull; Silinme: {invoice.deleted_at ? new Date(invoice.deleted_at).toLocaleDateString('tr-TR') : '—'}
                     </div>
                   </div>
                   <button
@@ -740,7 +740,7 @@ export default function InvoicesPage() {
                     )}
                   </div>
                   <div className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
-                    {invoice.customers?.name || `${customerLabel}siz`} &bull; {new Date(invoice.created_at).toLocaleDateString('tr-TR')}
+                    {invoice.customers?.name || `${customerLabel} belirtilmedi`} &bull; {new Date(invoice.created_at).toLocaleDateString('tr-TR')}
                     {invoice.due_date && ` \u00B7 Son: ${new Date(invoice.due_date).toLocaleDateString('tr-TR')}`}
                   </div>
                   {hasPaidProgress && (
