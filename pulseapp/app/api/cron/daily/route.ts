@@ -263,6 +263,16 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // ── 5. Vadesi Geçmiş Fatura Tespiti (batch update) ─────────────────────
+  const { count: overdueCount, error: overdueErr } = await supabase
+    .from('invoices')
+    .update({ status: 'overdue', updated_at: now.toISOString() }, { count: 'exact' })
+    .in('status', ['pending', 'partial'])
+    .lt('due_date', todayStr)
+    .is('deleted_at', null)
+
+  const overdueResult = { updated: overdueCount || 0, errors: overdueErr ? 1 : 0 }
+
   return NextResponse.json({
     ok: true,
     timestamp: now.toISOString(),
@@ -270,5 +280,6 @@ export async function GET(request: NextRequest) {
     reviewRequests,
     winback,
     waitlistNotifs,
+    overdueInvoices: overdueResult,
   })
 }

@@ -155,6 +155,14 @@ export interface Invoice {
   created_at: string
   updated_at: string
   deleted_at: string | null
+  // İndirim
+  discount_amount: number
+  discount_type: 'percentage' | 'fixed' | null
+  discount_description: string | null
+  // Müşteri vergi bilgileri (snapshot)
+  customer_tax_id: string | null
+  customer_tax_office: string | null
+  customer_company_name: string | null
   // e-Fatura (Paraşüt)
   efatura_id?: string | null
   efatura_status?: string | null
@@ -396,6 +404,11 @@ export interface Customer {
   total_no_shows: number
   last_visit_at: string | null
   preferred_channel?: 'sms' | 'whatsapp' | 'auto' | null
+  // Vergi bilgileri
+  tax_id: string | null
+  tax_id_type: 'vkn' | 'tckn' | null
+  tax_office: string | null
+  company_name: string | null
   preferences: Record<string, unknown>
   is_active: boolean
   created_at: string

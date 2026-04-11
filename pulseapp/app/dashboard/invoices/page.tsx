@@ -93,6 +93,13 @@ export default function InvoicesPage() {
   const [formInstallmentFrequency, setFormInstallmentFrequency] = useState<InstallmentFrequency>('monthly')
   const [formDepositAmount, setFormDepositAmount] = useState('')
   const [formDepositMethod, setFormDepositMethod] = useState<PaymentMethod>('cash')
+  const [formDiscountType, setFormDiscountType] = useState<'percentage' | 'fixed'>('fixed')
+  const [formDiscountAmount, setFormDiscountAmount] = useState('')
+  const [formDiscountDescription, setFormDiscountDescription] = useState('')
+  const [formCustomTaxRate, setFormCustomTaxRate] = useState('')
+  const [formTaxId, setFormTaxId] = useState('')
+  const [formTaxOffice, setFormTaxOffice] = useState('')
+  const [formCompanyName, setFormCompanyName] = useState('')
 
   // Payment history
   const [payments, setPayments] = useState<InvoicePayment[]>([])
@@ -217,16 +224,26 @@ export default function InvoicesPage() {
       setSaving(false); return
     }
 
+    const effectiveTaxRate = formTaxRate === 'custom'
+      ? (parseFloat(formCustomTaxRate) || 0)
+      : (parseFloat(formTaxRate) || 0)
+
     const payload: Record<string, unknown> = {
       business_id: businessId,
       customer_id: formCustomerId || null,
       items: validItems,
-      tax_rate: parseFloat(formTaxRate) || 0,
+      tax_rate: effectiveTaxRate,
       notes: formNotes || null,
       due_date: formDueDate || null,
       staff_id: staffId,
       staff_name: staffName,
       payment_type: formPaymentType,
+      discount_amount: parseFloat(formDiscountAmount) || 0,
+      discount_type: formDiscountAmount ? formDiscountType : null,
+      discount_description: formDiscountDescription || null,
+      customer_tax_id: formTaxId || null,
+      customer_tax_office: formTaxOffice || null,
+      customer_company_name: formCompanyName || null,
     }
 
     if (formPaymentType === 'installment') {
@@ -276,6 +293,8 @@ export default function InvoicesPage() {
     setFormTaxRate('0'); setFormNotes(''); setFormDueDate('')
     setFormPaymentType('standard'); setFormInstallmentCount('3')
     setFormInstallmentFrequency('monthly'); setFormDepositAmount(''); setFormDepositMethod('cash')
+    setFormDiscountType('fixed'); setFormDiscountAmount(''); setFormDiscountDescription('')
+    setFormCustomTaxRate(''); setFormTaxId(''); setFormTaxOffice(''); setFormCompanyName('')
   }
 
   async function handleRecordPayment() {
@@ -366,7 +385,11 @@ export default function InvoicesPage() {
       filteredInvoices.map(inv => ({
         invoice_number: inv.invoice_number,
         customer: inv.customers?.name || '—',
+        company_name: inv.customer_company_name || '—',
+        tax_id: inv.customer_tax_id || '—',
+        tax_office: inv.customer_tax_office || '—',
         subtotal: inv.subtotal,
+        discount: inv.discount_amount || 0,
         tax_rate: inv.tax_rate,
         tax_amount: inv.tax_amount,
         total: inv.total,
@@ -382,7 +405,11 @@ export default function InvoicesPage() {
       [
         { key: 'invoice_number', label: 'Fatura No' },
         { key: 'customer', label: customerLabel },
+        { key: 'company_name', label: 'Firma Adı' },
+        { key: 'tax_id', label: 'VKN/TCKN' },
+        { key: 'tax_office', label: 'Vergi Dairesi' },
         { key: 'subtotal', label: 'Ara Toplam (TL)' },
+        { key: 'discount', label: 'İndirim (TL)' },
         { key: 'tax_rate', label: 'KDV Oranı (%)' },
         { key: 'tax_amount', label: 'KDV Tutarı (TL)' },
         { key: 'total', label: 'Toplam (TL)' },
@@ -413,6 +440,11 @@ export default function InvoicesPage() {
       createdAt: invoice.created_at,
       dueDate: invoice.due_date,
       notes: invoice.notes,
+      discountAmount: invoice.discount_amount,
+      discountDescription: invoice.discount_description,
+      customerTaxId: invoice.customer_tax_id,
+      customerTaxOffice: invoice.customer_tax_office,
+      customerCompanyName: invoice.customer_company_name,
     })
   }
 
@@ -829,12 +861,33 @@ export default function InvoicesPage() {
                 </div>
               </div>
 
+              {/* Vergi Bilgileri */}
+              {(selectedInvoice.customer_tax_id || selectedInvoice.customer_company_name) && (
+                <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 p-3 text-sm space-y-1">
+                  {selectedInvoice.customer_company_name && (
+                    <div className="font-medium text-gray-900 dark:text-gray-100">{selectedInvoice.customer_company_name}</div>
+                  )}
+                  {selectedInvoice.customer_tax_id && (
+                    <div className="text-gray-600 dark:text-gray-400">VKN/TCKN: {selectedInvoice.customer_tax_id}</div>
+                  )}
+                  {selectedInvoice.customer_tax_office && (
+                    <div className="text-gray-600 dark:text-gray-400">Vergi Dairesi: {selectedInvoice.customer_tax_office}</div>
+                  )}
+                </div>
+              )}
+
               {/* Özet */}
               <div className="rounded-lg bg-gray-50 dark:bg-gray-700/50 p-3 space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-500 dark:text-gray-400">Ara Toplam</span>
                   <span className="text-gray-900 dark:text-gray-100">{formatCurrency(selectedInvoice.subtotal)}</span>
                 </div>
+                {(selectedInvoice.discount_amount ?? 0) > 0 && (
+                  <div className="flex justify-between text-green-600 dark:text-green-400">
+                    <span>İndirim{selectedInvoice.discount_description ? ` (${selectedInvoice.discount_description})` : ''}</span>
+                    <span>-{formatCurrency(selectedInvoice.discount_amount)}</span>
+                  </div>
+                )}
                 {selectedInvoice.tax_rate > 0 && (
                   <div className="flex justify-between">
                     <span className="text-gray-500 dark:text-gray-400">KDV (%{selectedInvoice.tax_rate})</span>
@@ -1165,21 +1218,103 @@ export default function InvoicesPage() {
                 </div>
               </div>
 
+              {/* İndirim */}
+              <div>
+                <label className="label">İndirim (opsiyonel)</label>
+                <div className="flex gap-2">
+                  <CustomSelect
+                    value={formDiscountType}
+                    onChange={v => setFormDiscountType(v as 'percentage' | 'fixed')}
+                    options={[
+                      { value: 'fixed', label: '₺ Tutar' },
+                      { value: 'percentage', label: '% Oran' },
+                    ]}
+                    className="w-28"
+                  />
+                  <input
+                    type="number"
+                    value={formDiscountAmount}
+                    onChange={e => setFormDiscountAmount(e.target.value)}
+                    className="input flex-1"
+                    placeholder={formDiscountType === 'percentage' ? 'Oran (ör: 10)' : 'Tutar (ör: 100)'}
+                    min="0"
+                    step="0.01"
+                  />
+                  <input
+                    type="text"
+                    value={formDiscountDescription}
+                    onChange={e => setFormDiscountDescription(e.target.value)}
+                    className="input flex-1"
+                    placeholder="Açıklama (opsiyonel)"
+                  />
+                </div>
+              </div>
+
               {/* KDV */}
               <div>
                 <label className="label">KDV Oranı (%)</label>
-                <CustomSelect
-                  value={formTaxRate}
-                  onChange={v => setFormTaxRate(v)}
-                  options={[
-                    { value: '0', label: 'KDV Yok (%0)' },
-                    { value: '1', label: '%1' },
-                    { value: '8', label: '%8 (Sağlık)' },
-                    { value: '10', label: '%10' },
-                    { value: '20', label: '%20' },
-                  ]}
-                />
+                <div className="flex gap-2">
+                  <CustomSelect
+                    value={formTaxRate}
+                    onChange={v => { setFormTaxRate(v); if (v !== 'custom') setFormCustomTaxRate('') }}
+                    options={[
+                      { value: '0', label: 'KDV Yok (%0)' },
+                      { value: '1', label: '%1' },
+                      { value: '8', label: '%8 (Sağlık)' },
+                      { value: '10', label: '%10' },
+                      { value: '20', label: '%20' },
+                      { value: 'custom', label: 'Diğer' },
+                    ]}
+                    className={formTaxRate === 'custom' ? 'w-36' : 'w-full'}
+                  />
+                  {formTaxRate === 'custom' && (
+                    <input
+                      type="number"
+                      value={formCustomTaxRate}
+                      onChange={e => setFormCustomTaxRate(e.target.value)}
+                      className="input flex-1"
+                      placeholder="Oran girin (ör: 18)"
+                      min="0"
+                      max="100"
+                      step="1"
+                    />
+                  )}
+                </div>
               </div>
+
+              {/* Vergi Bilgileri */}
+              <details className="group">
+                <summary className="label cursor-pointer flex items-center gap-1 select-none">
+                  <ChevronRight className="h-4 w-4 transition-transform group-open:rotate-90" />
+                  Vergi Bilgileri (opsiyonel)
+                </summary>
+                <div className="mt-2 space-y-2">
+                  <input
+                    type="text"
+                    value={formCompanyName}
+                    onChange={e => setFormCompanyName(e.target.value)}
+                    className="input"
+                    placeholder="Firma Adı / Ünvanı"
+                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={formTaxId}
+                      onChange={e => setFormTaxId(e.target.value)}
+                      className="input flex-1"
+                      placeholder="VKN / TCKN"
+                      maxLength={11}
+                    />
+                    <input
+                      type="text"
+                      value={formTaxOffice}
+                      onChange={e => setFormTaxOffice(e.target.value)}
+                      className="input flex-1"
+                      placeholder="Vergi Dairesi"
+                    />
+                  </div>
+                </div>
+              </details>
 
               {/* Son Ödeme */}
               <div>
