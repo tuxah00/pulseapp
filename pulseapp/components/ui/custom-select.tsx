@@ -17,6 +17,8 @@ interface CustomSelectProps {
   placeholder?: string
   className?: string
   disabled?: boolean
+  /** Dropdown'ı yukarı doğru açar (modal alt kısmında kullanım için) */
+  dropUp?: boolean
 }
 
 /**
@@ -40,6 +42,7 @@ export function CustomSelect({
   placeholder,
   className,
   disabled,
+  dropUp,
 }: CustomSelectProps) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -87,7 +90,10 @@ export function CustomSelect({
 
       {/* Dropdown panel */}
       {open && (
-        <div className="absolute left-0 right-0 top-full mt-1 z-[200] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xl rounded-xl overflow-hidden modal-content">
+        <div className={cn(
+          'absolute left-0 right-0 z-[200] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xl rounded-xl overflow-hidden modal-content',
+          dropUp ? 'bottom-full mb-1' : 'top-full mt-1'
+        )}>
           <div className="max-h-52 overflow-y-auto py-1">
             {/* Placeholder / "Tümü" seçeneği */}
             {placeholder !== undefined && (

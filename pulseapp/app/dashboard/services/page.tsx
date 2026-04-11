@@ -406,6 +406,7 @@ export default function ServicesPage() {
                       <CustomSelect
                         value={ciRisk}
                         onChange={setCiRisk}
+                        dropUp
                         options={[
                           { value: 'low', label: 'Düşük' },
                           { value: 'medium', label: 'Orta' },
