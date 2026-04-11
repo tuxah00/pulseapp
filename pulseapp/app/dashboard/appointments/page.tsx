@@ -91,6 +91,7 @@ export default function AppointmentsPage() {
   const [roomId, setRoomId] = useState('')
   const [date, setDate] = useState('')
   const [startTime, setStartTime] = useState('09:00')
+  const [endTime, setEndTime] = useState('')
   const [notes, setNotes] = useState('')
 
   // Tekrarlayan randevu state
@@ -286,10 +287,10 @@ export default function AppointmentsPage() {
     return `${sd} ${months[sm - 1]} – ${ed} ${months[em - 1]} ${ey}`
   }
 
-  function openNewModal(overrideDate?: string, overrideTime?: string) {
+  function openNewModal(overrideDate?: string, overrideTime?: string, overrideEndTime?: string) {
     setEditingAppointment(null)
     setCustomerId(''); setServiceId(''); setStaffId(''); setRoomId('')
-    setDate(overrideDate || selectedDate); setStartTime(overrideTime || '09:00'); setNotes('')
+    setDate(overrideDate || selectedDate); setStartTime(overrideTime || '09:00'); setEndTime(overrideEndTime || ''); setNotes('')
     setIsRecurring(false); setRecurrenceFrequency('weekly'); setRecurrenceCount(4)
     setError(null); setShowModal(true)
   }
@@ -299,7 +300,7 @@ export default function AppointmentsPage() {
     setEditingAppointment(apt)
     setCustomerId(apt.customer_id); setServiceId(apt.service_id || ''); setStaffId(apt.staff_id || '')
     setRoomId((apt as AppointmentView & { room_id?: string }).room_id || '')
-    setDate(apt.appointment_date); setStartTime(apt.start_time); setNotes(apt.notes || '')
+    setDate(apt.appointment_date); setStartTime(apt.start_time); setEndTime(apt.end_time); setNotes(apt.notes || '')
     setIsRecurring(false)
     setError(null); setShowModal(true)
   }
@@ -378,13 +379,13 @@ export default function AppointmentsPage() {
     e.preventDefault(); setSaving(true); setError(null)
     const selectedService = services.find(s => s.id === serviceId)
     const duration = selectedService?.duration_minutes || 30
-    const endTime = calculateEndTime(startTime, duration)
+    const finalEndTime = endTime || calculateEndTime(startTime, duration)
     const payload = {
       customer_id: customerId, service_id: serviceId || null, staff_id: staffId || null,
       room_id: roomId || null,
-      appointment_date: date, start_time: startTime, end_time: endTime, notes: notes || null,
+      appointment_date: date, start_time: startTime, end_time: finalEndTime, notes: notes || null,
     }
-    const conflict = await checkStaffConflict(staffId || null, date, startTime, endTime, editingAppointment?.id ?? null)
+    const conflict = await checkStaffConflict(staffId || null, date, startTime, finalEndTime, editingAppointment?.id ?? null)
     if (conflict) { setError('Bu personelin bu saatte başka bir randevusu var.'); setSaving(false); return }
 
     if (editingAppointment) {
@@ -398,7 +399,7 @@ export default function AppointmentsPage() {
 
       // Çakışma kontrolü
       for (const d of dates) {
-        const hasConflict = await checkStaffConflict(staffId || null, d, startTime, endTime, null)
+        const hasConflict = await checkStaffConflict(staffId || null, d, startTime, finalEndTime, null)
         if (hasConflict) conflictDates.push(d)
       }
 
@@ -418,7 +419,7 @@ export default function AppointmentsPage() {
         room_id: roomId || null,
         appointment_date: d,
         start_time: startTime,
-        end_time: endTime,
+        end_time: finalEndTime,
         notes: notes || null,
         status: 'confirmed' as const,
         source: 'manual' as const,
@@ -904,7 +905,7 @@ export default function AppointmentsPage() {
     return dayMap[d.getDay()]
   }
 
-  function generateTimeSlots(dateStr?: string, wh?: Record<string, { open: string; close: string } | null> | null): string[] {
+  function generateTimeSlots(dateStr?: string, wh?: Record<string, { open: string; close: string } | null> | null, includeClose?: boolean): string[] {
     let slots: string[] = []
     if (dateStr && wh) {
       const dayKey = getDayKeyFromDate(dateStr)
@@ -918,6 +919,11 @@ export default function AppointmentsPage() {
         const hh = Math.floor(t / 60)
         const mm = t % 60
         slots.push(`${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`)
+      }
+      // Bitiş saati için kapanış saatini de ekle
+      if (includeClose) {
+        const closeStr = `${String(closeH).padStart(2, '0')}:${String(closeM).padStart(2, '0')}`
+        if (!slots.includes(closeStr)) slots.push(closeStr)
       }
     } else {
       // Fallback: 08:00 - 21:30
@@ -2128,13 +2134,14 @@ export default function AppointmentsPage() {
                           onClick={() => {
                             const firstCell = sortedCells[0]
                             const startTimeStr = `${String(minHour).padStart(2, '0')}:00`
+                            const endTimeStr = `${String(maxHour + 1).padStart(2, '0')}:00`
                             setEditingAppointment(null)
                             setCustomerId(''); setServiceId(''); setStaffId(
                               selectionViewMode === 'staff' && firstCell.colId !== '__unassigned__' ? firstCell.colId : ''
                             ); setRoomId(
                               selectionViewMode === 'room' && firstCell.colId !== '__unassigned__' ? firstCell.colId : ''
                             )
-                            setDate(firstCell.date); setStartTime(startTimeStr); setNotes('')
+                            setDate(firstCell.date); setStartTime(startTimeStr); setEndTime(endTimeStr); setNotes('')
                             setIsRecurring(false); setRecurrenceFrequency('weekly'); setRecurrenceCount(4)
                             setError(null); setShowModal(true)
                             clearSelection()
@@ -2449,7 +2456,11 @@ export default function AppointmentsPage() {
                 <CustomSelect
                   options={services.map(s => ({ value: s.id, label: `${s.name} — ${s.duration_minutes} dk${s.price ? ` — ${s.price} TL` : ''}` }))}
                   value={serviceId}
-                  onChange={v => setServiceId(v)}
+                  onChange={v => {
+                    setServiceId(v)
+                    const svc = services.find(s => s.id === v)
+                    if (svc) setEndTime(calculateEndTime(startTime, svc.duration_minutes))
+                  }}
                   placeholder="Hizmet seçin (opsiyonel)..."
                   className="input"
                 />
@@ -2475,36 +2486,56 @@ export default function AppointmentsPage() {
                   />
                 </div>
               )}
+              <div>
+                <label className="label">Tarih</label>
+                <input type="date" value={date} onChange={(e) => {
+                  const newDate = e.target.value
+                  setDate(newDate)
+                  const slots = generateTimeSlots(newDate, workingHours)
+                  setStartTime(slots.length > 0 ? slots[0] : '09:00')
+                  setEndTime('')
+                }} className="input" required />
+                {date && workingHours && generateTimeSlots(date, workingHours).length === 0 && (
+                  <p className="text-xs text-red-500 mt-1">Bu gün kapalıdır, randevu oluşturulamaz.</p>
+                )}
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="label">Tarih</label>
-                  <input type="date" value={date} onChange={(e) => {
-                    const newDate = e.target.value
-                    setDate(newDate)
-                    const slots = generateTimeSlots(newDate, workingHours)
-                    setStartTime(slots.length > 0 ? slots[0] : '09:00')
-                  }} className="input" required />
-                </div>
-                <div>
-                  <label className="label">Saat</label>
+                  <label className="label">Başlangıç</label>
                   <CustomSelect
                     options={generateTimeSlots(date, workingHours).map(t => ({ value: t, label: t }))}
                     value={startTime}
-                    onChange={v => setStartTime(v)}
+                    onChange={v => {
+                      setStartTime(v)
+                      // Hizmet seçiliyse bitiş saatini otomatik güncelle
+                      const svc = services.find(s => s.id === serviceId)
+                      if (svc) setEndTime(calculateEndTime(v, svc.duration_minutes))
+                    }}
                     className="input"
                   />
-                  {date && workingHours && generateTimeSlots(date, workingHours).length === 0 && (
-                    <p className="text-xs text-red-500 mt-1">Bu gün kapalıdır, randevu oluşturulamaz.</p>
-                  )}
+                </div>
+                <div>
+                  <label className="label">Bitiş</label>
+                  <CustomSelect
+                    options={generateTimeSlots(date, workingHours, true).map(t => ({ value: t, label: t }))}
+                    value={endTime || calculateEndTime(startTime, services.find(s => s.id === serviceId)?.duration_minutes || 30)}
+                    onChange={v => setEndTime(v)}
+                    className="input"
+                  />
                 </div>
               </div>
-              {serviceId && (
-                <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 px-4 py-2.5 text-sm text-blue-700 dark:text-blue-300">
-                  <Clock className="inline h-3.5 w-3.5 mr-1" />
-                  Bitiş: {calculateEndTime(startTime, services.find(s => s.id === serviceId)?.duration_minutes || 30)}
-                  {' '}({services.find(s => s.id === serviceId)?.duration_minutes} dk)
-                </div>
-              )}
+              {(() => {
+                const effectiveEnd = endTime || calculateEndTime(startTime, services.find(s => s.id === serviceId)?.duration_minutes || 30)
+                const toMin = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
+                const durationMin = toMin(effectiveEnd) - toMin(startTime)
+                return durationMin > 0 ? (
+                  <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 px-4 py-2.5 text-sm text-blue-700 dark:text-blue-300">
+                    <Clock className="inline h-3.5 w-3.5 mr-1" />
+                    Süre: {Math.floor(durationMin / 60) > 0 ? `${Math.floor(durationMin / 60)} saat ` : ''}{durationMin % 60 > 0 ? `${durationMin % 60} dk` : ''}
+                    {serviceId && ` · ${services.find(s => s.id === serviceId)?.name}`}
+                  </div>
+                ) : null
+              })()}
               <div>
                 <label className="label">Not (opsiyonel)</label>
                 <input type="text" value={notes} onChange={(e) => setNotes(e.target.value)} className="input" placeholder="Ek bilgi..." />
