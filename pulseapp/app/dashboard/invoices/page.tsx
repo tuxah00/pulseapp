@@ -53,6 +53,9 @@ const PAYMENT_TYPE_LABELS: Record<string, string> = {
 export default function InvoicesPage() {
   const { businessId, staffId, staffName, sector, loading: ctxLoading, permissions } = useBusinessContext()
   const customerLabel = getCustomerLabelSingular(sector ?? undefined)
+  const PAGE_SIZE = 50
+  const [page, setPage] = useState(0)
+  const [totalCount, setTotalCount] = useState(0)
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState<string>('all')
@@ -116,6 +119,8 @@ export default function InvoicesPage() {
 
   const hasActiveFilters = !!(filterCustomerId || filterPaymentMethod || filterFrom || filterTo || filterAmountMin || filterAmountMax)
 
+  useEffect(() => { setPage(0) }, [statusFilter, filterCustomerId, filterPaymentMethod, filterFrom, filterTo, filterAmountMin, filterAmountMax, sortBy, sortOrder])
+
   const fetchInvoices = useCallback(async () => {
     if (!businessId) return
     setLoading(true)
@@ -129,12 +134,15 @@ export default function InvoicesPage() {
     if (filterAmountMax) params.set('amount_max', filterAmountMax)
     params.set('sort_by', sortBy)
     params.set('sort_order', sortOrder)
+    params.set('page', String(page))
+    params.set('pageSize', String(PAGE_SIZE))
 
     const res = await fetch(`/api/invoices?${params}`)
     const json = await res.json()
     setInvoices(json.invoices || [])
+    setTotalCount(json.total || 0)
     setLoading(false)
-  }, [businessId, statusFilter, filterCustomerId, filterPaymentMethod, filterFrom, filterTo, filterAmountMin, filterAmountMax, sortBy, sortOrder])
+  }, [businessId, statusFilter, filterCustomerId, filterPaymentMethod, filterFrom, filterTo, filterAmountMin, filterAmountMax, sortBy, sortOrder, page])
 
   const fetchDeletedInvoices = useCallback(async () => {
     if (!businessId) return
@@ -720,6 +728,23 @@ export default function InvoicesPage() {
           })}
         </AnimatedList>
       ))}
+
+      {/* Pagination */}
+      {totalCount > PAGE_SIZE && (
+        <div className="flex items-center justify-between pt-2">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, totalCount)} / {totalCount}
+          </p>
+          <div className="flex gap-2">
+            <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed">
+              Önceki
+            </button>
+            <button onClick={() => setPage(p => p + 1)} disabled={(page + 1) * PAGE_SIZE >= totalCount} className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed">
+              Sonraki
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── Fatura Detay Slide-Over ── */}
       {selectedInvoice && (

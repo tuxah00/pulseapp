@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isValidUUID } from '@/lib/utils/validate'
+import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
+import { validateBody } from '@/lib/api/validate'
+import { publicAppointmentPatchSchema, publicAppointmentDeleteSchema } from '@/lib/schemas'
 
 // GET: Token ile randevu bilgilerini getir (public — auth gerektirmez)
 export async function GET(_request: NextRequest, { params }: { params: { token: string } }) {
@@ -77,12 +80,12 @@ export async function PATCH(request: NextRequest, { params }: { params: { token:
     return NextResponse.json({ error: 'Bu randevu artık düzenlenemez' }, { status: 400 })
   }
 
-  const body = await request.json()
-  const { date, startTime, endTime } = body
+  const rl = checkRateLimit(request as NextRequest, RATE_LIMITS.publicBooking)
+  if (rl.limited) return rl.response
 
-  if (!date || !startTime || !endTime) {
-    return NextResponse.json({ error: 'date, startTime, endTime zorunlu' }, { status: 400 })
-  }
+  const patchResult = await validateBody(request, publicAppointmentPatchSchema)
+  if (!patchResult.ok) return patchResult.response
+  const { date, startTime, endTime } = patchResult.data
 
   // Müsaitlik kontrolü (aynı personel, aynı saat)
   if (appointment.staff_id) {
@@ -154,8 +157,14 @@ export async function DELETE(request: NextRequest, { params }: { params: { token
     return NextResponse.json({ error: 'Bu randevu zaten iptal edilmiş veya tamamlanmış' }, { status: 400 })
   }
 
-  const body = await request.json().catch(() => ({}))
-  const cancellationReason = (body as { reason?: string }).reason || 'Müşteri tarafından iptal edildi'
+  const rl = checkRateLimit(request as NextRequest, RATE_LIMITS.publicBooking)
+  if (rl.limited) return rl.response
+
+  const rawBody = await request.json().catch(() => ({}))
+  const deleteResult = publicAppointmentDeleteSchema.safeParse(rawBody)
+  const cancellationReason = deleteResult.success && deleteResult.data.reason
+    ? deleteResult.data.reason
+    : 'Müşteri tarafından iptal edildi'
 
   const { error } = await admin
     .from('appointments')

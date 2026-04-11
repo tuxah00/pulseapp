@@ -19,4 +19,6 @@ export const MSG = {
   NON_NEGATIVE: 'Negatif bir sayı olamaz',
   INVALID_ENUM: (values: string[]) => `Geçerli değerler: ${values.join(', ')}`,
   MIN_ITEMS: (min: number) => `En az ${min} öğe olmalı`,
+  INVALID_DATE_FORMAT: 'Geçerli bir tarih girin (YYYY-AA-GG)',
+  INVALID_TIME_FORMAT: 'Geçerli bir saat girin (SS:DD)',
 } as const
