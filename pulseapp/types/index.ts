@@ -395,7 +395,8 @@ export interface Customer {
   total_revenue: number
   total_no_shows: number
   last_visit_at: string | null
-  preferences: Record<string, any>
+  preferred_channel?: 'sms' | 'whatsapp' | 'auto' | null
+  preferences: Record<string, unknown>
   is_active: boolean
   created_at: string
   updated_at: string
@@ -418,9 +419,11 @@ export interface Appointment {
   notes: string | null
   cancellation_reason: string | null
   recurrence_group_id: string | null
-  recurrence_pattern: Record<string, any> | null
+  recurrence_pattern: Record<string, unknown> | null
   manage_token: string | null
   token_expires_at: string | null
+  deleted_at?: string | null
+  room_id?: string | null
   created_at: string
   updated_at: string
   // JOIN'lerden gelen opsiyonel alanlar
@@ -443,6 +446,8 @@ export interface Message {
   ai_classification: AiClassification | null
   ai_confidence: number | null
   appointment_id: string | null
+  staff_id?: string | null
+  staff_name?: string | null
   created_at: string
   // JOIN
   customer?: Customer
@@ -491,7 +496,7 @@ export interface Payment {
   currency: string
   status: string
   paytr_merchant_oid: string | null
-  paytr_response: Record<string, any> | null
+  paytr_response: Record<string, unknown> | null
   paid_at: string | null
   created_at: string
 }
