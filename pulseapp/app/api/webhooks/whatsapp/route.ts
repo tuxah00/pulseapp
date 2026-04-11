@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendWhatsApp } from '@/lib/whatsapp/send'
+import { verifyTwilioWebhook } from '@/lib/webhooks/verify-twilio'
 
 /**
  * Twilio WhatsApp inbound webhook
@@ -12,6 +13,10 @@ import { sendWhatsApp } from '@/lib/whatsapp/send'
  */
 export async function POST(request: NextRequest) {
   const body = await request.text()
+
+  const webhookErr = verifyTwilioWebhook(request, body)
+  if (webhookErr) return webhookErr
+
   const params = new URLSearchParams(body)
 
   // Twilio WA format: whatsapp:+905XXXXXXXXX

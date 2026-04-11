@@ -353,7 +353,7 @@
   100% { background-position:  200% 0; }
 }
 
-.modal-overlay          { animation: fadeIn       0.15s ease-out; }
+.modal-overlay          { animation: fadeIn       0.2s  ease-out; }
 .modal-content          { animation: scaleIn      0.2s  ease-out; }
 .slide-panel            { animation: slideInRight 0.2s  ease-out; }
 .modal-overlay.closing  { animation: fadeOut      0.2s  ease-in  forwards; }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendMessage } from '@/lib/messaging/send'
 import { generateWhatsAppMessage } from '@/lib/whatsapp/templates'
+import { verifyCronAuth } from '@/lib/api/verify-cron'
 
 /**
  * Follow-up Cron Job
@@ -12,12 +13,8 @@ import { generateWhatsAppMessage } from '@/lib/whatsapp/templates'
  * Çağrılma: GET /api/cron/follow-ups (CRON_SECRET ile korumalı)
  */
 export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get('authorization')
-  const cronSecret = process.env.CRON_SECRET
-
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
-  }
+  const authErr = verifyCronAuth(request)
+  if (authErr) return authErr
 
   const supabase = createAdminClient()
   const now = new Date().toISOString()

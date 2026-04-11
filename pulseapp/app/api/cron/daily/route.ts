@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { sendSMS } from '@/lib/sms/send'
 import type { CustomerSegment } from '@/types'
 import type { BusinessRow } from '@/types/db'
+import { verifyCronAuth } from '@/lib/api/verify-cron'
 
 type ReminderCustomer = { id: string; name: string; phone: string | null }
 type ReminderBusiness = { id: string; name: string; settings: BusinessRow['settings'] }
@@ -54,12 +55,8 @@ type WaitlistEntry = {
 }
 
 export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get('authorization')
-  const cronSecret = process.env.CRON_SECRET
-
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
-  }
+  const authErr = verifyCronAuth(request)
+  if (authErr) return authErr
 
   const supabase = createAdminClient()
   const now = new Date()
