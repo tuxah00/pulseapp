@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { ChevronDown, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -23,15 +24,7 @@ interface CustomSelectProps {
  * Native <select> yerine geçen, FilterPopoverList / SortPopoverContent
  * ile aynı görsel stile sahip özel açılır liste bileşeni.
  *
- * Kullanım:
- * ```tsx
- * <CustomSelect
- *   options={[{ value: 'pending', label: 'Bekleyen' }, ...]}
- *   value={status}
- *   onChange={setStatus}
- *   placeholder="Tümü"
- * />
- * ```
+ * Dropdown portal ile render edilir — overflow:hidden içinde de düzgün çalışır.
  */
 export function CustomSelect({
   options,
@@ -43,31 +36,48 @@ export function CustomSelect({
 }: CustomSelectProps) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  const [pos, setPos] = useState({ top: 0, left: 0, width: 0 })
   const selected = options.find(o => o.value === value)
+
+  const updatePosition = useCallback(() => {
+    if (!ref.current) return
+    const rect = ref.current.getBoundingClientRect()
+    setPos({ top: rect.bottom + 4, left: rect.left, width: rect.width })
+  }, [])
 
   useEffect(() => {
     if (!open) return
+    updatePosition()
     function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+      const target = e.target as Node
+      if (ref.current?.contains(target)) return
+      if (dropdownRef.current?.contains(target)) return
+      setOpen(false)
     }
     function handleKey(e: KeyboardEvent) {
       if (e.key === 'Escape') setOpen(false)
     }
+    function handleScroll() { updatePosition() }
     document.addEventListener('mousedown', handleClick)
     document.addEventListener('keydown', handleKey)
+    window.addEventListener('scroll', handleScroll, true)
+    window.addEventListener('resize', handleScroll)
     return () => {
       document.removeEventListener('mousedown', handleClick)
       document.removeEventListener('keydown', handleKey)
+      window.removeEventListener('scroll', handleScroll, true)
+      window.removeEventListener('resize', handleScroll)
     }
-  }, [open])
+  }, [open, updatePosition])
 
   return (
-    <div ref={ref} className={cn('relative', open && 'z-[70]', className)}>
+    <div ref={ref} className={cn('relative', className)}>
       {/* Trigger */}
       <button
         type="button"
         disabled={disabled}
-        onClick={() => !disabled && setOpen(v => !v)}
+        onClick={() => { if (!disabled) { updatePosition(); setOpen(v => !v) } }}
         className={cn(
           'input w-full min-w-[140px] flex items-center justify-between gap-2 text-left',
           !selected && placeholder && 'text-gray-400 dark:text-gray-500',
@@ -85,9 +95,13 @@ export function CustomSelect({
         />
       </button>
 
-      {/* Dropdown panel */}
-      {open && (
-        <div className="absolute left-0 right-0 top-full mt-1 z-[70] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xl rounded-xl overflow-hidden modal-content">
+      {/* Dropdown panel — portal ile body'ye render edilir */}
+      {open && typeof document !== 'undefined' && createPortal(
+        <div
+          ref={dropdownRef}
+          style={{ position: 'fixed', top: pos.top, left: pos.left, width: pos.width, zIndex: 9999 }}
+          className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xl rounded-xl overflow-hidden"
+        >
           <div className="max-h-52 overflow-y-auto py-1">
             {/* Placeholder / "Tümü" seçeneği */}
             {placeholder !== undefined && (
@@ -124,7 +138,8 @@ export function CustomSelect({
               </button>
             ))}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )
