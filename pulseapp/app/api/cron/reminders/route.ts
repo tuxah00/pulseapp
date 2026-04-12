@@ -48,59 +48,32 @@ export async function GET(request: NextRequest) {
       const time = apt.start_time?.substring(0, 5) || ''
       const confirmationEnabled = business.settings?.confirmation_sms_enabled
 
+      const template = confirmationEnabled ? 'appointment_confirmation_request' : 'appointment_reminder'
+      const body = generateWhatsAppMessage(template, {
+        customerName: customer.name,
+        businessName: business.name,
+        date,
+        time,
+        serviceName: service?.name || '',
+      })
+
+      await sendMessage({
+        to: customer.phone,
+        body,
+        businessId: business.id,
+        customerId: customer.id,
+        messageType: 'system',
+        channel: 'auto',
+      })
+
+      const aptUpdate: Record<string, unknown> = { reminder_24h_sent: true }
       if (confirmationEnabled) {
-        // İnteraktif onay mesajı gönder
-        const body = generateWhatsAppMessage('appointment_confirmation_request', {
-          customerName: customer.name,
-          businessName: business.name,
-          date,
-          time,
-          serviceName: service?.name || '',
-        })
-
-        await sendMessage({
-          to: customer.phone,
-          body,
-          businessId: business.id,
-          customerId: customer.id,
-          messageType: 'system',
-          channel: 'auto',
-        })
-
-        await supabase
-          .from('appointments')
-          .update({
-            reminder_24h_sent: true,
-            confirmation_status: 'waiting',
-            confirmation_sent_at: new Date().toISOString(),
-          })
-          .eq('id', apt.id)
-
+        aptUpdate.confirmation_status = 'waiting'
+        aptUpdate.confirmation_sent_at = new Date().toISOString()
         results.confirmations++
-      } else {
-        // Klasik hatırlatma (onay istemeden)
-        const body = generateWhatsAppMessage('appointment_reminder', {
-          customerName: customer.name,
-          businessName: business.name,
-          date,
-          time,
-          serviceName: service?.name || '',
-        })
-
-        await sendMessage({
-          to: customer.phone,
-          body,
-          businessId: business.id,
-          customerId: customer.id,
-          messageType: 'system',
-          channel: 'auto',
-        })
-
-        await supabase
-          .from('appointments')
-          .update({ reminder_24h_sent: true })
-          .eq('id', apt.id)
       }
+
+      await supabase.from('appointments').update(aptUpdate).eq('id', apt.id)
 
       results.sent24h++
     } catch {

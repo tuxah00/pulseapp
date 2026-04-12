@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendSMS } from '@/lib/sms/send'
-import { sendMessage } from '@/lib/messaging/send'
+import { handleAppointmentConfirmationReply } from '@/lib/messaging/appointment-confirmation'
 
 /**
  * Twilio inbound SMS webhook
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
   const isDecline = /^(HAYIR|H|NO|0|[İI]PTAL|GEL[Ee]M[İI]YORUM|VAZGE[CÇ])$/i.test(trimmed)
 
   if ((isConfirm || isDecline) && customer?.id) {
-    const handled = await handleAppointmentConfirmation(admin, customer.id, businessId, isConfirm)
+    const handled = await handleAppointmentConfirmationReply(admin, customer.id, businessId, from, isConfirm, 'auto')
     if (handled) {
       return new NextResponse('OK', { status: 200 })
     }
@@ -142,82 +142,3 @@ export async function POST(request: NextRequest) {
   return new NextResponse('OK', { status: 200 })
 }
 
-/**
- * Müşterinin EVET/HAYIR yanıtını en yakın "waiting" randevusuyla eşleştir ve işle.
- */
-async function handleAppointmentConfirmation(
-  admin: ReturnType<typeof createAdminClient>,
-  customerId: string,
-  businessId: string,
-  isConfirm: boolean
-): Promise<boolean> {
-  // Müşterinin "waiting" durumundaki en yakın randevusunu bul
-  const todayStr = new Date().toISOString().split('T')[0]
-
-  const { data: waitingApts } = await admin
-    .from('appointments')
-    .select('id, appointment_date, start_time, businesses(name), services(name), customers(name, phone)')
-    .eq('customer_id', customerId)
-    .eq('business_id', businessId)
-    .eq('confirmation_status', 'waiting')
-    .gte('appointment_date', todayStr)
-    .in('status', ['confirmed', 'pending'])
-    .is('deleted_at', null)
-    .order('appointment_date', { ascending: true })
-    .order('start_time', { ascending: true })
-    .limit(1)
-
-  const apt = waitingApts?.[0]
-  if (!apt) return false
-
-  const customer = apt.customers as any
-  const business = apt.businesses as any
-
-  if (isConfirm) {
-    // Onay: confirmation_status → confirmed_by_customer, status → confirmed
-    await admin
-      .from('appointments')
-      .update({
-        confirmation_status: 'confirmed_by_customer',
-        status: 'confirmed',
-      })
-      .eq('id', apt.id)
-
-    // Müşteriye onay mesajı gönder
-    if (customer?.phone) {
-      await sendMessage({
-        to: customer.phone,
-        body: `Teşekkürler ${customer.name || ''} ✅ Randevunuz onaylandı. Sizi bekliyoruz!`,
-        businessId,
-        customerId,
-        messageType: 'system',
-        channel: 'auto',
-      })
-    }
-  } else {
-    // Red: confirmation_status → declined, status → cancelled
-    await admin
-      .from('appointments')
-      .update({
-        confirmation_status: 'declined',
-        status: 'cancelled',
-        cancellation_reason: 'Müşteri SMS ile iptal etti',
-      })
-      .eq('id', apt.id)
-
-    // Müşteriye iptal mesajı gönder
-    if (customer?.phone) {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
-      await sendMessage({
-        to: customer.phone,
-        body: `Randevunuz iptal edildi. Yeni randevu almak için: ${appUrl}/book/${businessId}`,
-        businessId,
-        customerId,
-        messageType: 'system',
-        channel: 'auto',
-      })
-    }
-  }
-
-  return true
-}

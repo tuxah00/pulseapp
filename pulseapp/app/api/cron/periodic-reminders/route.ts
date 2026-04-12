@@ -66,7 +66,10 @@ export async function GET(request: NextRequest) {
 
       if (!candidates?.length) continue
 
-      // Müşteri bazlı gruplama (en son randevu)
+      // Müşteri bazlı gruplama — candidates DESC sıralı, ilk kayıt en yeni randevudur
+      const thirtyDaysAgo = new Date(now)
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
       const seen = new Set<string>()
       for (const apt of candidates) {
         const customerId = apt.customer_id
@@ -76,12 +79,15 @@ export async function GET(request: NextRequest) {
         const customer = apt.customers as any
         if (!customer?.phone) continue
 
+        // candidates DESC sıralı olduğundan apt.appointment_date en son randevudur
+        const daysSince = Math.floor(
+          (now.getTime() - new Date(apt.appointment_date).getTime()) / (1000 * 60 * 60 * 24)
+        )
+        if (daysSince < intervalDays - advanceDays) continue
+
         results.checked++
 
-        // Son 30 gün içinde bu müşteri+hizmet için hatırlatma gönderilmiş mi?
-        const thirtyDaysAgo = new Date(now)
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-
+        // Son 30 gün içinde hatırlatma gönderilmiş mi?
         const { data: recentReminder } = await supabase
           .from('periodic_reminders_sent')
           .select('id')
@@ -90,28 +96,8 @@ export async function GET(request: NextRequest) {
           .gte('sent_at', thirtyDaysAgo.toISOString())
           .limit(1)
 
-        if (recentReminder?.length) continue // Zaten gönderilmiş
+        if (recentReminder?.length) continue
 
-        // Son randevusu gerçekten interval'den eski mi? (son randevuyu kontrol et)
-        const { data: lastApt } = await supabase
-          .from('appointments')
-          .select('appointment_date')
-          .eq('customer_id', customerId)
-          .eq('service_id', service.id)
-          .eq('business_id', biz.id)
-          .eq('status', 'completed')
-          .is('deleted_at', null)
-          .order('appointment_date', { ascending: false })
-          .limit(1)
-          .single()
-
-        if (!lastApt) continue
-
-        const lastDate = new Date(lastApt.appointment_date)
-        const daysSince = Math.floor((now.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24))
-        if (daysSince < intervalDays - advanceDays) continue
-
-        // Hatırlatma gönder
         const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
         const bookingLink = `${appUrl}/book/${biz.id}`
 
@@ -121,22 +107,22 @@ export async function GET(request: NextRequest) {
           `Sağlıklı günler dileriz! 🌿`
 
         try {
-          await sendMessage({
-            to: customer.phone,
-            body,
-            businessId: biz.id,
-            customerId: customerId,
-            messageType: 'system',
-            channel: 'auto',
-          })
-
-          // Gönderim kaydı
-          await supabase.from('periodic_reminders_sent').insert({
-            business_id: biz.id,
-            customer_id: customerId,
-            service_id: service.id,
-          })
-
+          // Mesaj gönder ve kayıt işlemini paralel yap
+          await Promise.all([
+            sendMessage({
+              to: customer.phone,
+              body,
+              businessId: biz.id,
+              customerId: customerId,
+              messageType: 'system',
+              channel: 'auto',
+            }),
+            supabase.from('periodic_reminders_sent').insert({
+              business_id: biz.id,
+              customer_id: customerId,
+              service_id: service.id,
+            }),
+          ])
           results.sent++
         } catch {
           results.errors++

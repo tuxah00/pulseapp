@@ -235,28 +235,37 @@ export async function GET(request: NextRequest) {
 
   const noShowCustomerIds = [...new Set((noShowApts || []).map(a => a.customer_id).filter(Boolean))]
 
-  for (const custId of noShowCustomerIds) {
-    // Müşterinin toplam no_show sayısı ve total randevu sayısını al
-    const { data: stats } = await supabase
+  if (noShowCustomerIds.length > 0) {
+    // Tüm müşterilerin istatistiklerini tek sorguda al
+    const { data: allStats } = await supabase
       .from('appointments')
-      .select('status')
-      .eq('customer_id', custId)
-      .is('deleted_at', null)
+      .select('customer_id, status')
+      .in('customer_id', noShowCustomerIds)
       .in('status', ['completed', 'no_show'])
+      .is('deleted_at', null)
 
-    if (!stats || stats.length === 0) continue
+    // JS'te müşteri bazlı grupla
+    const statsMap = new Map<string, { done: number; noShow: number }>()
+    for (const apt of allStats || []) {
+      const entry = statsMap.get(apt.customer_id) ?? { done: 0, noShow: 0 }
+      if (apt.status === 'no_show') entry.noShow++
+      else entry.done++
+      statsMap.set(apt.customer_id, entry)
+    }
 
-    const totalDone = stats.length
-    const totalNoShow = stats.filter(s => s.status === 'no_show').length
-    // Skor: no_show yüzdesi (0-100)
-    const score = Math.round((totalNoShow / totalDone) * 100)
-
-    await supabase
-      .from('customers')
-      .update({ no_show_score: score, total_no_shows: totalNoShow })
-      .eq('id', custId)
-
-    noShowScoring.updated++
+    // Paralel güncelle
+    await Promise.all(
+      Array.from(statsMap.entries()).map(([custId, s]) => {
+        const total = s.done + s.noShow
+        if (total === 0) return Promise.resolve()
+        const score = Math.round((s.noShow / total) * 100)
+        noShowScoring.updated++
+        return supabase
+          .from('customers')
+          .update({ no_show_score: score })
+          .eq('id', custId)
+      })
+    )
   }
 
   // ── 5. Bekleme Listesi Bildirimleri ───────────────────────────────────────
