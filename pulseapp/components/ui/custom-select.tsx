@@ -18,8 +18,6 @@ interface CustomSelectProps {
   placeholder?: string
   className?: string
   disabled?: boolean
-  /** Dropdown'ı yukarı doğru açar (modal alt kısmında kullanım için) */
-  dropUp?: boolean
 }
 
 /**
@@ -27,6 +25,7 @@ interface CustomSelectProps {
  * ile aynı görsel stile sahip özel açılır liste bileşeni.
  *
  * Dropdown portal ile render edilir — overflow:hidden içinde de düzgün çalışır.
+ * Viewport altına sığmazsa otomatik yukarı açılır.
  */
 export function CustomSelect({
   options,
@@ -35,23 +34,28 @@ export function CustomSelect({
   placeholder,
   className,
   disabled,
-  dropUp,
 }: CustomSelectProps) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
-  const [pos, setPos] = useState({ top: 0, left: 0, width: 0 })
+  const [pos, setPos] = useState<{ top?: number; bottom?: number; left: number; width: number }>({ left: 0, width: 0 })
   const selected = options.find(o => o.value === value)
+
+  /** Dropdown max yüksekliği (max-h-52 = 13rem = 208px) */
+  const DROPDOWN_MAX_H = 208
 
   const updatePosition = useCallback(() => {
     if (!ref.current) return
     const rect = ref.current.getBoundingClientRect()
-    if (dropUp) {
-      setPos({ top: rect.top - 4, left: rect.left, width: rect.width })
+    const spaceBelow = window.innerHeight - rect.bottom - 4
+    const flipUp = spaceBelow < DROPDOWN_MAX_H && rect.top > spaceBelow
+
+    if (flipUp) {
+      setPos({ bottom: window.innerHeight - rect.top + 4, left: rect.left, width: rect.width })
     } else {
       setPos({ top: rect.bottom + 4, left: rect.left, width: rect.width })
     }
-  }, [dropUp])
+  }, [])
 
   useEffect(() => {
     if (!open) return
@@ -86,7 +90,7 @@ export function CustomSelect({
         disabled={disabled}
         onClick={() => { if (!disabled) { updatePosition(); setOpen(v => !v) } }}
         className={cn(
-          'input w-full min-w-[140px] flex items-center justify-between gap-2 text-left',
+          'input w-full flex items-center justify-between gap-2 text-left',
           !selected && placeholder && 'text-gray-400 dark:text-gray-500',
           disabled && 'opacity-50 cursor-not-allowed pointer-events-none'
         )}
@@ -106,7 +110,7 @@ export function CustomSelect({
       {open && typeof document !== 'undefined' && createPortal(
         <div
           ref={dropdownRef}
-          style={{ position: 'fixed', top: dropUp ? undefined : pos.top, bottom: dropUp ? `calc(100vh - ${pos.top}px)` : undefined, left: pos.left, width: pos.width, zIndex: 9999 }}
+          style={{ position: 'fixed', top: pos.top, bottom: pos.bottom, left: pos.left, width: pos.width, zIndex: 9999 }}
           className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xl rounded-xl overflow-hidden"
         >
           <div className="max-h-52 overflow-y-auto py-1">
