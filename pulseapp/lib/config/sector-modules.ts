@@ -17,6 +17,7 @@ const BASE_ITEMS: SidebarItem[] = [
   { key: 'dashboard', name: 'Genel Bakış', href: '/dashboard', iconName: 'LayoutDashboard' },
   { key: 'appointments', name: 'Randevular', href: '/dashboard/appointments', iconName: 'Calendar' },
   { key: 'customers', name: 'Müşteriler', href: '/dashboard/customers', iconName: 'Users' },
+  { key: 'waitlist', name: 'Bekleme Listesi', href: '/dashboard/waitlist', iconName: 'ClipboardList' },
 ]
 
 // Management items shown for every sector
