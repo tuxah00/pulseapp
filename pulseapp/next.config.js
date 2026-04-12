@@ -1,16 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Twilio webhook'ları için
+  // Webhook route'ları sunucu-sunucu iletişim kullanır, CORS gerekli değil
   async headers() {
-    return [
-      {
-        source: '/api/webhooks/:path*',
-        headers: [
-          { key: 'Access-Control-Allow-Origin', value: '*' },
-          { key: 'Access-Control-Allow-Methods', value: 'POST' },
-        ],
-      },
-    ]
+    return []
   },
   // Faz 5: Türkçe → İngilizce route rename geçişinde eski URL'ler
   // bookmarklı kullanıcılar için 308 redirect ile yenisine yönlendirilir.

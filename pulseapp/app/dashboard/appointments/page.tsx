@@ -91,6 +91,7 @@ export default function AppointmentsPage() {
   const [roomId, setRoomId] = useState('')
   const [date, setDate] = useState('')
   const [startTime, setStartTime] = useState('09:00')
+  const [endTime, setEndTime] = useState('')
   const [notes, setNotes] = useState('')
 
   // Tekrarlayan randevu state
@@ -286,10 +287,10 @@ export default function AppointmentsPage() {
     return `${sd} ${months[sm - 1]} – ${ed} ${months[em - 1]} ${ey}`
   }
 
-  function openNewModal(overrideDate?: string, overrideTime?: string) {
+  function openNewModal(overrideDate?: string, overrideTime?: string, overrideEndTime?: string) {
     setEditingAppointment(null)
     setCustomerId(''); setServiceId(''); setStaffId(''); setRoomId('')
-    setDate(overrideDate || selectedDate); setStartTime(overrideTime || '09:00'); setNotes('')
+    setDate(overrideDate || selectedDate); setStartTime(overrideTime || '09:00'); setEndTime(overrideEndTime || ''); setNotes('')
     setIsRecurring(false); setRecurrenceFrequency('weekly'); setRecurrenceCount(4)
     setError(null); setShowModal(true)
   }
@@ -299,7 +300,7 @@ export default function AppointmentsPage() {
     setEditingAppointment(apt)
     setCustomerId(apt.customer_id); setServiceId(apt.service_id || ''); setStaffId(apt.staff_id || '')
     setRoomId((apt as AppointmentView & { room_id?: string }).room_id || '')
-    setDate(apt.appointment_date); setStartTime(apt.start_time); setNotes(apt.notes || '')
+    setDate(apt.appointment_date); setStartTime(apt.start_time); setEndTime(apt.end_time); setNotes(apt.notes || '')
     setIsRecurring(false)
     setError(null); setShowModal(true)
   }
@@ -378,13 +379,13 @@ export default function AppointmentsPage() {
     e.preventDefault(); setSaving(true); setError(null)
     const selectedService = services.find(s => s.id === serviceId)
     const duration = selectedService?.duration_minutes || 30
-    const endTime = calculateEndTime(startTime, duration)
+    const finalEndTime = endTime || calculateEndTime(startTime, duration)
     const payload = {
       customer_id: customerId, service_id: serviceId || null, staff_id: staffId || null,
       room_id: roomId || null,
-      appointment_date: date, start_time: startTime, end_time: endTime, notes: notes || null,
+      appointment_date: date, start_time: startTime, end_time: finalEndTime, notes: notes || null,
     }
-    const conflict = await checkStaffConflict(staffId || null, date, startTime, endTime, editingAppointment?.id ?? null)
+    const conflict = await checkStaffConflict(staffId || null, date, startTime, finalEndTime, editingAppointment?.id ?? null)
     if (conflict) { setError('Bu personelin bu saatte başka bir randevusu var.'); setSaving(false); return }
 
     if (editingAppointment) {
@@ -398,7 +399,7 @@ export default function AppointmentsPage() {
 
       // Çakışma kontrolü
       for (const d of dates) {
-        const hasConflict = await checkStaffConflict(staffId || null, d, startTime, endTime, null)
+        const hasConflict = await checkStaffConflict(staffId || null, d, startTime, finalEndTime, null)
         if (hasConflict) conflictDates.push(d)
       }
 
@@ -418,7 +419,7 @@ export default function AppointmentsPage() {
         room_id: roomId || null,
         appointment_date: d,
         start_time: startTime,
-        end_time: endTime,
+        end_time: finalEndTime,
         notes: notes || null,
         status: 'confirmed' as const,
         source: 'manual' as const,
@@ -647,29 +648,90 @@ export default function AppointmentsPage() {
   }
 
   // Seçilen hücrelerdeki tüm blokları toplu kaldır
-  async function handleBulkUnblock(cells: { col: number; colId: string; date: string; hour: number }[]) {
-    if (!businessId || cells.length === 0) return
-    // Seçilen hücrelere denk gelen blok ID'lerini bul
-    const slotIds = new Set<string>()
-    for (const cell of cells) {
-      for (const bs of blockedSlots) {
-        if (bs.date !== cell.date) continue
-        const bsStartH = parseInt(bs.start_time.split(':')[0])
-        const bsEndH = parseInt(bs.end_time.split(':')[0])
-        if (cell.hour < bsStartH || cell.hour >= bsEndH) continue
-        if (selectionViewMode === 'week' && (bs.staff_id || bs.room_id)) continue
-        if (selectionViewMode === 'staff' && cell.colId !== '__unassigned__' && bs.staff_id && bs.staff_id !== cell.colId) continue
-        if (selectionViewMode === 'room' && cell.colId !== '__unassigned__' && bs.room_id && bs.room_id !== cell.colId) continue
-        slotIds.add(bs.id)
+  function computeRemainingIntervals(blockStartH: number, blockEndH: number, selectedHours: Set<number>): { startH: number; endH: number }[] {
+    const intervals: { startH: number; endH: number }[] = []
+    let rangeStart: number | null = null
+    for (let h = blockStartH; h < blockEndH; h++) {
+      if (!selectedHours.has(h)) {
+        if (rangeStart === null) rangeStart = h
+      } else {
+        if (rangeStart !== null) {
+          intervals.push({ startH: rangeStart, endH: h })
+          rangeStart = null
+        }
       }
     }
+    if (rangeStart !== null) intervals.push({ startH: rangeStart, endH: blockEndH })
+    return intervals
+  }
+
+  async function handleBulkUnblock(cells: { col: number; colId: string; date: string; hour: number }[]) {
+    if (!businessId || cells.length === 0) return
+
+    // Seçili hücreleri date+colId bazında grupla
+    const grouped = new Map<string, { date: string; colId: string; hours: Set<number> }>()
+    for (const cell of cells) {
+      const key = `${cell.date}_${cell.colId}`
+      if (!grouped.has(key)) grouped.set(key, { date: cell.date, colId: cell.colId, hours: new Set() })
+      grouped.get(key)!.hours.add(cell.hour)
+    }
+
+    const toDelete = new Set<string>()
+    const toCreate: Array<{ date: string; start_time: string; end_time: string; staff_id?: string; room_id?: string; reason?: string }> = []
+
+    for (const g of grouped.values()) {
+      for (const bs of blockedSlots) {
+        if (bs.date !== g.date) continue
+        if (toDelete.has(bs.id)) continue
+        if (selectionViewMode === 'week' && (bs.staff_id || bs.room_id)) continue
+        if (selectionViewMode === 'staff' && g.colId !== '__unassigned__' && bs.staff_id && bs.staff_id !== g.colId) continue
+        if (selectionViewMode === 'room' && g.colId !== '__unassigned__' && bs.room_id && bs.room_id !== g.colId) continue
+
+        const bsStartH = parseInt(bs.start_time.split(':')[0])
+        const bsEndH = parseInt(bs.end_time.split(':')[0])
+
+        // Seçili saatlerle kesişim kontrolü
+        let hasOverlap = false
+        for (let h = bsStartH; h < bsEndH; h++) {
+          if (g.hours.has(h)) { hasOverlap = true; break }
+        }
+        if (!hasOverlap) continue
+
+        toDelete.add(bs.id)
+
+        // Kalan aralıkları hesapla (split)
+        const remaining = computeRemainingIntervals(bsStartH, bsEndH, g.hours)
+        for (const r of remaining) {
+          toCreate.push({
+            date: bs.date,
+            start_time: `${String(r.startH).padStart(2, '0')}:00`,
+            end_time: `${String(r.endH).padStart(2, '0')}:00`,
+            staff_id: bs.staff_id || undefined,
+            room_id: bs.room_id || undefined,
+            reason: bs.reason || undefined,
+          })
+        }
+      }
+    }
+
+    if (toDelete.size === 0) return
+
     try {
-      await Promise.all(Array.from(slotIds).map(id =>
+      // Eski blokları sil
+      await Promise.all(Array.from(toDelete).map(id =>
         fetch(`/api/blocked-slots?id=${id}&businessId=${businessId}`, { method: 'DELETE' })
       ))
+      // Kalan parçaları oluştur
+      if (toCreate.length > 0) {
+        await fetch('/api/blocked-slots', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ businessId, slots: toCreate }),
+        })
+      }
       await fetchBlockedSlots()
       window.dispatchEvent(new CustomEvent('pulse-toast', {
-        detail: { type: 'system', title: 'Bloklar Kaldırıldı', body: `${slotIds.size} blok kaldırıldı.` },
+        detail: { type: 'system', title: 'Bloklar Kaldırıldı', body: `${toDelete.size} blok güncellendi.` },
       }))
     } catch { /* ignore */ }
   }
@@ -843,7 +905,7 @@ export default function AppointmentsPage() {
     return dayMap[d.getDay()]
   }
 
-  function generateTimeSlots(dateStr?: string, wh?: Record<string, { open: string; close: string } | null> | null): string[] {
+  function generateTimeSlots(dateStr?: string, wh?: Record<string, { open: string; close: string } | null> | null, includeClose?: boolean): string[] {
     let slots: string[] = []
     if (dateStr && wh) {
       const dayKey = getDayKeyFromDate(dateStr)
@@ -857,6 +919,11 @@ export default function AppointmentsPage() {
         const hh = Math.floor(t / 60)
         const mm = t % 60
         slots.push(`${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`)
+      }
+      // Bitiş saati için kapanış saatini de ekle
+      if (includeClose) {
+        const closeStr = `${String(closeH).padStart(2, '0')}:${String(closeM).padStart(2, '0')}`
+        if (!slots.includes(closeStr)) slots.push(closeStr)
       }
     } else {
       // Fallback: 08:00 - 21:30
@@ -1354,50 +1421,101 @@ export default function AppointmentsPage() {
                               />
                             )
                           })}
-                          {/* Randevu blokları — çakışma tespiti ile yan yana kolon */}
-                          {computeOverlapLayout(dayAppointments).map(({ apt, column, totalColumns }) => {
-                            const startMin = toMinutes(apt.start_time) - startHour * 60
-                            const endMin = toMinutes(apt.end_time) - startHour * 60
-                            const top = (startMin / 60) * hourHeight
-                            const height = Math.max(((endMin - startMin) / 60) * hourHeight, 20)
-                            const colorIdx = getStaffColorIndex(apt.staff_id)
-                            const colWidth = 100 / totalColumns
-                            const colLeft = column * colWidth
+                          {/* Randevu blokları — 3+ çakışmada tek blok göster */}
+                          {(() => {
+                            const layout = computeOverlapLayout(dayAppointments)
+                            // 3+ çakışan grupları bul
+                            const mergedGroups = new Map<string, typeof layout>()
+                            for (const item of layout) {
+                              if (item.totalColumns >= 3) {
+                                const overlapping = layout.filter(o =>
+                                  o.totalColumns >= 3 &&
+                                  o.apt.start_time < item.apt.end_time &&
+                                  o.apt.end_time > item.apt.start_time
+                                )
+                                const key = overlapping.map(o => o.apt.id).sort().join(',')
+                                if (!mergedGroups.has(key)) mergedGroups.set(key, overlapping)
+                              }
+                            }
+                            const mergedIds = new Set<string>()
+                            mergedGroups.forEach(items => items.forEach(i => mergedIds.add(i.apt.id)))
 
                             return (
-                              <div
-                                key={apt.id}
-                                draggable
-                                onDragStart={(e) => {
-                                  e.dataTransfer.setData('text/plain', apt.id)
-                                  e.dataTransfer.effectAllowed = 'move'
-                                  setDraggingId(apt.id)
-                                }}
-                                onDragEnd={() => setDraggingId(null)}
-                                className={cn(
-                                  'absolute rounded-md px-1.5 py-0.5 overflow-hidden cursor-grab active:cursor-grabbing hover:opacity-90 transition-opacity border border-white/20',
-                                  staffColors[colorIdx],
-                                  draggingId === apt.id && 'opacity-50'
-                                )}
-                                style={{ top, height, left: `${colLeft}%`, width: `${colWidth - 1}%` }}
-                                onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
-                              >
-                                <p className={cn('text-[10px] font-semibold truncate', staffTextColors[colorIdx])}>
-                                  {apt.customers?.name || 'İsimsiz'}
-                                </p>
-                                {height > 30 && (
-                                  <p className={cn('text-[9px] truncate opacity-75', staffTextColors[colorIdx])}>
-                                    {apt.services?.name || ''} · {formatTime(apt.start_time)}
-                                  </p>
-                                )}
-                                {apt.staff_members?.name && height > 24 && (
-                                  <p className={cn('text-[8px] truncate opacity-60 absolute bottom-0.5 right-1 max-w-[90%] text-right', staffTextColors[colorIdx])}>
-                                    {apt.staff_members.name}
-                                  </p>
-                                )}
-                              </div>
+                              <>
+                                {/* Birleştirilmiş bloklar */}
+                                {Array.from(mergedGroups.values()).map((items) => {
+                                  const apts = items.map(i => i.apt)
+                                  const earliest = Math.min(...apts.map(a => toMinutes(a.start_time)))
+                                  const latest = Math.max(...apts.map(a => toMinutes(a.end_time)))
+                                  const topPos = ((earliest - startHour * 60) / 60) * hourHeight
+                                  const h = Math.max(((latest - earliest) / 60) * hourHeight, 28)
+                                  const colorIdx = getStaffColorIndex(apts[0].staff_id)
+                                  return (
+                                    <div
+                                      key={`mg-${apts[0].id}`}
+                                      className={cn(
+                                        'absolute left-0 right-0 rounded-md px-2 py-1 cursor-pointer hover:opacity-90 transition-opacity border border-white/20 flex items-center justify-center',
+                                        staffColors[colorIdx]
+                                      )}
+                                      style={{ top: topPos, height: h }}
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        const hour = Math.floor(earliest / 60)
+                                        setSlotPopup({ day, hour, apts, x: e.clientX, y: e.clientY })
+                                      }}
+                                    >
+                                      <p className={cn('text-[11px] font-bold', staffTextColors[colorIdx])}>
+                                        {apts.length} randevu
+                                      </p>
+                                    </div>
+                                  )
+                                })}
+                                {/* Bireysel bloklar (1-2 çakışan) */}
+                                {layout.filter(i => !mergedIds.has(i.apt.id)).map(({ apt, column, totalColumns }) => {
+                                  const startMin = toMinutes(apt.start_time) - startHour * 60
+                                  const endMin = toMinutes(apt.end_time) - startHour * 60
+                                  const topPos = (startMin / 60) * hourHeight
+                                  const h = Math.max(((endMin - startMin) / 60) * hourHeight, 20)
+                                  const colorIdx = getStaffColorIndex(apt.staff_id)
+                                  const colWidth = 100 / totalColumns
+                                  const colLeft = column * colWidth
+                                  return (
+                                    <div
+                                      key={apt.id}
+                                      draggable
+                                      onDragStart={(e) => {
+                                        e.dataTransfer.setData('text/plain', apt.id)
+                                        e.dataTransfer.effectAllowed = 'move'
+                                        setDraggingId(apt.id)
+                                      }}
+                                      onDragEnd={() => setDraggingId(null)}
+                                      className={cn(
+                                        'absolute rounded-md px-1.5 py-0.5 overflow-hidden cursor-grab active:cursor-grabbing hover:opacity-90 transition-opacity border border-white/20',
+                                        staffColors[colorIdx],
+                                        draggingId === apt.id && 'opacity-50'
+                                      )}
+                                      style={{ top: topPos, height: h, left: `${colLeft}%`, width: `${colWidth - 1}%` }}
+                                      onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
+                                    >
+                                      <p className={cn('text-[10px] font-semibold truncate', staffTextColors[colorIdx])}>
+                                        {apt.customers?.name || 'İsimsiz'}
+                                      </p>
+                                      {h > 30 && (
+                                        <p className={cn('text-[9px] truncate opacity-75', staffTextColors[colorIdx])}>
+                                          {apt.services?.name || ''} · {formatTime(apt.start_time)}
+                                        </p>
+                                      )}
+                                      {apt.staff_members?.name && h > 24 && (
+                                        <p className={cn('text-[8px] truncate opacity-60 absolute bottom-0.5 right-1 max-w-[90%] text-right', staffTextColors[colorIdx])}>
+                                          {apt.staff_members.name}
+                                        </p>
+                                      )}
+                                    </div>
+                                  )
+                                })}
+                              </>
                             )
-                          })}
+                          })()}
 
                           {/* Şu anki saat çizgisi (sadece bugün) */}
                           {isDayToday && (() => {
@@ -2016,13 +2134,14 @@ export default function AppointmentsPage() {
                           onClick={() => {
                             const firstCell = sortedCells[0]
                             const startTimeStr = `${String(minHour).padStart(2, '0')}:00`
+                            const endTimeStr = `${String(maxHour + 1).padStart(2, '0')}:00`
                             setEditingAppointment(null)
                             setCustomerId(''); setServiceId(''); setStaffId(
                               selectionViewMode === 'staff' && firstCell.colId !== '__unassigned__' ? firstCell.colId : ''
                             ); setRoomId(
                               selectionViewMode === 'room' && firstCell.colId !== '__unassigned__' ? firstCell.colId : ''
                             )
-                            setDate(firstCell.date); setStartTime(startTimeStr); setNotes('')
+                            setDate(firstCell.date); setStartTime(startTimeStr); setEndTime(endTimeStr); setNotes('')
                             setIsRecurring(false); setRecurrenceFrequency('weekly'); setRecurrenceCount(4)
                             setError(null); setShowModal(true)
                             clearSelection()
@@ -2337,7 +2456,11 @@ export default function AppointmentsPage() {
                 <CustomSelect
                   options={services.map(s => ({ value: s.id, label: `${s.name} — ${s.duration_minutes} dk${s.price ? ` — ${s.price} TL` : ''}` }))}
                   value={serviceId}
-                  onChange={v => setServiceId(v)}
+                  onChange={v => {
+                    setServiceId(v)
+                    const svc = services.find(s => s.id === v)
+                    if (svc) setEndTime(calculateEndTime(startTime, svc.duration_minutes))
+                  }}
                   placeholder="Hizmet seçin (opsiyonel)..."
                   className="input"
                 />
@@ -2363,36 +2486,56 @@ export default function AppointmentsPage() {
                   />
                 </div>
               )}
+              <div>
+                <label className="label">Tarih</label>
+                <input type="date" value={date} onChange={(e) => {
+                  const newDate = e.target.value
+                  setDate(newDate)
+                  const slots = generateTimeSlots(newDate, workingHours)
+                  setStartTime(slots.length > 0 ? slots[0] : '09:00')
+                  setEndTime('')
+                }} className="input" required />
+                {date && workingHours && generateTimeSlots(date, workingHours).length === 0 && (
+                  <p className="text-xs text-red-500 mt-1">Bu gün kapalıdır, randevu oluşturulamaz.</p>
+                )}
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="label">Tarih</label>
-                  <input type="date" value={date} onChange={(e) => {
-                    const newDate = e.target.value
-                    setDate(newDate)
-                    const slots = generateTimeSlots(newDate, workingHours)
-                    setStartTime(slots.length > 0 ? slots[0] : '09:00')
-                  }} className="input" required />
-                </div>
-                <div>
-                  <label className="label">Saat</label>
+                  <label className="label">Başlangıç</label>
                   <CustomSelect
                     options={generateTimeSlots(date, workingHours).map(t => ({ value: t, label: t }))}
                     value={startTime}
-                    onChange={v => setStartTime(v)}
+                    onChange={v => {
+                      setStartTime(v)
+                      // Hizmet seçiliyse bitiş saatini otomatik güncelle
+                      const svc = services.find(s => s.id === serviceId)
+                      if (svc) setEndTime(calculateEndTime(v, svc.duration_minutes))
+                    }}
                     className="input"
                   />
-                  {date && workingHours && generateTimeSlots(date, workingHours).length === 0 && (
-                    <p className="text-xs text-red-500 mt-1">Bu gün kapalıdır, randevu oluşturulamaz.</p>
-                  )}
+                </div>
+                <div>
+                  <label className="label">Bitiş</label>
+                  <CustomSelect
+                    options={generateTimeSlots(date, workingHours, true).map(t => ({ value: t, label: t }))}
+                    value={endTime || calculateEndTime(startTime, services.find(s => s.id === serviceId)?.duration_minutes || 30)}
+                    onChange={v => setEndTime(v)}
+                    className="input"
+                  />
                 </div>
               </div>
-              {serviceId && (
-                <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 px-4 py-2.5 text-sm text-blue-700 dark:text-blue-300">
-                  <Clock className="inline h-3.5 w-3.5 mr-1" />
-                  Bitiş: {calculateEndTime(startTime, services.find(s => s.id === serviceId)?.duration_minutes || 30)}
-                  {' '}({services.find(s => s.id === serviceId)?.duration_minutes} dk)
-                </div>
-              )}
+              {(() => {
+                const effectiveEnd = endTime || calculateEndTime(startTime, services.find(s => s.id === serviceId)?.duration_minutes || 30)
+                const toMin = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
+                const durationMin = toMin(effectiveEnd) - toMin(startTime)
+                return durationMin > 0 ? (
+                  <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 px-4 py-2.5 text-sm text-blue-700 dark:text-blue-300">
+                    <Clock className="inline h-3.5 w-3.5 mr-1" />
+                    Süre: {Math.floor(durationMin / 60) > 0 ? `${Math.floor(durationMin / 60)} saat ` : ''}{durationMin % 60 > 0 ? `${durationMin % 60} dk` : ''}
+                    {serviceId && ` · ${services.find(s => s.id === serviceId)?.name}`}
+                  </div>
+                ) : null
+              })()}
               <div>
                 <label className="label">Not (opsiyonel)</label>
                 <input type="text" value={notes} onChange={(e) => setNotes(e.target.value)} className="input" placeholder="Ek bilgi..." />

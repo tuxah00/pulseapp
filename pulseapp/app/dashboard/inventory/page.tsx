@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { Portal } from '@/components/ui/portal'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useConfirm } from '@/lib/hooks/use-confirm'
@@ -19,6 +20,7 @@ import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { ToolbarPopover, SortPopoverContent } from '@/components/ui/toolbar-popover'
 import { exportToCSV } from '@/lib/utils/export'
+import { Pagination } from '@/components/ui/pagination'
 import type { StockMovement, Supplier } from '@/types'
 
 interface Product {
@@ -41,9 +43,12 @@ type PageTab = 'products' | 'suppliers'
 
 export default function StoklarPage() {
   const { businessId, staffId, staffName, loading: ctxLoading, permissions } = useBusinessContext()
+  const PAGE_SIZE = 50
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [dbError, setDbError] = useState<string | null>(null)
+  const [page, setPage] = useState(0)
+  const [totalCount, setTotalCount] = useState(0)
   const [showModal, setShowModal] = useState(false)
   const [isClosingModal, setIsClosingModal] = useState(false)
   const closeModal = () => setIsClosingModal(true)
@@ -100,12 +105,13 @@ export default function StoklarPage() {
     setLoading(true)
     const query = supabase
       .from('products')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('business_id', businessId)
       .eq('is_active', true)
       .order('name')
+      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
 
-    const { data, error } = await query
+    const { data, error, count } = await query
     if (error) {
       if (error.message.includes('relation "public.products" does not exist') ||
           error.message.includes('does not exist')) {
@@ -115,10 +121,11 @@ export default function StoklarPage() {
       }
     } else {
       setProducts(data || [])
+      if (count !== null) setTotalCount(count)
       setDbError(null)
     }
     setLoading(false)
-  }, [businessId])
+  }, [businessId, page])
 
   const fetchSuppliers = useCallback(async () => {
     if (!businessId) return
@@ -138,6 +145,8 @@ export default function StoklarPage() {
       fetchSuppliers()
     }
   }, [fetchProducts, fetchSuppliers, ctxLoading])
+
+  useEffect(() => { setPage(0) }, [debouncedSearch, categoryFilter, stockFilter])
 
   useEffect(() => {
     if (!showModal) return
@@ -622,6 +631,8 @@ export default function StoklarPage() {
             )}
             </div>
           )}
+        {/* Pagination */}
+        <Pagination page={page} pageSize={PAGE_SIZE} totalCount={totalCount} onPageChange={setPage} />
         </>
       )}
 
@@ -800,7 +811,8 @@ export default function StoklarPage() {
 
       {/* Ürün Ekle / Düzenleme Modal */}
       {showModal && (
-        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
+        <Portal>
+        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
           <div className={`modal-content card w-full max-w-md max-h-[90vh] overflow-y-auto dark:bg-gray-900 ${isClosingModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -912,11 +924,13 @@ export default function StoklarPage() {
             </form>
           </div>
         </div>
+        </Portal>
       )}
 
       {/* Tedarikçi Ekle / Düzenle Modal */}
       {showSupplierModal && (
-        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 ${isClosingSupplierModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingSupplierModal) { setShowSupplierModal(false); setIsClosingSupplierModal(false) } }}>
+        <Portal>
+        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 ${isClosingSupplierModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingSupplierModal) { setShowSupplierModal(false); setIsClosingSupplierModal(false) } }}>
           <div className={`modal-content card w-full max-w-md ${isClosingSupplierModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -953,6 +967,7 @@ export default function StoklarPage() {
             </form>
           </div>
         </div>
+        </Portal>
       )}
     </div>
   )

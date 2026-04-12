@@ -156,6 +156,14 @@ export interface Invoice {
   created_at: string
   updated_at: string
   deleted_at: string | null
+  // İndirim
+  discount_amount: number
+  discount_type: 'percentage' | 'fixed' | null
+  discount_description: string | null
+  // Müşteri vergi bilgileri (snapshot)
+  customer_tax_id: string | null
+  customer_tax_office: string | null
+  customer_company_name: string | null
   // e-Fatura (Paraşüt)
   efatura_id?: string | null
   efatura_status?: string | null
@@ -456,7 +464,13 @@ export interface Customer {
   total_no_shows: number
   no_show_score: number
   last_visit_at: string | null
-  preferences: Record<string, any>
+  preferred_channel?: 'sms' | 'whatsapp' | 'auto' | null
+  // Vergi bilgileri
+  tax_id: string | null
+  tax_id_type: 'vkn' | 'tckn' | null
+  tax_office: string | null
+  company_name: string | null
+  preferences: Record<string, unknown>
   is_active: boolean
   created_at: string
   updated_at: string
@@ -479,11 +493,13 @@ export interface Appointment {
   notes: string | null
   cancellation_reason: string | null
   recurrence_group_id: string | null
-  recurrence_pattern: Record<string, any> | null
+  recurrence_pattern: Record<string, unknown> | null
   manage_token: string | null
   token_expires_at: string | null
   confirmation_status: ConfirmationStatus
   confirmation_sent_at: string | null
+  deleted_at?: string | null
+  room_id?: string | null
   created_at: string
   updated_at: string
   // JOIN'lerden gelen opsiyonel alanlar
@@ -506,6 +522,8 @@ export interface Message {
   ai_classification: AiClassification | null
   ai_confidence: number | null
   appointment_id: string | null
+  staff_id?: string | null
+  staff_name?: string | null
   created_at: string
   // JOIN
   customer?: Customer
@@ -554,7 +572,7 @@ export interface Payment {
   currency: string
   status: string
   paytr_merchant_oid: string | null
-  paytr_response: Record<string, any> | null
+  paytr_response: Record<string, unknown> | null
   paid_at: string | null
   created_at: string
 }
@@ -912,12 +930,14 @@ export interface ServiceContraindication {
 
 // ── Referans / Tavsiye Sistemi ──
 
-export type ReferralStatus = 'pending' | 'rewarded'
-export type RewardType = 'discount_percent' | 'discount_amount' | 'free_service' | 'points'
+export type ReferralStatus = 'pending' | 'converted' | 'expired' | 'rewarded'
+export type RewardType = 'discount_percent' | 'discount_amount' | 'free_service' | 'points' | 'gift'
 
 export const REFERRAL_STATUS_LABELS: Record<ReferralStatus, string> = {
   pending: 'Bekliyor',
-  rewarded: 'Ödül Verildi',
+  converted: 'Dönüştürüldü',
+  expired: 'Süresi Doldu',
+  rewarded: 'Ödüllendirildi',
 }
 
 export const REWARD_TYPE_LABELS: Record<RewardType, string> = {
@@ -925,6 +945,7 @@ export const REWARD_TYPE_LABELS: Record<RewardType, string> = {
   discount_amount: '₺ İndirim',
   free_service: 'Ücretsiz Hizmet',
   points: 'Puan',
+  gift: 'Hediye',
 }
 
 export interface Referral {

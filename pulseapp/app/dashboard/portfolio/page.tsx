@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef, useCallback } from 'react'
+import { Portal } from '@/components/ui/portal'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { createClient } from '@/lib/supabase/client'
 import { logAudit } from '@/lib/utils/audit'
@@ -402,7 +403,8 @@ export default function PortfolioPage() {
 
       {/* Upload Modal */}
       {showModal && (
-        <div className={`fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 modal-overlay ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) onModalClosed() }}>
+        <Portal>
+        <div className={`fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 modal-overlay ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) onModalClosed() }}>
           <div className={`bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-md modal-content ${isClosingModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Yeni Görsel Ekle</h2>
@@ -542,11 +544,13 @@ export default function PortfolioPage() {
             </div>
           </div>
         </div>
+        </Portal>
       )}
 
       {/* AI Analysis Modal */}
       {showAnalysis && analysisItem && (
-        <div className={`fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 modal-overlay ${isClosingAnalysis ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingAnalysis) onAnalysisClosed() }}>
+        <Portal>
+        <div className={`fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 modal-overlay ${isClosingAnalysis ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingAnalysis) onAnalysisClosed() }}>
           <div className={`bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto modal-content ${isClosingAnalysis ? 'closing' : ''}`}>
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center gap-2">
@@ -586,11 +590,13 @@ export default function PortfolioPage() {
             </div>
           </div>
         </div>
+        </Portal>
       )}
 
       {/* Delete confirm dialog */}
       {deleteConfirm && (
-        <div className={`fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 modal-overlay ${isClosingDeleteConfirm ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingDeleteConfirm) { setDeleteConfirm(null); setIsClosingDeleteConfirm(false) } }}>
+        <Portal>
+        <div className={`fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 modal-overlay ${isClosingDeleteConfirm ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingDeleteConfirm) { setDeleteConfirm(null); setIsClosingDeleteConfirm(false) } }}>
           <div className={`bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-sm p-6 modal-content ${isClosingDeleteConfirm ? 'closing' : ''}`}>
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
@@ -617,6 +623,7 @@ export default function PortfolioPage() {
             </div>
           </div>
         </div>
+        </Portal>
       )}
     </div>
   )

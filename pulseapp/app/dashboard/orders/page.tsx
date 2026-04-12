@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { Portal } from '@/components/ui/portal'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { getCustomerLabelSingular } from '@/lib/config/sector-modules'
 import { useConfirm } from '@/lib/hooks/use-confirm'
@@ -12,6 +13,7 @@ import {
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatCurrency } from '@/lib/utils'
+import { Pagination } from '@/components/ui/pagination'
 
 interface OrderItem {
   product_id: string
@@ -69,6 +71,9 @@ export default function OrdersPage() {
   const { confirm } = useConfirm()
   const supabase = createClient()
 
+  const PAGE_SIZE = 50
+  const [page, setPage] = useState(0)
+  const [totalCount, setTotalCount] = useState(0)
   const [orders, setOrders] = useState<Order[]>([])
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
@@ -84,18 +89,23 @@ export default function OrdersPage() {
   const [orderNotes, setOrderNotes] = useState('')
   const [saving, setSaving] = useState(false)
 
+  useEffect(() => { setPage(0) }, [filter])
+
   const fetchOrders = useCallback(async () => {
     setLoading(true)
     try {
       const params = new URLSearchParams()
       if (filter !== 'all') params.set('status', filter)
+      params.set('page', String(page))
+      params.set('pageSize', String(PAGE_SIZE))
       const res = await fetch(`/api/orders?${params}`)
       const json = await res.json()
       setOrders(json.orders || [])
+      setTotalCount(json.total || 0)
     } finally {
       setLoading(false)
     }
-  }, [filter])
+  }, [filter, page])
 
   const fetchProducts = useCallback(async () => {
     if (!businessId) return
@@ -326,9 +336,13 @@ export default function OrdersPage() {
         </div>
       )}
 
+      {/* Pagination */}
+      <Pagination page={page} pageSize={PAGE_SIZE} totalCount={totalCount} onPageChange={setPage} />
+
       {/* New Order Modal */}
       {showModal && (
-        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
+        <Portal>
+        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
           <div className={`modal-content bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 space-y-4 ${isClosingModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Yeni Sipariş</h3>
@@ -440,6 +454,7 @@ export default function OrdersPage() {
             </div>
           </div>
         </div>
+        </Portal>
       )}
     </div>
   )

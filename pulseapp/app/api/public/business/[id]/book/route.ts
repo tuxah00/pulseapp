@@ -1,26 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { isValidUUID } from '@/lib/utils/validate'
+import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
+import { validateBody } from '@/lib/api/validate'
+import { publicBookingSchema } from '@/lib/schemas'
 
 const supabase = createAdminClient()
-
-function normalizePhone(phone: string): string {
-  const digits = phone.replace(/\D/g, '')
-  if (digits.startsWith('90') && digits.length === 12) return `+${digits}`
-  if (digits.startsWith('0') && digits.length === 11) return `+90${digits.slice(1)}`
-  if (digits.length === 10) return `+90${digits}`
-  return `+${digits}`
-}
 
 export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const body = await req.json()
-  const { name, phone, serviceId, staffId, date, startTime, notes } = body
-
-  if (!name || !phone || !serviceId || !date || !startTime) {
-    return NextResponse.json({ error: 'Zorunlu alanlar eksik' }, { status: 400 })
+  if (!isValidUUID(params.id)) {
+    return NextResponse.json({ error: 'Geçersiz istek' }, { status: 400 })
   }
+
+  const rl = checkRateLimit(req, RATE_LIMITS.publicBooking)
+  if (rl.limited) return rl.response
+
+  const result = await validateBody(req, publicBookingSchema)
+  if (!result.ok) return result.response
+  const { name, phone, serviceId, staffId, date, startTime, notes } = result.data
 
   // Servis bilgisi (süre için)
   const { data: service } = await supabase
@@ -60,7 +60,7 @@ export async function POST(
     return NextResponse.json({ error: 'Bu saat dolu. Lütfen başka bir saat seçin.' }, { status: 409 })
   }
 
-  const normalizedPhone = normalizePhone(phone)
+  const normalizedPhone = '+90' + phone
 
   // Müşteriyi bul veya oluştur
   const { data: existingCustomers } = await supabase

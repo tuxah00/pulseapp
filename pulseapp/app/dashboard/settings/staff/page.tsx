@@ -7,6 +7,7 @@ import { useConfirm } from '@/lib/hooks/use-confirm'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
 import { Plus, Pencil, Trash2, Loader2, UserPlus, X, Mail, Phone, Settings, LayoutList, LayoutGrid, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Portal } from '@/components/ui/portal'
 import CompactBoxCard from '@/components/ui/compact-box-card'
 import type { StaffMember, StaffRole, StaffPermissions } from '@/types'
 import { logAudit } from '@/lib/utils/audit'
@@ -495,7 +496,8 @@ export default function StaffPage() {
 
       {/* ── Personel Detay Popup (Ortada) ── */}
       {selectedStaff && (
-        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 ${isClosingSelectedStaff ? 'closing' : ''}`} onClick={closeSelectedStaff} onAnimationEnd={() => { if (isClosingSelectedStaff) { setSelectedStaff(null); setIsClosingSelectedStaff(false) } }}>
+        <Portal>
+        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 ${isClosingSelectedStaff ? 'closing' : ''}`} onClick={closeSelectedStaff} onAnimationEnd={() => { if (isClosingSelectedStaff) { setSelectedStaff(null); setIsClosingSelectedStaff(false) } }}>
           <div className={`modal-content card w-full max-w-xl max-h-[85vh] flex flex-col ${isClosingSelectedStaff ? 'closing' : ''}`} onClick={(e) => e.stopPropagation()}>
             {/* Başlık */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
@@ -599,11 +601,13 @@ export default function StaffPage() {
             )}
           </div>
         </div>
+        </Portal>
       )}
 
       {/* Modal */}
       {showModal && (
-        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
+        <Portal>
+        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
           <div className={`modal-content card w-full max-w-md ${isClosingModal ? 'closing' : ''}`}>
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
               {editingStaff ? 'Personeli Düzenle' : 'Yeni Personel Ekle'}
@@ -640,11 +644,13 @@ export default function StaffPage() {
             </form>
           </div>
         </div>
+        </Portal>
       )}
 
       {/* Yetki Popup Modal — Yeniden tasarlanmış */}
       {permPopupStaff && (
-        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 ${permPopupClosing ? 'closing' : ''}`} onClick={closePermPopup} onAnimationEnd={() => { if (permPopupClosing) { setPermPopupStaff(null); setPermPopupClosing(false) } }}>
+        <Portal>
+        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 ${permPopupClosing ? 'closing' : ''}`} onClick={closePermPopup} onAnimationEnd={() => { if (permPopupClosing) { setPermPopupStaff(null); setPermPopupClosing(false) } }}>
           <div className={`modal-content card w-full max-w-md max-h-[85vh] flex flex-col ${permPopupClosing ? 'closing' : ''}`} onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800">
               <div>
@@ -728,11 +734,13 @@ export default function StaffPage() {
             </div>
           </div>
         </div>
+        </Portal>
       )}
 
       {/* Davet Modal */}
       {showInviteModal && (
-        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 ${isClosingInviteModal ? 'closing' : ''}`} onClick={closeInviteModal} onAnimationEnd={() => { if (isClosingInviteModal) { setShowInviteModal(false); setIsClosingInviteModal(false) } }}>
+        <Portal>
+        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 ${isClosingInviteModal ? 'closing' : ''}`} onClick={closeInviteModal} onAnimationEnd={() => { if (isClosingInviteModal) { setShowInviteModal(false); setIsClosingInviteModal(false) } }}>
           <div className={`modal-content card w-full max-w-sm ${isClosingInviteModal ? 'closing' : ''}`} onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <div>
@@ -783,6 +791,7 @@ export default function StaffPage() {
             )}
           </div>
         </div>
+        </Portal>
       )}
     </div>
   )

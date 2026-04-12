@@ -18,6 +18,7 @@ import { formatCurrency } from '@/lib/utils'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { CustomerSearchSelect } from '@/components/ui/customer-search-select'
 import { Portal } from '@/components/ui/portal'
+import { Pagination } from '@/components/ui/pagination'
 
 const STATUS_CONFIG: Record<ProtocolStatus, { bg: string; text: string }> = {
   active: { bg: 'bg-blue-50 dark:bg-blue-900/20', text: 'text-blue-600 dark:text-blue-400' },
@@ -48,6 +49,10 @@ export default function ProtocolsPage() {
   const closeDetail = () => setIsClosingDetail(true)
 
   // Create modal
+  const [page, setPage] = useState(0)
+  const [totalCount, setTotalCount] = useState(0)
+  const PAGE_SIZE = 50
+
   const [showCreate, setShowCreate] = useState(false)
   const [isClosingCreate, setIsClosingCreate] = useState(false)
   const closeCreate = () => setIsClosingCreate(true)
@@ -66,11 +71,14 @@ export default function ProtocolsPage() {
     try {
       const params = new URLSearchParams({ businessId })
       if (statusFilter !== 'all') params.set('status', statusFilter)
+      params.set('page', String(page))
+      params.set('pageSize', String(PAGE_SIZE))
       const res = await fetch(`/api/protocols?${params}`)
       const json = await res.json()
       setProtocols(json.protocols || [])
+      setTotalCount(json.total || 0)
     } catch { /* ignore */ } finally { setLoading(false) }
-  }, [businessId, statusFilter])
+  }, [businessId, statusFilter, page])
 
   const fetchMeta = useCallback(async () => {
     if (!businessId) return
@@ -81,6 +89,7 @@ export default function ProtocolsPage() {
 
   useEffect(() => { fetchProtocols() }, [fetchProtocols])
   useEffect(() => { fetchMeta() }, [fetchMeta])
+  useEffect(() => { setPage(0) }, [statusFilter])
 
   useEffect(() => {
     if (!showCreate) return
@@ -299,6 +308,8 @@ export default function ProtocolsPage() {
           })
         )}
       </div>
+
+      <Pagination page={page} pageSize={PAGE_SIZE} totalCount={totalCount} onPageChange={setPage} />
 
       {/* Detail Panel — Slide-over */}
       {(selectedProtocol || isClosingDetail) && selectedProtocol && (

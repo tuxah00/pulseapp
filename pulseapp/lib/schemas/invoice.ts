@@ -36,6 +36,14 @@ export const invoiceCreateSchema = z.object({
   installment_count: z.number().int().min(1, MSG.MIN_VALUE(1)).optional().nullable(),
   installment_frequency: z.string().optional().nullable(),
   deposit_amount: z.number().min(0, MSG.NON_NEGATIVE).optional().nullable(),
+  // İndirim
+  discount_amount: z.number().min(0, MSG.NON_NEGATIVE).default(0),
+  discount_type: z.enum(['percentage', 'fixed']).optional().nullable(),
+  discount_description: z.string().trim().max(200, MSG.TOO_LONG(200)).optional().nullable(),
+  // Müşteri vergi bilgileri (snapshot)
+  customer_tax_id: z.string().trim().max(20, MSG.TOO_LONG(20)).optional().nullable(),
+  customer_tax_office: z.string().trim().max(100, MSG.TOO_LONG(100)).optional().nullable(),
+  customer_company_name: z.string().trim().max(200, MSG.TOO_LONG(200)).optional().nullable(),
 })
 
 export type InvoiceCreateInput = z.infer<typeof invoiceCreateSchema>

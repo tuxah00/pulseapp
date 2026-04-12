@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { sendSMS } from '@/lib/sms/send'
 import type { CustomerSegment } from '@/types'
 import type { BusinessRow } from '@/types/db'
+import { verifyCronAuth } from '@/lib/api/verify-cron'
 
 type ReminderCustomer = { id: string; name: string; phone: string | null }
 type ReminderBusiness = { id: string; name: string; settings: BusinessRow['settings'] }
@@ -54,12 +55,8 @@ type WaitlistEntry = {
 }
 
 export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get('authorization')
-  const cronSecret = process.env.CRON_SECRET
-
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
-  }
+  const authErr = verifyCronAuth(request)
+  if (authErr) return authErr
 
   const supabase = createAdminClient()
   const now = new Date()
@@ -316,6 +313,16 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // ── 5. Vadesi Geçmiş Fatura Tespiti (batch update) ─────────────────────
+  const { count: overdueCount, error: overdueErr } = await supabase
+    .from('invoices')
+    .update({ status: 'overdue', updated_at: now.toISOString() }, { count: 'exact' })
+    .in('status', ['pending', 'partial'])
+    .lt('due_date', todayStr)
+    .is('deleted_at', null)
+
+  const overdueResult = { updated: overdueCount || 0, errors: overdueErr ? 1 : 0 }
+
   return NextResponse.json({
     ok: true,
     timestamp: now.toISOString(),
@@ -324,5 +331,6 @@ export async function GET(request: NextRequest) {
     winback,
     noShowScoring,
     waitlistNotifs,
+    overdueInvoices: overdueResult,
   })
 }

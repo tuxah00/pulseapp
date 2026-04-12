@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { WorkingHours } from '@/types'
+import { isValidUUID } from '@/lib/utils/validate'
+import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
+import { validateQuery } from '@/lib/api/validate'
+import { slotsQuerySchema } from '@/lib/schemas'
 
 const supabase = createAdminClient()
 
@@ -43,16 +47,17 @@ export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const { searchParams } = new URL(req.url)
-  const date = searchParams.get('date')
-  const durationStr = searchParams.get('duration')
-  const staffId = searchParams.get('staffId') // belirli personel veya null (herhangi)
-
-  if (!date || !durationStr) {
-    return NextResponse.json({ error: 'date ve duration gerekli' }, { status: 400 })
+  if (!isValidUUID(params.id)) {
+    return NextResponse.json({ error: 'Geçersiz istek' }, { status: 400 })
   }
 
-  const duration = parseInt(durationStr, 10)
+  const rl = checkRateLimit(req, RATE_LIMITS.general)
+  if (rl.limited) return rl.response
+
+  const { searchParams } = new URL(req.url)
+  const qResult = validateQuery(searchParams, slotsQuerySchema)
+  if (!qResult.ok) return qResult.response
+  const { date, duration, staffId } = qResult.data
   const dateObj = new Date(date + 'T00:00:00')
   const dayKey = DAY_KEYS[dateObj.getDay()]
 

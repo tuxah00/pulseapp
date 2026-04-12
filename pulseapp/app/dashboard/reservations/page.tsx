@@ -20,6 +20,7 @@ import {
   ArrowUpDown,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Portal } from '@/components/ui/portal'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
 import { ToolbarPopover, SortPopoverContent } from '@/components/ui/toolbar-popover'
 import CompactBoxCard from '@/components/ui/compact-box-card'
@@ -474,7 +475,8 @@ export default function ReservationsPage() {
 
       {/* Modal */}
       {showModal && (
-        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
+        <Portal>
+        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
           <div className={`modal-content w-full max-w-md rounded-2xl bg-white dark:bg-gray-900 shadow-2xl ${isClosingModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-6 py-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -606,6 +608,7 @@ export default function ReservationsPage() {
             </div>
           </div>
         </div>
+        </Portal>
       )}
     </div>
   )

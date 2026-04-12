@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { Portal } from '@/components/ui/portal'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { getCustomerLabelSingular } from '@/lib/config/sector-modules'
 import { useDebounce } from '@/lib/hooks/use-debounce'
@@ -15,6 +16,7 @@ import { useViewMode } from '@/lib/hooks/use-view-mode'
 import { ToolbarPopover, SortPopoverContent } from '@/components/ui/toolbar-popover'
 import CompactBoxCard from '@/components/ui/compact-box-card'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
+import { Pagination } from '@/components/ui/pagination'
 
 interface Membership {
   id: string
@@ -86,6 +88,9 @@ export default function MembershipsPage() {
   const [viewMode, setViewMode] = useViewMode('memberships', 'list')
   const [sortField, setSortField] = useState<string | null>(null)
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+  const [page, setPage] = useState(0)
+  const [totalCount, setTotalCount] = useState(0)
+  const PAGE_SIZE = 50
   const { confirm } = useConfirm()
 
   // Form state
@@ -105,6 +110,8 @@ export default function MembershipsPage() {
       const params = new URLSearchParams({ businessId })
       if (statusFilter !== 'all') params.set('status', statusFilter)
       if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim())
+      params.set('page', String(page))
+      params.set('pageSize', String(PAGE_SIZE))
 
       const res = await fetch(`/api/memberships?${params}`)
       const json = await res.json()
@@ -116,17 +123,20 @@ export default function MembershipsPage() {
         }
       } else {
         setMemberships(json.memberships || [])
+        setTotalCount(json.total || 0)
         setDbError(null)
       }
     } catch {
       setDbError('Sunucuya bağlanılamadı.')
     }
     setLoading(false)
-  }, [businessId, statusFilter, debouncedSearch])
+  }, [businessId, statusFilter, debouncedSearch, page])
 
   useEffect(() => {
     if (!ctxLoading) fetchMemberships()
   }, [fetchMemberships, ctxLoading])
+
+  useEffect(() => { setPage(0) }, [statusFilter, debouncedSearch])
 
   useEffect(() => {
     if (!showModal) return
@@ -271,8 +281,6 @@ export default function MembershipsPage() {
     const now = new Date()
     return end.getFullYear() === now.getFullYear() && end.getMonth() === now.getMonth()
   }).length
-  const totalCount = memberships.length
-
   const hasActiveFilters = statusFilter !== 'all'
 
   const SORT_OPTIONS = [
@@ -470,9 +478,12 @@ export default function MembershipsPage() {
         </div>
       ) : null}
 
+      {!dbError && <Pagination page={page} pageSize={PAGE_SIZE} totalCount={totalCount} onPageChange={setPage} />}
+
       {/* Modal */}
       {showModal && (
-        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
+        <Portal>
+        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
           <div className={`modal-content card w-full max-w-lg max-h-[90vh] overflow-y-auto dark:bg-gray-900 ${isClosingModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -602,6 +613,7 @@ export default function MembershipsPage() {
             </form>
           </div>
         </div>
+        </Portal>
       )}
     </div>
   )

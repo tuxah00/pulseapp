@@ -7,10 +7,12 @@ import { toast } from 'sonner'
 import {
   Plus, ClipboardCheck, Search, Loader2, Calendar, Send, Ban, Clock, CheckCircle, XCircle, X
 } from 'lucide-react'
-import type { Customer } from '@/types'
 import { CustomSelect } from '@/components/ui/custom-select'
+import { CustomerSearchSelect } from '@/components/ui/customer-search-select'
 import { getCustomerLabelSingular } from '@/lib/config/sector-modules'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
+import { Portal } from '@/components/ui/portal'
+import { Pagination } from '@/components/ui/pagination'
 
 interface FollowUp {
   id: string
@@ -49,11 +51,15 @@ export default function FollowUpsPage() {
   const customerLabel = getCustomerLabelSingular(sector ?? undefined)
   const supabase = createClient()
 
+  const PAGE_SIZE = 50
   const [followUps, setFollowUps] = useState<FollowUp[]>([])
-  const [customers, setCustomers] = useState<Customer[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [page, setPage] = useState(0)
+  const [totalCount, setTotalCount] = useState(0)
+  const [pendingCount, setPendingCount] = useState(0)
+  const [sentCount, setSentCount] = useState(0)
 
   // Create modal
   const [showCreate, setShowCreate] = useState(false)
@@ -70,7 +76,7 @@ export default function FollowUpsPage() {
     try {
       let query = supabase
         .from('follow_up_queue')
-        .select('*, customers(name, phone)')
+        .select('*, customers(name, phone)', { count: 'exact' })
         .eq('business_id', businessId)
         .order('scheduled_for', { ascending: true })
 
@@ -78,31 +84,25 @@ export default function FollowUpsPage() {
         query = query.eq('status', statusFilter)
       }
 
-      const { data } = await query
-      setFollowUps((data as FollowUp[]) || [])
-    } catch { /* ignore */ } finally { setLoading(false) }
-  }, [businessId, statusFilter])
+      query = query.range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
 
-  const fetchCustomers = useCallback(async () => {
-    if (!businessId) return
-    try {
-      const { data } = await supabase
-        .from('customers')
-        .select('id, name, phone')
-        .eq('business_id', businessId)
-        .eq('is_active', true)
-        .order('name')
-      setCustomers((data as Customer[]) || [])
-    } catch { /* ignore */ }
-  }, [businessId])
+      const [{ data, count }, { count: pCount }, { count: sCount }] = await Promise.all([
+        query,
+        supabase.from('follow_up_queue').select('id', { count: 'exact', head: true }).eq('business_id', businessId).eq('status', 'pending'),
+        supabase.from('follow_up_queue').select('id', { count: 'exact', head: true }).eq('business_id', businessId).eq('status', 'sent'),
+      ])
+      setFollowUps((data as FollowUp[]) || [])
+      if (count !== null) setTotalCount(count)
+      setPendingCount(pCount ?? 0)
+      setSentCount(sCount ?? 0)
+    } catch { /* ignore */ } finally { setLoading(false) }
+  }, [businessId, statusFilter, page])
 
   useEffect(() => { fetchFollowUps() }, [fetchFollowUps])
-  useEffect(() => { fetchCustomers() }, [fetchCustomers])
 
-  // Stats
-  const totalCount = followUps.length
-  const pendingCount = followUps.filter(f => f.status === 'pending').length
-  const sentCount = followUps.filter(f => f.status === 'sent').length
+  useEffect(() => { setPage(0) }, [statusFilter])
+
+  const statsTotal = totalCount
 
   const handleCreate = async () => {
     if (!businessId || !formCustomerId || !formDate) return
@@ -177,7 +177,7 @@ export default function FollowUpsPage() {
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
         <div className="card p-4">
           <p className="text-xs text-gray-500 dark:text-gray-400">Toplam</p>
-          <p className="text-2xl font-bold text-gray-900 dark:text-white">{totalCount}</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white">{statsTotal}</p>
         </div>
         <div className="card p-4">
           <p className="text-xs text-gray-500 dark:text-gray-400">Bekleyen</p>
@@ -297,8 +297,12 @@ export default function FollowUpsPage() {
         </AnimatedList>
       )}
 
+      {/* Pagination */}
+      <Pagination page={page} pageSize={PAGE_SIZE} totalCount={totalCount} onPageChange={setPage} />
+
       {/* Create Modal */}
       {(showCreate || closingCreate) && (
+        <Portal>
         <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 ${closingCreate ? 'closing' : ''}`} onClick={() => setClosingCreate(true)} onAnimationEnd={() => { if (closingCreate) { setShowCreate(false); setClosingCreate(false); resetForm() } }}>
           <div className={`modal-content card w-full max-w-lg dark:bg-gray-900 ${closingCreate ? 'closing' : ''}`} onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
@@ -308,11 +312,11 @@ export default function FollowUpsPage() {
             <div className="space-y-4">
               <div>
                 <label className="label label-required">{customerLabel}</label>
-                <CustomSelect
-                  options={customers.map(c => ({ value: c.id, label: `${c.name}${c.phone ? ` — ${c.phone}` : ''}` }))}
+                <CustomerSearchSelect
                   value={formCustomerId}
                   onChange={v => setFormCustomerId(v)}
-                  placeholder={`${customerLabel} seçin`}
+                  businessId={businessId!}
+                  placeholder={`${customerLabel} seçin...`}
                 />
               </div>
               <div>
@@ -353,6 +357,7 @@ export default function FollowUpsPage() {
             </div>
           </div>
         </div>
+        </Portal>
       )}
     </div>
   )

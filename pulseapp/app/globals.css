@@ -209,32 +209,6 @@
     border: 1px solid var(--glass-border);
   }
 
-  /* ── Gradient cards ── */
-  .gradient-card-blue {
-    background: linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%);
-  }
-  .dark .gradient-card-blue {
-    background: linear-gradient(135deg, rgba(30, 64, 175, 0.3) 0%, rgba(29, 78, 216, 0.1) 100%);
-  }
-  .gradient-card-green {
-    background: linear-gradient(135deg, #d1fae5 0%, #ecfdf5 100%);
-  }
-  .dark .gradient-card-green {
-    background: linear-gradient(135deg, rgba(4, 120, 87, 0.3) 0%, rgba(6, 95, 70, 0.1) 100%);
-  }
-  .gradient-card-amber {
-    background: linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%);
-  }
-  .dark .gradient-card-amber {
-    background: linear-gradient(135deg, rgba(180, 83, 9, 0.3) 0%, rgba(146, 64, 14, 0.1) 100%);
-  }
-  .gradient-card-purple {
-    background: linear-gradient(135deg, #ede9fe 0%, #f5f3ff 100%);
-  }
-  .dark .gradient-card-purple {
-    background: linear-gradient(135deg, rgba(109, 40, 217, 0.3) 0%, rgba(91, 33, 182, 0.1) 100%);
-  }
-
   /* ── Shimmer skeleton ── */
   .skeleton {
     @apply rounded-lg bg-gray-200 dark:bg-gray-800;
@@ -379,7 +353,7 @@
   100% { background-position:  200% 0; }
 }
 
-.modal-overlay          { animation: fadeIn       0.15s ease-out; }
+.modal-overlay          { animation: fadeIn       0.2s  ease-out; }
 .modal-content          { animation: scaleIn      0.2s  ease-out; }
 .slide-panel            { animation: slideInRight 0.2s  ease-out; }
 .modal-overlay.closing  { animation: fadeOut      0.2s  ease-in  forwards; }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { isValidUUID } from '@/lib/utils/validate'
 
 const supabase = createAdminClient()
 
@@ -7,6 +8,10 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  if (!isValidUUID(params.id)) {
+    return NextResponse.json({ error: 'Geçersiz istek' }, { status: 400 })
+  }
+
   const { data: business, error } = await supabase
     .from('businesses')
     .select('id, name, sector, phone, address, city, district, working_hours, google_maps_url')

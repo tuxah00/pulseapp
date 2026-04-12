@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useSidebar } from '@/lib/hooks/sidebar-context'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -8,22 +9,19 @@ import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import {
   LayoutDashboard,
-  Calendar,
   CalendarCheck,
   Users,
-  UserPlus,
+  UserCog,
   MessageSquare,
-  MessageCircle,
   Star,
   BarChart3,
-  TrendingUp,
-  Shield,
+  ShieldCheck,
   Settings,
   LogOut,
   ChevronLeft,
   Menu,
-  Zap,
-  Scissors,
+  Banknote,
+  ListChecks,
   Package,
   FolderOpen,
   Briefcase,
@@ -32,19 +30,18 @@ import {
   ClipboardList,
   CreditCard,
   CalendarDays,
+  CalendarClock,
   CheckSquare,
   BookOpen,
   Image,
   Receipt,
   Layers,
-  Wallet,
-  X,
-  ClipboardCheck,
-  UserCheck,
-  Gift,
-  FileKey2,
+  Lock,
+  Clock,
   Stethoscope,
-  CalendarClock,
+  Gift,
+  Zap,
+  X,
   Megaphone,
   type LucideIcon,
 } from 'lucide-react'
@@ -53,12 +50,12 @@ import { getSidebarSections } from '@/lib/config/sector-modules'
 
 
 const ICON_MAP: Record<string, LucideIcon> = {
-  LayoutDashboard, Calendar, CalendarCheck, Users, UserPlus,
-  MessageSquare, MessageCircle, Star, BarChart3, TrendingUp,
-  Shield, Settings, LogOut, Scissors, Package, FolderOpen,
+  LayoutDashboard, CalendarCheck, Users, UserCog,
+  MessageSquare, Star, BarChart3, ShieldCheck,
+  Settings, LogOut, ListChecks, Package, FolderOpen,
   Briefcase, Car, PawPrint, ClipboardList, CreditCard,
-  CalendarDays, CheckSquare, BookOpen, Image, Receipt, Layers, Wallet,
-  ClipboardCheck, UserCheck, Gift, FileKey2, Stethoscope, CalendarClock, Megaphone,
+  CalendarDays, CalendarClock, CheckSquare, BookOpen, Image,
+  Receipt, Layers, Banknote, Lock, Clock, Stethoscope, Gift, Zap, X, Megaphone,
 }
 
 const bottomNav = [
@@ -107,7 +104,7 @@ interface SidebarProps {
 export default function Sidebar({ businessName, userName, sector, plan, permissions }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
-  const [collapsed, setCollapsed] = useState(false)
+  const { collapsed, setCollapsed } = useSidebar()
   const [mobileOpen, setMobileOpen] = useState(false)
 
   const rawSections = getSidebarSections(sector, plan)

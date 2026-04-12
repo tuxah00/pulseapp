@@ -13,15 +13,18 @@ import { CustomSelect } from '@/components/ui/custom-select'
 import { CustomerSearchSelect } from '@/components/ui/customer-search-select'
 import { cn } from '@/lib/utils'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
+import { Portal } from '@/components/ui/portal'
 
 const STATUS_CONFIG: Record<ReferralStatus, { bg: string; text: string; icon: typeof CheckCircle }> = {
   pending: { bg: 'bg-yellow-50 dark:bg-yellow-900/20', text: 'text-yellow-600 dark:text-yellow-400', icon: Clock },
+  converted: { bg: 'bg-blue-50 dark:bg-blue-900/20', text: 'text-blue-600 dark:text-blue-400', icon: ArrowRight },
+  expired: { bg: 'bg-gray-50 dark:bg-gray-800', text: 'text-gray-500 dark:text-gray-400', icon: X },
   rewarded: { bg: 'bg-green-50 dark:bg-green-900/20', text: 'text-green-600 dark:text-green-400', icon: CheckCircle },
 }
 
 const REWARD_TYPE_OPTIONS = [
   { value: 'discount_percent', label: '% İndirim' },
-  { value: 'discount_fixed', label: '₺ İndirim' },
+  { value: 'discount_amount', label: '₺ İndirim' },
   { value: 'free_service', label: 'Ücretsiz Hizmet' },
   { value: 'points', label: 'Puan' },
   { value: 'gift', label: 'Hediye' },
@@ -431,7 +434,7 @@ export default function RewardsPage() {
                         <p className="font-medium text-gray-900 dark:text-white">{t.name}</p>
                         <p className="text-xs text-gray-500 mt-0.5">
                           {REWARD_TYPE_OPTIONS.find(o => o.value === t.type)?.label || t.type}
-                          {t.value ? ` — ${t.value}${t.type === 'discount_percent' ? '%' : t.type === 'discount_fixed' ? '₺' : ''}` : ''}
+                          {t.value ? ` — ${t.value}${t.type === 'discount_percent' ? '%' : t.type === 'discount_amount' ? '₺' : ''}` : ''}
                         </p>
                         {t.description && <p className="text-xs text-gray-400 mt-1">{t.description}</p>}
                         <p className="text-[10px] text-gray-400 mt-1">Geçerlilik: {t.valid_days} gün</p>
@@ -504,6 +507,7 @@ export default function RewardsPage() {
 
       {/* Referans Oluştur */}
       {(showRefCreate || closingRefCreate) && (
+        <Portal>
         <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 ${closingRefCreate ? 'closing' : ''}`} onClick={() => { setClosingRefCreate(true) }} onAnimationEnd={() => { if (closingRefCreate) { setShowRefCreate(false); setClosingRefCreate(false); resetRefForm() } }}>
           <div className={`modal-content card w-full max-w-lg dark:bg-gray-900 ${closingRefCreate ? 'closing' : ''}`} onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
@@ -535,10 +539,12 @@ export default function RewardsPage() {
             </div>
           </div>
         </div>
+        </Portal>
       )}
 
       {/* Ödül Şablonu Oluştur */}
       {(showTemplateCreate || closingTemplateCreate) && (
+        <Portal>
         <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 ${closingTemplateCreate ? 'closing' : ''}`} onClick={() => setClosingTemplateCreate(true)} onAnimationEnd={() => { if (closingTemplateCreate) { setShowTemplateCreate(false); setClosingTemplateCreate(false) } }}>
           <div className={`modal-content card w-full max-w-md dark:bg-gray-900 ${closingTemplateCreate ? 'closing' : ''}`} onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
@@ -562,10 +568,12 @@ export default function RewardsPage() {
             </div>
           </div>
         </div>
+        </Portal>
       )}
 
       {/* Ödül Ata */}
       {(showAssign || closingAssign) && (
+        <Portal>
         <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 ${closingAssign ? 'closing' : ''}`} onClick={() => { setClosingAssign(true) }} onAnimationEnd={() => { if (closingAssign) { setShowAssign(false); setClosingAssign(false); setACustomerId(''); setARewardId(''); setANotes('') } }}>
           <div className={`modal-content card w-full max-w-md dark:bg-gray-900 ${closingAssign ? 'closing' : ''}`} onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
@@ -594,6 +602,7 @@ export default function RewardsPage() {
             </div>
           </div>
         </div>
+        </Portal>
       )}
     </div>
   )

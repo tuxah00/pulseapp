@@ -40,7 +40,10 @@ import { Portal } from '@/components/ui/portal'
 
 import { useRouter } from 'next/navigation'
 import { getCustomerLabel, getCustomerLabelSingular } from '@/lib/config/sector-modules'
-import ToothChart from '@/components/dashboard/tooth-chart'
+import dynamic from 'next/dynamic'
+const ToothChart = dynamic(() => import('@/components/dashboard/tooth-chart'), {
+  loading: () => <div className="h-40 w-full animate-pulse bg-gray-100 dark:bg-gray-800 rounded-lg" />
+})
 
 function isBirthdayToday(birthday: string | null): boolean {
   if (!birthday) return false

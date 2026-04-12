@@ -115,6 +115,3 @@ export function getInitials(name?: string | null): string {
   return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
 }
 
-export function getAvatarColor(name?: string | null): string {
-  return 'bg-gray-200 dark:bg-gray-700'
-}

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { parsePaginationParams } from '@/lib/api/validate'
 
 export async function GET(req: NextRequest) {
   try {
@@ -16,23 +17,22 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url)
     const status = searchParams.get('status')
-    const limit = parseInt(searchParams.get('limit') || '50')
+    const { page, pageSize, from, to } = parsePaginationParams(searchParams)
 
     let query = supabase
       .from('orders')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('business_id', staff.business_id)
       .order('created_at', { ascending: false })
-      .limit(limit)
 
     if (status && status !== 'all') {
       query = query.eq('status', status)
     }
 
-    const { data, error } = await query
+    const { data, error, count } = await query.range(from, to)
     if (error) throw error
 
-    return NextResponse.json({ orders: data || [] })
+    return NextResponse.json({ orders: data || [], total: count || 0 })
   } catch (err) {
     console.error('Orders GET error:', err)
     return NextResponse.json({ error: 'Siparişler alınamadı' }, { status: 500 })

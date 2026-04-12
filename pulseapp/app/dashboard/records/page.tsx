@@ -22,6 +22,7 @@ import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { CustomerSearchSelect } from '@/components/ui/customer-search-select'
 import { Portal } from '@/components/ui/portal'
+import { Pagination } from '@/components/ui/pagination'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -402,6 +403,9 @@ function RecordsPageInner() {
   const [fileDescPopup, setFileDescPopup] = useState<{ index: number; value: string; fileName: string; fileSize: string | null; editing: boolean } | null>(null)
   const [fileInfoPopup, setFileInfoPopup] = useState<{ index: number; url: string; meta: FileMetadataItem } | null>(null)
   const [selectedTag, setSelectedTag] = useState<string | null>(null)
+  const [page, setPage] = useState(0)
+  const [totalCount, setTotalCount] = useState(0)
+  const PAGE_SIZE = 50
 
   // Dynamic form state: one string per field key
   const [formData, setFormData] = useState<Record<string, string>>({})
@@ -413,7 +417,11 @@ function RecordsPageInner() {
     setSearch('')
     setSelectedTag(null)
     setDbError(null)
+    setPage(0)
   }, [recordType])
+
+  // Reset page when search changes
+  useEffect(() => { setPage(0) }, [debouncedSearch])
 
   const fetchRecords = useCallback(async () => {
     if (!businessId) return
@@ -421,6 +429,8 @@ function RecordsPageInner() {
 
     const params = new URLSearchParams({ businessId, type: recordType })
     if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim())
+    params.set('page', String(page))
+    params.set('pageSize', String(PAGE_SIZE))
 
     const res = await fetch(`/api/records?${params.toString()}`)
     const json = await res.json()
@@ -433,10 +443,11 @@ function RecordsPageInner() {
       }
     } else {
       setRecords(json.records || [])
+      setTotalCount(json.total || 0)
       setDbError(null)
     }
     setLoading(false)
-  }, [businessId, recordType, debouncedSearch])
+  }, [businessId, recordType, debouncedSearch, page])
 
   useEffect(() => {
     if (!ctxLoading) {
@@ -999,6 +1010,7 @@ function RecordsPageInner() {
               ))}
             </div>
           )}
+        <Pagination page={page} pageSize={PAGE_SIZE} totalCount={totalCount} onPageChange={setPage} />
         </>
       )}
 

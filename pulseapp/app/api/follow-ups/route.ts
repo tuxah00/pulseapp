@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { parsePaginationParams } from '@/lib/api/validate'
 import { logAuditServer } from '@/lib/utils/audit'
 
 async function getStaffInfo(supabase: ReturnType<typeof createServerSupabaseClient>, userId: string, businessId: string) {
@@ -21,13 +22,14 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const businessId = searchParams.get('businessId')
   const status = searchParams.get('status') || 'pending'
+  const { page, pageSize, from, to } = parsePaginationParams(searchParams)
 
   if (!businessId) return NextResponse.json({ error: 'businessId gerekli' }, { status: 400 })
 
   const staff = await getStaffInfo(supabase, user.id, businessId)
   if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
 
-  const { data, error } = await supabase
+  const { data, count, error } = await supabase
     .from('follow_up_queue')
     .select(`
       *,
@@ -35,13 +37,14 @@ export async function GET(request: NextRequest) {
       appointment:appointments(id, appointment_date, start_time, service_id,
         service:services(name)
       )
-    `)
+    `, { count: 'exact' })
     .eq('business_id', businessId)
     .eq('status', status)
     .order('scheduled_for', { ascending: true })
+    .range(from, to)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ followUps: data })
+  return NextResponse.json({ followUps: data, total: count || 0 })
 }
 
 // POST: Yeni takip kaydı oluştur

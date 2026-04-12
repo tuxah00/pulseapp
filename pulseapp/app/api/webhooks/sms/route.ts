@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendSMS } from '@/lib/sms/send'
 import { handleAppointmentConfirmationReply } from '@/lib/messaging/appointment-confirmation'
+import { verifyTwilioWebhook } from '@/lib/webhooks/verify-twilio'
 
 /**
  * Twilio inbound SMS webhook
@@ -10,6 +11,10 @@ import { handleAppointmentConfirmationReply } from '@/lib/messaging/appointment-
  */
 export async function POST(request: NextRequest) {
   const body = await request.text()
+
+  const webhookErr = verifyTwilioWebhook(request, body)
+  if (webhookErr) return webhookErr
+
   const params = new URLSearchParams(body)
 
   const from = params.get('From') || ''

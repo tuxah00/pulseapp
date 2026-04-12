@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/api/with-permission'
-import { validateBody } from '@/lib/api/validate'
+import { validateBody, parsePaginationParams } from '@/lib/api/validate'
 import { protocolCreateSchema } from '@/lib/schemas'
 import { logAuditServer } from '@/lib/utils/audit'
 
@@ -14,6 +14,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const customerId = searchParams.get('customerId')
   const status = searchParams.get('status')
+  const { page, pageSize, from, to } = parsePaginationParams(searchParams)
 
   const supabase = createServerSupabaseClient()
   let query = supabase
@@ -24,16 +25,17 @@ export async function GET(request: NextRequest) {
       service:services(id, name),
       staff:staff_members!treatment_protocols_created_by_fkey(id, name),
       sessions:protocol_sessions(*)
-    `)
+    `, { count: 'exact' })
     .eq('business_id', businessId)
     .order('created_at', { ascending: false })
+    .range(from, to)
 
   if (customerId) query = query.eq('customer_id', customerId)
   if (status) query = query.eq('status', status)
 
-  const { data, error } = await query
+  const { data, count, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ protocols: data })
+  return NextResponse.json({ protocols: data, total: count || 0 })
 }
 
 // POST: Yeni protokol oluştur

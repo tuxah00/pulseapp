@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requirePermission } from '@/lib/api/with-permission'
-import { validateBody } from '@/lib/api/validate'
+import { validateBody, parsePaginationParams } from '@/lib/api/validate'
 import { recordCreateSchema } from '@/lib/schemas'
 
 export async function GET(req: NextRequest) {
@@ -12,6 +12,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const type = searchParams.get('type')
   const search = searchParams.get('search') || ''
+  const { page, pageSize, from, to } = parsePaginationParams(searchParams)
 
   if (!type) {
     return NextResponse.json({ error: 'type is required' }, { status: 400 })
@@ -20,7 +21,7 @@ export async function GET(req: NextRequest) {
   const admin = createAdminClient()
   let query = admin
     .from('business_records')
-    .select('*')
+    .select('*', { count: 'exact' })
     .eq('business_id', businessId)
     .eq('type', type)
     .order('created_at', { ascending: false })
@@ -29,9 +30,9 @@ export async function GET(req: NextRequest) {
     query = query.ilike('title', `%${search}%`)
   }
 
-  const { data, error } = await query
+  const { data, count, error } = await query.range(from, to)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ records: data })
+  return NextResponse.json({ records: data, total: count || 0 })
 }
 
 export async function POST(req: NextRequest) {
