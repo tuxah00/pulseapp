@@ -44,6 +44,7 @@ export interface StaffPermissions {
   pos?: boolean
   protocols?: boolean
   referrals?: boolean
+  campaigns?: boolean
 }
 
 export const DEFAULT_PERMISSIONS: Record<StaffRole, StaffPermissions> = {
@@ -52,14 +53,14 @@ export const DEFAULT_PERMISSIONS: Record<StaffRole, StaffPermissions> = {
     messages: true, reviews: true, services: true, staff: true, shifts: true,
     settings: true, reservations: true, classes: true, memberships: true,
     packages: true, records: true, portfolio: true, inventory: true, orders: true, invoices: true, pos: true,
-    protocols: true, referrals: true,
+    protocols: true, referrals: true, campaigns: true,
   },
   manager: {
     dashboard: true, appointments: true, customers: true, analytics: true,
     messages: true, reviews: true, services: true, staff: false, shifts: true,
     settings: false, reservations: true, classes: true, memberships: true,
     packages: true, records: true, portfolio: true, inventory: true, orders: true, invoices: true, pos: true,
-    protocols: true, referrals: true,
+    protocols: true, referrals: true, campaigns: true,
   },
   staff: {
     dashboard: true, appointments: true, customers: true, analytics: false,
@@ -311,6 +312,55 @@ export interface ShiftDefinition {
 }
 
 export type ConfirmationStatus = 'none' | 'waiting' | 'confirmed_by_customer' | 'declined' | 'no_response'
+
+// ── Kampanya ──
+export type CampaignStatus = 'draft' | 'scheduled' | 'sending' | 'completed' | 'cancelled'
+export type CampaignChannel = 'auto' | 'sms' | 'whatsapp'
+export type CampaignRecipientStatus = 'pending' | 'sent' | 'failed' | 'skipped'
+
+export interface CampaignSegmentFilter {
+  segments?: CustomerSegment[]
+  lastVisitDaysMin?: number
+  lastVisitDaysMax?: number
+  birthdayMonth?: number
+  minTotalVisits?: number
+  minTotalRevenue?: number
+  createdDaysAgoMax?: number
+}
+
+export interface CampaignStats {
+  total_recipients: number
+  sent: number
+  errors: number
+}
+
+export interface Campaign {
+  id: string
+  business_id: string
+  name: string
+  description: string | null
+  segment_filter: CampaignSegmentFilter
+  message_template: string
+  channel: CampaignChannel
+  scheduled_at: string | null
+  status: CampaignStatus
+  stats: CampaignStats
+  created_by_staff_id: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface CampaignRecipient {
+  id: string
+  campaign_id: string
+  customer_id: string | null
+  customer_name: string
+  customer_phone: string
+  status: CampaignRecipientStatus
+  sent_at: string | null
+  error_message: string | null
+  created_at: string
+}
 
 export interface BusinessSettings {
   reminder_24h: boolean

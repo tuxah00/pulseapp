@@ -318,7 +318,12 @@ CREATE INDEX IF NOT EXISTS idx_customers_birthday ON customers (birthday) WHERE 
 -- services.recommended_interval_days, periodic_reminders_sent tablosu
 ```
 
-28. **Sektör enum genişletme** (yoga_pilates, spa_massage vb. için):
+28. **Kampanya Yöneticisi** (`039_campaigns.sql`): ✅ Uygulandı (2026-04-12)
+```sql
+-- campaigns tablosu (segment_filter JSONB, status machine, stats), campaign_recipients tablosu, RLS
+```
+
+29. **Sektör enum genişletme** (yoga_pilates, spa_massage vb. için):
 ```sql
 ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'spa_massage';
 ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'yoga_pilates';

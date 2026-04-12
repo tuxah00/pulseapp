@@ -23,6 +23,7 @@ const BASE_ITEMS: SidebarItem[] = [
 // Management items shown for every sector
 const MANAGEMENT_ITEMS: SidebarItem[] = [
   { key: 'pos', name: 'Kasa', href: '/dashboard/pos', iconName: 'Wallet' },
+  { key: 'campaigns', name: 'Kampanyalar', href: '/dashboard/campaigns', iconName: 'Megaphone' },
   { key: 'services', name: 'Hizmetler', href: '/dashboard/services', iconName: 'Scissors' },
   { key: 'staff', name: 'Personeller', href: '/dashboard/staff', iconName: 'UserPlus' },
   { key: 'messages', name: 'Mesajlar', href: '/dashboard/messages', iconName: 'MessageSquare' },

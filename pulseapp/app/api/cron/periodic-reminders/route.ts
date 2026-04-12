@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
       // Bu hizmetten son randevusu targetDate veya öncesinde olan müşterileri bul
       const { data: candidates } = await supabase
         .from('appointments')
-        .select('customer_id, customers(id, name, phone)')
+        .select('customer_id, appointment_date, customers(id, name, phone)')
         .eq('business_id', biz.id)
         .eq('service_id', service.id)
         .eq('status', 'completed')
