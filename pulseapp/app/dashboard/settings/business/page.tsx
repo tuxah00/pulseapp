@@ -62,6 +62,12 @@ const DEFAULT_SETTINGS: BusinessSettings = {
   periodic_reminder_advance_days: 3,
   gap_fill_enabled: false,
   gap_fill_lookback_months: 6,
+  loyalty_enabled: false,
+  points_per_currency: 1,
+  visit_bonus_points: 50,
+  tier_silver_threshold: 500,
+  tier_gold_threshold: 2000,
+  auto_reward_threshold: 500,
   whatsapp_enabled: false,
   whatsapp_mode: 'sandbox',
   default_channel: 'auto',
@@ -706,6 +712,70 @@ export default function BusinessSettingsPage() {
                       value={settings.gap_fill_lookback_months ?? 6}
                       onChange={(e) => setSettings(prev => ({ ...prev, gap_fill_lookback_months: Number(e.target.value) || 6 }))}
                     />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="card">
+              <h2 className="text-lg font-semibold text-gray-900 mb-1">Sadakat Puan Sistemi</h2>
+              <p className="text-sm text-gray-500 mb-6">
+                Müşteriler randevu tamamladığında otomatik puan kazanır. Belirli eşiklere ulaşınca seviye yükseltilir.
+              </p>
+              <div className="space-y-4">
+                <ToggleSetting
+                  label="Sadakat puanı aktif"
+                  description="Randevu tamamlandığında müşteriye hizmet bedeline göre puan ve ziyaret bonusu eklenir."
+                  checked={settings.loyalty_enabled ?? false}
+                  onChange={(v) => setSettings(prev => ({ ...prev, loyalty_enabled: v }))}
+                />
+                {(settings.loyalty_enabled ?? false) && (
+                  <div className="ml-14 space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="label">1₺ = kaç puan</label>
+                        <input
+                          type="number" min={0} step={0.1} className="input w-full"
+                          value={settings.points_per_currency ?? 1}
+                          onChange={(e) => setSettings(prev => ({ ...prev, points_per_currency: parseFloat(e.target.value) || 1 }))}
+                        />
+                      </div>
+                      <div>
+                        <label className="label">Ziyaret bonusu (puan)</label>
+                        <input
+                          type="number" min={0} className="input w-full"
+                          value={settings.visit_bonus_points ?? 50}
+                          onChange={(e) => setSettings(prev => ({ ...prev, visit_bonus_points: Number(e.target.value) || 0 }))}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="label">Gümüş eşiği (toplam puan)</label>
+                        <input
+                          type="number" min={1} className="input w-full"
+                          value={settings.tier_silver_threshold ?? 500}
+                          onChange={(e) => setSettings(prev => ({ ...prev, tier_silver_threshold: Number(e.target.value) || 500 }))}
+                        />
+                      </div>
+                      <div>
+                        <label className="label">Altın eşiği (toplam puan)</label>
+                        <input
+                          type="number" min={1} className="input w-full"
+                          value={settings.tier_gold_threshold ?? 2000}
+                          onChange={(e) => setSettings(prev => ({ ...prev, tier_gold_threshold: Number(e.target.value) || 2000 }))}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="label">Otomatik ödül eşiği (puan bakiyesi)</label>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">Bu eşiğe ulaşıldığında müşteriye ödül bildirimi gösterilir.</p>
+                      <input
+                        type="number" min={0} className="input w-32"
+                        value={settings.auto_reward_threshold ?? 500}
+                        onChange={(e) => setSettings(prev => ({ ...prev, auto_reward_threshold: Number(e.target.value) || 500 }))}
+                      />
+                    </div>
                   </div>
                 )}
               </div>

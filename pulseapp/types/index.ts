@@ -397,6 +397,13 @@ export interface BusinessSettings {
   // Akıllı boşluk doldurma
   gap_fill_enabled?: boolean
   gap_fill_lookback_months?: number
+  // Sadakat puan sistemi
+  loyalty_enabled?: boolean
+  points_per_currency?: number
+  visit_bonus_points?: number
+  tier_silver_threshold?: number
+  tier_gold_threshold?: number
+  auto_reward_threshold?: number
 }
 
 
@@ -1065,6 +1072,49 @@ export interface Room {
   is_active: boolean
   created_at: string
   updated_at: string
+}
+
+
+// ── Sadakat Puan Sistemi ──
+
+export type LoyaltyTier = 'bronze' | 'silver' | 'gold'
+export type PointTransactionType = 'earn' | 'spend' | 'expire' | 'adjust'
+export type PointTransactionSource = 'appointment' | 'visit_bonus' | 'campaign' | 'manual' | 'redemption'
+
+export const LOYALTY_TIER_LABELS: Record<LoyaltyTier, string> = {
+  bronze: 'Bronz',
+  silver: 'Gümüş',
+  gold: 'Altın',
+}
+
+export const LOYALTY_TIER_COLORS: Record<LoyaltyTier, { bg: string; text: string; border: string }> = {
+  bronze: { bg: 'bg-amber-100 dark:bg-amber-900/30', text: 'text-amber-800 dark:text-amber-300', border: 'border-amber-300 dark:border-amber-700' },
+  silver: { bg: 'bg-gray-100 dark:bg-gray-700/50', text: 'text-gray-700 dark:text-gray-300', border: 'border-gray-300 dark:border-gray-600' },
+  gold:   { bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-800 dark:text-yellow-300', border: 'border-yellow-400 dark:border-yellow-600' },
+}
+
+export interface LoyaltyPoints {
+  id: string
+  business_id: string
+  customer_id: string
+  points_balance: number
+  tier: LoyaltyTier
+  total_earned: number
+  total_spent: number
+  created_at: string
+  updated_at: string
+}
+
+export interface PointTransaction {
+  id: string
+  business_id: string
+  customer_id: string
+  type: PointTransactionType
+  points: number
+  source: PointTransactionSource
+  reference_id: string | null
+  description: string | null
+  created_at: string
 }
 
 export interface BlockedSlot {

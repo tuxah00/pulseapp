@@ -920,6 +920,35 @@ export default function AppointmentsPage() {
           notes: 'Randevu tamamlandı — otomatik seans düşümü',
         })
       }
+      // Sadakat puanı ekle (ayar kapalıysa API sessizce döner)
+      try {
+        const revenueAmount = statusApt.services?.price ?? 0
+        const loyaltyRes = await fetch('/api/loyalty', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            customerId: statusApt.customer_id,
+            appointmentId,
+            revenueAmount,
+          }),
+        })
+        if (loyaltyRes.ok) {
+          const loyaltyData = await loyaltyRes.json()
+          if (loyaltyData.ok && loyaltyData.pointsAdded) {
+            window.dispatchEvent(new CustomEvent('pulse-toast', {
+              detail: {
+                type: 'system',
+                title: `+${loyaltyData.pointsAdded} Puan Kazanıldı`,
+                body: loyaltyData.thresholdCrossed
+                  ? 'Ödül eşiğine ulaşıldı! 🎉'
+                  : loyaltyData.tierChanged
+                    ? `Seviye yükseldi: ${loyaltyData.newTier === 'silver' ? 'Gümüş 🥈' : 'Altın 🥇'}`
+                    : `Toplam: ${loyaltyData.newBalance} puan`,
+              },
+            }))
+          }
+        }
+      } catch { /* puan hatası ana akışı durdurmasın */ }
     }
     fetchAppointments()
   }
