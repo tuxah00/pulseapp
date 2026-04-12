@@ -45,6 +45,7 @@ export interface StaffPermissions {
   protocols?: boolean
   referrals?: boolean
   campaigns?: boolean
+  workflows?: boolean
 }
 
 export const DEFAULT_PERMISSIONS: Record<StaffRole, StaffPermissions> = {
@@ -53,14 +54,14 @@ export const DEFAULT_PERMISSIONS: Record<StaffRole, StaffPermissions> = {
     messages: true, reviews: true, services: true, staff: true, shifts: true,
     settings: true, reservations: true, classes: true, memberships: true,
     packages: true, records: true, portfolio: true, inventory: true, orders: true, invoices: true, pos: true,
-    protocols: true, referrals: true, campaigns: true,
+    protocols: true, referrals: true, campaigns: true, workflows: true,
   },
   manager: {
     dashboard: true, appointments: true, customers: true, analytics: true,
     messages: true, reviews: true, services: true, staff: false, shifts: true,
     settings: false, reservations: true, classes: true, memberships: true,
     packages: true, records: true, portfolio: true, inventory: true, orders: true, invoices: true, pos: true,
-    protocols: true, referrals: true, campaigns: true,
+    protocols: true, referrals: true, campaigns: true, workflows: true,
   },
   staff: {
     dashboard: true, appointments: true, customers: true, analytics: false,
