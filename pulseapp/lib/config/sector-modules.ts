@@ -30,6 +30,7 @@ const MANAGEMENT_ITEMS: SidebarItem[] = [
   { key: 'analytics', name: 'Gelir-Gider', href: '/dashboard/analytics', iconName: 'BarChart3' },
   { key: 'invoices', name: 'Faturalar', href: '/dashboard/invoices', iconName: 'Receipt' },
   { key: 'shifts', name: 'Vardiya', href: '/dashboard/shifts', iconName: 'CalendarDays' },
+  { key: 'commissions', name: 'Prim & Komisyon', href: '/dashboard/settings/commissions', iconName: 'BadgePercent' },
   { key: 'audit', name: 'Denetim', href: '/dashboard/audit', iconName: 'ShieldCheck' },
   { key: 'kvkk', name: 'KVKK', href: '/dashboard/kvkk', iconName: 'Lock' },
 ]

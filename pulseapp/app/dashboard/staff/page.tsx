@@ -5,13 +5,14 @@ import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
-import { Plus, Pencil, Trash2, Loader2, UserPlus, X, Mail, Phone, Settings, LayoutList, LayoutGrid, Check, ArrowUpDown } from 'lucide-react'
+import { Plus, Pencil, Trash2, Loader2, UserPlus, X, Mail, Phone, Settings, LayoutList, LayoutGrid, Check, ArrowUpDown, BadgePercent, TrendingUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Portal } from '@/components/ui/portal'
 import CompactBoxCard from '@/components/ui/compact-box-card'
 import { ToolbarPopover, SortPopoverContent } from '@/components/ui/toolbar-popover'
 import type { StaffMember, StaffRole, StaffPermissions } from '@/types'
 import { logAudit } from '@/lib/utils/audit'
+import { formatCurrency } from '@/lib/utils'
 import { DEFAULT_PERMISSIONS, getEffectivePermissions } from '@/types'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { getCustomerLabel } from '@/lib/config/sector-modules'
@@ -113,6 +114,16 @@ export default function StaffPage() {
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteLink, setInviteLink] = useState<string | null>(null)
   const [inviteLoading, setInviteLoading] = useState(false)
+
+  // Commission earnings widget
+  const [staffCommission, setStaffCommission] = useState<{
+    appointment_count: number
+    total_revenue: number
+    commission_total: number
+    status: 'pending' | 'paid'
+    period: string
+  } | null>(null)
+  const [commissionLoading, setCommissionLoading] = useState(false)
 
   const supabase = createClient()
 
@@ -317,6 +328,32 @@ export default function StaffPage() {
     setPermsSaving(false)
   }
 
+  async function fetchStaffCommission(staffMemberId: string) {
+    const now = new Date()
+    const period = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+    setCommissionLoading(true)
+    setStaffCommission(null)
+    try {
+      const res = await fetch(`/api/commissions/earnings?staffId=${staffMemberId}&period=${period}`)
+      if (!res.ok) return
+      const data = await res.json()
+      const earning = (data.earnings || []).find((e: any) => e.staff_id === staffMemberId)
+      if (earning) {
+        setStaffCommission({
+          appointment_count: earning.appointment_count,
+          total_revenue: earning.total_revenue,
+          commission_total: earning.commission_total,
+          status: earning.status,
+          period,
+        })
+      }
+    } catch {
+      // Prim verisi kritik değil, sessizce fail et
+    } finally {
+      setCommissionLoading(false)
+    }
+  }
+
   async function handleCreateInvite() {
     setInviteLoading(true)
     setInviteLink(null)
@@ -375,7 +412,7 @@ export default function StaffPage() {
           title={member.name}
           colorClass={member.role === 'owner' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-pulse-100 text-pulse-900'}
           selected={selectedStaff?.id === member.id}
-          onClick={() => { setSelectedStaff(member); setLocalPerms(getEffectivePermissions(member.role, member.permissions)); setPermsSaved(false) }}
+          onClick={() => { setSelectedStaff(member); setLocalPerms(getEffectivePermissions(member.role, member.permissions)); setPermsSaved(false); fetchStaffCommission(member.id) }}
           className={cn(
             isMe && 'bg-blue-50/50 dark:bg-blue-900/10',
             member.role === 'owner' && 'border-amber-200 dark:border-amber-800/50',
@@ -387,7 +424,7 @@ export default function StaffPage() {
     return (
       <AnimatedItem
         key={member.id}
-        onClick={() => setSelectedStaff(member)}
+        onClick={() => { setSelectedStaff(member); setLocalPerms(getEffectivePermissions(member.role, member.permissions)); setPermsSaved(false); fetchStaffCommission(member.id) }}
         className={cn(
           'card p-4 hover:shadow-md transition-all cursor-pointer',
           selectedStaff?.id === member.id && 'ring-2 ring-pulse-900',
@@ -547,6 +584,51 @@ export default function StaffPage() {
                 )}
                 {!selectedStaff.phone && !selectedStaff.email && (
                   <p className="text-sm text-gray-400 text-center py-2">İletişim bilgisi bulunmuyor</p>
+                )}
+              </div>
+
+              {/* Bu Ay Primleri */}
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <BadgePercent className="h-4 w-4 text-pulse-900 dark:text-pulse-300" />
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Bu Ay Primleri</h4>
+                </div>
+                {commissionLoading ? (
+                  <div className="flex items-center gap-2 text-sm text-gray-400">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Yükleniyor...
+                  </div>
+                ) : staffCommission ? (
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="rounded-lg bg-gray-50 dark:bg-gray-800 p-2.5 text-center">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Randevu</p>
+                      <p className="text-base font-bold text-gray-900 dark:text-gray-100">{staffCommission.appointment_count}</p>
+                    </div>
+                    <div className="rounded-lg bg-gray-50 dark:bg-gray-800 p-2.5 text-center">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Ciro</p>
+                      <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{formatCurrency(staffCommission.total_revenue)}</p>
+                    </div>
+                    <div className={cn(
+                      'rounded-lg p-2.5 text-center',
+                      staffCommission.status === 'paid'
+                        ? 'bg-green-50 dark:bg-green-900/20'
+                        : 'bg-pulse-50 dark:bg-pulse-900/20'
+                    )}>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Prim</p>
+                      <p className={cn(
+                        'text-sm font-bold',
+                        staffCommission.status === 'paid'
+                          ? 'text-green-700 dark:text-green-400'
+                          : 'text-pulse-900 dark:text-pulse-300'
+                      )}>
+                        {formatCurrency(staffCommission.commission_total)}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-400 dark:text-gray-500">
+                    Bu ay için hesaplanmış prim verisi yok.
+                  </p>
                 )}
               </div>
 
