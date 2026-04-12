@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { sendMessage } from '@/lib/messaging/send'
+import { generateWhatsAppMessage } from '@/lib/whatsapp/templates'
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization')
@@ -11,9 +13,9 @@ export async function GET(request: NextRequest) {
 
   const supabase = createAdminClient()
   const now = new Date()
-  const results = { sent24h: 0, sent2h: 0, errors: 0 }
+  const results = { sent24h: 0, sent2h: 0, confirmations: 0, noResponseHandled: 0, errors: 0 }
 
-  // 24 saat sonrası için hatırlatma
+  // ── 24 saat sonrası: Onay SMS'i veya basit hatırlatma ──
   const tomorrow = new Date(now)
   tomorrow.setDate(tomorrow.getDate() + 1)
   const tomorrowDate = tomorrow.toISOString().split('T')[0]
@@ -29,26 +31,84 @@ export async function GET(request: NextRequest) {
     .eq('appointment_date', tomorrowDate)
     .in('status', ['confirmed', 'pending'])
     .eq('reminder_24h_sent', false)
+    .is('deleted_at', null)
 
   for (const apt of appointments24h || []) {
     const customer = apt.customers as any
     const business = apt.businesses as any
+    const service = apt.services as any
 
     if (!customer?.phone || !business?.id) continue
     if (!business.settings?.reminder_24h) continue
 
     try {
-      await supabase
-        .from('appointments')
-        .update({ reminder_24h_sent: true })
-        .eq('id', apt.id)
+      const date = new Date(apt.appointment_date).toLocaleDateString('tr-TR', {
+        day: 'numeric', month: 'long', year: 'numeric'
+      })
+      const time = apt.start_time?.substring(0, 5) || ''
+      const confirmationEnabled = business.settings?.confirmation_sms_enabled
+
+      if (confirmationEnabled) {
+        // İnteraktif onay mesajı gönder
+        const body = generateWhatsAppMessage('appointment_confirmation_request', {
+          customerName: customer.name,
+          businessName: business.name,
+          date,
+          time,
+          serviceName: service?.name || '',
+        })
+
+        await sendMessage({
+          to: customer.phone,
+          body,
+          businessId: business.id,
+          customerId: customer.id,
+          messageType: 'system',
+          channel: 'auto',
+        })
+
+        await supabase
+          .from('appointments')
+          .update({
+            reminder_24h_sent: true,
+            confirmation_status: 'waiting',
+            confirmation_sent_at: new Date().toISOString(),
+          })
+          .eq('id', apt.id)
+
+        results.confirmations++
+      } else {
+        // Klasik hatırlatma (onay istemeden)
+        const body = generateWhatsAppMessage('appointment_reminder', {
+          customerName: customer.name,
+          businessName: business.name,
+          date,
+          time,
+          serviceName: service?.name || '',
+        })
+
+        await sendMessage({
+          to: customer.phone,
+          body,
+          businessId: business.id,
+          customerId: customer.id,
+          messageType: 'system',
+          channel: 'auto',
+        })
+
+        await supabase
+          .from('appointments')
+          .update({ reminder_24h_sent: true })
+          .eq('id', apt.id)
+      }
+
       results.sent24h++
     } catch {
       results.errors++
     }
   }
 
-  // 2 saat sonrası için hatırlatma
+  // ── 2 saat sonrası hatırlatma ──
   const twoHoursLater = new Date(now.getTime() + 2 * 60 * 60 * 1000)
   const todayDate = now.toISOString().split('T')[0]
   const targetHour = String(twoHoursLater.getHours()).padStart(2, '0')
@@ -63,7 +123,7 @@ export async function GET(request: NextRequest) {
   const { data: appointments2h } = await supabase
     .from('appointments')
     .select(`
-      id, appointment_date, start_time, notes,
+      id, appointment_date, start_time, confirmation_status,
       customers(id, name, phone),
       services(name),
       businesses(id, name, settings)
@@ -73,19 +133,53 @@ export async function GET(request: NextRequest) {
     .lte('start_time', windowEndStr)
     .in('status', ['confirmed', 'pending'])
     .eq('reminder_2h_sent', false)
+    .is('deleted_at', null)
 
   for (const apt of appointments2h || []) {
     const customer = apt.customers as any
     const business = apt.businesses as any
+    const service = apt.services as any
 
     if (!customer?.phone || !business?.id) continue
     if (!business.settings?.reminder_2h) continue
 
     try {
+      // Eğer onay bekleniyordu ama cevap gelmediyse → no_response olarak işaretle
+      if (apt.confirmation_status === 'waiting') {
+        await supabase
+          .from('appointments')
+          .update({ confirmation_status: 'no_response' })
+          .eq('id', apt.id)
+        results.noResponseHandled++
+      }
+
+      const date = new Date(apt.appointment_date).toLocaleDateString('tr-TR', {
+        day: 'numeric', month: 'long', year: 'numeric'
+      })
+      const time = apt.start_time?.substring(0, 5) || ''
+
+      const body = generateWhatsAppMessage('appointment_reminder', {
+        customerName: customer.name,
+        businessName: business.name,
+        date,
+        time,
+        serviceName: service?.name || '',
+      })
+
+      await sendMessage({
+        to: customer.phone,
+        body,
+        businessId: business.id,
+        customerId: customer.id,
+        messageType: 'system',
+        channel: 'auto',
+      })
+
       await supabase
         .from('appointments')
         .update({ reminder_2h_sent: true })
         .eq('id', apt.id)
+
       results.sent2h++
     } catch {
       results.errors++

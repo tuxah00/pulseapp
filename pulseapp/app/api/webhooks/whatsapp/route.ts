@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendWhatsApp } from '@/lib/whatsapp/send'
+import { sendMessage } from '@/lib/messaging/send'
 
 /**
  * Twilio WhatsApp inbound webhook
@@ -84,6 +85,16 @@ export async function POST(request: NextRequest) {
     meta_message_id: messageSid,
   })
 
+  // ── Randevu Onay Kontrolü (EVET / HAYIR) ──
+  const trimmed = messageBody.trim().toUpperCase()
+  const isConfirm = /^(EVET|E|YES|1|ONAY|GEL[İI]YORUM|TAMAM|OK)$/i.test(trimmed)
+  const isDecline = /^(HAYIR|H|NO|0|[İI]PTAL|GEL[Ee]M[İI]YORUM|VAZGE[CÇ])$/i.test(trimmed)
+
+  if ((isConfirm || isDecline) && customer?.id) {
+    const handled = await handleWhatsAppConfirmation(admin, customer.id, businessId, from, isConfirm)
+    if (handled) return new NextResponse('OK', { status: 200 })
+  }
+
   // İşletme ayarlarını çek
   const { data: business } = await admin
     .from('businesses')
@@ -135,4 +146,72 @@ export async function POST(request: NextRequest) {
   }
 
   return new NextResponse('OK', { status: 200 })
+}
+
+/**
+ * WhatsApp üzerinden EVET/HAYIR randevu onay yanıtı işleme
+ */
+async function handleWhatsAppConfirmation(
+  admin: ReturnType<typeof createAdminClient>,
+  customerId: string,
+  businessId: string,
+  customerPhone: string,
+  isConfirm: boolean
+): Promise<boolean> {
+  const todayStr = new Date().toISOString().split('T')[0]
+
+  const { data: waitingApts } = await admin
+    .from('appointments')
+    .select('id, customers(name)')
+    .eq('customer_id', customerId)
+    .eq('business_id', businessId)
+    .eq('confirmation_status', 'waiting')
+    .gte('appointment_date', todayStr)
+    .in('status', ['confirmed', 'pending'])
+    .is('deleted_at', null)
+    .order('appointment_date', { ascending: true })
+    .order('start_time', { ascending: true })
+    .limit(1)
+
+  const apt = waitingApts?.[0]
+  if (!apt) return false
+
+  const customer = apt.customers as any
+
+  if (isConfirm) {
+    await admin
+      .from('appointments')
+      .update({ confirmation_status: 'confirmed_by_customer', status: 'confirmed' })
+      .eq('id', apt.id)
+
+    await sendMessage({
+      to: customerPhone,
+      body: `Teşekkürler ${customer?.name || ''} ✅ Randevunuz onaylandı. Sizi bekliyoruz!`,
+      businessId,
+      customerId,
+      messageType: 'system',
+      channel: 'whatsapp',
+    })
+  } else {
+    await admin
+      .from('appointments')
+      .update({
+        confirmation_status: 'declined',
+        status: 'cancelled',
+        cancellation_reason: 'Müşteri WhatsApp ile iptal etti',
+      })
+      .eq('id', apt.id)
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
+    await sendMessage({
+      to: customerPhone,
+      body: `Randevunuz iptal edildi. Yeni randevu almak için: ${appUrl}/book/${businessId}`,
+      businessId,
+      customerId,
+      messageType: 'system',
+      channel: 'whatsapp',
+    })
+  }
+
+  return true
 }

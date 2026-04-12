@@ -54,6 +54,9 @@ const DEFAULT_SETTINGS: BusinessSettings = {
   birthday_sms_enabled: false,
   birthday_sms_template: 'Doğum gününüz kutlu olsun {name}! 🎂 Size özel sürprizimiz var, bizi ziyaret edin!',
   birthday_sms_hour: 9,
+  confirmation_sms_enabled: false,
+  no_show_auto_score: true,
+  max_no_shows: 3,
   whatsapp_enabled: false,
   whatsapp_mode: 'sandbox',
   default_channel: 'auto',
@@ -603,6 +606,43 @@ export default function BusinessSettingsPage() {
                   checked={settings.reminder_2h}
                   onChange={(v) => setSettings(prev => ({ ...prev, reminder_2h: v }))}
                 />
+              </div>
+            </div>
+
+            <div className="card">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Randevu Onay & No-Show</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                Müşterilerden randevu onayı isteyin ve no-show takibi yapın.
+              </p>
+
+              <div className="space-y-4">
+                <ToggleSetting
+                  label="Onay SMS'i gönder"
+                  description="24 saat önce 'EVET/HAYIR' ile yanıtlanabilen onay mesajı gönderilir. Kapalıysa sadece hatırlatma gönderilir."
+                  checked={settings.confirmation_sms_enabled ?? false}
+                  onChange={(v) => setSettings(prev => ({ ...prev, confirmation_sms_enabled: v }))}
+                />
+                <ToggleSetting
+                  label="Otomatik no-show skoru"
+                  description="Gelmeyen müşterilere otomatik risk skoru atanır."
+                  checked={settings.no_show_auto_score ?? true}
+                  onChange={(v) => setSettings(prev => ({ ...prev, no_show_auto_score: v }))}
+                />
+
+                {(settings.no_show_auto_score ?? true) && (
+                  <div className="ml-14">
+                    <label className="label">Maksimum gelmeme sayısı</label>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">Bu sayıya ulaşan müşteriler randevu sayfasında uyarı ile gösterilir.</p>
+                    <input
+                      type="number"
+                      min={1}
+                      max={10}
+                      className="input w-24"
+                      value={settings.max_no_shows ?? 3}
+                      onChange={(e) => setSettings(prev => ({ ...prev, max_no_shows: Number(e.target.value) || 3 }))}
+                    />
+                  </div>
+                )}
               </div>
             </div>
 

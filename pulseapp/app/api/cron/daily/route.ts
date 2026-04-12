@@ -218,7 +218,48 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // ── 4. Bekleme Listesi Bildirimleri ───────────────────────────────────────
+  // ── 4. No-Show Skor Güncelleme ────────────────────────────────────────────
+  const noShowScoring = { updated: 0 }
+
+  // Dünkü no_show randevuları olan müşterilerin skorunu güncelle
+  const yesterdayDate = new Date(now)
+  yesterdayDate.setDate(yesterdayDate.getDate() - 1)
+  const yesterdayStr = yesterdayDate.toISOString().split('T')[0]
+
+  const { data: noShowApts } = await supabase
+    .from('appointments')
+    .select('customer_id')
+    .eq('appointment_date', yesterdayStr)
+    .eq('status', 'no_show')
+    .is('deleted_at', null)
+
+  const noShowCustomerIds = [...new Set((noShowApts || []).map(a => a.customer_id).filter(Boolean))]
+
+  for (const custId of noShowCustomerIds) {
+    // Müşterinin toplam no_show sayısı ve total randevu sayısını al
+    const { data: stats } = await supabase
+      .from('appointments')
+      .select('status')
+      .eq('customer_id', custId)
+      .is('deleted_at', null)
+      .in('status', ['completed', 'no_show'])
+
+    if (!stats || stats.length === 0) continue
+
+    const totalDone = stats.length
+    const totalNoShow = stats.filter(s => s.status === 'no_show').length
+    // Skor: no_show yüzdesi (0-100)
+    const score = Math.round((totalNoShow / totalDone) * 100)
+
+    await supabase
+      .from('customers')
+      .update({ no_show_score: score, total_no_shows: totalNoShow })
+      .eq('id', custId)
+
+    noShowScoring.updated++
+  }
+
+  // ── 5. Bekleme Listesi Bildirimleri ───────────────────────────────────────
   const waitlistNotifs = { sent: 0, errors: 0 }
 
   // İptal/no_show olan bugünkü randevuların slotlarını kontrol et
@@ -272,6 +313,7 @@ export async function GET(request: NextRequest) {
     reminders,
     reviewRequests,
     winback,
+    noShowScoring,
     waitlistNotifs,
   })
 }

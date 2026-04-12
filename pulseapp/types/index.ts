@@ -310,6 +310,8 @@ export interface ShiftDefinition {
   end: string
 }
 
+export type ConfirmationStatus = 'none' | 'waiting' | 'confirmed_by_customer' | 'declined' | 'no_response'
+
 export interface BusinessSettings {
   reminder_24h: boolean
   reminder_2h: boolean
@@ -327,6 +329,10 @@ export interface BusinessSettings {
   whatsapp_enabled?: boolean
   whatsapp_mode?: 'sandbox' | 'production'
   default_channel?: 'auto' | 'sms' | 'whatsapp'
+  // Randevu onay & no-show
+  confirmation_sms_enabled?: boolean
+  no_show_auto_score?: boolean
+  max_no_shows?: number
 }
 
 
@@ -394,6 +400,7 @@ export interface Customer {
   total_visits: number
   total_revenue: number
   total_no_shows: number
+  no_show_score: number
   last_visit_at: string | null
   preferences: Record<string, any>
   is_active: boolean
@@ -421,6 +428,8 @@ export interface Appointment {
   recurrence_pattern: Record<string, any> | null
   manage_token: string | null
   token_expires_at: string | null
+  confirmation_status: ConfirmationStatus
+  confirmation_sent_at: string | null
   created_at: string
   updated_at: string
   // JOIN'lerden gelen opsiyonel alanlar

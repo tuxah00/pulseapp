@@ -10,6 +10,7 @@
 export type WhatsAppTemplateType =
   | 'appointment_reminder'
   | 'appointment_confirmation'
+  | 'appointment_confirmation_request'
   | 'birthday'
   | 'review_request'
   | 'winback'
@@ -35,6 +36,9 @@ const templates: Record<WhatsAppTemplateType, (params: TemplateParams) => string
 
   appointment_confirmation: ({ customerName, businessName, date, time, serviceName }) =>
     `Merhaba ${customerName} ✅\n\n${businessName} randevunuz onaylandı:\n📅 ${date}\n🕐 ${time}\n💆 ${serviceName || 'Randevu'}\n\nSizi bekliyoruz!`,
+
+  appointment_confirmation_request: ({ customerName, businessName, date, time, serviceName }) =>
+    `Merhaba ${customerName} 📋\n\n${businessName} randevunuzu hatırlatmak isteriz:\n📅 ${date}\n🕐 ${time}\n💆 ${serviceName || 'Randevu'}\n\nRandevunuza gelecek misiniz?\n✅ EVET — onaylamak için\n❌ HAYIR — iptal etmek için\n\nLütfen EVET veya HAYIR yazarak yanıtlayın.`,
 
   birthday: ({ customerName, businessName }) =>
     `Doğum gününüz kutlu olsun ${customerName}! 🎂🎉\n\n${businessName} olarak sizin için özel bir sürprizimiz var. Detaylar için bize ulaşın!`,
