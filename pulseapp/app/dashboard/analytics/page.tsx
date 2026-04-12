@@ -7,7 +7,7 @@ import { logAudit } from '@/lib/utils/audit'
 import {
   Loader2, TrendingUp, TrendingDown, Users, Calendar,
   DollarSign, AlertTriangle, Clock, Star, UserCheck, Minus,
-  BarChart3, PieChart, Activity, Plus, X, Wallet, Download, Layers,
+  BarChart3, PieChart, Activity, Plus, X, Wallet, Download, Layers, Sparkles,
 } from 'lucide-react'
 import { formatCurrency, cn } from '@/lib/utils'
 import { useConfirm } from '@/lib/hooks/use-confirm'
@@ -26,7 +26,7 @@ import type {
 import { CustomSelect } from '@/components/ui/custom-select'
 import { getCustomerLabelSingular, getCustomerLabel } from '@/lib/config/sector-modules'
 
-type AnalyticsTab = 'overview' | 'staff' | 'customers' | 'sources' | 'services' | 'expenses'
+type AnalyticsTab = 'overview' | 'staff' | 'customers' | 'sources' | 'services' | 'expenses' | 'forecast'
 
 type AnalyticsAppointment = AppointmentRow & {
   services: { name: string; price: number } | null
@@ -87,6 +87,16 @@ export default function AnalyticsPage() {
   const [services, setServices] = useState<ServiceRow[]>([])
   const [staffMembers, setStaffMembers] = useState<StaffSummary[]>([])
   const [paidInvoices, setPaidInvoices] = useState<AnalyticsInvoice[]>([])
+
+  // Forecast / İş Zekası state
+  const [forecastData, setForecastData] = useState<{
+    historical: { month: string; label: string; revenue: number }[]
+    forecast: { month: string; label: string; revenue: number }[]
+    insights: { busiestDay: string; busiestHourLabel: string; topServices: { name: string; revenue: number; count: number }[]; nextMonthForecast: number }
+    heatmap: { day: string; dayIndex: number; hour: number; count: number }[]
+    maxHeatmapCount: number
+  } | null>(null)
+  const [forecastLoading, setForecastLoading] = useState(false)
 
   // Expenses state
   const [expenses, setExpenses] = useState<Expense[]>([])
@@ -486,8 +496,19 @@ export default function AnalyticsPage() {
           ['sources', 'Kaynak', <PieChart key="sr" className="h-3.5 w-3.5" />],
           ['services', 'Hizmet', <Layers key="sv" className="h-3.5 w-3.5" />],
           ['expenses', 'Gelir-Gider', <Wallet key="e" className="h-3.5 w-3.5" />],
+          ['forecast', 'İş Zekası', <Sparkles key="f" className="h-3.5 w-3.5" />],
         ] as const).map(([key, label, icon]) => (
-          <button key={key} onClick={() => setActiveTab(key as AnalyticsTab)}
+          <button key={key} onClick={() => {
+            setActiveTab(key as AnalyticsTab)
+            if (key === 'forecast' && !forecastData && !forecastLoading) {
+              setForecastLoading(true)
+              fetch('/api/analytics/forecast?months=3')
+                .then(r => r.json())
+                .then(d => setForecastData(d))
+                .catch(() => {})
+                .finally(() => setForecastLoading(false))
+            }
+          }}
             className={cn('flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors',
               activeTab === key
                 ? 'border-pulse-900 text-pulse-900 dark:text-pulse-400'
@@ -1128,6 +1149,159 @@ export default function AnalyticsPage() {
                 <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-green-400 inline-block" />Telefon</span>
               </div>
             </div>
+          )}
+        </div>
+      )}
+
+      {/* İş Zekası Sekmesi */}
+      {activeTab === 'forecast' && (
+        <div className="space-y-6">
+          {forecastLoading && (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+            </div>
+          )}
+
+          {!forecastLoading && !forecastData && (
+            <div className="card p-6 text-center py-16">
+              <Sparkles className="h-10 w-10 text-gray-200 mx-auto mb-3" />
+              <p className="text-gray-500">Tahmin verisi yüklenemedi.</p>
+            </div>
+          )}
+
+          {!forecastLoading && forecastData && (
+            <>
+              {/* Özet Kartlar */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="card p-4 text-center">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Tahmini Gelir (Sonraki Ay)</p>
+                  <p className="text-2xl font-bold text-pulse-900 dark:text-pulse-300">{formatCurrency(forecastData.insights.nextMonthForecast)}</p>
+                </div>
+                <div className="card p-4 text-center">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">En Yoğun Gün</p>
+                  <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{forecastData.insights.busiestDay}</p>
+                </div>
+                <div className="card p-4 text-center">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">En Yoğun Saat</p>
+                  <p className="text-base font-bold text-gray-900 dark:text-gray-100">{forecastData.insights.busiestHourLabel}</p>
+                </div>
+                <div className="card p-4 text-center">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Geçmiş Veri</p>
+                  <p className="text-xl font-bold text-gray-900 dark:text-gray-100">6 Ay</p>
+                </div>
+              </div>
+
+              {/* Gelir Tahmini Grafik (CSS-only bar chart) */}
+              <div className="card p-5">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">Gelir Trendi & Tahmin</h3>
+                {(() => {
+                  const allData = [
+                    ...forecastData.historical.map(h => ({ ...h, isForecast: false })),
+                    ...forecastData.forecast.map(f => ({ ...f, isForecast: true })),
+                  ]
+                  const maxRevenue = Math.max(...allData.map(d => d.revenue), 1)
+                  return (
+                    <div className="flex items-end gap-2 h-48">
+                      {allData.map((item, i) => (
+                        <div key={i} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
+                          <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">{formatCurrency(item.revenue)}</span>
+                          <div
+                            className={cn(
+                              'w-full rounded-t-sm transition-all',
+                              item.isForecast
+                                ? 'bg-pulse-300 dark:bg-pulse-700 opacity-70 border-2 border-dashed border-pulse-600 dark:border-pulse-400'
+                                : 'bg-pulse-900 dark:bg-pulse-400'
+                            )}
+                            style={{ height: `${Math.max((item.revenue / maxRevenue) * 100, 2)}%` }}
+                          />
+                          <span className="text-xs text-gray-400 text-center leading-tight">{item.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })()}
+                <div className="flex gap-4 mt-3 text-xs text-gray-500">
+                  <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-pulse-900 dark:bg-pulse-400 inline-block" />Gerçek Gelir</span>
+                  <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-pulse-300 dark:bg-pulse-700 border border-dashed border-pulse-600 inline-block" />Tahmin</span>
+                </div>
+              </div>
+
+              {/* Top 3 Hizmet */}
+              {forecastData.insights.topServices.length > 0 && (
+                <div className="card p-5">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">En Çok Gelir Getiren Hizmetler</h3>
+                  <div className="space-y-3">
+                    {forecastData.insights.topServices.map((svc, i) => {
+                      const maxRevenue = forecastData.insights.topServices[0]?.revenue || 1
+                      const pct = Math.round((svc.revenue / maxRevenue) * 100)
+                      const medals = ['🥇', '🥈', '🥉']
+                      return (
+                        <div key={i} className="space-y-1">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="font-medium text-gray-800 dark:text-gray-200">{medals[i]} {svc.name}</span>
+                            <span className="text-gray-600 dark:text-gray-400">{formatCurrency(svc.revenue)} <span className="text-gray-400">({svc.count} randevu)</span></span>
+                          </div>
+                          <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                            <div className="h-full bg-pulse-900 dark:bg-pulse-400 rounded-full" style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Yoğunluk Haritası */}
+              <div className="card p-5">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">Haftalık Yoğunluk Haritası</h3>
+                <div className="overflow-x-auto">
+                  <div className="min-w-[480px]">
+                    {/* Saat başlıkları */}
+                    <div className="flex mb-1">
+                      <div className="w-20 flex-shrink-0" />
+                      {[8, 10, 12, 14, 16, 18, 20].map(h => (
+                        <div key={h} className="flex-1 text-center text-xs text-gray-400">{h}:00</div>
+                      ))}
+                    </div>
+                    {/* Günler */}
+                    {['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'].map((dayLabel, dayIdx) => {
+                      const realDayIndex = dayIdx === 6 ? 0 : dayIdx + 1 // Pazar=0
+                      return (
+                        <div key={dayLabel} className="flex items-center mb-1 gap-0.5">
+                          <div className="w-20 flex-shrink-0 text-xs text-gray-500 dark:text-gray-400 truncate">{dayLabel}</div>
+                          {Array.from({ length: 15 }, (_, hi) => hi + 7).map(hour => {
+                            const cell = forecastData.heatmap.find(c => c.dayIndex === realDayIndex && c.hour === hour)
+                            const count = cell?.count || 0
+                            const intensity = forecastData.maxHeatmapCount > 0 ? count / forecastData.maxHeatmapCount : 0
+                            return (
+                              <div
+                                key={hour}
+                                title={`${dayLabel} ${hour}:00 — ${count} randevu`}
+                                className="flex-1 h-6 rounded-sm transition-colors"
+                                style={{
+                                  backgroundColor: count === 0
+                                    ? undefined
+                                    : `rgba(25, 61, 143, ${0.1 + intensity * 0.9})`,
+                                  background: count === 0 ? 'var(--heatmap-empty, #f3f4f6)' : undefined,
+                                }}
+                              />
+                            )
+                          })}
+                        </div>
+                      )
+                    })}
+                    {/* Renk skalası */}
+                    <div className="flex items-center gap-2 mt-2 text-xs text-gray-400">
+                      <span>Az</span>
+                      {[0.1, 0.3, 0.5, 0.7, 0.9, 1.0].map((op, i) => (
+                        <div key={i} className="w-5 h-3 rounded-sm" style={{ backgroundColor: `rgba(25, 61, 143, ${op})` }} />
+                      ))}
+                      <span>Çok</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
           )}
         </div>
       )}
