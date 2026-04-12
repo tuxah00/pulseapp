@@ -74,6 +74,13 @@ export default function KasaPage() {
   const [appliedReferralId, setAppliedReferralId] = useState<string | null>(null)
   const [freeServiceItemKey, setFreeServiceItemKey] = useState<string | null>(null)
 
+  // Sadakat puanı
+  const [loyaltyBalance, setLoyaltyBalance] = useState(0)
+  const [loyaltyRedemptionRate, setLoyaltyRedemptionRate] = useState(10)
+  const [loyaltyPointsInput, setLoyaltyPointsInput] = useState('')
+  const [loyaltyDiscountApplied, setLoyaltyDiscountApplied] = useState(0)
+  const [appliedLoyaltyPoints, setAppliedLoyaltyPoints] = useState(0)
+
   // Payment
   const [paymentRows, setPaymentRows] = useState<POSPayment[]>([])
   const [processing, setProcessing] = useState(false)
@@ -148,6 +155,10 @@ export default function KasaPage() {
       setAvailableRewards([])
       setAppliedReferralId(null)
       setFreeServiceItemKey(null)
+      setLoyaltyBalance(0)
+      setLoyaltyPointsInput('')
+      setLoyaltyDiscountApplied(0)
+      setAppliedLoyaltyPoints(0)
       return
     }
     const fetchRewards = async () => {
@@ -158,7 +169,17 @@ export default function KasaPage() {
         setAvailableRewards(rewards)
       } catch { /* ignore */ }
     }
+    const fetchLoyalty = async () => {
+      try {
+        const res = await fetch(`/api/loyalty?customerId=${selectedCustomerId}`)
+        if (!res.ok) return
+        const json = await res.json()
+        setLoyaltyBalance(json.loyalty?.points_balance ?? 0)
+        setLoyaltyRedemptionRate(json.redemptionRate ?? 10)
+      } catch { /* ignore */ }
+    }
     fetchRewards()
+    fetchLoyalty()
   }, [selectedCustomerId, businessId])
 
   // ── Cart Hesaplamaları ──
@@ -210,6 +231,10 @@ export default function KasaPage() {
     setAppliedReferralId(null)
     setAvailableRewards([])
     setFreeServiceItemKey(null)
+    setLoyaltyBalance(0)
+    setLoyaltyPointsInput('')
+    setLoyaltyDiscountApplied(0)
+    setAppliedLoyaltyPoints(0)
   }
 
   // ── Referans Ödülü ──
@@ -262,6 +287,25 @@ export default function KasaPage() {
       setDiscountType('fixed')
     }
     setAppliedReferralId(null)
+  }
+
+  // ── Sadakat Puanı ──
+  function applyLoyaltyPoints() {
+    const pts = parseInt(loyaltyPointsInput, 10)
+    if (!pts || pts <= 0 || pts > loyaltyBalance) return
+    const discountTL = Math.floor(pts / loyaltyRedemptionRate)
+    if (discountTL <= 0) return
+    setAppliedLoyaltyPoints(pts)
+    setLoyaltyDiscountApplied(discountTL)
+    setDiscountAmount(prev => prev + discountTL)
+    setDiscountType('fixed')
+    setLoyaltyPointsInput('')
+  }
+
+  function removeLoyaltyPoints() {
+    setDiscountAmount(prev => Math.max(0, prev - loyaltyDiscountApplied))
+    setAppliedLoyaltyPoints(0)
+    setLoyaltyDiscountApplied(0)
   }
 
   // ── Ödeme ──
@@ -332,6 +376,19 @@ export default function KasaPage() {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ businessId, id: appliedReferralId, status: 'rewarded' }),
+        })
+      }
+
+      // Sadakat puanı kullanıldıysa düş
+      if (appliedLoyaltyPoints > 0 && selectedCustomerId) {
+        await fetch('/api/loyalty', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            customerId: selectedCustomerId,
+            points: appliedLoyaltyPoints,
+            description: `Kasa işlemi — ${loyaltyDiscountApplied}₺ indirim`,
+          }),
         })
       }
 
@@ -604,6 +661,54 @@ export default function KasaPage() {
                 </div>
               )}
             </div>
+          )}
+
+          {/* Sadakat puan banner */}
+          {loyaltyBalance > 0 && selectedCustomerId && (
+            appliedLoyaltyPoints > 0 ? (
+              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Gift className="h-4 w-4 text-green-600 dark:text-green-400" />
+                    <span className="text-sm font-medium text-green-700 dark:text-green-300">
+                      {appliedLoyaltyPoints.toLocaleString('tr-TR')} puan → -{formatCurrency(loyaltyDiscountApplied)} indirim
+                    </span>
+                  </div>
+                  <button onClick={removeLoyaltyPoints} className="text-xs text-red-500 hover:text-red-600">Kaldır</button>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Gift className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                  <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
+                    {loyaltyBalance.toLocaleString('tr-TR')} puan mevcut
+                    <span className="text-xs text-purple-500 dark:text-purple-400 ml-1">
+                      (max ≈ {Math.floor(loyaltyBalance / loyaltyRedemptionRate).toLocaleString('tr-TR')}₺ indirim)
+                    </span>
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={loyaltyRedemptionRate}
+                    max={loyaltyBalance}
+                    step={loyaltyRedemptionRate}
+                    value={loyaltyPointsInput}
+                    onChange={e => setLoyaltyPointsInput(e.target.value)}
+                    placeholder={`Puan gir (${loyaltyRedemptionRate} puan = 1₺)`}
+                    className="input text-sm flex-1"
+                  />
+                  <button
+                    onClick={applyLoyaltyPoints}
+                    disabled={!loyaltyPointsInput || parseInt(loyaltyPointsInput) <= 0 || parseInt(loyaltyPointsInput) > loyaltyBalance}
+                    className="text-xs px-3 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-40 transition-colors whitespace-nowrap"
+                  >
+                    Uygula
+                  </button>
+                </div>
+              </div>
+            )
           )}
 
           {/* Sepet kalemleri */}
