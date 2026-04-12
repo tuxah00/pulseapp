@@ -123,6 +123,10 @@ export default function CustomersPage() {
 
   // Sadakat puan
   const [customerLoyalty, setCustomerLoyalty] = useState<LoyaltyPoints | null>(null)
+  const [showRedeemModal, setShowRedeemModal] = useState(false)
+  const [redeemPoints, setRedeemPoints] = useState('')
+  const [redeemDesc, setRedeemDesc] = useState('')
+  const [redeemSaving, setRedeemSaving] = useState(false)
 
   // Ödül verme modalı
   const [showRewardModal, setShowRewardModal] = useState(false)
@@ -440,6 +444,36 @@ export default function CustomersPage() {
       console.error('Ödül verme hatası:', err)
     } finally {
       setRewardSaving(false)
+    }
+  }
+
+  async function handleRedeemPoints() {
+    if (!selectedCustomer || !redeemPoints || Number(redeemPoints) <= 0) return
+    setRedeemSaving(true)
+    try {
+      const res = await fetch('/api/loyalty', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerId: selectedCustomer.id,
+          points: Number(redeemPoints),
+          description: redeemDesc || 'Manuel indirim',
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: data.error || 'Puan harcama başarısız' } }))
+        return
+      }
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'system', title: `-${redeemPoints} Puan Harcandı`, body: `Kalan bakiye: ${data.newBalance} puan` } }))
+      setShowRedeemModal(false)
+      setRedeemPoints('')
+      setRedeemDesc('')
+      fetchCustomerDetail(selectedCustomer.id)
+    } catch {
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: 'Bağlantı hatası' } }))
+    } finally {
+      setRedeemSaving(false)
     }
   }
 
@@ -880,9 +914,19 @@ export default function CustomersPage() {
                           <Gift className="h-3.5 w-3.5" />
                           {LOYALTY_TIER_LABELS[customerLoyalty.tier]} Üye
                         </span>
-                        <span className={`text-xs font-medium ${LOYALTY_TIER_COLORS[customerLoyalty.tier].text}`}>
-                          {customerLoyalty.points_balance.toLocaleString('tr-TR')} puan
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs font-medium ${LOYALTY_TIER_COLORS[customerLoyalty.tier].text}`}>
+                            {customerLoyalty.points_balance.toLocaleString('tr-TR')} puan
+                          </span>
+                          {customerLoyalty.points_balance > 0 && (
+                            <button
+                              onClick={() => setShowRedeemModal(true)}
+                              className="text-xs px-2 py-0.5 rounded-lg bg-white/60 dark:bg-gray-800/60 border border-current font-medium hover:bg-white dark:hover:bg-gray-700 transition-colors"
+                            >
+                              Kullan
+                            </button>
+                          )}
+                        </div>
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-xs">
                         <div>
@@ -1264,6 +1308,73 @@ export default function CustomersPage() {
                 <button type="button" onClick={handleGiveReward} disabled={rewardSaving || !rewardValue} className="btn-primary flex-1">
                   {rewardSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Ödül Ver
+                </button>
+              </div>
+            </div>
+          </div>
+        </Portal>
+      )}
+
+      {/* Puan Harcama Modalı */}
+      {showRedeemModal && selectedCustomer && customerLoyalty && (
+        <Portal>
+          <div
+            className="modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4"
+            onClick={(e) => { if (e.target === e.currentTarget) setShowRedeemModal(false) }}
+          >
+            <div className="modal-content card w-full max-w-sm dark:bg-gray-900">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1 flex items-center gap-2">
+                <Gift className="h-5 w-5 text-pulse-900 dark:text-pulse-300" /> Puan Kullan
+              </h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                Mevcut bakiye: <span className="font-semibold text-gray-700 dark:text-gray-300">{customerLoyalty.points_balance.toLocaleString('tr-TR')} puan</span>
+              </p>
+              <div className="space-y-3">
+                <div>
+                  <label className="label label-required">Harcanacak Puan</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={customerLoyalty.points_balance}
+                    value={redeemPoints}
+                    onChange={e => setRedeemPoints(e.target.value)}
+                    className="input"
+                    placeholder={`Maks: ${customerLoyalty.points_balance}`}
+                    autoFocus
+                  />
+                  {redeemPoints && Number(redeemPoints) > 0 && (
+                    <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
+                      ≈ {Number(redeemPoints).toLocaleString('tr-TR')}₺ indirim değeri
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label className="label">Açıklama (opsiyonel)</label>
+                  <input
+                    type="text"
+                    value={redeemDesc}
+                    onChange={e => setRedeemDesc(e.target.value)}
+                    className="input"
+                    placeholder="Ör: Randevu indirimi, Hediye ürün..."
+                  />
+                </div>
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => { setShowRedeemModal(false); setRedeemPoints(''); setRedeemDesc('') }}
+                  className="btn-secondary flex-1"
+                >
+                  İptal
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRedeemPoints}
+                  disabled={redeemSaving || !redeemPoints || Number(redeemPoints) <= 0 || Number(redeemPoints) > customerLoyalty.points_balance}
+                  className="btn-primary flex-1"
+                >
+                  {redeemSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Onayla
                 </button>
               </div>
             </div>

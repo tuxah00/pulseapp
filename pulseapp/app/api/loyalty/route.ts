@@ -185,3 +185,71 @@ export async function POST(request: NextRequest) {
     tierChanged: newTier !== (currentLoyalty?.tier ?? 'bronze'),
   })
 }
+
+// PATCH /api/loyalty — Manuel puan harcama (indirim uygulama)
+// Body: { customerId, points, description? }
+export async function PATCH(request: NextRequest) {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
+
+  const { data: staff } = await supabase
+    .from('staff_members')
+    .select('id, name, business_id')
+    .eq('user_id', user.id)
+    .single()
+  if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
+
+  const body = await request.json()
+  const { customerId, points, description = 'Manuel indirim' } = body
+  if (!customerId || !points || points <= 0) {
+    return NextResponse.json({ error: 'customerId ve geçerli bir puan miktarı gerekli' }, { status: 400 })
+  }
+
+  const admin = createAdminClient()
+
+  const { data: currentLoyalty } = await admin
+    .from('loyalty_points')
+    .select('*')
+    .eq('business_id', staff.business_id)
+    .eq('customer_id', customerId)
+    .single()
+
+  if (!currentLoyalty) {
+    return NextResponse.json({ error: 'Müşterinin puan kaydı bulunamadı' }, { status: 404 })
+  }
+
+  if (currentLoyalty.points_balance < points) {
+    return NextResponse.json({ error: `Yetersiz puan. Mevcut bakiye: ${currentLoyalty.points_balance}` }, { status: 400 })
+  }
+
+  const newBalance = currentLoyalty.points_balance - points
+  const newTotalSpent = currentLoyalty.total_spent + points
+
+  await Promise.all([
+    admin
+      .from('loyalty_points')
+      .update({ points_balance: newBalance, total_spent: newTotalSpent })
+      .eq('id', currentLoyalty.id),
+    admin.from('point_transactions').insert({
+      business_id: staff.business_id,
+      customer_id: customerId,
+      type: 'spend',
+      points: -points,
+      source: 'redemption',
+      description,
+    }),
+  ])
+
+  await logAuditServer({
+    businessId: staff.business_id,
+    staffId: staff.id,
+    staffName: staff.name,
+    action: 'update',
+    resource: 'customer',
+    resourceId: customerId,
+    details: { type: 'loyalty_spend', pointsSpent: points, newBalance, description },
+  })
+
+  return NextResponse.json({ ok: true, pointsSpent: points, newBalance })
+}
