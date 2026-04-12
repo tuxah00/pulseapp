@@ -65,8 +65,6 @@ const DEFAULT_SETTINGS: BusinessSettings = {
   loyalty_enabled: false,
   points_per_currency: 1,
   visit_bonus_points: 50,
-  tier_silver_threshold: 500,
-  tier_gold_threshold: 2000,
   auto_reward_threshold: 500,
   redemption_rate: 10,
   whatsapp_enabled: false,
@@ -747,24 +745,6 @@ export default function BusinessSettingsPage() {
                           type="number" min={0} className="input w-full"
                           value={settings.visit_bonus_points ?? 50}
                           onChange={(e) => setSettings(prev => ({ ...prev, visit_bonus_points: Number(e.target.value) || 0 }))}
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="label">Gümüş eşiği (toplam puan)</label>
-                        <input
-                          type="number" min={1} className="input w-full"
-                          value={settings.tier_silver_threshold ?? 500}
-                          onChange={(e) => setSettings(prev => ({ ...prev, tier_silver_threshold: Number(e.target.value) || 500 }))}
-                        />
-                      </div>
-                      <div>
-                        <label className="label">Altın eşiği (toplam puan)</label>
-                        <input
-                          type="number" min={1} className="input w-full"
-                          value={settings.tier_gold_threshold ?? 2000}
-                          onChange={(e) => setSettings(prev => ({ ...prev, tier_gold_threshold: Number(e.target.value) || 2000 }))}
                         />
                       </div>
                     </div>
