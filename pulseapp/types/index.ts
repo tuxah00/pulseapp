@@ -394,6 +394,9 @@ export interface BusinessSettings {
   // Periyodik kontrol hatırlatıcı
   periodic_reminder_enabled?: boolean
   periodic_reminder_advance_days?: number
+  // Akıllı boşluk doldurma
+  gap_fill_enabled?: boolean
+  gap_fill_lookback_months?: number
 }
 
 
