@@ -68,6 +68,7 @@ const DEFAULT_SETTINGS: BusinessSettings = {
   tier_silver_threshold: 500,
   tier_gold_threshold: 2000,
   auto_reward_threshold: 500,
+  redemption_rate: 10,
   whatsapp_enabled: false,
   whatsapp_mode: 'sandbox',
   default_channel: 'auto',
@@ -774,6 +775,17 @@ export default function BusinessSettingsPage() {
                         type="number" min={0} className="input w-32"
                         value={settings.auto_reward_threshold ?? 500}
                         onChange={(e) => setSettings(prev => ({ ...prev, auto_reward_threshold: Number(e.target.value) || 500 }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="label">Harcama oranı — kaç puan = 1₺ indirim</label>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">
+                        Örn: 10 → 100 puan = 10₺ indirim (%10 cashback). Değer düşüldükçe indirim oranı artar.
+                      </p>
+                      <input
+                        type="number" min={1} className="input w-32"
+                        value={settings.redemption_rate ?? 10}
+                        onChange={(e) => setSettings(prev => ({ ...prev, redemption_rate: Number(e.target.value) || 10 }))}
                       />
                     </div>
                   </div>

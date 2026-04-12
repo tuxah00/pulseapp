@@ -404,6 +404,7 @@ export interface BusinessSettings {
   tier_silver_threshold?: number
   tier_gold_threshold?: number
   auto_reward_threshold?: number
+  redemption_rate?: number  // kaç puan = 1₺ indirim (varsayılan: 10)
 }
 
 

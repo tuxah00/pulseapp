@@ -123,6 +123,7 @@ export default function CustomersPage() {
 
   // Sadakat puan
   const [customerLoyalty, setCustomerLoyalty] = useState<LoyaltyPoints | null>(null)
+  const [loyaltyRedemptionRate, setLoyaltyRedemptionRate] = useState(10)
   const [showRedeemModal, setShowRedeemModal] = useState(false)
   const [redeemPoints, setRedeemPoints] = useState('')
   const [redeemDesc, setRedeemDesc] = useState('')
@@ -410,6 +411,7 @@ export default function CustomersPage() {
       setCustomerReviews((revsRes.data as ReviewRow[]) || [])
       setCustomerRecordsCount(recsRes.count || 0)
       setCustomerLoyalty((loyaltyRes as any)?.loyalty ?? null)
+      setLoyaltyRedemptionRate((loyaltyRes as any)?.redemptionRate ?? 10)
     } catch (err) {
       console.error('Detay veri çekme hatası:', err)
     } finally {
@@ -1344,7 +1346,8 @@ export default function CustomersPage() {
                   />
                   {redeemPoints && Number(redeemPoints) > 0 && (
                     <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
-                      ≈ {Number(redeemPoints).toLocaleString('tr-TR')}₺ indirim değeri
+                      ≈ {(Number(redeemPoints) / loyaltyRedemptionRate).toLocaleString('tr-TR', { maximumFractionDigits: 0 })}₺ indirim değeri
+                      <span className="text-gray-400 dark:text-gray-500 ml-1">({loyaltyRedemptionRate} puan = 1₺)</span>
                     </p>
                   )}
                 </div>
