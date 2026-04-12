@@ -9,6 +9,8 @@ import {
   Trash2, CalendarClock, ShieldX, Filter
 } from 'lucide-react'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
+import EmptyState from '@/components/ui/empty-state'
+import { CustomSelect } from '@/components/ui/custom-select'
 import { cn } from '@/lib/utils'
 import type { Campaign, CustomerSegment } from '@/types'
 
@@ -209,20 +211,12 @@ export default function CampaignsPage() {
   }
 
   const handleSendNow = async (campaign: Campaign) => {
-    const res = await fetch('/api/campaigns', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: campaign.id, status: 'sending' }),
-    })
-    if (!res.ok) return
-    // Trigger send via re-create logic: patch to scheduled then cron picks up
-    // For immediate send, use separate send endpoint
-    const sendRes = await fetch('/api/campaigns/send', {
+    const res = await fetch('/api/campaigns/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ campaignId: campaign.id }),
     })
-    if (sendRes.ok) { toast.success('Kampanya gönderiliyor...'); fetchCampaigns() }
+    if (res.ok) { toast.success('Kampanya gönderiliyor...'); fetchCampaigns() }
     else toast.error('Gönderilemedi')
   }
 
@@ -283,13 +277,13 @@ export default function CampaignsPage() {
       {loading ? (
         <div className="flex items-center justify-center h-32"><Loader2 className="h-6 w-6 animate-spin text-pulse-900" /></div>
       ) : campaigns.length === 0 ? (
-        <div className="card p-10 text-center">
-          <Megaphone className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-          <p className="text-gray-500 dark:text-gray-400 font-medium">Henüz kampanya yok</p>
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 mb-4">Müşterilerinize toplu SMS veya WhatsApp göndermek için kampanya oluşturun</p>
-          <button onClick={openCreate} className="btn-primary inline-flex items-center gap-2">
-            <Plus className="h-4 w-4" /> İlk Kampanyayı Oluştur
-          </button>
+        <div className="card">
+          <EmptyState
+            icon={<Megaphone className="h-8 w-8" />}
+            title="Henüz kampanya yok"
+            description="Müşterilerinize toplu SMS veya WhatsApp göndermek için kampanya oluşturun"
+            action={{ label: 'İlk Kampanyayı Oluştur', onClick: openCreate, icon: <Plus className="h-4 w-4" /> }}
+          />
         </div>
       ) : (
         <AnimatedList className="space-y-3">
@@ -524,10 +518,12 @@ export default function CampaignsPage() {
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="label text-xs">Doğum Günü Ayı</label>
-                      <select className="input w-full" value={form.birthdayMonth} onChange={e => setField('birthdayMonth', e.target.value)}>
-                        <option value="">— Seçin —</option>
-                        {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
-                      </select>
+                      <CustomSelect
+                        options={MONTHS.map((m, i) => ({ value: String(i + 1), label: m }))}
+                        value={form.birthdayMonth}
+                        onChange={v => setField('birthdayMonth', v)}
+                        placeholder="— Seçin —"
+                      />
                     </div>
                     <div>
                       <label className="label text-xs">Min. Ziyaret Sayısı</label>

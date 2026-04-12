@@ -1,17 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import type { CampaignSegmentFilter, CustomerSegment } from '@/types'
+import { getStaffInfo } from '@/app/api/campaigns/route'
+import { matchesCampaignFilter } from '@/lib/utils/campaign-filters'
+import type { CustomerSegment } from '@/types'
+
+const MS_PER_DAY = 86400000
 
 export async function GET(request: NextRequest) {
   const supabase = await createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
-
-  const { data: staff } = await supabase
-    .from('staff_members')
-    .select('business_id')
-    .eq('user_id', user.id)
-    .single()
+  const staff = await getStaffInfo(supabase)
   if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
 
   const sp = request.nextUrl.searchParams
@@ -23,53 +20,28 @@ export async function GET(request: NextRequest) {
   const minTotalRevenue = sp.get('minTotalRevenue') ? Number(sp.get('minTotalRevenue')) : undefined
   const createdDaysAgoMax = sp.get('createdDaysAgoMax') ? Number(sp.get('createdDaysAgoMax')) : undefined
 
+  const now = new Date()
+
   let query = supabase
     .from('customers')
-    .select('id, segment, last_visit_at, total_visits, total_revenue, created_at, birthday')
+    .select('segment, last_visit_at, total_visits, total_revenue, created_at, birthday')
     .eq('business_id', staff.business_id)
     .eq('is_active', true)
     .not('phone', 'is', null)
 
-  if (segments.length) {
-    query = query.in('segment', segments)
-  }
+  if (segments.length) query = query.in('segment', segments)
+  if (lastVisitDaysMin) query = query.lte('last_visit_at', new Date(now.getTime() - lastVisitDaysMin * MS_PER_DAY).toISOString())
+  if (lastVisitDaysMax) query = query.gte('last_visit_at', new Date(now.getTime() - lastVisitDaysMax * MS_PER_DAY).toISOString())
+  if (minTotalVisits) query = query.gte('total_visits', minTotalVisits)
+  if (minTotalRevenue) query = query.gte('total_revenue', minTotalRevenue)
+  if (createdDaysAgoMax) query = query.gte('created_at', new Date(now.getTime() - createdDaysAgoMax * MS_PER_DAY).toISOString())
 
   const { data: customers } = await query
 
-  const now = new Date()
-  const filter: CampaignSegmentFilter = {
-    segments: segments.length ? segments : undefined,
-    lastVisitDaysMin,
-    lastVisitDaysMax,
-    birthdayMonth,
-    minTotalVisits,
-    minTotalRevenue,
-    createdDaysAgoMax,
-  }
+  // birthdayMonth can't be pushed to DB via PostgREST — filter in JS
+  const count = birthdayMonth
+    ? (customers || []).filter(c => matchesCampaignFilter(c, { birthdayMonth }, now)).length
+    : (customers || []).length
 
-  const filtered = (customers || []).filter(c => {
-    if (filter.lastVisitDaysMin !== undefined && filter.lastVisitDaysMin > 0) {
-      if (!c.last_visit_at) return false
-      const days = Math.floor((now.getTime() - new Date(c.last_visit_at).getTime()) / 86400000)
-      if (days < filter.lastVisitDaysMin) return false
-    }
-    if (filter.lastVisitDaysMax !== undefined && filter.lastVisitDaysMax > 0) {
-      if (!c.last_visit_at) return false
-      const days = Math.floor((now.getTime() - new Date(c.last_visit_at).getTime()) / 86400000)
-      if (days > filter.lastVisitDaysMax) return false
-    }
-    if (filter.birthdayMonth !== undefined) {
-      if (!c.birthday) return false
-      if (new Date(c.birthday).getMonth() + 1 !== filter.birthdayMonth) return false
-    }
-    if (filter.minTotalVisits !== undefined && (c.total_visits || 0) < filter.minTotalVisits) return false
-    if (filter.minTotalRevenue !== undefined && (c.total_revenue || 0) < filter.minTotalRevenue) return false
-    if (filter.createdDaysAgoMax !== undefined) {
-      const days = Math.floor((now.getTime() - new Date(c.created_at).getTime()) / 86400000)
-      if (days > filter.createdDaysAgoMax) return false
-    }
-    return true
-  })
-
-  return NextResponse.json({ count: filtered.length })
+  return NextResponse.json({ count })
 }

@@ -1,18 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { sendCampaign } from '@/app/api/campaigns/route'
+import { getStaffInfo, sendCampaign } from '@/app/api/campaigns/route'
 
 export async function POST(request: NextRequest) {
   const supabase = await createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
-
-  const { data: staff } = await supabase
-    .from('staff_members')
-    .select('business_id')
-    .eq('user_id', user.id)
-    .single()
+  const staff = await getStaffInfo(supabase)
   if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
 
   const { campaignId } = await request.json()

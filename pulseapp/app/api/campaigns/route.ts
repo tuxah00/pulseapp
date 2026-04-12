@@ -3,9 +3,10 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendMessage } from '@/lib/messaging/send'
 import { logAuditServer } from '@/lib/utils/audit'
+import { matchesCampaignFilter } from '@/lib/utils/campaign-filters'
 import type { CampaignSegmentFilter } from '@/types'
 
-async function getStaffInfo(supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>) {
+export async function getStaffInfo(supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
   const { data: staff } = await supabase
@@ -168,7 +169,6 @@ export async function DELETE(request: NextRequest) {
   return NextResponse.json({ ok: true })
 }
 
-// ── Yardımcı: Segment filtresine göre müşterileri getir ve kampanya gönder ──
 export async function sendCampaign(
   admin: ReturnType<typeof createAdminClient>,
   campaignId: string,
@@ -199,63 +199,26 @@ export async function sendCampaign(
   }
 
   const now = new Date()
-
-  // Ek filtreler (JS tarafında)
-  const filtered = customers.filter(c => {
-    if (!c.phone) return false
-
-    if (segmentFilter.lastVisitDaysMin !== undefined && segmentFilter.lastVisitDaysMin > 0) {
-      if (!c.last_visit_at) return false
-      const days = Math.floor((now.getTime() - new Date(c.last_visit_at).getTime()) / 86400000)
-      if (days < segmentFilter.lastVisitDaysMin) return false
-    }
-
-    if (segmentFilter.lastVisitDaysMax !== undefined && segmentFilter.lastVisitDaysMax > 0) {
-      if (!c.last_visit_at) return false
-      const days = Math.floor((now.getTime() - new Date(c.last_visit_at).getTime()) / 86400000)
-      if (days > segmentFilter.lastVisitDaysMax) return false
-    }
-
-    if (segmentFilter.birthdayMonth !== undefined) {
-      if (!c.birthday) return false
-      const month = new Date(c.birthday).getMonth() + 1
-      if (month !== segmentFilter.birthdayMonth) return false
-    }
-
-    if (segmentFilter.minTotalVisits !== undefined && (c.total_visits || 0) < segmentFilter.minTotalVisits) return false
-    if (segmentFilter.minTotalRevenue !== undefined && (c.total_revenue || 0) < segmentFilter.minTotalRevenue) return false
-
-    if (segmentFilter.createdDaysAgoMax !== undefined) {
-      const days = Math.floor((now.getTime() - new Date(c.created_at).getTime()) / 86400000)
-      if (days > segmentFilter.createdDaysAgoMax) return false
-    }
-
-    return true
-  })
+  const filtered = customers.filter(c => c.phone && matchesCampaignFilter(c, segmentFilter, now))
 
   const stats = { total_recipients: filtered.length, sent: 0, errors: 0 }
 
-  // Alıcı kayıtlarını toplu oluştur
-  if (filtered.length > 0) {
-    await admin.from('campaign_recipients').insert(
-      filtered.map(c => ({
-        campaign_id: campaignId,
-        customer_id: c.id,
-        customer_name: c.name,
-        customer_phone: c.phone,
-        status: 'pending',
-      }))
-    )
-  }
+  const [, { data: bizRow }] = await Promise.all([
+    filtered.length > 0
+      ? admin.from('campaign_recipients').insert(
+          filtered.map(c => ({
+            campaign_id: campaignId,
+            customer_id: c.id,
+            customer_name: c.name,
+            customer_phone: c.phone,
+            status: 'pending',
+          }))
+        )
+      : Promise.resolve(null),
+    admin.from('businesses').select('name').eq('id', businessId).single(),
+  ])
 
-  // Mesajları gönder
-  const { data: bizData } = await admin
-    .from('businesses')
-    .select('name')
-    .eq('id', businessId)
-    .single()
-
-  const bizName = bizData?.name || ''
+  const bizName = bizRow?.name || ''
 
   for (const customer of filtered) {
     const body = messageTemplate
