@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
 
   const admin = createAdminClient()
 
-  const [{ data: loyalty }, { data: transactions }] = await Promise.all([
+  const [{ data: loyalty }, { data: transactions }, { data: biz }] = await Promise.all([
     admin
       .from('loyalty_points')
       .select('*')
@@ -36,9 +36,17 @@ export async function GET(request: NextRequest) {
       .eq('customer_id', customerId)
       .order('created_at', { ascending: false })
       .limit(10),
+    admin
+      .from('businesses')
+      .select('settings')
+      .eq('id', staff.business_id)
+      .single(),
   ])
 
-  return NextResponse.json({ loyalty: loyalty || null, transactions: transactions || [] })
+  const settings = biz?.settings as Record<string, any> | null
+  const redemptionRate: number = settings?.redemption_rate ?? 10
+
+  return NextResponse.json({ loyalty: loyalty || null, transactions: transactions || [], redemptionRate })
 }
 
 // POST /api/loyalty — Puan ekle (randevu tamamlandığında)
