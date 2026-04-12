@@ -12,7 +12,7 @@ import {
   Gift, FileText, ChevronRight,
 } from 'lucide-react'
 import { formatPhone, formatDate, formatTime, formatCurrency, getSegmentColor, cn, getInitials } from '@/lib/utils'
-import { SEGMENT_LABELS, STATUS_LABELS, REFERRAL_STATUS_LABELS, REWARD_TYPE_LABELS, type Customer, type CustomerSegment, type Referral, type RewardType } from '@/types'
+import { SEGMENT_LABELS, STATUS_LABELS, REFERRAL_STATUS_LABELS, REWARD_TYPE_LABELS, LOYALTY_TIER_LABELS, LOYALTY_TIER_COLORS, type Customer, type CustomerSegment, type Referral, type RewardType, type LoyaltyPoints } from '@/types'
 import type { AppointmentRow, MessageRow, ReviewRow } from '@/types/db'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -120,6 +120,9 @@ export default function CustomersPage() {
   const [customerReviews, setCustomerReviews] = useState<ReviewRow[]>([])
   const [customerRecordsCount, setCustomerRecordsCount] = useState(0)
   const [detailLoading, setDetailLoading] = useState(false)
+
+  // Sadakat puan
+  const [customerLoyalty, setCustomerLoyalty] = useState<LoyaltyPoints | null>(null)
 
   // Ödül verme modalı
   const [showRewardModal, setShowRewardModal] = useState(false)
@@ -359,7 +362,7 @@ export default function CustomersPage() {
       const today = new Date()
       const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
 
-      const [aptsRes, refsRes, revsRes, recsRes] = await Promise.all([
+      const [aptsRes, refsRes, revsRes, recsRes, loyaltyRes] = await Promise.all([
         // Yaklaşan randevular
         supabase
           .from('appointments')
@@ -394,12 +397,15 @@ export default function CustomersPage() {
           .select('id', { count: 'exact', head: true })
           .eq('business_id', businessId)
           .eq('customer_id', customerId),
+        // Sadakat puanı
+        fetch(`/api/loyalty?customerId=${customerId}`).then(r => r.json()).catch(() => ({ loyalty: null })),
       ])
 
       setUpcomingAppointments((aptsRes.data as unknown as AppointmentTimelineData[]) || [])
       setCustomerReferrals((refsRes.data as Referral[]) || [])
       setCustomerReviews((revsRes.data as ReviewRow[]) || [])
       setCustomerRecordsCount(recsRes.count || 0)
+      setCustomerLoyalty((loyaltyRes as any)?.loyalty ?? null)
     } catch (err) {
       console.error('Detay veri çekme hatası:', err)
     } finally {
@@ -865,6 +871,31 @@ export default function CustomersPage() {
                       <p className="text-xs text-gray-500 dark:text-gray-400">Gelmedi</p>
                     </div>
                   </div>
+
+                  {/* Sadakat Puan Kartı */}
+                  {customerLoyalty && (
+                    <div className={`rounded-xl p-3 border ${LOYALTY_TIER_COLORS[customerLoyalty.tier].bg} ${LOYALTY_TIER_COLORS[customerLoyalty.tier].border}`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className={`text-xs font-semibold flex items-center gap-1.5 ${LOYALTY_TIER_COLORS[customerLoyalty.tier].text}`}>
+                          <Gift className="h-3.5 w-3.5" />
+                          {LOYALTY_TIER_LABELS[customerLoyalty.tier]} Üye
+                        </span>
+                        <span className={`text-xs font-medium ${LOYALTY_TIER_COLORS[customerLoyalty.tier].text}`}>
+                          {customerLoyalty.points_balance.toLocaleString('tr-TR')} puan
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                          <span className="text-gray-500 dark:text-gray-400">Kazanılan</span>
+                          <p className="font-semibold text-gray-700 dark:text-gray-300">{customerLoyalty.total_earned.toLocaleString('tr-TR')}</p>
+                        </div>
+                        <div>
+                          <span className="text-gray-500 dark:text-gray-400">Harcanan</span>
+                          <p className="font-semibold text-gray-700 dark:text-gray-300">{customerLoyalty.total_spent.toLocaleString('tr-TR')}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {selectedCustomer.notes && (
                     <div>
