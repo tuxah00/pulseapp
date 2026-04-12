@@ -1,0 +1,84 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+
+// POST — OTP doğrula ve müşteri cookie'si oluştur
+export async function POST(request: NextRequest) {
+  const body = await request.json()
+  const { businessId, phone, otp } = body
+
+  if (!businessId || !phone || !otp) {
+    return NextResponse.json({ error: 'businessId, telefon ve kod zorunludur' }, { status: 400 })
+  }
+
+  const admin = createAdminClient()
+  const now = new Date().toISOString()
+
+  // OTP'yi doğrula
+  const { data: otpRecord } = await admin
+    .from('portal_otps')
+    .select('id, otp, expires_at, used')
+    .eq('business_id', businessId)
+    .eq('phone', phone)
+    .eq('used', false)
+    .gt('expires_at', now)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single()
+
+  if (!otpRecord) {
+    return NextResponse.json({ error: 'Geçersiz veya süresi dolmuş kod' }, { status: 401 })
+  }
+
+  if (otpRecord.otp !== String(otp)) {
+    return NextResponse.json({ error: 'Hatalı doğrulama kodu' }, { status: 401 })
+  }
+
+  // OTP'yi kullanıldı olarak işaretle
+  await admin
+    .from('portal_otps')
+    .update({ used: true })
+    .eq('id', otpRecord.id)
+
+  // Müşteriyi bul
+  const { data: customer } = await admin
+    .from('customers')
+    .select('id, name, phone, segment, birthday')
+    .eq('business_id', businessId)
+    .eq('phone', phone)
+    .single()
+
+  if (!customer) {
+    return NextResponse.json({ error: 'Müşteri bulunamadı' }, { status: 404 })
+  }
+
+  // Cookie oluştur — customerId bilgisini cookie olarak sakla
+  const response = NextResponse.json({
+    success: true,
+    customer: {
+      id: customer.id,
+      name: customer.name,
+      phone: customer.phone,
+      segment: customer.segment,
+    },
+  })
+
+  // Cookie: 7 gün geçerli, httpOnly, sameSite
+  response.cookies.set('portal_customer_id', customer.id, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 7 * 24 * 60 * 60, // 7 gün
+    path: `/portal/${businessId}`,
+  })
+
+  // BusinessId de sakla
+  response.cookies.set('portal_business_id', businessId, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 7 * 24 * 60 * 60,
+    path: `/portal/${businessId}`,
+  })
+
+  return response
+}
