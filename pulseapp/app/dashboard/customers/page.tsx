@@ -12,7 +12,7 @@ import {
   Gift, FileText, ChevronRight,
 } from 'lucide-react'
 import { formatPhone, formatDate, formatTime, formatCurrency, getSegmentColor, cn, getInitials } from '@/lib/utils'
-import { SEGMENT_LABELS, STATUS_LABELS, REFERRAL_STATUS_LABELS, REWARD_TYPE_LABELS, LOYALTY_TIER_LABELS, LOYALTY_TIER_COLORS, type Customer, type CustomerSegment, type Referral, type RewardType, type LoyaltyPoints } from '@/types'
+import { SEGMENT_LABELS, STATUS_LABELS, REFERRAL_STATUS_LABELS, REWARD_TYPE_LABELS, type Customer, type CustomerSegment, type Referral, type RewardType, type LoyaltyPoints } from '@/types'
 import type { AppointmentRow, MessageRow, ReviewRow } from '@/types/db'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -910,20 +910,20 @@ export default function CustomersPage() {
 
                   {/* Sadakat Puan Kartı */}
                   {customerLoyalty && (
-                    <div className={`rounded-xl p-3 border ${LOYALTY_TIER_COLORS[customerLoyalty.tier].bg} ${LOYALTY_TIER_COLORS[customerLoyalty.tier].border}`}>
+                    <div className="rounded-xl p-3 border border-purple-200 dark:border-purple-700/50 bg-purple-50 dark:bg-purple-900/20">
                       <div className="flex items-center justify-between mb-2">
-                        <span className={`text-xs font-semibold flex items-center gap-1.5 ${LOYALTY_TIER_COLORS[customerLoyalty.tier].text}`}>
+                        <span className="text-xs font-semibold flex items-center gap-1.5 text-purple-700 dark:text-purple-300">
                           <Gift className="h-3.5 w-3.5" />
-                          {LOYALTY_TIER_LABELS[customerLoyalty.tier]} Üye
+                          Sadakat Puanı
                         </span>
                         <div className="flex items-center gap-2">
-                          <span className={`text-xs font-medium ${LOYALTY_TIER_COLORS[customerLoyalty.tier].text}`}>
+                          <span className="text-xs font-bold text-purple-700 dark:text-purple-300">
                             {customerLoyalty.points_balance.toLocaleString('tr-TR')} puan
                           </span>
                           {customerLoyalty.points_balance > 0 && (
                             <button
                               onClick={() => setShowRedeemModal(true)}
-                              className="text-xs px-2 py-0.5 rounded-lg bg-white/60 dark:bg-gray-800/60 border border-current font-medium hover:bg-white dark:hover:bg-gray-700 transition-colors"
+                              className="text-xs px-2 py-0.5 rounded-lg bg-white/60 dark:bg-gray-800/60 border border-purple-300 dark:border-purple-600 text-purple-700 dark:text-purple-300 font-medium hover:bg-white dark:hover:bg-gray-700 transition-colors"
                             >
                               Kullan
                             </button>

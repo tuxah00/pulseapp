@@ -941,9 +941,7 @@ export default function AppointmentsPage() {
                 title: `+${loyaltyData.pointsAdded} Puan Kazanıldı`,
                 body: loyaltyData.thresholdCrossed
                   ? 'Ödül eşiğine ulaşıldı! 🎉'
-                  : loyaltyData.tierChanged
-                    ? `Seviye yükseldi: ${loyaltyData.newTier === 'silver' ? 'Gümüş 🥈' : 'Altın 🥇'}`
-                    : `Toplam: ${loyaltyData.newBalance} puan`,
+                  : `Toplam: ${loyaltyData.newBalance} puan`,
               },
             }))
           }

@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logAuditServer } from '@/lib/utils/audit'
-import type { LoyaltyTier } from '@/types'
 
 // GET /api/loyalty?customerId=xxx — Müşterinin puan bakiyesi + son işlemler
 export async function GET(request: NextRequest) {
@@ -86,8 +85,6 @@ export async function POST(request: NextRequest) {
 
   const pointsPerCurrency: number = settings.points_per_currency ?? 1
   const visitBonus: number = settings.visit_bonus_points ?? 50
-  const silverThreshold: number = settings.tier_silver_threshold ?? 500
-  const goldThreshold: number = settings.tier_gold_threshold ?? 2000
   const autoRewardThreshold: number = settings.auto_reward_threshold ?? 500
 
   // Idempotency: Bu randevu için daha önce puan eklendi mi?
@@ -116,13 +113,8 @@ export async function POST(request: NextRequest) {
     .single()
 
   const oldBalance = currentLoyalty?.points_balance ?? 0
-  const oldTotalEarned = currentLoyalty?.total_earned ?? 0
   const newBalance = oldBalance + totalEarned
-  const newTotalEarned = oldTotalEarned + totalEarned
-
-  const newTier: LoyaltyTier =
-    newTotalEarned >= goldThreshold ? 'gold' :
-    newTotalEarned >= silverThreshold ? 'silver' : 'bronze'
+  const newTotalEarned = (currentLoyalty?.total_earned ?? 0) + totalEarned
 
   // Upsert loyalty_points
   await admin
@@ -132,7 +124,6 @@ export async function POST(request: NextRequest) {
         business_id: staff.business_id,
         customer_id: customerId,
         points_balance: newBalance,
-        tier: newTier,
         total_earned: newTotalEarned,
         total_spent: currentLoyalty?.total_spent ?? 0,
       },
@@ -174,24 +165,10 @@ export async function POST(request: NextRequest) {
     action: 'create',
     resource: 'customer',
     resourceId: customerId,
-    details: {
-      type: 'loyalty_earn',
-      appointmentId,
-      pointsAdded: totalEarned,
-      newBalance,
-      newTier,
-      thresholdCrossed,
-    },
+    details: { type: 'loyalty_earn', appointmentId, pointsAdded: totalEarned, newBalance, thresholdCrossed },
   })
 
-  return NextResponse.json({
-    ok: true,
-    pointsAdded: totalEarned,
-    newBalance,
-    newTier,
-    thresholdCrossed,
-    tierChanged: newTier !== (currentLoyalty?.tier ?? 'bronze'),
-  })
+  return NextResponse.json({ ok: true, pointsAdded: totalEarned, newBalance, thresholdCrossed })
 }
 
 // PATCH /api/loyalty — Manuel puan harcama (indirim uygulama)
