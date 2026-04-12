@@ -60,6 +60,8 @@ const DEFAULT_SETTINGS: BusinessSettings = {
   max_no_shows: 3,
   periodic_reminder_enabled: false,
   periodic_reminder_advance_days: 3,
+  gap_fill_enabled: false,
+  gap_fill_lookback_months: 6,
   whatsapp_enabled: false,
   whatsapp_mode: 'sandbox',
   default_channel: 'auto',
@@ -674,6 +676,35 @@ export default function BusinessSettingsPage() {
                       className="input w-24"
                       value={settings.periodic_reminder_advance_days ?? 3}
                       onChange={(e) => setSettings(prev => ({ ...prev, periodic_reminder_advance_days: Number(e.target.value) || 0 }))}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="card">
+              <h2 className="text-lg font-semibold text-gray-900 mb-1">Akıllı Boşluk Doldurma</h2>
+              <p className="text-sm text-gray-500 mb-6">
+                Randevu iptal edildiğinde boş slota uygun müşterileri otomatik olarak bilgilendirin.
+              </p>
+              <div className="space-y-4">
+                <ToggleSetting
+                  label="Boşluk doldurma bildirimi"
+                  description="İptal edilen randevu için önce bekleme listesi, sonra geçmiş müşteriler arasından uygun adaylar bulunur ve SMS/WhatsApp gönderilir."
+                  checked={settings.gap_fill_enabled ?? false}
+                  onChange={(v) => setSettings(prev => ({ ...prev, gap_fill_enabled: v }))}
+                />
+                {(settings.gap_fill_enabled ?? false) && (
+                  <div className="ml-14">
+                    <label className="label">Geriye bakış süresi (ay)</label>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">Bu hizmeti son kaç ay içinde alan müşteriler bilgilendirilsin?</p>
+                    <input
+                      type="number"
+                      min={1}
+                      max={24}
+                      className="input w-24"
+                      value={settings.gap_fill_lookback_months ?? 6}
+                      onChange={(e) => setSettings(prev => ({ ...prev, gap_fill_lookback_months: Number(e.target.value) || 6 }))}
                     />
                   </div>
                 )}

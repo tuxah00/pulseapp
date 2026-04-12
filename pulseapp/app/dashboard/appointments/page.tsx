@@ -25,7 +25,7 @@ import {
   CalendarDays,
   CalendarRange,
   Search, Filter, ArrowUpDown,
-  Users, Building2, Ban, Lock,
+  Users, Building2, Ban, Lock, BellRing,
 } from 'lucide-react'
 import { formatTime, formatDate, getStatusColor, formatCurrency, cn } from '@/lib/utils'
 import { STATUS_LABELS, type AppointmentStatus, type Service, type StaffMember, type WorkingHours, type BlockedSlot } from '@/types'
@@ -67,6 +67,8 @@ export default function AppointmentsPage() {
   const [cancelConfirmAppointment, setCancelConfirmAppointment] = useState<AppointmentView | null>(null)
   const [isClosingCancelConfirm, setIsClosingCancelConfirm] = useState(false)
   const closeCancelConfirm = () => setIsClosingCancelConfirm(true)
+  const [fillGapOnCancel, setFillGapOnCancel] = useState(false)
+  const [fillGapLoading, setFillGapLoading] = useState<string | null>(null)
   const [cancelNotifyCustomer, setCancelNotifyCustomer] = useState(true)
   const [slotPopup, setSlotPopup] = useState<{ day: string; hour: number; apts: AppointmentView[]; x: number; y: number } | null>(null)
   const [saving, setSaving] = useState(false)
@@ -807,6 +809,31 @@ export default function AppointmentsPage() {
     setSaving(false); closeCancelConfirm()
     if (selectedAppointment?.id === apt.id) setSelectedAppointment(null)
     fetchAppointments()
+    if (fillGapOnCancel) {
+      setTimeout(() => handleFillGap(apt.id), 300)
+    }
+  }
+
+  async function handleFillGap(appointmentId: string, e?: React.MouseEvent) {
+    e?.stopPropagation()
+    setFillGapLoading(appointmentId)
+    try {
+      const res = await fetch(`/api/appointments/${appointmentId}/fill-gap`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+      const j = await res.json()
+      if (!res.ok) {
+        window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: j.error || 'Bildirim gönderilemedi' } }))
+      } else if (j.notified === 0) {
+        window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'appointment', title: 'Uygun müşteri bulunamadı', body: 'Bekleme listesinde veya geçmişte uygun müşteri yok.' } }))
+      } else {
+        window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'appointment', title: 'Bildirimler Gönderildi', body: `${j.notified} kişiye boşluk bildirimi gönderildi.` } }))
+      }
+    } catch {
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: 'Bağlantı hatası' } }))
+    }
+    finally { setFillGapLoading(null) }
   }
 
   async function handleDeleteAppointment(appointmentId: string, e?: React.MouseEvent) {
@@ -1026,6 +1053,18 @@ export default function AppointmentsPage() {
         )}
         {(apt.status === 'no_show' || apt.status === 'cancelled') && (
           <>
+            {apt.status === 'cancelled' && (
+              <button
+                onClick={(e) => handleFillGap(apt.id, e)}
+                title="Boşluğu Doldur — Uygun müşterilere bildirim gönder"
+                disabled={fillGapLoading === apt.id}
+                className={cn(btnCls, 'text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/30')}
+              >
+                {fillGapLoading === apt.id
+                  ? <Loader2 className={cn(iconCls, 'animate-spin')} />
+                  : <BellRing className={iconCls} />}
+              </button>
+            )}
             <button
               onClick={(e) => { e.stopPropagation(); updateStatus(apt.id, 'confirmed') }}
               className={cn(
@@ -2665,9 +2704,13 @@ export default function AppointmentsPage() {
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
               {cancelConfirmAppointment?.customers?.name} — {cancelConfirmAppointment ? formatTime(cancelConfirmAppointment.start_time) : ''} randevusunu iptal etmek istediğinize emin misiniz?
             </p>
-            <label className="flex items-center gap-2 cursor-pointer mb-4">
+            <label className="flex items-center gap-2 cursor-pointer mb-3">
               <input type="checkbox" checked={cancelNotifyCustomer} onChange={(e) => setCancelNotifyCustomer(e.target.checked)} className="rounded border-gray-300" />
               <span className="text-sm text-gray-700 dark:text-gray-300">Müşteriye iptal bildirimi gönder</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer mb-4">
+              <input type="checkbox" checked={fillGapOnCancel} onChange={(e) => setFillGapOnCancel(e.target.checked)} className="rounded border-gray-300" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">Boşluğu otomatik doldurmaya çalış</span>
             </label>
             <div className="flex gap-3">
               <button type="button" onClick={() => closeCancelConfirm()} className="btn-secondary flex-1">Vazgeç</button>
