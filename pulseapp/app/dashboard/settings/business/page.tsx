@@ -57,6 +57,8 @@ const DEFAULT_SETTINGS: BusinessSettings = {
   confirmation_sms_enabled: false,
   no_show_auto_score: true,
   max_no_shows: 3,
+  periodic_reminder_enabled: false,
+  periodic_reminder_advance_days: 3,
   whatsapp_enabled: false,
   whatsapp_mode: 'sandbox',
   default_channel: 'auto',
@@ -640,6 +642,37 @@ export default function BusinessSettingsPage() {
                       className="input w-24"
                       value={settings.max_no_shows ?? 3}
                       onChange={(e) => setSettings(prev => ({ ...prev, max_no_shows: Number(e.target.value) || 3 }))}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="card">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Periyodik Kontrol Hatırlatıcı</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                Hizmetlere tanımlanan tekrar süresine göre müşterilere otomatik hatırlatma gönderin.
+              </p>
+
+              <div className="space-y-4">
+                <ToggleSetting
+                  label="Periyodik hatırlatma"
+                  description="Hizmetlerin 'önerilen tekrar süresi' dolduğunda müşterilere otomatik SMS/WhatsApp gönderilir. Hizmet ayarlarından süreleri tanımlayın."
+                  checked={settings.periodic_reminder_enabled ?? false}
+                  onChange={(v) => setSettings(prev => ({ ...prev, periodic_reminder_enabled: v }))}
+                />
+
+                {(settings.periodic_reminder_enabled ?? false) && (
+                  <div className="ml-14">
+                    <label className="label">Kaç gün önceden gönderilsin?</label>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">Örn: 3 gün önceden gönderilirse müşteri randevu alabilir.</p>
+                    <input
+                      type="number"
+                      min={0}
+                      max={30}
+                      className="input w-24"
+                      value={settings.periodic_reminder_advance_days ?? 3}
+                      onChange={(e) => setSettings(prev => ({ ...prev, periodic_reminder_advance_days: Number(e.target.value) || 0 }))}
                     />
                   </div>
                 )}

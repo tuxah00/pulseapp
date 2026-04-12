@@ -333,6 +333,9 @@ export interface BusinessSettings {
   confirmation_sms_enabled?: boolean
   no_show_auto_score?: boolean
   max_no_shows?: number
+  // Periyodik kontrol hatırlatıcı
+  periodic_reminder_enabled?: boolean
+  periodic_reminder_advance_days?: number
 }
 
 
@@ -383,6 +386,7 @@ export interface Service {
   duration_minutes: number
   price: number | null
   sort_order: number
+  recommended_interval_days: number | null
   is_active: boolean
   created_at: string
   updated_at: string

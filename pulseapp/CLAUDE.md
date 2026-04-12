@@ -308,7 +308,17 @@ CREATE INDEX IF NOT EXISTS idx_customers_birthday ON customers (birthday) WHERE 
 -- blocked_slots tablosu (randevu alınamayacak saatler), RLS, index'ler
 ```
 
-26. **Sektör enum genişletme** (yoga_pilates, spa_massage vb. için):
+26. **Randevu onay & no-show** (`037_appointment_confirmation.sql`): ✅ Uygulandı (2026-04-12)
+```sql
+-- appointments.confirmation_status, confirmation_sent_at, customers.no_show_score
+```
+
+27. **Periyodik kontrol hatırlatıcı** (`038_periodic_reminders.sql`): ✅ Uygulandı (2026-04-12)
+```sql
+-- services.recommended_interval_days, periodic_reminders_sent tablosu
+```
+
+28. **Sektör enum genişletme** (yoga_pilates, spa_massage vb. için):
 ```sql
 ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'spa_massage';
 ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'yoga_pilates';
