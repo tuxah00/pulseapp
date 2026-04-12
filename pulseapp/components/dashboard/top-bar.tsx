@@ -46,6 +46,8 @@ const ROUTE_LABELS: Record<string, string> = {
   referrals: 'Referanslar',
   kvkk: 'KVKK',
   'follow-ups': 'Takipler',
+  waitlist: 'Bekleme Listesi',
+  campaigns: 'Kampanyalar',
   new: 'Yeni',
 }
 
