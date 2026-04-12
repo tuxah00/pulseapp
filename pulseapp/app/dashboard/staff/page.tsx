@@ -60,6 +60,7 @@ const PERMISSION_LABELS: Record<keyof StaffPermissions, string> = {
   protocols: 'Tedavi Protokolleri',
   referrals: 'Referanslar',
   campaigns: 'Kampanyalar',
+  workflows: 'Mesaj Akışları',
 }
 
 const PERMISSION_CATEGORIES: { label: string; keys: (keyof StaffPermissions)[] }[] = [

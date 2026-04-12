@@ -948,6 +948,27 @@ export default function AppointmentsPage() {
         }
       } catch { /* puan hatası ana akışı durdurmasın */ }
     }
+
+    // İş akışı tetikleyicileri
+    if (['completed', 'cancelled', 'no_show'].includes(newStatus) && statusApt?.customer_id) {
+      const triggerMap: Record<string, string> = {
+        completed: 'appointment_completed',
+        cancelled: 'appointment_cancelled',
+        no_show: 'no_show',
+      }
+      try {
+        await fetch('/api/workflows/trigger', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            triggerType: triggerMap[newStatus],
+            customerId: statusApt.customer_id,
+            appointmentId,
+          }),
+        })
+      } catch { /* workflow tetikleme hatası ana akışı durdurmasın */ }
+    }
+
     fetchAppointments()
   }
 
