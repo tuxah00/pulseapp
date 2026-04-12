@@ -36,6 +36,7 @@ export default function ServicesPage() {
   const [description, setDescription] = useState('')
   const [durationMinutes, setDurationMinutes] = useState(30)
   const [price, setPrice] = useState('')
+  const [recommendedInterval, setRecommendedInterval] = useState('')
 
   const supabase = createClient()
 
@@ -74,6 +75,7 @@ export default function ServicesPage() {
     setDescription('')
     setDurationMinutes(30)
     setPrice('')
+    setRecommendedInterval('')
     setError(null)
     setContraindications([])
     setPendingContraindications([])
@@ -86,6 +88,7 @@ export default function ServicesPage() {
     setDescription(service.description || '')
     setDurationMinutes(service.duration_minutes)
     setPrice(service.price ? String(service.price) : '')
+    setRecommendedInterval(service.recommended_interval_days ? String(service.recommended_interval_days) : '')
     setError(null)
     setShowModal(true)
     fetchContraindications(service.id)
@@ -101,6 +104,7 @@ export default function ServicesPage() {
       description: description || null,
       duration_minutes: durationMinutes,
       price: price ? parseFloat(price) : null,
+      recommended_interval_days: recommendedInterval ? parseInt(recommendedInterval) : null,
       business_id: businessId,
     }
 
@@ -108,7 +112,7 @@ export default function ServicesPage() {
       // Güncelle
       const { error } = await supabase
         .from('services')
-        .update({ name, description: description || null, duration_minutes: durationMinutes, price: price ? parseFloat(price) : null })
+        .update({ name, description: description || null, duration_minutes: durationMinutes, price: price ? parseFloat(price) : null, recommended_interval_days: recommendedInterval ? parseInt(recommendedInterval) : null })
         .eq('id', editingService.id)
 
       if (error) {
@@ -383,6 +387,20 @@ export default function ServicesPage() {
                     step="0.01"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label htmlFor="recommendedInterval" className="label">Önerilen Tekrar Süresi (gün)</label>
+                <input
+                  id="recommendedInterval"
+                  type="number"
+                  value={recommendedInterval}
+                  onChange={(e) => setRecommendedInterval(e.target.value)}
+                  className="input"
+                  placeholder="ör. 180 (6 ay)"
+                  min="0"
+                />
+                <p className="text-xs text-gray-400 mt-1">Periyodik hatırlatma için. Boş bırakılırsa hatırlatma gönderilmez.</p>
               </div>
 
               {error && (

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendSMS } from '@/lib/sms/send'
+import { handleAppointmentConfirmationReply } from '@/lib/messaging/appointment-confirmation'
 import { verifyTwilioWebhook } from '@/lib/webhooks/verify-twilio'
 
 /**
@@ -27,9 +28,7 @@ export async function POST(request: NextRequest) {
 
   const admin = createAdminClient()
 
-  // İşletmeyi Twilio numarasına göre bul (TWILIO_PHONE_NUMBER env veya business phone)
-  // Basit yaklaşım: tüm aktif işletmeleri çek ve TWILIO_PHONE_NUMBER ile eşleştir
-  // Gerçek çok-işletme senaryosunda her işletmenin kendi Twilio numarası olur
+  // İşletmeyi Twilio numarasına göre bul
   const twilioNumber = process.env.TWILIO_PHONE_NUMBER || ''
   if (to !== twilioNumber && !twilioNumber.includes(to.replace('+', ''))) {
     // Numara eşleşmedi, yine de devam et (tek işletme için)
@@ -48,7 +47,7 @@ export async function POST(request: NextRequest) {
   const businessId = customer?.business_id
 
   if (!businessId) {
-    // Müşteri bulunamadı, ilk aktif işletmeye yaz (tek işletme senaryosu)
+    // Müşteri bulunamadı, ilk aktif işletmeye yaz
     const { data: firstBusiness } = await admin
       .from('businesses')
       .select('id')
@@ -84,7 +83,19 @@ export async function POST(request: NextRequest) {
     twilio_status: 'received',
   })
 
-  // İşletme ayarlarını ve bilgilerini çek
+  // ── Randevu Onay Kontrolü (EVET / HAYIR) ──
+  const trimmed = messageBody.trim().toUpperCase()
+  const isConfirm = /^(EVET|E|YES|1|ONAY|GEL[İI]YORUM|TAMAM|OK)$/i.test(trimmed)
+  const isDecline = /^(HAYIR|H|NO|0|[İI]PTAL|GEL[Ee]M[İI]YORUM|VAZGE[CÇ])$/i.test(trimmed)
+
+  if ((isConfirm || isDecline) && customer?.id) {
+    const handled = await handleAppointmentConfirmationReply(admin, customer.id, businessId, from, isConfirm, 'auto')
+    if (handled) {
+      return new NextResponse('OK', { status: 200 })
+    }
+  }
+
+  // ── Otomatik Yanıt (mevcut sistem) ──
   const { data: business } = await admin
     .from('businesses')
     .select('name, phone, address, city, district, google_maps_url, working_hours, settings')
@@ -95,11 +106,8 @@ export async function POST(request: NextRequest) {
     return new NextResponse('OK', { status: 200 })
   }
 
-  // Otomatik yanıt: basit keyword eşleştirme + AI fallback
   const lowerBody = messageBody.toLowerCase()
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
-
-  // Randevu alma linki
   const bookingLink = `${appUrl}/book/${businessId}`
 
   let autoReply: string | null = null
@@ -138,3 +146,4 @@ export async function POST(request: NextRequest) {
 
   return new NextResponse('OK', { status: 200 })
 }
+

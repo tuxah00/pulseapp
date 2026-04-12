@@ -44,6 +44,7 @@ export interface StaffPermissions {
   pos?: boolean
   protocols?: boolean
   referrals?: boolean
+  campaigns?: boolean
 }
 
 export const DEFAULT_PERMISSIONS: Record<StaffRole, StaffPermissions> = {
@@ -52,14 +53,14 @@ export const DEFAULT_PERMISSIONS: Record<StaffRole, StaffPermissions> = {
     messages: true, reviews: true, services: true, staff: true, shifts: true,
     settings: true, reservations: true, classes: true, memberships: true,
     packages: true, records: true, portfolio: true, inventory: true, orders: true, invoices: true, pos: true,
-    protocols: true, referrals: true,
+    protocols: true, referrals: true, campaigns: true,
   },
   manager: {
     dashboard: true, appointments: true, customers: true, analytics: true,
     messages: true, reviews: true, services: true, staff: false, shifts: true,
     settings: false, reservations: true, classes: true, memberships: true,
     packages: true, records: true, portfolio: true, inventory: true, orders: true, invoices: true, pos: true,
-    protocols: true, referrals: true,
+    protocols: true, referrals: true, campaigns: true,
   },
   staff: {
     dashboard: true, appointments: true, customers: true, analytics: false,
@@ -318,6 +319,57 @@ export interface ShiftDefinition {
   end: string
 }
 
+export type ConfirmationStatus = 'none' | 'waiting' | 'confirmed_by_customer' | 'declined' | 'no_response'
+
+// ── Kampanya ──
+export type CampaignStatus = 'draft' | 'scheduled' | 'sending' | 'completed' | 'cancelled'
+export type CampaignChannel = 'auto' | 'sms' | 'whatsapp'
+export type CampaignRecipientStatus = 'pending' | 'sent' | 'failed' | 'skipped'
+
+export interface CampaignSegmentFilter {
+  segments?: CustomerSegment[]
+  lastVisitDaysMin?: number
+  lastVisitDaysMax?: number
+  birthdayMonth?: number
+  minTotalVisits?: number
+  minTotalRevenue?: number
+  createdDaysAgoMax?: number
+}
+
+export interface CampaignStats {
+  total_recipients: number
+  sent: number
+  errors: number
+}
+
+export interface Campaign {
+  id: string
+  business_id: string
+  name: string
+  description: string | null
+  segment_filter: CampaignSegmentFilter
+  message_template: string
+  channel: CampaignChannel
+  scheduled_at: string | null
+  status: CampaignStatus
+  stats: CampaignStats
+  created_by_staff_id: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface CampaignRecipient {
+  id: string
+  campaign_id: string
+  customer_id: string | null
+  customer_name: string
+  customer_phone: string
+  status: CampaignRecipientStatus
+  sent_at: string | null
+  error_message: string | null
+  created_at: string
+}
+
 export interface BusinessSettings {
   reminder_24h: boolean
   reminder_2h: boolean
@@ -335,6 +387,13 @@ export interface BusinessSettings {
   whatsapp_enabled?: boolean
   whatsapp_mode?: 'sandbox' | 'production'
   default_channel?: 'auto' | 'sms' | 'whatsapp'
+  // Randevu onay & no-show
+  confirmation_sms_enabled?: boolean
+  no_show_auto_score?: boolean
+  max_no_shows?: number
+  // Periyodik kontrol hatırlatıcı
+  periodic_reminder_enabled?: boolean
+  periodic_reminder_advance_days?: number
 }
 
 
@@ -385,6 +444,7 @@ export interface Service {
   duration_minutes: number
   price: number | null
   sort_order: number
+  recommended_interval_days: number | null
   is_active: boolean
   created_at: string
   updated_at: string
@@ -402,6 +462,7 @@ export interface Customer {
   total_visits: number
   total_revenue: number
   total_no_shows: number
+  no_show_score: number
   last_visit_at: string | null
   preferred_channel?: 'sms' | 'whatsapp' | 'auto' | null
   // Vergi bilgileri
@@ -435,6 +496,8 @@ export interface Appointment {
   recurrence_pattern: Record<string, unknown> | null
   manage_token: string | null
   token_expires_at: string | null
+  confirmation_status: ConfirmationStatus
+  confirmation_sent_at: string | null
   deleted_at?: string | null
   room_id?: string | null
   created_at: string

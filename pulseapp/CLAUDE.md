@@ -317,12 +317,27 @@ CREATE INDEX IF NOT EXISTS idx_customers_birthday ON customers (birthday) WHERE 
 -- referrals.status constraint güncelleme (rewarded eklendi)
 ```
 
-27-b. **Rewards type constraint düzeltmesi** (`036_fix_rewards_type_constraint.sql`): ✅ Uygulandı (2026-04-11)
+26-b. **Rewards type constraint düzeltmesi** (`036_fix_rewards_type_constraint.sql`): ✅ Uygulandı (2026-04-11)
 ```sql
 -- rewards.type constraint'ine discount_amount eklendi (DB'de discount_fixed vardı, kod discount_amount kullanıyor)
 ```
 
-27. **Sektör enum genişletme** (yoga_pilates, spa_massage vb. için):
+27. **Randevu onay & no-show** (`037_appointment_confirmation.sql`): ✅ Uygulandı (2026-04-12)
+```sql
+-- appointments.confirmation_status, confirmation_sent_at, customers.no_show_score
+```
+
+28. **Periyodik kontrol hatırlatıcı** (`038_periodic_reminders.sql`): ✅ Uygulandı (2026-04-12)
+```sql
+-- services.recommended_interval_days, periodic_reminders_sent tablosu
+```
+
+29. **Kampanya Yöneticisi** (`039_campaigns.sql`): ✅ Uygulandı (2026-04-12)
+```sql
+-- campaigns tablosu (segment_filter JSONB, status machine, stats), campaign_recipients tablosu, RLS
+```
+
+30. **Sektör enum genişletme** (yoga_pilates, spa_massage vb. için):
 ```sql
 ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'spa_massage';
 ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'yoga_pilates';

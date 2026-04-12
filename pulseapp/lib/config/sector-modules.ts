@@ -17,11 +17,13 @@ const BASE_ITEMS: SidebarItem[] = [
   { key: 'dashboard', name: 'Genel Bakış', href: '/dashboard', iconName: 'LayoutDashboard' },
   { key: 'appointments', name: 'Randevular', href: '/dashboard/appointments', iconName: 'CalendarCheck' },
   { key: 'customers', name: 'Müşteriler', href: '/dashboard/customers', iconName: 'Users' },
+  { key: 'waitlist', name: 'Bekleme Listesi', href: '/dashboard/waitlist', iconName: 'ClipboardList' },
 ]
 
 // Management items shown for every sector
 const MANAGEMENT_ITEMS: SidebarItem[] = [
   { key: 'pos', name: 'Kasa', href: '/dashboard/pos', iconName: 'Banknote' },
+  { key: 'campaigns', name: 'Kampanyalar', href: '/dashboard/campaigns', iconName: 'Megaphone' },
   { key: 'services', name: 'Hizmetler', href: '/dashboard/services', iconName: 'ListChecks' },
   { key: 'staff', name: 'Personeller', href: '/dashboard/staff', iconName: 'UserCog' },
   { key: 'messages', name: 'Mesajlar', href: '/dashboard/messages', iconName: 'MessageSquare' },

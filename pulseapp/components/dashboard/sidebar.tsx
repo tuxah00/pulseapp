@@ -42,6 +42,7 @@ import {
   Gift,
   Zap,
   X,
+  Megaphone,
   type LucideIcon,
 } from 'lucide-react'
 import type { SectorType, PlanType, StaffPermissions } from '@/types'
@@ -54,7 +55,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Settings, LogOut, ListChecks, Package, FolderOpen,
   Briefcase, Car, PawPrint, ClipboardList, CreditCard,
   CalendarDays, CalendarClock, CheckSquare, BookOpen, Image,
-  Receipt, Layers, Banknote, Lock, Clock, Stethoscope, Gift,
+  Receipt, Layers, Banknote, Lock, Clock, Stethoscope, Gift, Zap, X, Megaphone,
 }
 
 const bottomNav = [
@@ -84,6 +85,8 @@ const PERMISSION_MAP: Record<string, keyof StaffPermissions> = {
   '/dashboard/kvkk': 'settings',
   '/dashboard/protocols': 'protocols',
   '/dashboard/referrals': 'referrals',
+  '/dashboard/campaigns': 'campaigns',
+  '/dashboard/waitlist': 'appointments',
   '/dashboard/settings/services': 'services',
   '/dashboard/settings/staff': 'staff',
   '/dashboard/settings/shifts': 'shifts',

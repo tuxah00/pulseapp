@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendWhatsApp } from '@/lib/whatsapp/send'
+import { handleAppointmentConfirmationReply } from '@/lib/messaging/appointment-confirmation'
 import { verifyTwilioWebhook } from '@/lib/webhooks/verify-twilio'
 
 /**
@@ -89,6 +90,16 @@ export async function POST(request: NextRequest) {
     meta_message_id: messageSid,
   })
 
+  // ── Randevu Onay Kontrolü (EVET / HAYIR) ──
+  const trimmed = messageBody.trim().toUpperCase()
+  const isConfirm = /^(EVET|E|YES|1|ONAY|GEL[İI]YORUM|TAMAM|OK)$/i.test(trimmed)
+  const isDecline = /^(HAYIR|H|NO|0|[İI]PTAL|GEL[Ee]M[İI]YORUM|VAZGE[CÇ])$/i.test(trimmed)
+
+  if ((isConfirm || isDecline) && customer?.id) {
+    const handled = await handleAppointmentConfirmationReply(admin, customer.id, businessId, from, isConfirm, 'whatsapp')
+    if (handled) return new NextResponse('OK', { status: 200 })
+  }
+
   // İşletme ayarlarını çek
   const { data: business } = await admin
     .from('businesses')
@@ -141,3 +152,4 @@ export async function POST(request: NextRequest) {
 
   return new NextResponse('OK', { status: 200 })
 }
+

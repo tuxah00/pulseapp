@@ -215,7 +215,57 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // ── 4. Bekleme Listesi Bildirimleri ───────────────────────────────────────
+  // ── 4. No-Show Skor Güncelleme ────────────────────────────────────────────
+  const noShowScoring = { updated: 0 }
+
+  // Dünkü no_show randevuları olan müşterilerin skorunu güncelle
+  const yesterdayDate = new Date(now)
+  yesterdayDate.setDate(yesterdayDate.getDate() - 1)
+  const yesterdayStr = yesterdayDate.toISOString().split('T')[0]
+
+  const { data: noShowApts } = await supabase
+    .from('appointments')
+    .select('customer_id')
+    .eq('appointment_date', yesterdayStr)
+    .eq('status', 'no_show')
+    .is('deleted_at', null)
+
+  const noShowCustomerIds = [...new Set((noShowApts || []).map(a => a.customer_id).filter(Boolean))]
+
+  if (noShowCustomerIds.length > 0) {
+    // Tüm müşterilerin istatistiklerini tek sorguda al
+    const { data: allStats } = await supabase
+      .from('appointments')
+      .select('customer_id, status')
+      .in('customer_id', noShowCustomerIds)
+      .in('status', ['completed', 'no_show'])
+      .is('deleted_at', null)
+
+    // JS'te müşteri bazlı grupla
+    const statsMap = new Map<string, { done: number; noShow: number }>()
+    for (const apt of allStats || []) {
+      const entry = statsMap.get(apt.customer_id) ?? { done: 0, noShow: 0 }
+      if (apt.status === 'no_show') entry.noShow++
+      else entry.done++
+      statsMap.set(apt.customer_id, entry)
+    }
+
+    // Paralel güncelle
+    await Promise.all(
+      Array.from(statsMap.entries()).map(([custId, s]) => {
+        const total = s.done + s.noShow
+        if (total === 0) return Promise.resolve()
+        const score = Math.round((s.noShow / total) * 100)
+        noShowScoring.updated++
+        return supabase
+          .from('customers')
+          .update({ no_show_score: score })
+          .eq('id', custId)
+      })
+    )
+  }
+
+  // ── 5. Bekleme Listesi Bildirimleri ───────────────────────────────────────
   const waitlistNotifs = { sent: 0, errors: 0 }
 
   // İptal/no_show olan bugünkü randevuların slotlarını kontrol et
@@ -279,6 +329,7 @@ export async function GET(request: NextRequest) {
     reminders,
     reviewRequests,
     winback,
+    noShowScoring,
     waitlistNotifs,
     overdueInvoices: overdueResult,
   })
