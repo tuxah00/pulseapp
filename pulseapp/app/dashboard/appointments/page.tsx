@@ -1188,9 +1188,28 @@ export default function AppointmentsPage() {
                   value={serviceIdFilter}
                   onChange={setServiceIdFilter}
                 />
-                {hasActiveFilters && (
+                <div className="border-t border-gray-100 dark:border-gray-700" />
+                <div>
+                  <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Durum</p>
+                  <div className="space-y-0.5">
+                    <button
+                      onClick={() => setStatusFilter(statusFilter === 'unresolved' ? null : 'unresolved')}
+                      className={cn(
+                        'w-full text-left px-3 py-1.5 rounded-lg text-sm transition-colors flex items-center gap-2',
+                        statusFilter === 'unresolved'
+                          ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 font-medium'
+                          : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                      )}
+                    >
+                      <span className="h-2 w-2 rounded-full bg-red-500 flex-shrink-0" />
+                      Sonuçlandırılmamış
+                      {unresolvedCount > 0 && <span className="ml-auto text-xs text-gray-400">{unresolvedCount}</span>}
+                    </button>
+                  </div>
+                </div>
+                {(hasActiveFilters || statusFilter === 'unresolved') && (
                   <div className="border-t border-gray-100 dark:border-gray-700 pt-2">
-                    <button onClick={() => { setStaffIdFilter(''); setServiceIdFilter('') }}
+                    <button onClick={() => { setStaffIdFilter(''); setServiceIdFilter(''); setStatusFilter(null) }}
                       className="w-full text-xs text-center py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-center gap-1">
                       <X className="h-3 w-3" /> Temizle
                     </button>
