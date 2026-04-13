@@ -229,6 +229,7 @@ export default function PaketlerPage() {
     }
 
     setSavingTemplate(false); closeTemplateModal(); fetchTemplates()
+    window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: editingTemplate ? 'Kaydedildi' : 'Oluşturuldu' } }))
   }
 
   async function handleDeleteTemplate(t: ServicePackage) {
@@ -237,6 +238,7 @@ export default function PaketlerPage() {
     await supabase.from('service_packages').update({ is_active: false }).eq('id', t.id)
     await logAudit({ businessId: businessId!, staffId, staffName, action: 'delete', resource: 'service_packages', resourceId: t.id, details: { name: t.name } })
     fetchTemplates()
+    window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Silindi' } }))
   }
 
   // ── Sell package ──
@@ -302,6 +304,7 @@ export default function PaketlerPage() {
 
     await logAudit({ businessId: businessId!, staffId, staffName, action: 'create', resource: 'customer_packages', details: { customer_name: payload.customer_name, package_name: payload.package_name } })
     setSavingSell(false); closeSellModal(); setPageTab('customer'); fetchCustomerPackages()
+    window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Paket satıldı' } }))
   }
 
   // ── Use session ──
@@ -336,6 +339,7 @@ export default function PaketlerPage() {
     setSavingUse(false); closeUseModal()
     setSelectedCp(prev => prev ? { ...prev, sessions_used: newUsed, status: newStatus } : null)
     fetchCustomerPackages()
+    window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Seans düşüldü' } }))
   }
 
   function closePanel() {
