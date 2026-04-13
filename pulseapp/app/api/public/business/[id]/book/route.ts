@@ -4,6 +4,7 @@ import { isValidUUID } from '@/lib/utils/validate'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
 import { validateBody } from '@/lib/api/validate'
 import { publicBookingSchema } from '@/lib/schemas'
+import { normalizePhone, phoneOrFilter } from '@/lib/utils/phone'
 
 const supabase = createAdminClient()
 
@@ -60,18 +61,13 @@ export async function POST(
     return NextResponse.json({ error: 'Bu saat dolu. Lütfen başka bir saat seçin.' }, { status: 409 })
   }
 
-  // Telefon normalizasyonu: 5XXXXXXXXX formatına çevir (prefix'siz)
-  let normalizedPhone = phone.replace(/[\s\-\(\)]/g, '')
-  if (normalizedPhone.startsWith('+90')) normalizedPhone = normalizedPhone.slice(3)
-  if (normalizedPhone.startsWith('90') && normalizedPhone.length > 10) normalizedPhone = normalizedPhone.slice(2)
-  if (normalizedPhone.startsWith('0')) normalizedPhone = normalizedPhone.slice(1)
+  const normalizedPhone = normalizePhone(phone)
 
-  // Müşteriyi bul veya oluştur (her iki formattaki kayıtları da bul)
   const { data: existingCustomers } = await supabase
     .from('customers')
     .select('id')
     .eq('business_id', params.id)
-    .or(`phone.eq.${normalizedPhone},phone.eq.+90${normalizedPhone}`)
+    .or(phoneOrFilter(normalizedPhone))
     .eq('is_active', true)
     .limit(1)
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendMessage } from '@/lib/messaging/send'
+import { normalizePhone, phoneOrFilter } from '@/lib/utils/phone'
 
 function generateOTP(): string {
   return String(Math.floor(100000 + Math.random() * 900000))
@@ -15,35 +16,25 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'businessId ve telefon numarası zorunludur' }, { status: 400 })
   }
 
-  // Telefon normalizasyonu: +90/0 prefix'lerini kaldır → 5XXXXXXXXX formatına çevir
-  let normalizedPhone = phone.replace(/[\s\-\(\)]/g, '')
-  if (normalizedPhone.startsWith('+90')) normalizedPhone = normalizedPhone.slice(3)
-  if (normalizedPhone.startsWith('90') && normalizedPhone.length > 10) normalizedPhone = normalizedPhone.slice(2)
-  if (normalizedPhone.startsWith('0')) normalizedPhone = normalizedPhone.slice(1)
-
+  const normalizedPhone = normalizePhone(phone)
   const admin = createAdminClient()
 
-  // İşletmenin var olduğunu doğrula
-  const { data: business } = await admin
-    .from('businesses')
-    .select('id, name')
-    .eq('id', businessId)
-    .single()
+  // İşletme ve müşteri sorgularını paralel çalıştır
+  const [bizResult, customerResult] = await Promise.all([
+    admin.from('businesses').select('id, name').eq('id', businessId).single(),
+    admin.from('customers').select('id, name, phone')
+      .eq('business_id', businessId)
+      .or(phoneOrFilter(normalizedPhone))
+      .eq('is_active', true)
+      .limit(1),
+  ])
 
-  if (!business) {
+  if (!bizResult.data) {
     return NextResponse.json({ error: 'İşletme bulunamadı' }, { status: 404 })
   }
 
-  // Müşterinin bu işletmede kayıtlı olduğunu doğrula (tüm telefon formatları)
-  const { data: customers } = await admin
-    .from('customers')
-    .select('id, name, phone')
-    .eq('business_id', businessId)
-    .or(`phone.eq.${normalizedPhone},phone.eq.0${normalizedPhone},phone.eq.+90${normalizedPhone}`)
-    .eq('is_active', true)
-    .limit(1)
-
-  const customer = customers?.[0] || null
+  const business = bizResult.data
+  const customer = customerResult.data?.[0] || null
 
   if (!customer) {
     return NextResponse.json({ error: 'Bu telefon numarasıyla kayıtlı müşteri bulunamadı' }, { status: 404 })
