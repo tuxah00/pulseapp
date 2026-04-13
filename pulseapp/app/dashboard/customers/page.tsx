@@ -192,7 +192,7 @@ export default function CustomersPage() {
       name: values.name,
       phone: values.phone, // schema 10 haneli "5XXXXXXXXX" formatına normalize etti
       email: values.email ?? null,
-      birthday: values.birthday ?? null,
+      birthday: values.birthday && values.birthday.trim() !== '' ? values.birthday : null,
       notes: values.notes ?? null,
       segment,
       business_id: businessId,
@@ -207,7 +207,7 @@ export default function CustomersPage() {
         segment,
       }).eq('id', editingCustomer.id)
       if (error) {
-        setError(error.message.includes('idx_customers_business_phone') ? 'Bu telefon numarası zaten kayıtlı.' : error.message)
+        setError(error.message.includes('idx_customers_business_phone') ? 'Bu telefon numarası zaten kayıtlı.' : error.message.includes('invalid input syntax') ? 'Geçersiz veri formatı. Lütfen girdiğiniz bilgileri kontrol edin.' : error.message)
         setSaving(false)
         return
       }
@@ -223,7 +223,7 @@ export default function CustomersPage() {
     } else {
       const { error } = await supabase.from('customers').insert(customerData)
       if (error) {
-        setError(error.message.includes('idx_customers_business_phone') ? 'Bu telefon numarası zaten kayıtlı.' : error.message)
+        setError(error.message.includes('idx_customers_business_phone') ? 'Bu telefon numarası zaten kayıtlı.' : error.message.includes('invalid input syntax') ? 'Geçersiz veri formatı. Lütfen girdiğiniz bilgileri kontrol edin.' : error.message)
         setSaving(false)
         return
       }
