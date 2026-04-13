@@ -395,6 +395,7 @@ export default function KasaPage() {
       // Listeyi güncelle ve sepeti temizle
       setTransactions(prev => [data.transaction, ...prev])
       clearCart()
+      showToast('İşlem Tamamlandı')
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Bilinmeyen hata'
       showToast('Hata', message)
@@ -416,6 +417,7 @@ export default function KasaPage() {
       setSession(data.session)
       setShowSessionModal(false)
       setOpeningCash('')
+      showToast('Kasa Açıldı')
     } else {
       showToast('Hata', data.error || 'Kasa açılamadı')
     }
@@ -443,6 +445,7 @@ export default function KasaPage() {
       setShowSessionModal(false)
       setClosingCash('')
       setClosingNote('')
+      showToast('Kasa Kapatıldı')
     } else {
       showToast('Hata', data.error || 'Kasa kapatılamadı')
     }

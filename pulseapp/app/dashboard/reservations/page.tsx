@@ -197,6 +197,7 @@ export default function ReservationsPage() {
       }
       closeModal()
       fetchReservations()
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: editingReservation ? 'Kaydedildi' : 'Oluşturuldu' } }))
     } catch (e) {
       setError('Bir hata oluştu.')
     }
@@ -211,6 +212,7 @@ export default function ReservationsPage() {
         body: JSON.stringify({ status }),
       })
       fetchReservations()
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Kaydedildi' } }))
     } catch (e) {
       console.error('Status güncelleme hatası:', e)
     }
@@ -222,6 +224,7 @@ export default function ReservationsPage() {
     try {
       await fetch(`/api/reservations?id=${id}`, { method: 'DELETE' })
       fetchReservations()
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Silindi' } }))
     } catch (e) {
       console.error('Silme hatası:', e)
     }

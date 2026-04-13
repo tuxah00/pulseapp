@@ -293,7 +293,6 @@ export default function BusinessSettingsPage() {
       district: district || null,
       google_maps_url: googleMapsUrl || null,
     })
-    window.location.reload()
   }
 
   async function handleSaveHours(e: React.FormEvent) {
@@ -315,9 +314,11 @@ export default function BusinessSettingsPage() {
     const res = await fetch('/api/business/logo', { method: 'POST', body: fd })
     if (res.ok) {
       fetchBusiness()
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Kaydedildi' } }))
     } else {
       const { error } = await res.json()
       setError(error || 'Logo yüklenemedi')
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: error || 'Logo yüklenemedi' } }))
     }
     setLogoUploading(false)
     e.target.value = ''
@@ -326,6 +327,7 @@ export default function BusinessSettingsPage() {
   async function handleLogoRemove() {
     await fetch('/api/business/logo', { method: 'DELETE' })
     fetchBusiness()
+    window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Silindi' } }))
   }
 
   async function saveBusiness(updates: Record<string, any>) {
@@ -341,11 +343,13 @@ export default function BusinessSettingsPage() {
 
     if (error) {
       setError('Kaydetme hatası: ' + error.message)
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: 'Kaydetme hatası: ' + error.message } }))
     } else {
       setSaveSuccess(true)
       setTimeout(() => setSaveSuccess(false), 3000)
       fetchBusiness()
       router.refresh()
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Kaydedildi' } }))
       logAudit({ businessId: businessId!, staffId: currentStaffId, staffName: currentStaffName, action: 'update', resource: 'settings', resourceId: businessId!, details: { section: 'İşletme Bilgileri', fields: Object.keys(updates).join(', ') } })
     }
     setSaving(false)

@@ -230,6 +230,7 @@ export default function CustomersPage() {
     }
     setSaving(false); setShowModal(false)
     await fetchCustomers()
+    window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: editingCustomer ? 'Kaydedildi' : 'Oluşturuldu' } }))
     await logAudit({
       businessId: businessId!,
       staffId,
@@ -247,6 +248,7 @@ export default function CustomersPage() {
     await supabase.from('customers').update({ is_active: false }).eq('id', customer.id)
     if (selectedCustomer?.id === customer.id) setSelectedCustomer(null)
     await fetchCustomers()
+    window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Silindi' } }))
     await logAudit({
       businessId: businessId!,
       staffId,
