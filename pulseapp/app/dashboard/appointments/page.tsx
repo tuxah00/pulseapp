@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
@@ -111,6 +112,33 @@ export default function AppointmentsPage() {
   const gridRef = useRef<HTMLDivElement>(null)
 
   const supabase = createClient()
+  const searchParams = useSearchParams()
+  const router = useRouter()
+
+  // Bildirimden gelen appointmentId parametresini oku ve detay panelini aç
+  useEffect(() => {
+    const appointmentId = searchParams.get('appointmentId')
+    if (!appointmentId || !businessId || ctxLoading) return
+
+    async function openFromNotification() {
+      const { data } = await supabase
+        .from('appointments')
+        .select('*, customers(name, phone), services(name, duration_minutes, price), staff_members(name)')
+        .eq('id', appointmentId!)
+        .eq('business_id', businessId)
+        .is('deleted_at', null)
+        .single()
+
+      if (data) {
+        // Randevunun tarihine git
+        setSelectedDate(data.appointment_date)
+        setSelectedAppointment(data)
+      }
+      // URL'den parametreyi temizle (geri tuşunda tekrar açılmasın)
+      router.replace('/dashboard/appointments', { scroll: false })
+    }
+    openFromNotification()
+  }, [searchParams, businessId, ctxLoading])
 
   // Hafta hesaplama yardımcıları
   function getWeekRange(dateStr: string): { start: string; end: string } {

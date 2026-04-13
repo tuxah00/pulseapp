@@ -86,7 +86,12 @@ export default function ToastContainer() {
   }, [toasts.length])
 
   function handleClick(toast: ToastItem) {
-    const route = RELATED_ROUTES[toast.related_type || toast.type] || '/dashboard/notifications'
+    const type = toast.related_type || toast.type
+    let route = RELATED_ROUTES[type] || '/dashboard/notifications'
+    // Randevu bildirimi: related_id varsa direkt o randevuya git
+    if (type === 'appointment' && toast.related_id) {
+      route = `/dashboard/appointments?appointmentId=${toast.related_id}`
+    }
     router.push(route)
     removeToast(toast.id)
   }

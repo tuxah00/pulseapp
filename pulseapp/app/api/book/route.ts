@@ -261,6 +261,8 @@ export async function POST(req: NextRequest) {
       type: 'appointment',
       title: 'Yeni Online Randevu',
       body: `${customer_name} – ${service.name} – ${start_time}`,
+      related_id: appointment.id,
+      related_type: 'appointment',
       is_read: false,
     })
   } catch { /* bildirim hatası randevu oluşturmayı etkilemez */ }
