@@ -437,7 +437,7 @@ export default function AppointmentsPage() {
           const [y, m, dd] = d.split('-').map(Number)
           return `${dd}/${m}`
         }).join(', ')
-        alert(`${validDates.length} randevu oluşturuldu. ${conflictDates.length} tarih çakışma nedeniyle atlandı: ${skipped}`)
+        window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Kısmi Oluşturma', body: `${validDates.length} randevu oluşturuldu. ${conflictDates.length} tarih çakışma nedeniyle atlandı: ${skipped}` } }))
       }
     } else {
       const { error } = await supabase.from('appointments').insert({ business_id: businessId, ...payload, status: 'confirmed', source: 'manual' })
@@ -445,6 +445,7 @@ export default function AppointmentsPage() {
     }
     setSaving(false); closeModal()
     await fetchAppointments()
+    window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: editingAppointment ? 'Randevu güncellendi' : 'Randevu oluşturuldu' } }))
     const auditCustRes = customerId ? await supabase.from('customers').select('name').eq('id', customerId).single() : null
     const auditCustomer = auditCustRes?.data || null
     const auditService = services.find(s => s.id === serviceId)
@@ -498,6 +499,7 @@ export default function AppointmentsPage() {
         return
       }
       await fetchAppointments()
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Randevu taşındı' } }))
       await logAudit({
         businessId: businessId!,
         staffId: currentStaffId,
@@ -783,6 +785,7 @@ export default function AppointmentsPage() {
     const { error } = await supabase.from('appointments').update({ appointment_date: rescheduleDate, start_time: rescheduleTime, end_time: endTime }).eq('id', rescheduleAppointment.id)
     if (error) { setError(error.message); setSaving(false); return }
     setSaving(false); closeReschedule(); fetchAppointments()
+    window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Randevu ertelendi' } }))
   }
 
   async function handleCancelConfirm() {
@@ -790,7 +793,7 @@ export default function AppointmentsPage() {
     setSaving(true)
     const apt = cancelConfirmAppointment
     const { error } = await supabase.from('appointments').update({ status: 'cancelled' }).eq('id', apt.id)
-    if (error) { alert('İptal güncellenemedi: ' + error.message); setSaving(false); closeCancelConfirm(); return }
+    if (error) { window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: 'İptal güncellenemedi: ' + error.message } })); setSaving(false); closeCancelConfirm(); return }
     if (cancelNotifyCustomer && apt.customer_id) {
       try {
         await fetch('/api/messages/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ businessId, customerId: apt.customer_id, content: 'Merhaba, randevunuz iptal edilmiştir. Sorularınız için bizi arayabilirsiniz.' }) })
@@ -809,6 +812,7 @@ export default function AppointmentsPage() {
     setSaving(false); closeCancelConfirm()
     if (selectedAppointment?.id === apt.id) setSelectedAppointment(null)
     fetchAppointments()
+    window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Randevu iptal edildi' } }))
     if (fillGapOnCancel) {
       setTimeout(() => handleFillGap(apt.id), 300)
     }
@@ -844,7 +848,7 @@ export default function AppointmentsPage() {
       .from('appointments')
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', appointmentId)
-    if (error) { alert('Silme hatası: ' + error.message); return }
+    if (error) { window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: 'Silme hatası: ' + error.message } })); return }
     const deletedApt = appointments.find(a => a.id === appointmentId)
     await logAudit({
       businessId: businessId!,
@@ -862,6 +866,7 @@ export default function AppointmentsPage() {
     })
     if (selectedAppointment?.id === appointmentId) setSelectedAppointment(null)
     fetchAppointments()
+    window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Randevu silindi' } }))
   }
 
   async function updateStatus(appointmentId: string, newStatus: AppointmentStatus, e?: React.MouseEvent) {
@@ -869,9 +874,9 @@ export default function AppointmentsPage() {
     const { error } = await supabase.from('appointments').update({ status: newStatus }).eq('id', appointmentId)
     if (error) {
       if (error.message.includes('segment') && error.message.includes('customer_segment')) {
-        alert('Randevu güncellemesi veritabanı ayarı nedeniyle başarısız.\n\nDüzeltmek için:\n1. Supabase Dashboard → SQL Editor\'ü açın.\n2. supabase/migrations/003_fix_appointment_customer_segment.sql dosyasını çalıştırın.')
+        window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Veritabanı Hatası', body: 'Randevu güncellemesi veritabanı ayarı nedeniyle başarısız. Supabase SQL Editor\'den 003_fix_appointment_customer_segment.sql dosyasını çalıştırın.' } }))
       } else {
-        alert('Güncelleme hatası: ' + error.message)
+        window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: 'Güncelleme hatası: ' + error.message } }))
       }
       return
     }
@@ -970,6 +975,8 @@ export default function AppointmentsPage() {
     }
 
     fetchAppointments()
+    const statusLabels: Record<string, string> = { completed: 'Tamamlandı', cancelled: 'İptal edildi', no_show: 'Gelmedi olarak işaretlendi', confirmed: 'Onaylandı', pending: 'Beklemede' }
+    window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: statusLabels[newStatus] || 'Durum güncellendi' } }))
   }
 
   function getDayKeyFromDate(dateStr: string): keyof WorkingHours {
@@ -2500,9 +2507,10 @@ export default function AppointmentsPage() {
                         .eq('recurrence_group_id', selectedAppointment.recurrence_group_id)
                         .gte('appointment_date', today)
                         .in('status', ['pending', 'confirmed'])
-                      if (error) { alert('Seri iptal hatası: ' + error.message); return }
+                      if (error) { window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: 'Seri iptal hatası: ' + error.message } })); return }
                       setSelectedAppointment(null)
                       fetchAppointments()
+                      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Tüm seri iptal edildi' } }))
                     }}
                     className="w-full flex items-center gap-2 rounded-lg border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-900/20 px-4 py-2.5 text-sm font-medium text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-800/30 transition-colors"
                   >

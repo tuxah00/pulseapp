@@ -217,6 +217,7 @@ export default function MembershipsPage() {
 
       closeModal()
       fetchMemberships()
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: editingMembership ? 'Üyelik güncellendi' : 'Üyelik eklendi' } }))
     } catch {
       setError('Sunucu hatası')
     }
@@ -229,16 +230,17 @@ export default function MembershipsPage() {
     const res = await fetch(`/api/memberships?id=${m.id}`, { method: 'DELETE' })
     if (!res.ok) {
       const json = await res.json()
-      alert('Silme hatası: ' + json.error)
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: 'Silme hatası: ' + json.error } }))
       return
     }
     fetchMemberships()
+    window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Üyelik silindi' } }))
   }
 
   async function handleAddSession(m: Membership) {
     const newUsed = m.sessions_used + 1
     if (m.sessions_total != null && newUsed > m.sessions_total) {
-      alert('Toplam seans sayısını aşamazsınız.')
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: 'Toplam seans sayısını aşamazsınız.' } }))
       return
     }
     const res = await fetch(`/api/memberships?id=${m.id}`, {
@@ -248,12 +250,13 @@ export default function MembershipsPage() {
     })
     if (!res.ok) {
       const json = await res.json()
-      alert('Seans güncelleme hatası: ' + json.error)
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: 'Seans güncelleme hatası: ' + json.error } }))
       return
     }
     setMemberships(prev =>
       prev.map(item => item.id === m.id ? { ...item, sessions_used: newUsed } : item)
     )
+    window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Seans güncellendi' } }))
   }
 
   async function handleToggleFreeze(m: Membership) {
@@ -265,12 +268,13 @@ export default function MembershipsPage() {
     })
     if (!res.ok) {
       const json = await res.json()
-      alert('Durum güncelleme hatası: ' + json.error)
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: 'Durum güncelleme hatası: ' + json.error } }))
       return
     }
     setMemberships(prev =>
       prev.map(item => item.id === m.id ? { ...item, status: newStatus } : item)
     )
+    window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: newStatus === 'frozen' ? 'Üyelik donduruldu' : 'Üyelik aktifleştirildi' } }))
   }
 
   // Stats
