@@ -91,7 +91,7 @@ export function FilterPopoverList({ label, options, value, onChange, allLabel = 
         {options.map(opt => (
           <button
             key={opt.value}
-            onClick={() => onChange(opt.value)}
+            onClick={() => onChange(value === opt.value ? '' : opt.value)}
             className={cn(
               'w-full text-left px-3 py-1.5 rounded-lg text-sm transition-colors',
               value === opt.value
