@@ -851,7 +851,7 @@ export default function PaketlerPage() {
             <AnimatedList className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {templates.map(t => (
                 <AnimatedItem key={t.id}>
-                  <div className="card p-5 hover:shadow-md transition-shadow">
+                  <div className="card p-5 hover:shadow-md transition-shadow flex flex-col h-full">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-pulse-50 dark:bg-pulse-900/30 text-pulse-900 dark:text-pulse-400 flex-shrink-0">
@@ -877,10 +877,10 @@ export default function PaketlerPage() {
                     </div>
 
                     {t.description && (
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-3 line-clamp-2">{t.description}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 line-clamp-1">{t.description}</p>
                     )}
 
-                    <div className="mt-4 flex items-center justify-between">
+                    <div className="mt-auto pt-3 flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <span className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300">
                           <Tag className="h-4 w-4 text-gray-400" />
@@ -898,7 +898,7 @@ export default function PaketlerPage() {
 
                     <button
                       onClick={() => openSellModal(t.id)}
-                      className="mt-4 w-full text-sm font-medium text-center py-2 rounded-lg border border-pulse-200 dark:border-pulse-800 text-pulse-900 dark:text-pulse-400 hover:bg-pulse-50 dark:hover:bg-pulse-900/20 transition-colors"
+                      className="mt-3 w-full text-sm font-medium text-center py-2 rounded-lg border border-pulse-200 dark:border-pulse-800 text-pulse-900 dark:text-pulse-400 hover:bg-pulse-50 dark:hover:bg-pulse-900/20 transition-colors"
                     >
                       Bu Paketi Sat
                     </button>
