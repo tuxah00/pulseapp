@@ -185,6 +185,7 @@ export default function StaffPage() {
     }
     setSaving(false); closeModal()
     await fetchStaff()
+    window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Kaydedildi' } }))
     await logAudit({
       businessId: businessId!,
       staffId: currentStaffId,
@@ -200,9 +201,10 @@ export default function StaffPage() {
     const ok = await confirm({ title: 'Onay', message: `"${member.name}" personelini listeden kaldırmak istediğinize emin misiniz? Randevularda artık seçilemez.` })
     if (!ok) return
     const { error: err } = await supabase.from('staff_members').update({ is_active: false }).eq('id', member.id)
-    if (err) { alert('İşlem hatası: ' + err.message); return }
+    if (err) { window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: 'İşlem hatası: ' + err.message } })); return }
     if (selectedStaff?.id === member.id) setSelectedStaff(null)
     await fetchStaff()
+    window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Personel listeden kaldırıldı' } }))
     await logAudit({
       businessId: businessId!,
       staffId: currentStaffId,
@@ -327,7 +329,7 @@ export default function StaffPage() {
     if (res.ok) {
       setInviteLink(data.link)
     } else {
-      alert('Hata: ' + data.error)
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: data.error } }))
     }
     setInviteLoading(false)
   }
@@ -780,7 +782,7 @@ export default function StaffPage() {
                   <p className="text-xs text-gray-700 dark:text-gray-300 break-all font-mono">{inviteLink}</p>
                 </div>
                 <button
-                  onClick={() => { navigator.clipboard.writeText(inviteLink); alert('Link kopyalandı!') }}
+                  onClick={() => { navigator.clipboard.writeText(inviteLink); window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Kopyalandı', body: 'Davet linki panoya kopyalandı' } })) }}
                   className="btn-secondary w-full text-sm"
                 >
                   Linki Kopyala
