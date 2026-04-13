@@ -1531,14 +1531,11 @@ export default function AppointmentsPage() {
                                         'absolute rounded-md px-1.5 py-0.5 overflow-hidden cursor-grab active:cursor-grabbing hover:opacity-90 transition-opacity border border-white/20',
                                         staffColors[colorIdx],
                                         draggingId === apt.id && 'opacity-50',
-                                        isPastUnresolved(apt) && 'opacity-50'
+                                        isPastUnresolved(apt) && 'opacity-50 !border-l-2 !border-l-red-500'
                                       )}
                                       style={{ top: topPos, height: h, left: `${colLeft}%`, width: `${colWidth - 1}%` }}
                                       onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
                                     >
-                                      {isPastUnresolved(apt) && (
-                                        <span className="absolute -top-1 -right-1 z-20 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white dark:ring-gray-900" title="Sonuç girilmemiş" />
-                                      )}
                                       <p className={cn('text-[10px] font-semibold truncate', staffTextColors[colorIdx])}>
                                         {apt.customers?.name || 'İsimsiz'}
                                       </p>
@@ -1670,17 +1667,14 @@ export default function AppointmentsPage() {
                               onDragEnd={() => setDraggingId(null)}
                               onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
                               className={cn(
-                                'rounded px-1.5 py-0.5 text-[10px] font-medium truncate cursor-grab active:cursor-grabbing border border-white/20 hover:opacity-90 relative',
+                                'rounded px-1.5 py-0.5 text-[10px] font-medium truncate cursor-grab active:cursor-grabbing border border-white/20 hover:opacity-90',
                                 staffColors[colorIdx],
                                 staffTextColors[colorIdx],
                                 draggingId === apt.id && 'opacity-50',
-                                isPastUnresolved(apt) && 'opacity-50'
+                                isPastUnresolved(apt) && 'opacity-50 !border-l-2 !border-l-red-500'
                               )}
                             >
                               {formatTime(apt.start_time)} {apt.customers?.name || 'İsimsiz'}
-                              {isPastUnresolved(apt) && (
-                                <span className="absolute -top-1 -right-1 z-20 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white dark:ring-gray-900" title="Sonuç girilmemiş" />
-                              )}
                             </div>
                           )
                         })}
@@ -1872,14 +1866,11 @@ export default function AppointmentsPage() {
                                 'absolute left-0.5 right-0.5 rounded-md px-1.5 py-0.5 overflow-hidden cursor-grab active:cursor-grabbing hover:opacity-90 transition-opacity border border-white/20',
                                 staffColors[col.colorIdx],
                                 draggingId === apt.id && 'opacity-50',
-                                isPastUnresolved(apt) && 'opacity-50'
+                                isPastUnresolved(apt) && 'opacity-50 !border-l-2 !border-l-red-500'
                               )}
                               style={{ top, height }}
                               onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
                             >
-                              {isPastUnresolved(apt) && (
-                                <span className="absolute -top-1 -right-1 z-20 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white dark:ring-gray-900" title="Sonuç girilmemiş" />
-                              )}
                               <p className={cn('text-[10px] font-semibold truncate', staffTextColors[col.colorIdx])}>
                                 {apt.customers?.name || 'İsimsiz'}
                               </p>
@@ -2089,14 +2080,11 @@ export default function AppointmentsPage() {
                               className={cn(
                                 'absolute left-0.5 right-0.5 rounded-md px-1.5 py-0.5 overflow-hidden cursor-grab active:cursor-grabbing hover:opacity-80 transition-opacity text-white border border-white/20',
                                 draggingId === apt.id && 'opacity-50',
-                                isPastUnresolved(apt) && 'opacity-50'
+                                isPastUnresolved(apt) && 'opacity-50 !border-l-2 !border-l-red-500'
                               )}
                               style={{ top, height, backgroundColor: col.color }}
                               onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
                             >
-                              {isPastUnresolved(apt) && (
-                                <span className="absolute -top-1 -right-1 z-20 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white dark:ring-gray-900" title="Sonuç girilmemiş" />
-                              )}
                               <p className="text-[10px] font-semibold truncate">{apt.customers?.name || 'İsimsiz'}</p>
                               {height > 30 && (
                                 <p className="text-[9px] truncate opacity-80">{apt.services?.name} · {formatTime(apt.start_time)}</p>
@@ -2262,6 +2250,7 @@ export default function AppointmentsPage() {
                   'hover:border-gray-200 dark:hover:border-gray-700 hover:shadow-sm',
                   timeState === 'past' && 'opacity-60',
                   timeState === 'current' && 'border-green-400 dark:border-green-600 ring-1 ring-green-400 dark:ring-green-600',
+                  isPastUnresolved(apt) && '!border-l-[3px] !border-l-red-500',
                   selectedAppointment?.id === apt.id && 'ring-2 ring-pulse-900 border-pulse-300 dark:border-pulse-700',
                 )}
               >
@@ -2307,6 +2296,7 @@ export default function AppointmentsPage() {
                   'border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900/50',
                   timeState === 'past' && 'opacity-60',
                   timeState === 'current' && 'border-green-400 ring-1 ring-green-400',
+                  isPastUnresolved(apt) && '!border-l-[3px] !border-l-red-500',
                   selectedAppointment?.id === apt.id && 'ring-2 ring-pulse-900',
                 )}
               >
@@ -2325,9 +2315,6 @@ export default function AppointmentsPage() {
                   <p className="text-base font-bold text-gray-900 dark:text-gray-100 tabular-nums">{formatTime(apt.start_time)}</p>
                   <p className="text-xs text-gray-400 tabular-nums">{formatTime(apt.end_time)}</p>
                 </div>
-                {isPastUnresolved(apt) && (
-                  <span className="absolute -top-1 -right-1 z-20 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white dark:ring-gray-900" title="Sonuç girilmemiş" />
-                )}
                 <div className="flex items-center gap-1 mb-2 flex-wrap">
                   <span className={`badge text-xs ${getStatusColor(apt.status)}`}>{STATUS_LABELS[apt.status as keyof typeof STATUS_LABELS]}</span>
                   {apt.recurrence_group_id && <Repeat className="h-3 w-3 text-purple-400" />}
