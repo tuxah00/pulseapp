@@ -1,17 +1,17 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 
 type ViewMode = 'list' | 'box' | 'week' | 'month' | 'staff' | 'room'
 
 export function useViewMode(key: string, defaultMode: ViewMode = 'list') {
-  const [viewMode, setViewMode] = useState<ViewMode>(defaultMode)
-
-  useEffect(() => {
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    if (typeof window === 'undefined') return defaultMode
     const stored = localStorage.getItem(`viewMode_${key}`) as ViewMode | null
     const valid: ViewMode[] = ['list', 'box', 'week', 'month', 'staff', 'room']
-    if (stored && valid.includes(stored)) setViewMode(stored)
-  }, [key])
+    if (stored && valid.includes(stored)) return stored
+    return defaultMode
+  })
 
   function updateViewMode(mode: ViewMode) {
     setViewMode(mode)

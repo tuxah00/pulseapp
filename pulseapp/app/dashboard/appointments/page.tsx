@@ -1654,7 +1654,7 @@ export default function AppointmentsPage() {
                           <span className="text-[10px] text-gray-400 tabular-nums">{dayApts.length}</span>
                         )}
                       </div>
-                      <div className="flex flex-col gap-1 overflow-hidden">
+                      <div className="flex flex-col gap-1.5">
                         {visible.map((apt) => {
                           const colorIdx = getStaffColorIndex(apt.staff_id)
                           return (
