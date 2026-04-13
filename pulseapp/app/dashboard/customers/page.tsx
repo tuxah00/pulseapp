@@ -223,7 +223,38 @@ export default function CustomersPage() {
     } else {
       const { error } = await supabase.from('customers').insert(customerData)
       if (error) {
-        setError(error.message.includes('idx_customers_business_phone') ? 'Bu telefon numarası zaten kayıtlı.' : error.message.includes('invalid input syntax') ? 'Geçersiz veri formatı. Lütfen girdiğiniz bilgileri kontrol edin.' : error.message)
+        // Telefon unique constraint hatası — pasif kayıt varsa yeniden aktive et
+        if (error.message.includes('idx_customers_business_phone')) {
+          const { data: inactiveCustomer } = await supabase
+            .from('customers')
+            .select('id')
+            .eq('business_id', businessId)
+            .eq('phone', customerData.phone)
+            .eq('is_active', false)
+            .single()
+          if (inactiveCustomer) {
+            const { error: reactivateError } = await supabase
+              .from('customers')
+              .update({
+                name: customerData.name,
+                email: customerData.email,
+                birthday: customerData.birthday,
+                notes: customerData.notes,
+                segment: customerData.segment,
+                is_active: true,
+              })
+              .eq('id', inactiveCustomer.id)
+            if (!reactivateError) {
+              setSaving(false); setShowModal(false)
+              await fetchCustomers()
+              window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Müşteri yeniden aktive edildi' } }))
+              return
+            }
+          }
+          setError('Bu telefon numarası zaten kayıtlı.')
+        } else {
+          setError(error.message.includes('invalid input syntax') ? 'Geçersiz veri formatı. Lütfen girdiğiniz bilgileri kontrol edin.' : error.message)
+        }
         setSaving(false)
         return
       }
