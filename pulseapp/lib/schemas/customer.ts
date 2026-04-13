@@ -1,22 +1,17 @@
 import { z } from 'zod'
 import { MSG } from './messages'
+import { normalizePhone } from '@/lib/utils/phone'
 
 /**
  * Türk telefon numarası — kullanıcı "0532 123 45 67", "532 123 45 67",
  * "+90 532 123 45 67" gibi varyasyonlarla girebilir. Schema input'tan
- * boşluk/parantez/tire/+ karakterlerini soyup 10 haneli "5XXXXXXXXX"
- * formatına normalize eder.
+ * 10 haneli "5XXXXXXXXX" formatına normalize eder.
  */
 export const phoneField = z
   .string()
   .trim()
   .min(1, MSG.REQUIRED)
-  .transform((raw) => {
-    let digits = raw.replace(/\D/g, '')
-    if (digits.startsWith('90')) digits = digits.slice(2)
-    if (digits.startsWith('0')) digits = digits.slice(1)
-    return digits
-  })
+  .transform((raw) => normalizePhone(raw))
   .refine((d) => /^5\d{9}$/.test(d), { message: MSG.INVALID_PHONE })
 
 /**

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { normalizePhone, phoneOrFilter } from '@/lib/utils/phone'
 
 // POST — OTP doğrula ve müşteri cookie'si oluştur
 export async function POST(request: NextRequest) {
@@ -10,11 +11,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'businessId, telefon ve kod zorunludur' }, { status: 400 })
   }
 
-  // Telefon normalizasyonu
-  let normalizedPhone = phone.replace(/[\s\-\(\)]/g, '')
-  if (normalizedPhone.startsWith('+90')) normalizedPhone = normalizedPhone.slice(3)
-  if (normalizedPhone.startsWith('90') && normalizedPhone.length > 10) normalizedPhone = normalizedPhone.slice(2)
-  if (normalizedPhone.startsWith('0')) normalizedPhone = normalizedPhone.slice(1)
+  const normalizedPhone = normalizePhone(phone)
 
   const admin = createAdminClient()
   const now = new Date().toISOString()
@@ -50,7 +47,7 @@ export async function POST(request: NextRequest) {
     .from('customers')
     .select('id, name, phone, segment, birthday')
     .eq('business_id', businessId)
-    .or(`phone.eq.${normalizedPhone},phone.eq.0${normalizedPhone},phone.eq.+90${normalizedPhone}`)
+    .or(phoneOrFilter(normalizedPhone))
     .eq('is_active', true)
     .limit(1)
 
