@@ -32,8 +32,8 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
-  // ── Public rotalar: /book/* ve /api/public/* ──
-  if (pathname.startsWith('/book') || pathname.startsWith('/api/public')) {
+  // ── Public rotalar: /book/*, /api/public/*, /portal/*, /api/portal/* ──
+  if (pathname.startsWith('/book') || pathname.startsWith('/api/public') || pathname.startsWith('/portal') || pathname.startsWith('/api/portal')) {
     return supabaseResponse
   }
 
