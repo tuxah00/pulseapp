@@ -48,7 +48,8 @@ export default function PortalLoginPage() {
 
     setLoading(true)
     try {
-      const res = await fetch('/api/portal/otp', {
+      // Doğrudan giriş (SMS servisi aktif olana kadar OTP atlanıyor)
+      const res = await fetch('/api/portal/direct-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ businessId, phone: cleanPhone }),
@@ -58,8 +59,8 @@ export default function PortalLoginPage() {
         setError(data.error || 'Bir hata oluştu')
         return
       }
-      // OTP gönderildi — doğrulama sayfasına yönlendir
-      router.push(`/portal/${businessId}/verify?phone=${encodeURIComponent(cleanPhone)}`)
+      // Giriş başarılı — dashboard'a yönlendir
+      router.push(`/portal/${businessId}/dashboard`)
     } catch {
       setError('Bağlantı hatası. Lütfen tekrar deneyin.')
     } finally {
@@ -95,7 +96,7 @@ export default function PortalLoginPage() {
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-1">Giriş Yap</h2>
-          <p className="text-sm text-gray-500 mb-5">Telefon numaranızı girin, SMS ile doğrulama kodu gönderelim.</p>
+          <p className="text-sm text-gray-500 mb-5">Kayıtlı telefon numaranızı girerek portala erişin.</p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -127,7 +128,7 @@ export default function PortalLoginPage() {
             >
               {loading
                 ? <Loader2 className="h-4 w-4 animate-spin" />
-                : <>SMS Kodu Gönder <ArrowRight className="h-4 w-4" /></>
+                : <>Giriş Yap <ArrowRight className="h-4 w-4" /></>
               }
             </button>
           </form>
