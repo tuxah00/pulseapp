@@ -212,6 +212,7 @@ export default function AnalyticsPage() {
       setExpDate(new Date().toISOString().split('T')[0])
       setExpIsRecurring(false); setExpRecurringPeriod('monthly'); setExpCustomDays('7')
       fetchExpenses()
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Oluşturuldu' } }))
     } finally {
       setSavingExpense(false)
     }
@@ -224,6 +225,7 @@ export default function AnalyticsPage() {
     await fetch(`/api/expenses?id=${id}`, { method: 'DELETE' })
     logAudit({ businessId: businessId!, staffId: staffId || null, staffName: staffName || null, action: 'delete', resource: 'expense', details: { category: expense?.category || null, amount: expense?.amount || null } })
     fetchExpenses()
+    window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Silindi' } }))
   }
 
   async function handleAddIncome(e: React.FormEvent) {
@@ -251,6 +253,7 @@ export default function AnalyticsPage() {
       setIncDate(new Date().toISOString().split('T')[0])
       setIncIsRecurring(false); setIncRecurringPeriod('monthly'); setIncCustomDays('7')
       fetchIncome()
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Oluşturuldu' } }))
     } finally {
       setSavingIncome(false)
     }
@@ -263,6 +266,7 @@ export default function AnalyticsPage() {
     await fetch(`/api/income?id=${id}`, { method: 'DELETE' })
     logAudit({ businessId: businessId!, staffId: staffId || null, staffName: staffName || null, action: 'delete', resource: 'income', details: { category: income?.category || null, amount: income?.amount || null } })
     fetchIncome()
+    window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Silindi' } }))
   }
 
   useEffect(() => { if (!ctxLoading) fetchData() }, [fetchData, ctxLoading])

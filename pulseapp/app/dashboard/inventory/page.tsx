@@ -233,6 +233,7 @@ export default function StoklarPage() {
     }
 
     setSaving(false); closeModal(); fetchProducts()
+    window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: editingProduct ? 'Ürün güncellendi' : 'Ürün eklendi' } }))
     logAudit({ businessId: businessId!, staffId, staffName, action: editingProduct ? 'update' : 'create', resource: 'inventory', resourceId: editingProduct?.id, details: { name } })
   }
 
@@ -243,9 +244,10 @@ export default function StoklarPage() {
       .from('products')
       .update({ is_active: false })
       .eq('id', product.id)
-    if (err) { alert('Silme hatası: ' + err.message); return }
+    if (err) { window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: 'Silme hatası: ' + err.message } })); return }
     if (selectedProduct?.id === product.id) setSelectedProduct(null)
     fetchProducts()
+    window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Ürün silindi' } }))
     logAudit({ businessId: businessId!, staffId, staffName, action: 'delete', resource: 'inventory', resourceId: product.id, details: { name: product.name } })
   }
 
@@ -263,7 +265,7 @@ export default function StoklarPage() {
         }),
       })
       const json = await res.json()
-      if (!res.ok) { alert('Stok güncelleme hatası: ' + json.error); return }
+      if (!res.ok) { window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: 'Stok güncelleme hatası: ' + json.error } })); return }
 
       const newCount = json.newStock
       setProducts(prev => prev.map(p => p.id === product.id ? { ...p, stock_count: newCount } : p))
@@ -271,8 +273,9 @@ export default function StoklarPage() {
         setSelectedProduct(prev => prev ? { ...prev, stock_count: newCount } : null)
         if (detailTab === 'movements') fetchMovements(product.id)
       }
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Stok güncellendi' } }))
     } catch (err) {
-      alert('Stok güncelleme hatası')
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: 'Stok güncelleme hatası' } }))
     }
   }
 
@@ -306,6 +309,7 @@ export default function StoklarPage() {
       await supabase.from('suppliers').insert({ ...payload, business_id: businessId })
     }
     setSavingSupplier(false); closeSupplierModal(); fetchSuppliers()
+    window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: editingSupplier ? 'Tedarikçi güncellendi' : 'Tedarikçi eklendi' } }))
   }
 
   async function handleDeleteSupplier(supplier: Supplier) {
@@ -313,6 +317,7 @@ export default function StoklarPage() {
     if (!ok) return
     await supabase.from('suppliers').delete().eq('id', supplier.id)
     fetchSuppliers()
+    window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Tedarikçi silindi' } }))
   }
 
   // Summary stats (always from full products list, not filtered)

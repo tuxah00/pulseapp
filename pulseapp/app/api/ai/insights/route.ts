@@ -96,6 +96,7 @@ export async function GET(_req: NextRequest) {
       .from('customers')
       .select('*', { count: 'exact', head: true })
       .eq('business_id', businessId)
+      .eq('is_active', true)
       .gte('created_at', weekAgo.toISOString())
 
     // Risk müşteriler (60+ gün gelmemiş, aktif)

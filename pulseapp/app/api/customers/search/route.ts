@@ -52,6 +52,7 @@ export async function GET(request: NextRequest) {
       .select('id, name, phone')
       .eq('id', selectedId)
       .eq('business_id', businessId)
+      .eq('is_active', true)
       .single()
 
     if (selected) {

@@ -58,6 +58,7 @@ export async function POST(req: NextRequest) {
       .update({ kvkk_consent_given: true, kvkk_consent_given_at: new Date().toISOString() })
       .eq('id', customerId)
       .eq('business_id', businessId)
+      .eq('is_active', true)
   }
 
   return NextResponse.json({ consent: data }, { status: 201 })

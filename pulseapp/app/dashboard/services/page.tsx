@@ -150,6 +150,7 @@ export default function ServicesPage() {
     setSaving(false)
     closeModal()
     fetchServices()
+    window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: editingService ? 'Hizmet güncellendi' : 'Hizmet eklendi' } }))
     await logAudit({
       businessId: businessId!,
       staffId: currentStaffId,
@@ -181,11 +182,12 @@ export default function ServicesPage() {
       .eq('id', service.id)
 
     if (error) {
-      alert('Silme hatası: ' + error.message)
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: 'Silme hatası: ' + error.message } }))
       return
     }
 
     fetchServices()
+    window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Hizmet silindi' } }))
     await logAudit({
       businessId: businessId!,
       staffId: currentStaffId,

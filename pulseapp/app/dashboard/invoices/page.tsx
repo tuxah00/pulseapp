@@ -268,6 +268,7 @@ export default function InvoicesPage() {
     resetForm()
     fetchInvoices()
     setSelectedInvoice(json.invoice)
+    window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Oluşturuldu' } }))
     logAudit({ businessId: businessId!, staffId, staffName, action: 'create', resource: 'invoice', resourceId: json.invoice?.id, details: { customer_id: formCustomerId || null, total: json.invoice?.total ?? null, payment_type: formPaymentType } })
   }
 
@@ -284,6 +285,7 @@ export default function InvoicesPage() {
     } else {
       setSelectedInvoice(prev => prev ? { ...prev, efatura_id: json.efatura?.id, efatura_status: 'sent' } : prev)
       fetchInvoices()
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Kaydedildi' } }))
     }
     setEfaturaSending(false)
   }
@@ -322,6 +324,7 @@ export default function InvoicesPage() {
       fetchInvoices()
       setShowPaymentForm(false)
       setPayAmount(''); setPayNotes('')
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Kaydedildi' } }))
       logAudit({ businessId: businessId!, staffId, staffName, action: 'pay', resource: 'invoice', resourceId: selectedInvoice.id, details: { amount: parseFloat(payAmount), method: payMethod } })
     }
     setPayingSaving(false)
@@ -338,6 +341,7 @@ export default function InvoicesPage() {
       setSelectedInvoice(json.invoice)
       fetchInvoices()
       if (json.invoice) fetchPayments(json.invoice.id)
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Kaydedildi' } }))
       logAudit({ businessId: businessId!, staffId, staffName, action: 'pay', resource: 'invoice', resourceId: invoice.id, details: { amount: invoice.total ?? null, payment_method: paymentMethod } })
     }
   }
@@ -354,6 +358,7 @@ export default function InvoicesPage() {
     if (res.ok) {
       setSelectedInvoice(json.invoice)
       fetchInvoices()
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Kaydedildi' } }))
     }
   }
 
@@ -363,6 +368,7 @@ export default function InvoicesPage() {
     await fetch(`/api/invoices?id=${invoice.id}`, { method: 'DELETE' })
     setSelectedInvoice(null)
     fetchInvoices()
+    window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Silindi' } }))
     logAudit({ businessId: businessId!, staffId, staffName, action: 'delete', resource: 'invoice', resourceId: invoice.id, details: { invoice_number: invoice.invoice_number } })
   }
 
@@ -376,6 +382,7 @@ export default function InvoicesPage() {
     })
     fetchDeletedInvoices()
     fetchInvoices()
+    window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Kaydedildi' } }))
     logAudit({ businessId: businessId!, staffId, staffName, action: 'restore', resource: 'invoice', resourceId: invoice.id, details: { invoice_number: invoice.invoice_number } })
   }
 

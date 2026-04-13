@@ -109,6 +109,7 @@ export default async function DashboardPage() {
         .from('customers')
         .select('id, name, segment, last_visit_at')
         .eq('business_id', businessId)
+        .eq('is_active', true)
         .in('segment', ['risk', 'lost'])
         .order('last_visit_at', { ascending: true })
         .limit(5),

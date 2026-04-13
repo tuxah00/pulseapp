@@ -683,6 +683,7 @@ function RecordsPageInner() {
 
       closeModal()
       fetchRecords()
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Kaydedildi' } }))
       logAudit({ businessId: businessId!, staffId, staffName, action: editingRecord ? 'update' : 'create', resource: 'patient_record', resourceId: editingRecord?.id, details: { title: formData.title || '' } })
     } catch (err) {
       setFormError('Bir hata oluştu. Lütfen tekrar deneyin.')
@@ -718,7 +719,7 @@ function RecordsPageInner() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ data: { ...record.data, file_urls: updatedUrls, file_metadata: updatedMeta } }),
     })
-    if (!res.ok) { alert('Dosya silme hatası'); return }
+    if (!res.ok) { window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: 'Dosya silme hatası' } })); return }
 
     // Try to delete from Supabase storage
     try {
@@ -741,6 +742,7 @@ function RecordsPageInner() {
     }
 
     fetchRecords()
+    window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Dosya silindi' } }))
     logAudit({ businessId: businessId!, staffId, staffName, action: 'delete', resource: 'patient_record_file', resourceId: recordId, details: { deletedFileUrl: fileUrl } })
   }
 
@@ -761,6 +763,7 @@ function RecordsPageInner() {
     setSelectedRecord({ ...selectedRecord, data: { ...selectedRecord.data, file_metadata: updatedMeta } })
     setFileDescPopup(null)
     fetchRecords()
+    window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Kaydedildi' } }))
   }
 
   // ── Delete ────────────────────────────────────────────────────────────────
@@ -769,9 +772,10 @@ function RecordsPageInner() {
     const ok = await confirm({ title: 'Onay', message: `"${record.title}" kaydını silmek istediğinize emin misiniz?` })
     if (!ok) return
     const res = await fetch(`/api/records?id=${record.id}`, { method: 'DELETE' })
-    if (!res.ok) { alert('Silme hatası'); return }
+    if (!res.ok) { window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: 'Silme hatası' } })); return }
     if (selectedRecord?.id === record.id) setSelectedRecord(null)
     fetchRecords()
+    window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Silindi' } }))
     logAudit({ businessId: businessId!, staffId, staffName, action: 'delete', resource: 'patient_record', resourceId: record.id, details: { title: record.title } })
   }
 

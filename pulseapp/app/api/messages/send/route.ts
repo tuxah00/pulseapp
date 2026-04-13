@@ -28,6 +28,7 @@ export const POST = withPermission('messages', async (req: NextRequest, ctx) => 
       .select('id, phone, name, whatsapp_opted_in, preferred_channel')
       .eq('id', customerId)
       .eq('business_id', ctx.businessId)
+      .eq('is_active', true)
       .single()
 
     if (!customer) {

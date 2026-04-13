@@ -205,6 +205,7 @@ export default function VardiyePage() {
       }
       closeModal()
       await fetchData()
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Vardiya kaydedildi' } }))
       logAudit({ businessId: businessId!, staffId: currentStaffId, staffName: currentStaffName, action: 'create', resource: 'shift', details: { staff_id: modal.staffId, date: modal.date, type: modalType } })
     } catch (err) {
       setSaveError('Bağlantı hatası. Lütfen tekrar deneyin.')
@@ -218,13 +219,14 @@ export default function VardiyePage() {
       const res = await fetch(`/api/shifts/${shiftId}`, { method: 'DELETE' })
       if (!res.ok) {
         const json = await res.json().catch(() => ({}))
-        alert(json.error || 'Silme işlemi başarısız.')
+        window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: json.error || 'Silme işlemi başarısız.' } }))
         return
       }
       await fetchData()
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Vardiya silindi' } }))
       logAudit({ businessId: businessId!, staffId: currentStaffId, staffName: currentStaffName, action: 'delete', resource: 'shift', resourceId: shiftId, details: {} })
     } catch {
-      alert('Bağlantı hatası. Lütfen tekrar deneyin.')
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: 'Bağlantı hatası. Lütfen tekrar deneyin.' } }))
     }
   }
 
@@ -239,7 +241,9 @@ export default function VardiyePage() {
       const updatedSettings = { ...currentSettings, shift_definitions: shiftDefs }
       const { error } = await supabase.from('businesses').update({ settings: updatedSettings }).eq('id', businessId)
       if (error) {
-        alert('Kaydetme hatası: ' + error.message)
+        window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: 'Kaydetme hatası: ' + error.message } }))
+      } else {
+        window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Mesai tanımları kaydedildi' } }))
       }
     } finally {
       setShiftDefsSaving(false)
@@ -302,6 +306,7 @@ export default function VardiyePage() {
         setAutoError(errors.join(' | '))
       } else {
         setShowAutoPanel(false)
+        window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Otomatik dağıtım tamamlandı' } }))
       }
     } finally {
       setAutoSaving(false)
@@ -335,6 +340,7 @@ export default function VardiyePage() {
       } else {
         setSaveError(null)
         await fetchData()
+        window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Çalışma saatleri kaydedildi' } }))
       }
     } finally {
       setSaving(false)
@@ -352,6 +358,7 @@ export default function VardiyePage() {
         weekShifts.map(s => fetch(`/api/shifts/${s.id}`, { method: 'DELETE' }))
       )
       await fetchData()
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Tablo sıfırlandı' } }))
     } finally {
       setResetting(false)
       closeResetConfirm()
@@ -372,7 +379,7 @@ export default function VardiyePage() {
       link.click()
     } catch (err) {
       console.error('Image save error:', err)
-      alert('Görsel oluşturulurken hata oluştu.')
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: 'Görsel oluşturulurken hata oluştu.' } }))
     }
   }
 

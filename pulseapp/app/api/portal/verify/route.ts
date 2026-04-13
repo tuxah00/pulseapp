@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
     .select('id, name, phone, segment, birthday')
     .eq('business_id', businessId)
     .eq('phone', phone)
+    .eq('is_active', true)
     .single()
 
   if (!customer) {

@@ -42,6 +42,7 @@ export async function POST(
     .select('id')
     .eq('business_id', params.id)
     .eq('phone', normalizedPhone)
+    .eq('is_active', true)
     .limit(1)
 
   const { error: insertError } = await supabase

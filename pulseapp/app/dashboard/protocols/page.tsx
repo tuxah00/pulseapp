@@ -115,6 +115,7 @@ export default function ProtocolsPage() {
         closeCreate()
         resetForm()
         fetchProtocols()
+        window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Oluşturuldu' } }))
       }
     } catch { /* ignore */ } finally { setSaving(false) }
   }
@@ -141,6 +142,7 @@ export default function ProtocolsPage() {
       if (selectedProtocol?.id === protocolId) {
         setSelectedProtocol(prev => prev ? { ...prev, status } : null)
       }
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Kaydedildi' } }))
     } catch { /* ignore */ }
   }
 
@@ -159,6 +161,7 @@ export default function ProtocolsPage() {
         fetch(`/api/protocols/${protocolId}?businessId=${businessId}`).then(r => r.json()),
       ])
       if (detailJson.protocol) setSelectedProtocol(detailJson.protocol)
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Kaydedildi' } }))
     } catch { /* ignore */ }
   }
 
@@ -188,6 +191,7 @@ export default function ProtocolsPage() {
       await fetch(`/api/protocols/${protocolId}?businessId=${businessId}`, { method: 'DELETE' })
       fetchProtocols()
       if (selectedProtocol?.id === protocolId) setSelectedProtocol(null)
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Silindi' } }))
     } catch { /* ignore */ }
   }
 

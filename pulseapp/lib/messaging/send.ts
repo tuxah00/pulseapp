@@ -99,6 +99,7 @@ async function resolveChannel(
       .from('customers')
       .select('whatsapp_opted_in, preferred_channel')
       .eq('id', customerId)
+      .eq('is_active', true)
       .single()
 
     if (customer?.preferred_channel === 'whatsapp' || customer?.whatsapp_opted_in) {
