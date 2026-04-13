@@ -34,14 +34,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'İşletme bulunamadı' }, { status: 404 })
   }
 
-  // Müşterinin bu işletmede kayıtlı olduğunu doğrula
-  const { data: customer } = await admin
+  // Müşterinin bu işletmede kayıtlı olduğunu doğrula (tüm telefon formatları)
+  const { data: customers } = await admin
     .from('customers')
     .select('id, name, phone')
     .eq('business_id', businessId)
-    .eq('phone', normalizedPhone)
+    .or(`phone.eq.${normalizedPhone},phone.eq.0${normalizedPhone},phone.eq.+90${normalizedPhone}`)
     .eq('is_active', true)
-    .single()
+    .limit(1)
+
+  const customer = customers?.[0] || null
 
   if (!customer) {
     return NextResponse.json({ error: 'Bu telefon numarasıyla kayıtlı müşteri bulunamadı' }, { status: 404 })
