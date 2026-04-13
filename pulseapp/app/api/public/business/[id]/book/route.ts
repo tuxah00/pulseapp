@@ -60,14 +60,18 @@ export async function POST(
     return NextResponse.json({ error: 'Bu saat dolu. Lütfen başka bir saat seçin.' }, { status: 409 })
   }
 
-  const normalizedPhone = '+90' + phone
+  // Telefon normalizasyonu: 5XXXXXXXXX formatına çevir (prefix'siz)
+  let normalizedPhone = phone.replace(/[\s\-\(\)]/g, '')
+  if (normalizedPhone.startsWith('+90')) normalizedPhone = normalizedPhone.slice(3)
+  if (normalizedPhone.startsWith('90') && normalizedPhone.length > 10) normalizedPhone = normalizedPhone.slice(2)
+  if (normalizedPhone.startsWith('0')) normalizedPhone = normalizedPhone.slice(1)
 
-  // Müşteriyi bul veya oluştur
+  // Müşteriyi bul veya oluştur (her iki formattaki kayıtları da bul)
   const { data: existingCustomers } = await supabase
     .from('customers')
     .select('id')
     .eq('business_id', params.id)
-    .eq('phone', normalizedPhone)
+    .or(`phone.eq.${normalizedPhone},phone.eq.+90${normalizedPhone}`)
     .eq('is_active', true)
     .limit(1)
 
