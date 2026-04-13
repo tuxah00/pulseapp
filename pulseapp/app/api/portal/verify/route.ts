@@ -10,6 +10,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'businessId, telefon ve kod zorunludur' }, { status: 400 })
   }
 
+  // Telefon normalizasyonu
+  let normalizedPhone = phone.replace(/[\s\-\(\)]/g, '')
+  if (normalizedPhone.startsWith('+90')) normalizedPhone = normalizedPhone.slice(3)
+  if (normalizedPhone.startsWith('90') && normalizedPhone.length > 10) normalizedPhone = normalizedPhone.slice(2)
+  if (normalizedPhone.startsWith('0')) normalizedPhone = normalizedPhone.slice(1)
+
   const admin = createAdminClient()
   const now = new Date().toISOString()
 
@@ -18,7 +24,7 @@ export async function POST(request: NextRequest) {
     .from('portal_otps')
     .select('id, otp, expires_at, used')
     .eq('business_id', businessId)
-    .eq('phone', phone)
+    .eq('phone', normalizedPhone)
     .eq('used', false)
     .gt('expires_at', now)
     .order('created_at', { ascending: false })
@@ -44,7 +50,7 @@ export async function POST(request: NextRequest) {
     .from('customers')
     .select('id, name, phone, segment, birthday')
     .eq('business_id', businessId)
-    .eq('phone', phone)
+    .eq('phone', normalizedPhone)
     .eq('is_active', true)
     .single()
 

@@ -15,6 +15,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'businessId ve telefon numarası zorunludur' }, { status: 400 })
   }
 
+  // Telefon normalizasyonu: +90/0 prefix'lerini kaldır → 5XXXXXXXXX formatına çevir
+  let normalizedPhone = phone.replace(/[\s\-\(\)]/g, '')
+  if (normalizedPhone.startsWith('+90')) normalizedPhone = normalizedPhone.slice(3)
+  if (normalizedPhone.startsWith('90') && normalizedPhone.length > 10) normalizedPhone = normalizedPhone.slice(2)
+  if (normalizedPhone.startsWith('0')) normalizedPhone = normalizedPhone.slice(1)
+
   const admin = createAdminClient()
 
   // İşletmenin var olduğunu doğrula
@@ -33,7 +39,7 @@ export async function POST(request: NextRequest) {
     .from('customers')
     .select('id, name, phone')
     .eq('business_id', businessId)
-    .eq('phone', phone)
+    .eq('phone', normalizedPhone)
     .eq('is_active', true)
     .single()
 
@@ -47,7 +53,7 @@ export async function POST(request: NextRequest) {
     .from('portal_otps')
     .select('id, created_at')
     .eq('business_id', businessId)
-    .eq('phone', phone)
+    .eq('phone', normalizedPhone)
     .eq('used', false)
     .gte('created_at', oneMinAgo)
     .single()
@@ -65,7 +71,7 @@ export async function POST(request: NextRequest) {
     .from('portal_otps')
     .update({ used: true })
     .eq('business_id', businessId)
-    .eq('phone', phone)
+    .eq('phone', normalizedPhone)
     .eq('used', false)
 
   // Yeni OTP kaydet
@@ -73,7 +79,7 @@ export async function POST(request: NextRequest) {
     .from('portal_otps')
     .insert({
       business_id: businessId,
-      phone,
+      phone: normalizedPhone,
       otp,
       expires_at: expiresAt,
     })
@@ -87,7 +93,7 @@ export async function POST(request: NextRequest) {
 
   try {
     await sendMessage({
-      to: phone,
+      to: normalizedPhone,
       body: smsMessage,
       businessId,
       customerId: customer.id,
@@ -99,5 +105,5 @@ export async function POST(request: NextRequest) {
     // SMS gönderilemese bile devam et (geliştirme ortamında)
   }
 
-  return NextResponse.json({ success: true, message: `${phone} numarasına doğrulama kodu gönderildi` })
+  return NextResponse.json({ success: true, message: `${normalizedPhone} numarasına doğrulama kodu gönderildi` })
 }
