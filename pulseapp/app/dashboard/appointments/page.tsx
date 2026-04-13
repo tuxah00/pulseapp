@@ -980,7 +980,9 @@ export default function AppointmentsPage() {
   const hasActiveFilters = !!(staffIdFilter || serviceIdFilter)
   const filteredAppointments = (() => {
     let list = appointments.filter(a => {
-      if (statusFilter && a.status !== statusFilter) return false
+      if (statusFilter === 'unresolved') {
+        if (!isPastUnresolved(a)) return false
+      } else if (statusFilter && a.status !== statusFilter) return false
       if (staffIdFilter && a.staff_id !== staffIdFilter) return false
       if (serviceIdFilter && a.service_id !== serviceIdFilter) return false
       if (!search.trim()) return true
@@ -1029,6 +1031,7 @@ export default function AppointmentsPage() {
     if (apt.appointment_date === todayStr2 && apt.end_time <= nowMinStr) return true
     return false
   }
+  const unresolvedCount = appointments.filter(a => isPastUnresolved(a)).length
 
   // Aksiyon butonları — hem liste hem kutu görünümünde kullanılır
   function ActionButtons({ apt, size = 'md' }: { apt: AppointmentView; size?: 'sm' | 'md' }) {
@@ -1161,11 +1164,12 @@ export default function AppointmentsPage() {
 
       {/* Mini İstatistik + Görünüm butonları */}
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className="grid flex-1 grid-cols-4 gap-2">
+        <div className="grid flex-1 grid-cols-5 gap-2">
           <button onClick={() => setStatusFilter(null)} className={cn('rounded-2xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 p-3 text-center transition-all hover:shadow-sm', statusFilter === null && 'ring-2 ring-gray-400 dark:ring-gray-500')}><p className="text-xl font-bold text-gray-900 dark:text-gray-100">{totalCount}</p><p className="text-xs text-gray-500 mt-0.5">Toplam</p></button>
           <button onClick={() => setStatusFilter(statusFilter === 'confirmed' ? null : 'confirmed')} className={cn('rounded-2xl border border-blue-100 dark:border-blue-900/40 bg-blue-50 dark:bg-blue-950/30 p-3 text-center transition-all hover:shadow-sm', statusFilter === 'confirmed' && 'ring-2 ring-blue-500')}><p className="text-xl font-bold text-blue-600 dark:text-blue-400">{confirmedCount}</p><p className="text-xs text-gray-500 mt-0.5">Onaylı</p></button>
           <button onClick={() => setStatusFilter(statusFilter === 'completed' ? null : 'completed')} className={cn('rounded-2xl border border-green-100 dark:border-green-900/40 bg-green-50 dark:bg-green-950/30 p-3 text-center transition-all hover:shadow-sm', statusFilter === 'completed' && 'ring-2 ring-green-500')}><p className="text-xl font-bold text-green-600 dark:text-green-400">{completedCount}</p><p className="text-xs text-gray-500 mt-0.5">Tamamlandı</p></button>
           <button onClick={() => setStatusFilter(statusFilter === 'no_show' ? null : 'no_show')} className={cn('rounded-2xl border border-red-100 dark:border-red-900/40 bg-red-50 dark:bg-red-950/30 p-3 text-center transition-all hover:shadow-sm', statusFilter === 'no_show' && 'ring-2 ring-red-500')}><p className="text-xl font-bold text-red-600 dark:text-red-400">{noShowCount}</p><p className="text-xs text-gray-500 mt-0.5">Gelmedi</p></button>
+          <button onClick={() => setStatusFilter(statusFilter === 'unresolved' ? null : 'unresolved')} className={cn('rounded-2xl border border-amber-100 dark:border-amber-900/40 bg-amber-50 dark:bg-amber-950/30 p-3 text-center transition-all hover:shadow-sm', statusFilter === 'unresolved' && 'ring-2 ring-amber-500')}><p className="text-xl font-bold text-amber-600 dark:text-amber-400">{unresolvedCount}</p><p className="text-xs text-gray-500 mt-0.5">Belirsiz</p></button>
         </div>
         <div className="flex justify-end">
           <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
@@ -1536,8 +1540,7 @@ export default function AppointmentsPage() {
                                       style={{ top: topPos, height: h, left: `${colLeft}%`, width: `${colWidth - 1}%` }}
                                       onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
                                     >
-                                      <p className={cn('text-[10px] font-semibold truncate flex items-center gap-0.5', staffTextColors[colorIdx])}>
-                                        {isPastUnresolved(apt) && <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-500 flex-shrink-0" />}
+                                      <p className={cn('text-[10px] font-semibold truncate', staffTextColors[colorIdx])}>
                                         {apt.customers?.name || 'İsimsiz'}
                                       </p>
                                       {h > 30 && (
@@ -1655,27 +1658,32 @@ export default function AppointmentsPage() {
                       <div className="flex flex-col gap-1.5">
                         {visible.map((apt) => {
                           const colorIdx = getStaffColorIndex(apt.staff_id)
+                          const unresolved = isPastUnresolved(apt)
                           return (
-                            <div
-                              key={apt.id}
-                              draggable
-                              onDragStart={(e) => {
-                                e.stopPropagation()
-                                e.dataTransfer.setData('text/plain', apt.id)
-                                e.dataTransfer.effectAllowed = 'move'
-                                setDraggingId(apt.id)
-                              }}
-                              onDragEnd={() => setDraggingId(null)}
-                              onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
-                              className={cn(
-                                'rounded px-1.5 py-0.5 text-[10px] font-medium truncate cursor-grab active:cursor-grabbing border border-white/20 hover:opacity-90',
-                                staffColors[colorIdx],
-                                staffTextColors[colorIdx],
-                                draggingId === apt.id && 'opacity-50',
-                                isPastUnresolved(apt) && 'opacity-50'
+                            <div key={apt.id} className="relative">
+                              {unresolved && (
+                                <span className="absolute -top-1 -right-1 z-10 h-2.5 w-2.5 rounded-full bg-red-500 border-2 border-gray-900 pointer-events-none" />
                               )}
-                            >
-                              {isPastUnresolved(apt) && <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-500 mr-0.5 flex-shrink-0" />}{formatTime(apt.start_time)} {apt.customers?.name || 'İsimsiz'}
+                              <div
+                                draggable
+                                onDragStart={(e) => {
+                                  e.stopPropagation()
+                                  e.dataTransfer.setData('text/plain', apt.id)
+                                  e.dataTransfer.effectAllowed = 'move'
+                                  setDraggingId(apt.id)
+                                }}
+                                onDragEnd={() => setDraggingId(null)}
+                                onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
+                                className={cn(
+                                  'rounded px-1.5 py-0.5 text-[10px] font-medium truncate cursor-grab active:cursor-grabbing border border-white/20 hover:opacity-90',
+                                  staffColors[colorIdx],
+                                  staffTextColors[colorIdx],
+                                  draggingId === apt.id && 'opacity-50',
+                                  unresolved && 'opacity-50'
+                                )}
+                              >
+                                {formatTime(apt.start_time)} {apt.customers?.name || 'İsimsiz'}
+                              </div>
                             </div>
                           )
                         })}
@@ -1872,8 +1880,7 @@ export default function AppointmentsPage() {
                               style={{ top, height }}
                               onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
                             >
-                              <p className={cn('text-[10px] font-semibold truncate flex items-center gap-0.5', staffTextColors[col.colorIdx])}>
-                                {isPastUnresolved(apt) && <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-500 flex-shrink-0" />}
+                              <p className={cn('text-[10px] font-semibold truncate', staffTextColors[col.colorIdx])}>
                                 {apt.customers?.name || 'İsimsiz'}
                               </p>
                               {height > 30 && (
@@ -2087,10 +2094,7 @@ export default function AppointmentsPage() {
                               style={{ top, height, backgroundColor: col.color }}
                               onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
                             >
-                              <p className="text-[10px] font-semibold truncate flex items-center gap-0.5">
-                                {isPastUnresolved(apt) && <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-500 flex-shrink-0" />}
-                                {apt.customers?.name || 'İsimsiz'}
-                              </p>
+                              <p className="text-[10px] font-semibold truncate">{apt.customers?.name || 'İsimsiz'}</p>
                               {height > 30 && (
                                 <p className="text-[9px] truncate opacity-80">{apt.services?.name} · {formatTime(apt.start_time)}</p>
                               )}
