@@ -14,8 +14,7 @@ interface Appointment {
   id: string
   staff_id: string | null
   service_id: string | null
-  price: number | null
-  services?: { price: number | null }[] | { price: number | null } | null
+  services?: { price: number | null } | null
 }
 
 // POST — Belirli dönem için prim hesapla ve kaydet
@@ -48,7 +47,7 @@ export async function POST(request: NextRequest) {
   // 2. Dönem için tamamlanmış randevuları çek
   const { data: appointments, error: aptError } = await admin
     .from('appointments')
-    .select('id, staff_id, service_id, price, services(price)')
+    .select('id, staff_id, service_id, services(price)')
     .eq('business_id', businessId)
     .eq('status', 'completed')
     .is('deleted_at', null)
@@ -94,7 +93,7 @@ export async function POST(request: NextRequest) {
   for (const apt of (appointments as unknown as Appointment[]) || []) {
     if (!apt.staff_id) continue
 
-    const price = apt.price ?? (apt.services as any)?.price ?? 0
+    const price = (apt.services as any)?.price ?? 0
     const rule = findMatchingRule(apt.staff_id, apt.service_id)
 
     let commission = 0

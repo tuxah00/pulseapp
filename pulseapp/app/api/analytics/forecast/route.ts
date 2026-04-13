@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
 
   const { data: appointments, error: aptError } = await admin
     .from('appointments')
-    .select('id, appointment_date, start_time, price, service_id, services(name, price)')
+    .select('id, appointment_date, start_time, service_id, services(name, price)')
     .eq('business_id', businessId)
     .eq('status', 'completed')
     .is('deleted_at', null)
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
     const monthKey = apt.appointment_date?.slice(0, 7)
     if (!monthKey) continue
 
-    const revenue = (apt.price ?? (apt.services as any)?.price ?? 0) as number
+    const revenue = ((apt.services as any)?.price ?? 0) as number
 
     if (monthlyRevenue.has(monthKey)) {
       monthlyRevenue.set(monthKey, (monthlyRevenue.get(monthKey) || 0) + revenue)

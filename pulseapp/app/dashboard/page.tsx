@@ -188,6 +188,7 @@ export default async function DashboardPage() {
   }
 
   const bookingUrl = `${process.env.NEXT_PUBLIC_APP_URL}/book/${businessId}`
+  const portalUrl = `${process.env.NEXT_PUBLIC_APP_URL}/portal/${businessId}`
   const firstName = staff.name?.split(' ')[0] || 'Hoş geldiniz'
 
   return (
@@ -269,6 +270,28 @@ export default async function DashboardPage() {
           </div>
           <a
             href={bookingUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-shrink-0 flex items-center gap-1.5 rounded-xl bg-white/20 hover:bg-white/30 px-3 py-2 text-xs font-semibold text-white transition-colors backdrop-blur-sm"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            Aç
+          </a>
+        </div>
+      </div>
+
+      {/* ── Portal banner ── */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-purple-700 to-fuchsia-600 px-5 py-4 shadow-lg shadow-purple-900/20">
+        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
+        <div className="relative flex items-center gap-4">
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold text-white/70 uppercase tracking-wider mb-0.5">
+              Müşteri Self-Servis Portal
+            </p>
+            <p className="text-sm text-white/90 truncate font-mono">{portalUrl}</p>
+          </div>
+          <a
+            href={portalUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="flex-shrink-0 flex items-center gap-1.5 rounded-xl bg-white/20 hover:bg-white/30 px-3 py-2 text-xs font-semibold text-white transition-colors backdrop-blur-sm"
