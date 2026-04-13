@@ -29,14 +29,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'İşletme bulunamadı' }, { status: 404 })
   }
 
-  // Müşteriyi bul
-  const { data: customer } = await admin
+  // Müşteriyi bul (tüm olası telefon formatlarını kontrol et)
+  const { data: customers } = await admin
     .from('customers')
     .select('id, name, phone, segment, birthday')
     .eq('business_id', businessId)
-    .eq('phone', normalizedPhone)
+    .or(`phone.eq.${normalizedPhone},phone.eq.0${normalizedPhone},phone.eq.+90${normalizedPhone}`)
     .eq('is_active', true)
-    .single()
+    .limit(1)
+
+  const customer = customers?.[0] || null
 
   if (!customer) {
     return NextResponse.json({ error: 'Bu telefon numarasıyla kayıtlı müşteri bulunamadı' }, { status: 404 })
@@ -58,7 +60,7 @@ export async function POST(request: NextRequest) {
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     maxAge: 7 * 24 * 60 * 60,
-    path: `/portal/${businessId}`,
+    path: '/',
   })
 
   response.cookies.set('portal_business_id', businessId, {
@@ -66,7 +68,7 @@ export async function POST(request: NextRequest) {
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     maxAge: 7 * 24 * 60 * 60,
-    path: `/portal/${businessId}`,
+    path: '/',
   })
 
   return response

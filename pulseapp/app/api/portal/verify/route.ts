@@ -45,14 +45,16 @@ export async function POST(request: NextRequest) {
     .update({ used: true })
     .eq('id', otpRecord.id)
 
-  // Müşteriyi bul
-  const { data: customer } = await admin
+  // Müşteriyi bul (tüm telefon formatları)
+  const { data: verifiedCustomers } = await admin
     .from('customers')
     .select('id, name, phone, segment, birthday')
     .eq('business_id', businessId)
-    .eq('phone', normalizedPhone)
+    .or(`phone.eq.${normalizedPhone},phone.eq.0${normalizedPhone},phone.eq.+90${normalizedPhone}`)
     .eq('is_active', true)
-    .single()
+    .limit(1)
+
+  const customer = verifiedCustomers?.[0] || null
 
   if (!customer) {
     return NextResponse.json({ error: 'Müşteri bulunamadı' }, { status: 404 })
@@ -75,7 +77,7 @@ export async function POST(request: NextRequest) {
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     maxAge: 7 * 24 * 60 * 60, // 7 gün
-    path: `/portal/${businessId}`,
+    path: '/',
   })
 
   // BusinessId de sakla
@@ -84,7 +86,7 @@ export async function POST(request: NextRequest) {
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     maxAge: 7 * 24 * 60 * 60,
-    path: `/portal/${businessId}`,
+    path: '/',
   })
 
   return response
