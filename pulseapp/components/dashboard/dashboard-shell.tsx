@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import dynamic from 'next/dynamic'
 import { Toaster, toast } from 'sonner'
 import { motion } from 'framer-motion'
 import { SidebarProvider, useSidebar } from '@/lib/hooks/sidebar-context'
 import Sidebar from './sidebar'
 import TopBar from './top-bar'
+import SuccessNotification from '@/components/ui/success-notification'
 
 const CommandPalette = dynamic(() => import('./command-palette'), {
   ssr: false,
@@ -44,6 +45,9 @@ function DashboardShellInner({
   const { collapsed } = useSidebar()
   const [commandOpen, setCommandOpen] = useState(false)
   const [isDesktop, setIsDesktop] = useState(false)
+  const [successNotif, setSuccessNotif] = useState<{ title: string; body?: string } | null>(null)
+
+  const dismissSuccess = useCallback(() => setSuccessNotif(null), [])
 
   // Breakpoint detection
   useEffect(() => {
@@ -79,6 +83,11 @@ function DashboardShellInner({
     function handlePulseToast(e: Event) {
       const detail = (e as CustomEvent).detail
       if (!detail) return
+      // Success type → üst-orta bildirim bileşeni
+      if (detail.type === 'success') {
+        setSuccessNotif({ title: detail.title, body: detail.body ?? undefined })
+        return
+      }
       const fn = TYPE_MAP[detail.type] ?? toast
       fn(detail.title, { description: detail.body ?? undefined, duration: 5000 })
     }
@@ -127,6 +136,14 @@ function DashboardShellInner({
         }}
         richColors
         closeButton
+      />
+
+      {/* Başarı bildirimi — üst orta */}
+      <SuccessNotification
+        show={!!successNotif}
+        title={successNotif?.title || ''}
+        body={successNotif?.body}
+        onDismiss={dismissSuccess}
       />
     </div>
   )

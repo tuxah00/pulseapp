@@ -72,6 +72,7 @@ export async function POST(request: NextRequest) {
       .select('id')
       .eq('business_id', businessId)
       .eq('phone', referredPhone)
+      .eq('is_active', true)
       .single()
     if (existing) referredCustomerId = existing.id
   }
