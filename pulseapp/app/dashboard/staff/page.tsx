@@ -641,7 +641,7 @@ export default function StaffPage() {
                   <button onClick={() => { openEditModal(selectedStaff); setSelectedStaff(null) }} className="btn-secondary flex-1 text-sm">
                     <Pencil className="mr-1.5 h-3.5 w-3.5" />Düzenle
                   </button>
-                  <button onClick={() => { const s = selectedStaff; setSelectedStaff(null); setIsClosingSelectedStaff(false); handleDeactivate(s) }} className="btn-danger flex-1 text-sm">
+                  <button onClick={() => handleDeactivate(selectedStaff)} className="btn-danger flex-1 text-sm">
                     <Trash2 className="mr-1.5 h-3.5 w-3.5" />Kaldır
                   </button>
                 </div>
