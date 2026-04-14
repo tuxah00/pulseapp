@@ -169,7 +169,26 @@ Aşağıdaki özelliklerin kodu tamamlandı; aktif etmek için sadece ilgili hes
 | **WhatsApp Business** | `TWILIO_WHATSAPP_NUMBER` | `lib/whatsapp/send.ts`, `lib/whatsapp/templates.ts`, `app/api/webhooks/whatsapp/route.ts` | Twilio konsolunda WA Sandbox'ı etkinleştir, sandbox için `whatsapp:+14155238886` |
 | **PayTR Ödeme** | `PAYTR_MERCHANT_ID`, `PAYTR_MERCHANT_KEY`, `PAYTR_MERCHANT_SALT` | `lib/billing/paytr.ts`, `app/api/billing/checkout/route.ts`, `app/api/webhooks/paytr/route.ts`, `app/dashboard/settings/billing/page.tsx` | paytr.com'dan merchant hesabı aç |
 | **Paraşüt E-Fatura** | `PARASUT_CLIENT_ID`, `PARASUT_CLIENT_SECRET`, `PARASUT_USERNAME`, `PARASUT_PASSWORD` | `lib/efatura/parasut.ts`, `app/api/efatura/route.ts` | parasut.com API erişimi için başvur |
-| **Vercel Cron Jobs** | — (env yok, `vercel.json` güncellenmeli) | `app/api/cron/reminders/route.ts`, `app/api/cron/birthday/route.ts`, `app/api/cron/review-requests/route.ts`, `app/api/cron/winback/route.ts` | `vercel.json`'a cron schedule ekle, `CRON_SECRET` zaten tanımlı olmalı |
+| **Vercel Cron Jobs** | — (env yok, `vercel.json` güncellenmeli) | `app/api/cron/reminders/route.ts`, `app/api/cron/birthday/route.ts`, `app/api/cron/review-requests/route.ts`, `app/api/cron/winback/route.ts`, `app/api/cron/ai-scheduled-runner/route.ts`, `app/api/cron/campaigns/route.ts` | `vercel.json`'a cron schedule ekle, `CRON_SECRET` zaten tanımlı olmalı. **Vercel Pro planı gerekir** (Hobby planında cron job limiti 2/gün) — abonelik açılana kadar `vercel.json`'daki `crons` girişleri ertelenmiş durumdadır, ilgili özellikler (AI günlük brief, zamanlanmış eylemler, kampanya otomasyonu, hatırlatma SMS'leri, winback) cron tetiklenmeden çalışmaz. |
+
+---
+
+## Ertelenen Abonelik Gerektiren Deploylar
+
+Aşağıdaki özellikler **kod tarafında tamamlanmış** ama production'da çalışması için ücretli abonelik gerektiriyor. Şimdilik atlanmış, abonelik açıldığında aktifleştirilecek:
+
+| Özellik | Gerekli Abonelik | Durum |
+|---------|------------------|-------|
+| AI zamanlanmış eylemler cron (`/api/cron/ai-scheduled-runner`) | Vercel Pro ($20/ay) | Kod hazır, `vercel.json`'a cron satırı eklenmedi |
+| Kampanya gönderim cron (`/api/cron/campaigns`) | Vercel Pro | Kod hazır, cron tetiklenmiyor |
+| Günlük AI brief cron (`/api/cron/ai-daily-brief`) | Vercel Pro | Faz 4'te eklenecek |
+| Hatırlatma / winback / doğum günü / yorum SMS cron'ları | Vercel Pro | Kod hazır, cron tetiklenmiyor |
+| PayTR ödeme akışı | PayTR merchant hesabı | Env eklenince aktif |
+| Paraşüt e-Fatura | Paraşüt API erişimi | Env eklenince aktif |
+| Twilio WhatsApp | Twilio WA Business onayı | Env eklenince aktif |
+| Resend e-posta | Resend hesabı | Kod kısmi |
+
+**Kural:** Bu listede olan bir özellik için yeni kod yazılabilir ama deploy adımında `vercel.json` cron satırı VEYA env değişkeni gerekiyorsa **es geçilir** ve bu tabloya eklenir.
 
 ---
 
