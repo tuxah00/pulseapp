@@ -274,12 +274,23 @@ export async function POST(req: NextRequest) {
                 parsedArgs = JSON.parse(tc.arguments || '{}')
               } catch {}
 
-              const result = await executeAssistantTool(tc.name, parsedArgs, ctx, admin)
+              const result = await executeAssistantTool(tc.name, parsedArgs, { ...ctx, staffName: staff.name, conversationId: convId }, admin)
 
               const summary = result.success
-                ? summarizeToolResult(tc.name, result.data)
+                ? (result.requires_confirmation ? 'Onay bekliyor' : summarizeToolResult(tc.name, result.data))
                 : result.error || 'Hata oluştu'
               send({ type: 'tool_end', name: tc.name, summary })
+
+              // If pending action, emit confirmation event to client (UI renders Onayla/İptal buttons)
+              if (result.success && result.requires_confirmation) {
+                send({
+                  type: 'confirmation_required',
+                  action_id: result.action_id,
+                  action_type: result.action_type,
+                  preview: result.preview,
+                  details: result.details,
+                })
+              }
 
               // Save tool result
               await admin.from('ai_messages').insert({
@@ -406,6 +417,12 @@ function summarizeToolResult(toolName: string, data: any): string {
       return 'İşletme bilgileri getirildi'
     case 'get_working_hours':
       return 'Çalışma saatleri getirildi'
+    case 'list_pending_messages':
+      return `${data.toplam || 0} bekleyen mesaj`
+    case 'get_recent_messages':
+      return `${data.toplam || 0} mesaj getirildi`
+    case 'search_audit_logs':
+      return `${data.toplam || 0} kayıt bulundu`
     default:
       return 'İşlem tamamlandı'
   }

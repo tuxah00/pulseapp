@@ -47,6 +47,7 @@ export default function AIAssistantPanel({ businessName, sector, plan, permissio
     loadConversations,
     deleteConversation,
     stopGeneration,
+    decideConfirmation,
   } = useAIAssistant()
 
   // Auto-scroll to bottom
@@ -235,7 +236,7 @@ export default function AIAssistantPanel({ businessName, sector, plan, permissio
               ) : (
                 <>
                   {messages.map((msg) => (
-                    <AIMessageBubble key={msg.id} message={msg} />
+                    <AIMessageBubble key={msg.id} message={msg} onConfirm={decideConfirmation} />
                   ))}
                 </>
               )}

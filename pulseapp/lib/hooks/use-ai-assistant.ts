@@ -3,6 +3,15 @@
 import { useState, useCallback, useRef } from 'react'
 import type { AIStreamEvent, AIConversation } from '@/types'
 
+export interface PendingConfirmation {
+  action_id: string
+  action_type: string
+  preview: string
+  details?: any
+  status: 'pending' | 'confirmed' | 'cancelled' | 'error'
+  resultMessage?: string
+}
+
 export interface ChatMessage {
   id: string
   role: 'user' | 'assistant' | 'tool'
@@ -11,6 +20,7 @@ export interface ChatMessage {
   toolResult?: any
   isStreaming?: boolean
   createdAt: string
+  confirmations?: PendingConfirmation[]
 }
 
 interface ToolExecution {
@@ -131,6 +141,24 @@ export function useAIAssistant() {
               }, 1500)
               break
 
+            case 'confirmation_required': {
+              const conf: PendingConfirmation = {
+                action_id: (event as any).action_id,
+                action_type: (event as any).action_type,
+                preview: (event as any).preview,
+                details: (event as any).details,
+                status: 'pending',
+              }
+              setMessages(prev =>
+                prev.map(m =>
+                  m.id === assistantId
+                    ? { ...m, confirmations: [...(m.confirmations || []), conf] }
+                    : m
+                )
+              )
+              break
+            }
+
             case 'done':
               if (event.conversationId) {
                 setConversationId(event.conversationId)
@@ -231,6 +259,47 @@ export function useAIAssistant() {
     } catch {}
   }, [conversationId, newConversation])
 
+  const decideConfirmation = useCallback(async (actionId: string, decision: 'confirm' | 'cancel') => {
+    // Optimistic: mark as processing
+    setMessages(prev => prev.map(m => ({
+      ...m,
+      confirmations: m.confirmations?.map(c =>
+        c.action_id === actionId ? { ...c, status: decision === 'confirm' ? 'confirmed' : 'cancelled' } : c
+      ),
+    })))
+
+    try {
+      const res = await fetch('/api/ai/assistant/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action_id: actionId, decision }),
+      })
+      const json = await res.json()
+      const ok = json.ok !== false
+      const resultMessage = json.message || (ok ? 'Tamamlandı' : 'İşlem başarısız')
+
+      setMessages(prev => prev.map(m => ({
+        ...m,
+        confirmations: m.confirmations?.map(c =>
+          c.action_id === actionId
+            ? {
+                ...c,
+                status: ok ? (decision === 'confirm' ? 'confirmed' : 'cancelled') : 'error',
+                resultMessage,
+              }
+            : c
+        ),
+      })))
+    } catch (err: any) {
+      setMessages(prev => prev.map(m => ({
+        ...m,
+        confirmations: m.confirmations?.map(c =>
+          c.action_id === actionId ? { ...c, status: 'error', resultMessage: err.message || 'Hata' } : c
+        ),
+      })))
+    }
+  }, [])
+
   const stopGeneration = useCallback(() => {
     abortRef.current?.abort()
     setIsLoading(false)
@@ -249,5 +318,6 @@ export function useAIAssistant() {
     loadConversations,
     deleteConversation,
     stopGeneration,
+    decideConfirmation,
   }
 }

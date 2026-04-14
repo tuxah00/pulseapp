@@ -1157,7 +1157,7 @@ export interface AIUsage {
 }
 
 export interface AIStreamEvent {
-  type: 'text' | 'tool_start' | 'tool_end' | 'done' | 'error' | 'limit'
+  type: 'text' | 'tool_start' | 'tool_end' | 'done' | 'error' | 'limit' | 'confirmation_required'
   content?: string
   name?: string
   label?: string
@@ -1165,4 +1165,8 @@ export interface AIStreamEvent {
   conversationId?: string
   messageId?: string
   error?: string
+  action_id?: string
+  action_type?: string
+  preview?: string
+  details?: Record<string, unknown>
 }
