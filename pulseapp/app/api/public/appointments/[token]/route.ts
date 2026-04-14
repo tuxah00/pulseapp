@@ -4,6 +4,7 @@ import { isValidUUID } from '@/lib/utils/validate'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
 import { validateBody } from '@/lib/api/validate'
 import { publicAppointmentPatchSchema, publicAppointmentDeleteSchema } from '@/lib/schemas'
+import { sendSMS } from '@/lib/sms/send'
 
 // GET: Token ile randevu bilgilerini getir (public — auth gerektirmez)
 export async function GET(_request: NextRequest, { params }: { params: { token: string } }) {
@@ -192,6 +193,55 @@ export async function DELETE(request: NextRequest, { params }: { params: { token
       is_read: false,
     })
   } catch { /* bildirim hatası işlemi etkilemez */ }
+
+  // Bekleme listesi: aynı hizmet için bekleyenlere bildir
+  try {
+    // Randevunun hizmet ve tarih bilgisini çek
+    const { data: cancelledApt } = await admin
+      .from('appointments')
+      .select('service_id, appointment_date, start_time, services(name)')
+      .eq('id', appointment.id)
+      .single()
+
+    if (cancelledApt?.service_id) {
+      const svcName = (Array.isArray(cancelledApt.services) ? cancelledApt.services[0] : cancelledApt.services)?.name || ''
+      const { data: waitlistEntries } = await admin
+        .from('waitlist_entries')
+        .select('id, customer_id, preferred_date, customers(name, phone)')
+        .eq('business_id', appointment.business_id)
+        .eq('service_id', cancelledApt.service_id)
+        .eq('status', 'waiting')
+        .order('created_at', { ascending: true })
+        .limit(3)
+
+      for (const entry of waitlistEntries || []) {
+        const customer = Array.isArray(entry.customers) ? entry.customers[0] : entry.customers
+        if (!customer?.phone) continue
+        const smsBody = [
+          `🔔 Müjde! Beklediğiniz randevu slotu açıldı.`,
+          `📋 Hizmet: ${svcName}`,
+          `📅 Tarih: ${cancelledApt.appointment_date}`,
+          `🕐 Saat: ${cancelledApt.start_time}`,
+          `\nHemen randevu almak için işletmemizi arayabilirsiniz.`,
+        ].join('\n')
+        await sendSMS({
+          to: customer.phone,
+          body: smsBody,
+          businessId: appointment.business_id,
+          customerId: entry.customer_id,
+          messageType: 'system',
+        })
+        // Bildirim gönderildi olarak işaretle
+        await admin
+          .from('waitlist_entries')
+          .update({ status: 'notified' })
+          .eq('id', entry.id)
+      }
+    }
+  } catch (err) {
+    console.error('Bekleme listesi bildirim hatası:', err)
+    // Hata işlemi etkilemez
+  }
 
   return NextResponse.json({ success: true, message: 'Randevu iptal edildi' })
 }
