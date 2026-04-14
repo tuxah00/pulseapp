@@ -34,7 +34,11 @@ export async function GET(request: NextRequest) {
     .eq('is_active', true)
 
   if (q) {
-    query = query.or(`name.ilike.%${q}%,phone.ilike.%${q}%`)
+    // PostgREST .or() filter injection koruması: özel karakterleri temizle (, ) * vb.)
+    const safeQ = q.replace(/[,()*%\\]/g, '').slice(0, 100)
+    if (safeQ) {
+      query = query.or(`name.ilike.%${safeQ}%,phone.ilike.%${safeQ}%`)
+    }
     query = query.order('name').limit(limitParam)
   } else {
     query = query.order('last_visit_at', { ascending: false, nullsFirst: false })
