@@ -51,29 +51,9 @@ export async function POST(request: NextRequest) {
   let businessId = customer?.business_id
 
   if (!businessId) {
-    // Müşteri bulunamadı — ilk aktif işletmeye yaz (tek işletme senaryosu)
-    const { data: firstBusiness } = await admin
-      .from('businesses')
-      .select('id')
-      .eq('is_active', true)
-      .limit(1)
-      .single()
-
-    if (!firstBusiness) return new NextResponse('OK', { status: 200 })
-    businessId = firstBusiness.id
-
-    await admin.from('messages').insert({
-      business_id: businessId,
-      customer_id: null,
-      direction: 'inbound',
-      channel: 'whatsapp',
-      message_type: 'text',
-      content: messageBody,
-      twilio_sid: messageSid,
-      twilio_status: 'received',
-      meta_message_id: messageSid,
-    })
-
+    // Müşteri bulunamadı — orphan mesaj güvenlik riski (saldırgan ilk işletmeyi spam'leyebilir)
+    // İşletmeye yazmak yerine sadece logla ve düş
+    console.warn('WhatsApp webhook: bilinmeyen numara, mesaj düşürüldü', { from, messageSid })
     return new NextResponse('OK', { status: 200 })
   }
 

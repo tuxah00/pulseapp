@@ -67,14 +67,21 @@ export async function POST(req: NextRequest) {
   if (paidAmount >= total) payment_status = 'paid'
   else if (paidAmount > 0) payment_status = 'partial'
 
-  // Fiş numarası: RCP-YYYY-XXXX
+  // Fiş numarası: RCP-YYYY-XXXX (max-based, silinenler dahil yıl bazlı sıralı)
   const year = new Date().getFullYear()
-  const { count } = await supabase
+  const { data: lastReceipt } = await supabase
     .from('pos_transactions')
-    .select('*', { count: 'exact', head: true })
+    .select('receipt_number')
     .eq('business_id', businessId)
+    .like('receipt_number', `RCP-${year}-%`)
+    .order('receipt_number', { ascending: false })
+    .limit(1)
+    .single()
 
-  const receipt_number = `RCP-${year}-${String((count || 0) + 1).padStart(4, '0')}`
+  const lastReceiptSeq = lastReceipt?.receipt_number
+    ? parseInt(String(lastReceipt.receipt_number).split('-')[2]) || 0
+    : 0
+  const receipt_number = `RCP-${year}-${String(lastReceiptSeq + 1).padStart(4, '0')}`
 
   let invoice_id: string | null = null
   if (payment_status === 'paid') {
@@ -87,13 +94,20 @@ export async function POST(req: NextRequest) {
       type: item.type,
     }))
 
-    const { count: invCount } = await supabase
+    // Fatura numarası: INV-YYYY-XXXX (silinenler dahil max-based — invoices/route.ts ile tutarlı)
+    const { data: lastInv } = await supabase
       .from('invoices')
-      .select('*', { count: 'exact', head: true })
+      .select('invoice_number')
       .eq('business_id', businessId)
-      .is('deleted_at', null)
+      .like('invoice_number', `INV-${year}-%`)
+      .order('invoice_number', { ascending: false })
+      .limit(1)
+      .single()
 
-    const invoiceNumber = `INV-${year}-${String((invCount || 0) + 1).padStart(4, '0')}`
+    const lastInvSeq = lastInv?.invoice_number
+      ? parseInt(String(lastInv.invoice_number).split('-')[2]) || 0
+      : 0
+    const invoiceNumber = `INV-${year}-${String(lastInvSeq + 1).padStart(4, '0')}`
     const primaryMethod = payments[0]?.method || 'cash'
 
     const { data: invoice } = await supabase

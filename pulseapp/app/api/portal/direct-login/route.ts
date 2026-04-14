@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
 
   // İşletme ve müşteri sorgularını paralel çalıştır
   const [bizResult, customerResult] = await Promise.all([
-    admin.from('businesses').select('id').eq('id', businessId).single(),
+    admin.from('businesses').select('id, is_active').eq('id', businessId).single(),
     admin.from('customers').select('id, name, phone, segment, birthday')
       .eq('business_id', businessId)
       .or(phoneOrFilter(normalizedPhone))
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
       .limit(1),
   ])
 
-  if (!bizResult.data) {
+  if (!bizResult.data || bizResult.data.is_active === false) {
     return NextResponse.json({ error: 'İşletme bulunamadı' }, { status: 404 })
   }
 

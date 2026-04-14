@@ -47,27 +47,9 @@ export async function POST(request: NextRequest) {
   const businessId = customer?.business_id
 
   if (!businessId) {
-    // Müşteri bulunamadı, ilk aktif işletmeye yaz
-    const { data: firstBusiness } = await admin
-      .from('businesses')
-      .select('id')
-      .eq('is_active', true)
-      .limit(1)
-      .single()
-
-    if (!firstBusiness) return new NextResponse('OK', { status: 200 })
-
-    await admin.from('messages').insert({
-      business_id: firstBusiness.id,
-      customer_id: null,
-      direction: 'inbound',
-      channel: 'sms',
-      message_type: 'text',
-      content: messageBody,
-      twilio_sid: messageSid,
-      twilio_status: 'received',
-    })
-
+    // Müşteri bulunamadı — orphan mesaj güvenlik riski (saldırgan ilk işletmeyi spam'leyebilir)
+    // İşletmeye yazmak yerine sadece logla ve düş
+    console.warn('SMS webhook: bilinmeyen numara, mesaj düşürüldü', { from, messageSid })
     return new NextResponse('OK', { status: 200 })
   }
 

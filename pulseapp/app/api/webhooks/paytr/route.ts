@@ -22,6 +22,18 @@ export async function POST(req: NextRequest) {
 
   const admin = createAdminClient()
 
+  // İdempotency: bu merchant_oid zaten işlenmişse tekrar çalıştırma
+  const { data: existingPayment } = await admin
+    .from('payments')
+    .select('id, status')
+    .eq('merchant_oid', data.merchant_oid)
+    .maybeSingle()
+
+  if (existingPayment?.status === 'paid' && data.status === 'success') {
+    // Zaten işlenmiş — PayTR'nin tekrar gönderimi; OK dön ve çık
+    return new Response('OK')
+  }
+
   // payment kaydını güncelle
   await admin
     .from('payments')

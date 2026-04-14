@@ -119,19 +119,6 @@ export async function POST(req: NextRequest) {
   // Fatura numarası oluştur: INV-YYYY-XXXX (yıl bazlı sıralı, silinen dahil)
   const supabase = createServerSupabaseClient()
   const year = new Date().getFullYear()
-  const { data: lastInvoice } = await supabase
-    .from('invoices')
-    .select('invoice_number')
-    .eq('business_id', business_id)
-    .like('invoice_number', `INV-${year}-%`)
-    .order('invoice_number', { ascending: false })
-    .limit(1)
-    .single()
-
-  const lastSeq = lastInvoice
-    ? parseInt(lastInvoice.invoice_number.split('-')[2]) || 0
-    : 0
-  const invoiceNumber = `INV-${year}-${String(lastSeq + 1).padStart(4, '0')}`
 
   // Kapora varsa paid_amount ve status belirle
   let initialPaidAmount = 0
@@ -141,38 +128,70 @@ export async function POST(req: NextRequest) {
     initialStatus = deposit_amount >= total ? 'paid' : 'partial'
   }
 
-  const { data: invoice, error } = await supabase
-    .from('invoices')
-    .insert({
-      business_id,
-      customer_id: customer_id || null,
-      appointment_id: appointment_id || null,
-      invoice_number: invoiceNumber,
-      items,
-      subtotal,
-      tax_rate: tax_rate || 0,
-      tax_amount,
-      total,
-      paid_amount: initialPaidAmount,
-      status: initialStatus,
-      notes: notes || null,
-      due_date: due_date || null,
-      staff_id: staffId,
-      staff_name: staff_name || null,
-      payment_type: payment_type || 'standard',
-      installment_count: installment_count || null,
-      installment_frequency: installment_frequency || null,
-      discount_amount: discountValue,
-      discount_type: discount_type || null,
-      discount_description: discount_description || null,
-      customer_tax_id: customer_tax_id || null,
-      customer_tax_office: customer_tax_office || null,
-      customer_company_name: customer_company_name || null,
-    })
-    .select('*, customers(name, phone)')
-    .single()
+  // Race condition koruması: unique constraint hatası alırsak numarayı artırıp tekrar dene
+  let invoice: any = null
+  let insertError: any = null
+  const MAX_RETRIES = 5
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    const { data: lastInvoice } = await supabase
+      .from('invoices')
+      .select('invoice_number')
+      .eq('business_id', business_id)
+      .like('invoice_number', `INV-${year}-%`)
+      .order('invoice_number', { ascending: false })
+      .limit(1)
+      .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    const lastSeq = lastInvoice
+      ? parseInt(lastInvoice.invoice_number.split('-')[2]) || 0
+      : 0
+    const invoiceNumber = `INV-${year}-${String(lastSeq + 1 + attempt).padStart(4, '0')}`
+
+    const { data, error } = await supabase
+      .from('invoices')
+      .insert({
+        business_id,
+        customer_id: customer_id || null,
+        appointment_id: appointment_id || null,
+        invoice_number: invoiceNumber,
+        items,
+        subtotal,
+        tax_rate: tax_rate || 0,
+        tax_amount,
+        total,
+        paid_amount: initialPaidAmount,
+        status: initialStatus,
+        notes: notes || null,
+        due_date: due_date || null,
+        staff_id: staffId,
+        staff_name: staff_name || null,
+        payment_type: payment_type || 'standard',
+        installment_count: installment_count || null,
+        installment_frequency: installment_frequency || null,
+        discount_amount: discountValue,
+        discount_type: discount_type || null,
+        discount_description: discount_description || null,
+        customer_tax_id: customer_tax_id || null,
+        customer_tax_office: customer_tax_office || null,
+        customer_company_name: customer_company_name || null,
+      })
+      .select('*, customers(name, phone)')
+      .single()
+
+    if (!error) {
+      invoice = data
+      insertError = null
+      break
+    }
+    insertError = error
+    // Duplicate key hatası değilse hemen dur
+    if (!String(error.message || '').toLowerCase().includes('duplicate')) break
+  }
+
+  if (insertError || !invoice) {
+    return NextResponse.json({ error: insertError?.message || 'Fatura oluşturulamadı' }, { status: 500 })
+  }
+  const invoiceNumber = invoice.invoice_number
 
   // Kapora ödeme kaydı oluştur
   if (payment_type === 'deposit' && deposit_amount && deposit_amount > 0 && invoice) {

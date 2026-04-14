@@ -3,10 +3,14 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/api/with-permission'
 import { getAnthropicClient, AI_MODEL } from '@/lib/ai/client'
 import { getPhotoAnalysisPrompt } from '@/lib/ai/photo-prompts'
+import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
 import type { SectorType } from '@/types'
 
 // POST: Öncesi/Sonrası karşılaştırma
 export async function POST(req: NextRequest) {
+  const rl = checkRateLimit(req, RATE_LIMITS.ai)
+  if (rl.limited) return rl.response
+
   const auth = await requirePermission(req, 'records')
   if (!auth.ok) return auth.response
   const { businessId } = auth.ctx

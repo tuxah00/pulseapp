@@ -315,9 +315,21 @@ export default function PaketlerPage() {
   async function handleUseSession(e: React.FormEvent) {
     e.preventDefault()
     if (!selectedCp) return
+
+    // Tüm seanslar tükendiyse engelle
+    if (selectedCp.sessions_used >= selectedCp.sessions_total) {
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Seans hakkı tükendi', body: 'Bu paketin kullanılacak seansı kalmadı.' } }))
+      return
+    }
+    // İptal edilmiş / bitmiş paketlerde seans düşmeye izin verme
+    if (selectedCp.status !== 'active') {
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Paket aktif değil', body: 'Bu paket üzerinde işlem yapılamaz.' } }))
+      return
+    }
+
     setSavingUse(true)
 
-    const newUsed = selectedCp.sessions_used + 1
+    const newUsed = Math.min(selectedCp.sessions_used + 1, selectedCp.sessions_total)
     const newStatus: PackageStatus = newUsed >= selectedCp.sessions_total ? 'completed' : 'active'
 
     const { error } = await supabase

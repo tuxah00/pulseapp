@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { getAnthropicClient, AI_MODEL } from '@/lib/ai/client'
+import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
 
 interface InsightItem {
   type: 'warning' | 'opportunity' | 'success'
@@ -27,8 +28,11 @@ const DAY_TR: Record<string, string> = {
   thu: 'Perşembe', fri: 'Cuma', sat: 'Cumartesi', sun: 'Pazar',
 }
 
-export async function GET(_req: NextRequest) {
+export async function GET(req: NextRequest) {
   try {
+    const rl = checkRateLimit(req, RATE_LIMITS.ai)
+    if (rl.limited) return rl.response
+
     const supabase = createServerSupabaseClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
