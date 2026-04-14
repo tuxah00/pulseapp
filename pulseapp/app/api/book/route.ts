@@ -154,6 +154,19 @@ export async function POST(req: NextRequest) {
   let assignedStaffId: string | null = staff_id || null
 
   if (staff_id) {
+    // Cross-tenant koruma: staff_id bu işletmeye ait ve aktif olmalı
+    const { data: staffRow } = await supabase
+      .from('staff_members')
+      .select('id')
+      .eq('id', staff_id)
+      .eq('business_id', businessId)
+      .eq('is_active', true)
+      .maybeSingle()
+
+    if (!staffRow) {
+      return NextResponse.json({ error: 'Personel bulunamadı' }, { status: 404 })
+    }
+
     // Belirli personel seçildi — sadece onun çakışmasını kontrol et
     const { data: conflicts } = await supabase
       .from('appointments')
@@ -162,6 +175,7 @@ export async function POST(req: NextRequest) {
       .eq('appointment_date', appointment_date)
       .eq('staff_id', staff_id)
       .in('status', ['pending', 'confirmed'])
+      .is('deleted_at', null)
       .lt('start_time', end_time)
       .gt('end_time', start_time)
 
@@ -196,6 +210,7 @@ export async function POST(req: NextRequest) {
         .eq('business_id', businessId)
         .eq('appointment_date', appointment_date)
         .in('status', ['pending', 'confirmed'])
+        .is('deleted_at', null)
         .in('staff_id', sIds)
 
       const [sH, sM] = start_time.split(':').map(Number)

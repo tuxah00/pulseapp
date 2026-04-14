@@ -64,12 +64,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'customerId ve rewardId zorunlu' }, { status: 400 })
     }
 
-    // Ödül bilgisini al (valid_days + name)
-    const { data: reward } = await ctx.supabase
-      .from('rewards')
-      .select('name, valid_days')
-      .eq('id', rewardId)
-      .single()
+    // Cross-tenant koruma: her iki kaydın da bu işletmeye ait olduğunu doğrula
+    const [rewardRes, customerRes] = await Promise.all([
+      ctx.supabase
+        .from('rewards')
+        .select('name, valid_days')
+        .eq('id', rewardId)
+        .eq('business_id', ctx.businessId)
+        .maybeSingle(),
+      ctx.supabase
+        .from('customers')
+        .select('id')
+        .eq('id', customerId)
+        .eq('business_id', ctx.businessId)
+        .maybeSingle(),
+    ])
+
+    if (!rewardRes.data || !customerRes.data) {
+      return NextResponse.json({ error: 'Ödül veya müşteri bulunamadı' }, { status: 404 })
+    }
+    const reward = rewardRes.data
 
     const expiresAt = reward?.valid_days
       ? new Date(Date.now() + reward.valid_days * 86400000).toISOString()
@@ -107,6 +121,21 @@ export async function POST(req: NextRequest) {
   const { name, type, value, description, validDays } = body
   if (!name || !type) {
     return NextResponse.json({ error: 'name ve type zorunlu' }, { status: 400 })
+  }
+
+  const REWARD_TYPES = new Set(['discount_percent', 'discount_amount', 'free_service', 'points', 'gift'])
+  if (!REWARD_TYPES.has(type)) {
+    return NextResponse.json({ error: 'Geçersiz ödül tipi' }, { status: 400 })
+  }
+  if (value !== undefined && value !== null) {
+    if (typeof value !== 'number' || value < 0 || value > 1_000_000) {
+      return NextResponse.json({ error: 'Geçersiz tutar' }, { status: 400 })
+    }
+  }
+  if (validDays !== undefined && validDays !== null) {
+    if (typeof validDays !== 'number' || validDays < 1 || validDays > 3650) {
+      return NextResponse.json({ error: 'Geçersiz geçerlilik süresi' }, { status: 400 })
+    }
   }
 
   const { data, error } = await ctx.supabase
@@ -148,8 +177,12 @@ export async function PATCH(req: NextRequest) {
   if (!id) return NextResponse.json({ error: 'id zorunlu' }, { status: 400 })
 
   if (table === 'customer_rewards') {
+    const ASSIGNED_STATUSES = new Set(['pending', 'used', 'expired', 'cancelled'])
     const updates: Record<string, unknown> = {}
     if (body.status) {
+      if (!ASSIGNED_STATUSES.has(body.status)) {
+        return NextResponse.json({ error: 'Geçersiz durum' }, { status: 400 })
+      }
       updates.status = body.status
       if (body.status === 'used') updates.used_at = new Date().toISOString()
     }
@@ -173,14 +206,30 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ ok: true })
   }
 
-  // Reward template update
+  // Reward template update — allowlist + değer sınırları
+  const REWARD_TYPES = new Set(['discount_percent', 'discount_amount', 'free_service', 'points', 'gift'])
   const updates: Record<string, unknown> = {}
   if (body.name !== undefined) updates.name = body.name
-  if (body.type !== undefined) updates.type = body.type
-  if (body.value !== undefined) updates.value = body.value
+  if (body.type !== undefined) {
+    if (!REWARD_TYPES.has(body.type)) {
+      return NextResponse.json({ error: 'Geçersiz ödül tipi' }, { status: 400 })
+    }
+    updates.type = body.type
+  }
+  if (body.value !== undefined) {
+    if (body.value !== null && (typeof body.value !== 'number' || body.value < 0 || body.value > 1_000_000)) {
+      return NextResponse.json({ error: 'Geçersiz tutar' }, { status: 400 })
+    }
+    updates.value = body.value
+  }
   if (body.description !== undefined) updates.description = body.description
-  if (body.validDays !== undefined) updates.valid_days = body.validDays
-  if (body.isActive !== undefined) updates.is_active = body.isActive
+  if (body.validDays !== undefined) {
+    if (body.validDays !== null && (typeof body.validDays !== 'number' || body.validDays < 1 || body.validDays > 3650)) {
+      return NextResponse.json({ error: 'Geçersiz geçerlilik süresi' }, { status: 400 })
+    }
+    updates.valid_days = body.validDays
+  }
+  if (body.isActive !== undefined) updates.is_active = Boolean(body.isActive)
 
   const { error } = await ctx.supabase
     .from('rewards')
