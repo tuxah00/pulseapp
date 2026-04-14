@@ -1,7 +1,9 @@
 import type { ChatCompletionTool } from 'openai/resources/chat/completions'
-import { createAdminClient } from '@/lib/supabase/admin'
+import type { createAdminClient } from '@/lib/supabase/admin'
 import type { AuthContext } from '@/lib/api/with-permission'
 import type { StaffPermissions } from '@/types'
+
+type SupabaseAdmin = ReturnType<typeof createAdminClient>
 
 // ── Tool Definitions (OpenAI format) ──
 
@@ -218,6 +220,7 @@ export async function executeAssistantTool(
   toolName: string,
   args: Record<string, any>,
   ctx: AuthContext,
+  admin: SupabaseAdmin,
 ): Promise<{ success: boolean; data?: any; error?: string }> {
   // Permission check
   const requiredPerm = TOOL_PERMISSIONS[toolName]
@@ -225,7 +228,6 @@ export async function executeAssistantTool(
     return { success: false, error: `Bu işlem için yetkiniz yok: ${requiredPerm}` }
   }
 
-  const admin = createAdminClient()
   const { businessId } = ctx
 
   try {
@@ -265,9 +267,12 @@ export async function executeAssistantTool(
   }
 }
 
-// ── Handler Implementations ──
+const DAY_NAMES: Record<string, string> = {
+  monday: 'Pazartesi', tuesday: 'Salı', wednesday: 'Çarşamba',
+  thursday: 'Perşembe', friday: 'Cuma', saturday: 'Cumartesi', sunday: 'Pazar',
+}
 
-type SupabaseAdmin = ReturnType<typeof createAdminClient>
+// ── Handler Implementations ──
 
 async function handleListAppointments(
   admin: SupabaseAdmin, businessId: string, args: Record<string, any>,
@@ -379,7 +384,9 @@ async function handleGetAvailableSlots(
 async function handleSearchCustomers(
   admin: SupabaseAdmin, businessId: string, args: Record<string, any>,
 ) {
-  const q = args.query
+  // Sanitize: strip Supabase filter metacharacters to prevent injection
+  const q = String(args.query || '').replace(/[%_\\(),."']/g, '')
+  if (!q) return { success: false, error: 'Arama sorgusu boş' }
   const limit = Math.min(args.limit || 10, 25)
 
   const { data, error } = await admin
@@ -542,31 +549,29 @@ async function handleGetStaffSchedule(
 ) {
   const { staff_id, date } = args
 
-  // Get shifts for that date
-  const { data: shifts } = await admin
-    .from('shifts')
-    .select('start_time, end_time, notes')
-    .eq('business_id', businessId)
-    .eq('staff_id', staff_id)
-    .eq('date', date)
-
-  // Get staff name
-  const { data: staff } = await admin
-    .from('staff_members')
-    .select('name, working_hours')
-    .eq('id', staff_id)
-    .single()
-
-  // Get appointments for that date
-  const { data: appts } = await admin
-    .from('appointments')
-    .select('start_time, end_time, status, customers(name), services(name)')
-    .eq('business_id', businessId)
-    .eq('staff_id', staff_id)
-    .eq('appointment_date', date)
-    .is('deleted_at', null)
-    .in('status', ['pending', 'confirmed'])
-    .order('start_time', { ascending: true })
+  // Parallel: shifts + staff name + appointments
+  const [{ data: shifts }, { data: staff }, { data: appts }] = await Promise.all([
+    admin
+      .from('shifts')
+      .select('start_time, end_time, notes')
+      .eq('business_id', businessId)
+      .eq('staff_id', staff_id)
+      .eq('date', date),
+    admin
+      .from('staff_members')
+      .select('name, working_hours')
+      .eq('id', staff_id)
+      .single(),
+    admin
+      .from('appointments')
+      .select('start_time, end_time, status, customers(name), services(name)')
+      .eq('business_id', businessId)
+      .eq('staff_id', staff_id)
+      .eq('appointment_date', date)
+      .is('deleted_at', null)
+      .in('status', ['pending', 'confirmed'])
+      .order('start_time', { ascending: true }),
+  ])
 
   return {
     success: true,
@@ -637,25 +642,25 @@ async function handleGetRevenueStats(
 ) {
   const { date_from, date_to } = args
 
-  // Completed appointments with services
-  const { data: appts } = await admin
-    .from('appointments')
-    .select('services(name, price)')
-    .eq('business_id', businessId)
-    .is('deleted_at', null)
-    .eq('status', 'completed')
-    .gte('appointment_date', date_from)
-    .lte('appointment_date', date_to)
-
-  // Paid invoices
-  const { data: invoices } = await admin
-    .from('invoices')
-    .select('total, paid_amount')
-    .eq('business_id', businessId)
-    .is('deleted_at', null)
-    .in('status', ['paid', 'partial'])
-    .gte('created_at', date_from + 'T00:00:00')
-    .lte('created_at', date_to + 'T23:59:59')
+  // Parallel: completed appointments + paid invoices
+  const [{ data: appts }, { data: invoices }] = await Promise.all([
+    admin
+      .from('appointments')
+      .select('services(name, price)')
+      .eq('business_id', businessId)
+      .is('deleted_at', null)
+      .eq('status', 'completed')
+      .gte('appointment_date', date_from)
+      .lte('appointment_date', date_to),
+    admin
+      .from('invoices')
+      .select('total, paid_amount')
+      .eq('business_id', businessId)
+      .is('deleted_at', null)
+      .in('status', ['paid', 'partial'])
+      .gte('created_at', date_from + 'T00:00:00')
+      .lte('created_at', date_to + 'T23:59:59'),
+  ])
 
   const appointmentRevenue = (appts || []).reduce((sum: number, a: any) => sum + ((a as any).services?.price || 0), 0)
   const invoiceRevenue = (invoices || []).reduce((sum: number, inv: any) => sum + (inv.paid_amount || 0), 0)
@@ -753,16 +758,11 @@ async function handleGetWorkingHours(admin: SupabaseAdmin, businessId: string) {
 
   if (error || !data) return { success: false, error: 'Çalışma saatleri alınamadı' }
 
-  const dayNames: Record<string, string> = {
-    monday: 'Pazartesi', tuesday: 'Salı', wednesday: 'Çarşamba',
-    thursday: 'Perşembe', friday: 'Cuma', saturday: 'Cumartesi', sunday: 'Pazar',
-  }
-
   const wh = data.working_hours as Record<string, any> | null
   if (!wh) return { success: true, data: { calisma_saatleri: null, not: 'Henüz ayarlanmamış' } }
 
   const hours: Record<string, string> = {}
-  for (const [key, label] of Object.entries(dayNames)) {
+  for (const [key, label] of Object.entries(DAY_NAMES)) {
     const day = wh[key]
     hours[label] = (!day || day.closed) ? 'Kapalı' : `${day.open} - ${day.close}`
   }

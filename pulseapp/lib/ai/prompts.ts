@@ -1,6 +1,6 @@
 import type { SectorType } from '@/types'
 
-const SECTOR_CONTEXT: Record<SectorType, string> = {
+export const SECTOR_CONTEXT: Record<SectorType, string> = {
   hair_salon: 'kuaför salonunda saç kesimi, boyama, röfle, keratin bakımı hizmetleri sunulmaktadır',
   barber: 'berberde saç kesimi, sakal düzenleme, ense tıraşı, yüz bakımı hizmetleri sunulmaktadır',
   beauty_salon: 'güzellik salonunda cilt bakımı, manikür, pedikür, epilasyon, kaş şekillendirme hizmetleri sunulmaktadır',

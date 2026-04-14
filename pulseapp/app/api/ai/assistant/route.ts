@@ -60,24 +60,26 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: 'Mesaj boş olamaz' }, { status: 400 })
   }
 
-  // 4. Plan limit check
-  const { data: biz } = await admin
-    .from('businesses')
-    .select('subscription_plan, working_hours, name, sector')
-    .eq('id', staff.business_id)
-    .single()
+  // 4. Plan limit check (parallel: business info + usage)
+  const currentMonth = new Date().toISOString().slice(0, 7) // '2026-04'
+
+  const [{ data: biz }, { data: usage }] = await Promise.all([
+    admin
+      .from('businesses')
+      .select('subscription_plan, working_hours, name, sector')
+      .eq('id', staff.business_id)
+      .single(),
+    admin
+      .from('ai_usage')
+      .select('message_count, total_input_tokens, total_output_tokens')
+      .eq('business_id', staff.business_id)
+      .eq('staff_id', staff.id)
+      .eq('month', currentMonth)
+      .single(),
+  ])
 
   const plan = (biz?.subscription_plan || 'starter') as PlanType
   const limits = AI_LIMITS[plan]
-  const currentMonth = new Date().toISOString().slice(0, 7) // '2026-04'
-
-  const { data: usage } = await admin
-    .from('ai_usage')
-    .select('message_count')
-    .eq('business_id', staff.business_id)
-    .eq('staff_id', staff.id)
-    .eq('month', currentMonth)
-    .single()
 
   const currentCount = usage?.message_count || 0
   if (currentCount >= limits.monthlyMessages) {
@@ -164,8 +166,6 @@ export async function POST(req: NextRequest) {
   const encoder = new TextEncoder()
   let totalInputTokens = 0
   let totalOutputTokens = 0
-  let assistantContent = ''
-  let assistantToolCalls: any[] | null = null
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -274,7 +274,7 @@ export async function POST(req: NextRequest) {
                 parsedArgs = JSON.parse(tc.arguments || '{}')
               } catch {}
 
-              const result = await executeAssistantTool(tc.name, parsedArgs, ctx)
+              const result = await executeAssistantTool(tc.name, parsedArgs, ctx, admin)
 
               const summary = result.success
                 ? summarizeToolResult(tc.name, result.data)
@@ -300,11 +300,7 @@ export async function POST(req: NextRequest) {
 
             // Continue the loop to get the final text response
             continueLoop = true
-            assistantToolCalls = accumulatedToolCalls
           } else {
-            // Final text response
-            assistantContent = accumulatedContent
-
             // Save final assistant message
             if (accumulatedContent) {
               await admin.from('ai_messages').insert({
@@ -317,22 +313,17 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        // 10. Update usage — upsert manually
-        const { data: existingUsage } = await admin
-          .from('ai_usage')
-          .select('id, message_count, total_input_tokens, total_output_tokens')
-          .eq('business_id', staff.business_id)
-          .eq('staff_id', staff.id)
-          .eq('month', currentMonth)
-          .single()
-
-        if (existingUsage) {
+        // 10. Update usage (usage row fetched in step 4 — sequential per user)
+        if (usage) {
           await admin.from('ai_usage').update({
-            message_count: existingUsage.message_count + 1,
-            total_input_tokens: existingUsage.total_input_tokens + totalInputTokens,
-            total_output_tokens: existingUsage.total_output_tokens + totalOutputTokens,
+            message_count: (usage as any).message_count + 1,
+            total_input_tokens: ((usage as any).total_input_tokens || 0) + totalInputTokens,
+            total_output_tokens: ((usage as any).total_output_tokens || 0) + totalOutputTokens,
             updated_at: new Date().toISOString(),
-          }).eq('id', existingUsage.id)
+          })
+            .eq('business_id', staff.business_id)
+            .eq('staff_id', staff.id)
+            .eq('month', currentMonth)
         } else {
           await admin.from('ai_usage').insert({
             business_id: staff.business_id,
