@@ -508,6 +508,29 @@ export const ASSISTANT_TOOLS: ChatCompletionTool[] = [
       },
     },
   },
+  {
+    type: 'function',
+    function: {
+      name: 'detect_risk_customers',
+      description: 'Risk altındaki müşterileri tespit eder — uzun süredir gelmeyenler, yüksek no-show skoru olanlar, VIP/regular iken kaybolanlar.',
+      parameters: {
+        type: 'object',
+        properties: {
+          min_days_since_visit: { type: 'number', description: 'Son ziyaretten bu yana minimum gün (varsayılan: 60)' },
+          min_no_show_score: { type: 'number', description: 'Minimum no-show skoru 0-100 (varsayılan: 30)' },
+          limit: { type: 'number', description: 'Sonuç sayısı (varsayılan: 20, maks 50)' },
+        },
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'detect_anomalies',
+      description: 'Son 7 güne göre anomali tespiti — geçen haftaya kıyasla gelir düşüşü, no-show artışı, yeni müşteri düşüşü, boş slot artışı gibi dikkat çekici değişimleri listeler.',
+      parameters: { type: 'object', properties: {} },
+    },
+  },
 ]
 
 // ── Tool Label Map (UI göstergesi için) ──
@@ -546,6 +569,8 @@ export const TOOL_LABELS: Record<string, string> = {
   get_expense_breakdown: 'Gider dökümü hesaplanıyor...',
   get_profit_loss: 'Kâr-zarar raporu hazırlanıyor...',
   compare_periods: 'Dönemler karşılaştırılıyor...',
+  detect_risk_customers: 'Risk altındaki müşteriler tespit ediliyor...',
+  detect_anomalies: 'Anomali taraması yapılıyor...',
 }
 
 // ── Permission Map ──
@@ -584,6 +609,8 @@ const TOOL_PERMISSIONS: Record<string, keyof StaffPermissions> = {
   get_expense_breakdown: 'analytics',
   get_profit_loss: 'analytics',
   compare_periods: 'analytics',
+  detect_risk_customers: 'customers',
+  detect_anomalies: 'analytics',
 }
 
 // ── Tool Executor ──
@@ -671,6 +698,10 @@ export async function executeAssistantTool(
         return await handleGetProfitLoss(admin, businessId, args)
       case 'compare_periods':
         return await handleComparePeriods(admin, businessId, args)
+      case 'detect_risk_customers':
+        return await handleDetectRiskCustomers(admin, businessId, args)
+      case 'detect_anomalies':
+        return await handleDetectAnomalies(admin, businessId)
       default:
         return { success: false, error: `Bilinmeyen araç: ${toolName}` }
     }
@@ -2073,6 +2104,123 @@ async function handleComparePeriods(
       new_customers: { current: curNew, previous: prevNew, change_pct: pctChange(curNew, prevNew) },
       completion_rate: { current: round1(curCompletionRate), previous: round1(prevCompletionRate), change_pct: pctChange(curCompletionRate, prevCompletionRate) },
     },
+  }
+}
+
+const RISK_DEFAULT_DAYS = 60
+const RISK_DEFAULT_NO_SHOW_SCORE = 30
+const RISK_DEFAULT_LIMIT = 20
+const RISK_MAX_LIMIT = 50
+const MS_PER_DAY = 24 * 60 * 60 * 1000
+
+export async function handleDetectRiskCustomers(
+  admin: SupabaseAdmin, businessId: string, args: Record<string, any>,
+) {
+  const minDays = Math.max(0, Number(args.min_days_since_visit) || RISK_DEFAULT_DAYS)
+  const minScore = Math.max(0, Number(args.min_no_show_score) || RISK_DEFAULT_NO_SHOW_SCORE)
+  const limit = Math.min(Number(args.limit) || RISK_DEFAULT_LIMIT, RISK_MAX_LIMIT)
+  const cutoff = new Date(Date.now() - minDays * MS_PER_DAY).toISOString().split('T')[0]
+
+  const { data, error } = await admin
+    .from('customers')
+    .select('id, name, phone, segment, total_visits, total_revenue, last_visit_at, no_show_score')
+    .eq('business_id', businessId)
+    .eq('is_active', true)
+    .or(`last_visit_at.lte.${cutoff},no_show_score.gte.${minScore}`)
+    .order('total_revenue', { ascending: false })
+    .limit(limit)
+
+  if (error) return { success: false, error: error.message }
+  const customers = (data || []).map((c: any) => {
+    const daysSince = c.last_visit_at
+      ? Math.floor((Date.now() - new Date(c.last_visit_at).getTime()) / MS_PER_DAY)
+      : null
+    const reasons: string[] = []
+    if (daysSince != null && daysSince >= minDays) reasons.push(`${daysSince} gündür gelmedi`)
+    if ((c.no_show_score || 0) >= minScore) reasons.push(`no-show skoru %${c.no_show_score}`)
+    if (c.segment === 'vip' || c.segment === 'regular') reasons.push(`segment: ${c.segment}`)
+    return {
+      customer_id: c.id,
+      name: c.name,
+      phone: c.phone,
+      segment: c.segment,
+      total_visits: c.total_visits,
+      total_revenue: round2(c.total_revenue || 0),
+      days_since_last_visit: daysSince,
+      no_show_score: c.no_show_score || 0,
+      reasons,
+    }
+  })
+  return { success: true, data: { toplam: customers.length, customers } }
+}
+
+export async function handleDetectAnomalies(admin: SupabaseAdmin, businessId: string) {
+  const today = new Date()
+  const toISO = (d: Date) => d.toISOString().split('T')[0]
+  const thisEnd = toISO(today)
+  const thisStart = toISO(new Date(today.getTime() - 6 * MS_PER_DAY))
+  const prevEnd = toISO(new Date(today.getTime() - 7 * MS_PER_DAY))
+  const prevStart = toISO(new Date(today.getTime() - 13 * MS_PER_DAY))
+
+  const [curRev, prevRev, curApts, prevApts, curNew, prevNew] = await Promise.all([
+    sumRevenue(admin, businessId, thisStart, thisEnd),
+    sumRevenue(admin, businessId, prevStart, prevEnd),
+    countAppointmentsDetailed(admin, businessId, thisStart, thisEnd),
+    countAppointmentsDetailed(admin, businessId, prevStart, prevEnd),
+    countNewCustomers(admin, businessId, thisStart, thisEnd),
+    countNewCustomers(admin, businessId, prevStart, prevEnd),
+  ])
+
+  const anomalies: Array<{ type: string; severity: 'info' | 'warning' | 'alert'; message: string; change_pct: number | null }> = []
+  const revChange = pctChange(curRev, prevRev)
+  if (revChange != null && revChange <= -20) {
+    anomalies.push({ type: 'revenue_drop', severity: revChange <= -40 ? 'alert' : 'warning', message: `Haftalık gelir %${Math.abs(revChange)} düştü`, change_pct: revChange })
+  }
+  const aptChange = pctChange(curApts.total, prevApts.total)
+  if (aptChange != null && aptChange <= -20) {
+    anomalies.push({ type: 'appointment_drop', severity: 'warning', message: `Randevu sayısı %${Math.abs(aptChange)} düştü`, change_pct: aptChange })
+  }
+  const noShowChange = pctChange(curApts.no_show, prevApts.no_show)
+  if (curApts.no_show > prevApts.no_show && curApts.no_show >= 3) {
+    anomalies.push({ type: 'no_show_spike', severity: 'warning', message: `Bu hafta ${curApts.no_show} no-show (geçen hafta ${prevApts.no_show})`, change_pct: noShowChange })
+  }
+  const newChange = pctChange(curNew, prevNew)
+  if (newChange != null && newChange <= -30) {
+    anomalies.push({ type: 'new_customer_drop', severity: 'info', message: `Yeni müşteri kazanımı %${Math.abs(newChange)} düştü`, change_pct: newChange })
+  }
+
+  return {
+    success: true,
+    data: {
+      period: { current: { from: thisStart, to: thisEnd }, previous: { from: prevStart, to: prevEnd } },
+      metrics: {
+        revenue: { current: round2(curRev), previous: round2(prevRev), change_pct: revChange },
+        appointments: { current: curApts.total, previous: prevApts.total, change_pct: aptChange },
+        no_show: { current: curApts.no_show, previous: prevApts.no_show, change_pct: noShowChange },
+        new_customers: { current: curNew, previous: prevNew, change_pct: newChange },
+      },
+      anomalies,
+    },
+  }
+}
+
+async function countAppointmentsDetailed(
+  admin: SupabaseAdmin, businessId: string, from: string, to: string,
+) {
+  const { data } = await admin
+    .from('appointments')
+    .select('status')
+    .eq('business_id', businessId)
+    .is('deleted_at', null)
+    .gte('appointment_date', from)
+    .lte('appointment_date', to)
+    .limit(ANALYTICS_QUERY_LIMIT)
+  const arr = data || []
+  return {
+    total: arr.length,
+    completed: arr.filter((a: any) => a.status === 'completed').length,
+    cancelled: arr.filter((a: any) => a.status === 'cancelled').length,
+    no_show: arr.filter((a: any) => a.status === 'no_show').length,
   }
 }
 

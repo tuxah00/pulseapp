@@ -29,6 +29,7 @@ import TodayAppointments from './_components/today-appointments'
 import WeeklyInsights from './_components/weekly-insights'
 import PerformanceStats from './_components/performance-stats'
 import AiInsightsWidget from './_components/ai-insights-widget'
+import AiBriefWidget from './_components/ai-brief-widget'
 import { Sparkline } from '@/components/ui/sparkline'
 
 type TodayAppointmentRow = AppointmentRow & {
@@ -362,6 +363,9 @@ export default async function DashboardPage() {
               </div>
             )}
           </div>
+
+          {/* AI daily brief */}
+          <AiBriefWidget businessId={businessId} />
 
           {/* Performance stats */}
           <PerformanceStats />

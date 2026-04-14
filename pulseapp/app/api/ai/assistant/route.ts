@@ -437,6 +437,10 @@ function summarizeToolResult(toolName: string, data: any): string {
       return `Net kâr: ${data.net_profit ?? 0}₺ (%${data.margin_percentage ?? 0})`
     case 'compare_periods':
       return `Dönem karşılaştırması hazırlandı`
+    case 'detect_risk_customers':
+      return `${data.toplam || 0} risk altında müşteri bulundu`
+    case 'detect_anomalies':
+      return `${(data.anomalies || []).length} anomali tespit edildi`
     default:
       return 'İşlem tamamlandı'
   }
