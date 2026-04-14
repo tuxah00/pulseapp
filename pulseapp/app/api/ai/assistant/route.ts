@@ -447,6 +447,12 @@ function summarizeToolResult(toolName: string, data: any): string {
       return `${data.count || 0} planlı eylem`
     case 'cancel_scheduled_action':
       return data.message || '✓ İptal edildi'
+    case 'list_campaigns':
+      return `${data.toplam || 0} kampanya listelendi`
+    case 'estimate_campaign_audience':
+      return `Tahmini hedef kitle: ${data.count || 0} kişi`
+    case 'list_workflows':
+      return `${data.toplam || 0} iş akışı listelendi`
     default:
       return 'İşlem tamamlandı'
   }

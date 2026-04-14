@@ -1,6 +1,7 @@
 import type { createAdminClient } from '@/lib/supabase/admin'
 import type { AuthContext } from '@/lib/api/with-permission'
 import { logAuditServer } from '@/lib/utils/audit'
+import { sendCampaign } from '@/lib/campaigns/send'
 
 type SupabaseAdmin = ReturnType<typeof createAdminClient>
 
@@ -15,6 +16,10 @@ export type PendingActionType =
   | 'create_service'
   | 'update_service'
   | 'send_message'
+  | 'create_campaign'
+  | 'send_campaign'
+  | 'create_workflow'
+  | 'toggle_workflow'
 
 export interface ConfirmationRequired {
   success: true
@@ -136,6 +141,18 @@ export async function executePendingAction(
         break
       case 'send_message':
         result = await execSendMessage(admin, ctx, payload)
+        break
+      case 'create_campaign':
+        result = await execCreateCampaign(admin, ctx, payload)
+        break
+      case 'send_campaign':
+        result = await execSendCampaign(admin, ctx, payload)
+        break
+      case 'create_workflow':
+        result = await execCreateWorkflow(admin, ctx, payload)
+        break
+      case 'toggle_workflow':
+        result = await execToggleWorkflow(admin, ctx, payload)
         break
       default:
         result = { ok: false, message: 'Bilinmeyen eylem türü' }
@@ -500,4 +517,135 @@ async function execSendMessage(
   })
 
   return { ok: true, message: '✓ Mesaj gönderildi', data: { id: data.id } }
+}
+
+// ── Faz 6: Campaign & Workflow Executors ─────────────────────────────
+
+async function execCreateCampaign(
+  admin: SupabaseAdmin,
+  ctx: ExecutorCtx,
+  p: Record<string, any>,
+): Promise<ActionExecuteResult> {
+  const { data, error } = await admin.from('campaigns').insert({
+    business_id: ctx.businessId,
+    name: p.name,
+    description: p.description || null,
+    segment_filter: p.segment_filter || {},
+    message_template: p.message_template,
+    channel: p.channel || 'auto',
+    scheduled_at: p.scheduled_at || null,
+    status: p.scheduled_at ? 'scheduled' : 'draft',
+    created_by_staff_id: ctx.staffId,
+  }).select('id').single()
+
+  if (error || !data) return { ok: false, message: 'Kampanya oluşturulamadı: ' + (error?.message || '') }
+
+  await logAuditServer({
+    businessId: ctx.businessId,
+    staffId: ctx.staffId,
+    staffName: ctx.staffName,
+    action: 'create',
+    resource: 'campaign',
+    resourceId: data.id,
+    details: { via: 'ai_assistant', name: p.name },
+  })
+
+  return { ok: true, message: `✓ Kampanya oluşturuldu: ${p.name}`, data: { id: data.id } }
+}
+
+async function execSendCampaign(
+  admin: SupabaseAdmin,
+  ctx: ExecutorCtx,
+  p: Record<string, any>,
+): Promise<ActionExecuteResult> {
+  const { data: camp, error: loadErr } = await admin
+    .from('campaigns')
+    .select('id, status, segment_filter, message_template, channel')
+    .eq('id', p.campaign_id)
+    .eq('business_id', ctx.businessId)
+    .single()
+
+  if (loadErr || !camp) return { ok: false, message: 'Kampanya bulunamadı' }
+  if (!['draft', 'scheduled'].includes(camp.status)) {
+    return { ok: false, message: `Kampanya durumu uygun değil: ${camp.status}` }
+  }
+
+  // Mark as sending; the real send happens via sendCampaign helper (reused)
+  await admin.from('campaigns').update({ status: 'sending' }).eq('id', camp.id)
+
+  // Fire-and-await send (may take a while for large audiences)
+  await sendCampaign(
+    admin,
+    camp.id,
+    ctx.businessId,
+    camp.segment_filter || {},
+    camp.message_template,
+    camp.channel || 'auto',
+  )
+
+  await logAuditServer({
+    businessId: ctx.businessId,
+    staffId: ctx.staffId,
+    staffName: ctx.staffName,
+    action: 'send',
+    resource: 'campaign',
+    resourceId: camp.id,
+    details: { via: 'ai_assistant' },
+  })
+
+  return { ok: true, message: '✓ Kampanya gönderildi', data: { id: camp.id } }
+}
+
+async function execCreateWorkflow(
+  admin: SupabaseAdmin,
+  ctx: ExecutorCtx,
+  p: Record<string, any>,
+): Promise<ActionExecuteResult> {
+  const { data, error } = await admin.from('workflows').insert({
+    business_id: ctx.businessId,
+    name: p.name,
+    trigger_type: p.trigger_type,
+    steps: p.steps,
+    is_active: true,
+  }).select('id').single()
+
+  if (error || !data) return { ok: false, message: 'İş akışı oluşturulamadı: ' + (error?.message || '') }
+
+  await logAuditServer({
+    businessId: ctx.businessId,
+    staffId: ctx.staffId,
+    staffName: ctx.staffName,
+    action: 'create',
+    resource: 'workflow',
+    resourceId: data.id,
+    details: { via: 'ai_assistant', name: p.name, trigger_type: p.trigger_type },
+  })
+
+  return { ok: true, message: `✓ İş akışı oluşturuldu: ${p.name}`, data: { id: data.id } }
+}
+
+async function execToggleWorkflow(
+  admin: SupabaseAdmin,
+  ctx: ExecutorCtx,
+  p: Record<string, any>,
+): Promise<ActionExecuteResult> {
+  const { error } = await admin
+    .from('workflows')
+    .update({ is_active: p.is_active, updated_at: new Date().toISOString() })
+    .eq('id', p.workflow_id)
+    .eq('business_id', ctx.businessId)
+
+  if (error) return { ok: false, message: 'Güncelleme başarısız: ' + error.message }
+
+  await logAuditServer({
+    businessId: ctx.businessId,
+    staffId: ctx.staffId,
+    staffName: ctx.staffName,
+    action: 'update',
+    resource: 'workflow',
+    resourceId: p.workflow_id,
+    details: { via: 'ai_assistant', is_active: p.is_active },
+  })
+
+  return { ok: true, message: p.is_active ? '✓ İş akışı aktifleştirildi' : '✓ İş akışı pasifleştirildi' }
 }

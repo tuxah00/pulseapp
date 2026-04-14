@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getStaffInfo, sendCampaign } from '@/app/api/campaigns/route'
+import { getStaffInfo } from '@/app/api/campaigns/route'
+import { sendCampaign } from '@/lib/campaigns/send'
 
 export async function POST(request: NextRequest) {
   const supabase = await createServerSupabaseClient()

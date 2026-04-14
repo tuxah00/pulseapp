@@ -1,8 +1,9 @@
 import type { ChatCompletionTool } from 'openai/resources/chat/completions'
 import type { createAdminClient } from '@/lib/supabase/admin'
 import type { AuthContext } from '@/lib/api/with-permission'
-import type { StaffPermissions } from '@/types'
+import type { StaffPermissions, CampaignSegmentFilter } from '@/types'
 import { createPendingAction, cancelPendingAction } from '@/lib/ai/assistant-actions'
+import { matchesCampaignFilter } from '@/lib/utils/campaign-filters'
 
 type SupabaseAdmin = ReturnType<typeof createAdminClient>
 type ToolCtx = AuthContext & { staffName: string; conversationId: string | null }
@@ -574,6 +575,134 @@ export const ASSISTANT_TOOLS: ChatCompletionTool[] = [
       },
     },
   },
+  // Grup 11: Kampanya & İş Akışı (Faz 6)
+  {
+    type: 'function',
+    function: {
+      name: 'list_campaigns',
+      description: 'Kampanyaları listeler. Durum filtresi opsiyonel.',
+      parameters: {
+        type: 'object',
+        properties: {
+          status: { type: 'string', enum: ['draft', 'scheduled', 'sending', 'completed', 'cancelled'] },
+          limit: { type: 'number', description: 'Maks. sonuç (varsayılan 20)' },
+        },
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'estimate_campaign_audience',
+      description: 'Verilen segment filtresine göre mesaj gönderilecek tahmini müşteri sayısını hesaplar.',
+      parameters: {
+        type: 'object',
+        properties: {
+          segments: { type: 'array', items: { type: 'string', enum: ['new', 'regular', 'vip', 'risk', 'lost'] } },
+          lastVisitDaysMin: { type: 'number', description: 'Son ziyaretten bu yana minimum gün' },
+          lastVisitDaysMax: { type: 'number', description: 'Son ziyaretten bu yana maksimum gün' },
+          birthdayMonth: { type: 'number', description: 'Doğum ayı (1-12)' },
+          minTotalVisits: { type: 'number' },
+          minTotalRevenue: { type: 'number' },
+          createdDaysAgoMax: { type: 'number' },
+        },
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'create_campaign',
+      description: 'Draft/scheduled kampanya oluşturur. Mesajda {name} ve {businessName} değişkenleri kullanılabilir.',
+      parameters: {
+        type: 'object',
+        properties: {
+          name: { type: 'string', description: 'Kampanya adı' },
+          description: { type: 'string' },
+          message_template: { type: 'string', description: 'Mesaj şablonu ({name}, {businessName} değişkenleriyle)' },
+          channel: { type: 'string', enum: ['auto', 'sms', 'whatsapp'] },
+          scheduled_at: { type: 'string', description: 'ISO tarih-saat (opsiyonel, verilirse zamanlanır)' },
+          segment_filter: {
+            type: 'object',
+            properties: {
+              segments: { type: 'array', items: { type: 'string', enum: ['new', 'regular', 'vip', 'risk', 'lost'] } },
+              lastVisitDaysMin: { type: 'number' },
+              lastVisitDaysMax: { type: 'number' },
+              birthdayMonth: { type: 'number' },
+              minTotalVisits: { type: 'number' },
+              minTotalRevenue: { type: 'number' },
+              createdDaysAgoMax: { type: 'number' },
+            },
+          },
+        },
+        required: ['name', 'message_template'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'send_campaign',
+      description: 'Draft/scheduled durumdaki bir kampanyayı başlatır.',
+      parameters: {
+        type: 'object',
+        properties: {
+          campaign_id: { type: 'string' },
+        },
+        required: ['campaign_id'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'list_workflows',
+      description: 'Otomatik iş akışlarını listeler.',
+      parameters: { type: 'object', properties: {} },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'create_workflow',
+      description: 'Yeni otomatik iş akışı oluşturur (tetikleyici + adımlar).',
+      parameters: {
+        type: 'object',
+        properties: {
+          name: { type: 'string' },
+          trigger_type: { type: 'string', enum: ['appointment_completed', 'appointment_cancelled', 'customer_created', 'no_show', 'birthday'] },
+          steps: {
+            type: 'array',
+            description: 'Adımlar: her biri {delay_hours, message}',
+            items: {
+              type: 'object',
+              properties: {
+                delay_hours: { type: 'number', description: 'Tetiklemeden sonra bekleme (saat)' },
+                message: { type: 'string', description: 'Gönderilecek mesaj ({name}, {businessName})' },
+              },
+              required: ['delay_hours', 'message'],
+            },
+          },
+        },
+        required: ['name', 'trigger_type', 'steps'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'toggle_workflow',
+      description: 'Bir iş akışını aktifleştirir veya pasifleştirir.',
+      parameters: {
+        type: 'object',
+        properties: {
+          workflow_id: { type: 'string' },
+          is_active: { type: 'boolean' },
+        },
+        required: ['workflow_id', 'is_active'],
+      },
+    },
+  },
 ]
 
 // ── Tool Label Map (UI göstergesi için) ──
@@ -617,6 +746,13 @@ export const TOOL_LABELS: Record<string, string> = {
   schedule_action: 'Eylem zamanlanıyor...',
   list_scheduled_actions: 'Planlı eylemler listeleniyor...',
   cancel_scheduled_action: 'Zamanlanmış eylem iptal ediliyor...',
+  list_campaigns: 'Kampanyalar listeleniyor...',
+  estimate_campaign_audience: 'Hedef kitle hesaplanıyor...',
+  create_campaign: 'Kampanya önizlemesi hazırlanıyor...',
+  send_campaign: 'Kampanya gönderim önizlemesi hazırlanıyor...',
+  list_workflows: 'İş akışları listeleniyor...',
+  create_workflow: 'İş akışı önizlemesi hazırlanıyor...',
+  toggle_workflow: 'İş akışı durumu değiştiriliyor...',
 }
 
 // ── Permission Map ──
@@ -660,6 +796,13 @@ const TOOL_PERMISSIONS: Record<string, keyof StaffPermissions> = {
   schedule_action: 'dashboard',
   list_scheduled_actions: 'dashboard',
   cancel_scheduled_action: 'dashboard',
+  list_campaigns: 'campaigns',
+  estimate_campaign_audience: 'campaigns',
+  create_campaign: 'campaigns',
+  send_campaign: 'campaigns',
+  list_workflows: 'workflows',
+  create_workflow: 'workflows',
+  toggle_workflow: 'workflows',
 }
 
 // ── Tool Executor ──
@@ -757,6 +900,20 @@ export async function executeAssistantTool(
         return await handleListScheduledActions(admin, ctx, args)
       case 'cancel_scheduled_action':
         return await handleCancelScheduledAction(admin, ctx, args)
+      case 'list_campaigns':
+        return await handleListCampaigns(admin, ctx, args)
+      case 'estimate_campaign_audience':
+        return await handleEstimateCampaignAudience(admin, ctx, args)
+      case 'create_campaign':
+        return await handleCreateCampaign(admin, ctx, args)
+      case 'send_campaign':
+        return await handleSendCampaign(admin, ctx, args)
+      case 'list_workflows':
+        return await handleListWorkflows(admin, ctx)
+      case 'create_workflow':
+        return await handleCreateWorkflow(admin, ctx, args)
+      case 'toggle_workflow':
+        return await handleToggleWorkflow(admin, ctx, args)
       default:
         return { success: false, error: `Bilinmeyen araç: ${toolName}` }
     }
@@ -2387,4 +2544,193 @@ async function handleCancelScheduledAction(
   const res = await cancelPendingAction(admin, args.action_id, ctx.staffId, ctx.businessId)
   if (!res.ok) return { success: false, error: res.message }
   return { success: true, data: { message: '✓ Zamanlanmış eylem iptal edildi' } }
+}
+
+// ── Faz 6: Campaign & Workflow Handlers ──
+
+const VALID_TRIGGERS = ['appointment_completed', 'appointment_cancelled', 'customer_created', 'no_show', 'birthday'] as const
+
+async function handleListCampaigns(
+  admin: SupabaseAdmin, ctx: ToolCtx, args: Record<string, any>,
+) {
+  let query = admin
+    .from('campaigns')
+    .select('id, name, description, status, channel, scheduled_at, stats, created_at')
+    .eq('business_id', ctx.businessId)
+    .order('created_at', { ascending: false })
+    .limit(Math.min(args.limit || 20, 50))
+
+  if (args.status) query = query.eq('status', args.status)
+
+  const { data, error } = await query
+  if (error) return { success: false, error: 'Listelenemedi' }
+
+  return {
+    success: true,
+    data: {
+      toplam: (data || []).length,
+      kampanyalar: (data || []).map((c: any) => ({
+        id: c.id,
+        ad: c.name,
+        durum: c.status,
+        kanal: c.channel,
+        alici_sayisi: c.stats?.total_recipients ?? 0,
+        gonderilen: c.stats?.sent ?? 0,
+        olusturma: c.created_at,
+      })),
+    },
+  }
+}
+
+async function estimateAudience(
+  admin: SupabaseAdmin, businessId: string, filter: CampaignSegmentFilter,
+): Promise<number> {
+  let query = admin
+    .from('customers')
+    .select('id, last_visit_at, birthday, total_visits, total_revenue, created_at, phone')
+    .eq('business_id', businessId)
+    .eq('is_active', true)
+    .not('phone', 'is', null)
+
+  if (filter.segments?.length) query = query.in('segment', filter.segments)
+
+  const { data } = await query
+  if (!data) return 0
+  const now = new Date()
+  return data.filter((c: any) => c.phone && matchesCampaignFilter(c, filter, now)).length
+}
+
+async function handleEstimateCampaignAudience(
+  admin: SupabaseAdmin, ctx: ToolCtx, args: Record<string, any>,
+) {
+  const filter = args as CampaignSegmentFilter
+  const count = await estimateAudience(admin, ctx.businessId, filter)
+  return { success: true, data: { count, filter } }
+}
+
+async function handleCreateCampaign(
+  admin: SupabaseAdmin, ctx: ToolCtx, args: Record<string, any>,
+) {
+  if (!args.name || !args.message_template) {
+    return { success: false, error: 'Ad ve mesaj şablonu zorunludur' }
+  }
+  const filter = (args.segment_filter || {}) as CampaignSegmentFilter
+  const audience = await estimateAudience(admin, ctx.businessId, filter)
+  const scheduleNote = args.scheduled_at ? ` (${args.scheduled_at} tarihinde planlanacak)` : ''
+  const preview = `📣 Kampanya: "${args.name}"${scheduleNote}\nHedef kitle: ~${audience} kişi\nMesaj: ${args.message_template}`
+
+  return await createPendingAction(
+    admin, ctx, 'create_campaign',
+    {
+      name: args.name,
+      description: args.description,
+      message_template: args.message_template,
+      channel: args.channel || 'auto',
+      scheduled_at: args.scheduled_at || null,
+      segment_filter: filter,
+    },
+    preview,
+    { name: args.name, audience },
+  )
+}
+
+async function handleSendCampaign(
+  admin: SupabaseAdmin, ctx: ToolCtx, args: Record<string, any>,
+) {
+  const { data: camp } = await admin
+    .from('campaigns')
+    .select('id, name, status, segment_filter, message_template')
+    .eq('id', args.campaign_id)
+    .eq('business_id', ctx.businessId)
+    .single()
+
+  if (!camp) return { success: false, error: 'Kampanya bulunamadı' }
+  if (!['draft', 'scheduled'].includes(camp.status)) {
+    return { success: false, error: `Kampanya durumu uygun değil: ${camp.status}` }
+  }
+
+  const audience = await estimateAudience(admin, ctx.businessId, (camp.segment_filter || {}) as CampaignSegmentFilter)
+  const preview = `🚀 "${camp.name}" kampanyası şimdi gönderilecek.\nHedef kitle: ~${audience} kişi\nMesaj: ${camp.message_template}`
+
+  return await createPendingAction(
+    admin, ctx, 'send_campaign',
+    { campaign_id: camp.id },
+    preview,
+    { name: camp.name, audience },
+  )
+}
+
+async function handleListWorkflows(admin: SupabaseAdmin, ctx: ToolCtx) {
+  const { data, error } = await admin
+    .from('workflows')
+    .select('id, name, trigger_type, is_active, steps, created_at')
+    .eq('business_id', ctx.businessId)
+    .order('created_at', { ascending: false })
+
+  if (error) return { success: false, error: 'Listelenemedi' }
+  return {
+    success: true,
+    data: {
+      toplam: (data || []).length,
+      is_akislari: (data || []).map((w: any) => ({
+        id: w.id,
+        ad: w.name,
+        tetikleyici: w.trigger_type,
+        aktif: w.is_active,
+        adim_sayisi: Array.isArray(w.steps) ? w.steps.length : 0,
+      })),
+    },
+  }
+}
+
+async function handleCreateWorkflow(
+  admin: SupabaseAdmin, ctx: ToolCtx, args: Record<string, any>,
+) {
+  if (!args.name || !args.trigger_type || !Array.isArray(args.steps) || args.steps.length === 0) {
+    return { success: false, error: 'Ad, tetikleyici türü ve en az bir adım zorunludur' }
+  }
+  if (!VALID_TRIGGERS.includes(args.trigger_type)) {
+    return { success: false, error: 'Geçersiz tetikleyici türü' }
+  }
+  for (const step of args.steps) {
+    if (typeof step.delay_hours !== 'number' || step.delay_hours < 0) {
+      return { success: false, error: 'Her adımda geçerli bir bekleme süresi zorunludur' }
+    }
+    if (!step.message || typeof step.message !== 'string') {
+      return { success: false, error: 'Her adımda mesaj zorunludur' }
+    }
+  }
+
+  const stepsSummary = args.steps
+    .map((s: any, i: number) => `  ${i + 1}. +${s.delay_hours}s → "${s.message.slice(0, 60)}${s.message.length > 60 ? '…' : ''}"`)
+    .join('\n')
+  const preview = `⚡ İş akışı: "${args.name}"\nTetikleyici: ${args.trigger_type}\nAdımlar:\n${stepsSummary}`
+
+  return await createPendingAction(
+    admin, ctx, 'create_workflow',
+    { name: args.name, trigger_type: args.trigger_type, steps: args.steps },
+    preview,
+    { name: args.name, trigger_type: args.trigger_type },
+  )
+}
+
+async function handleToggleWorkflow(
+  admin: SupabaseAdmin, ctx: ToolCtx, args: Record<string, any>,
+) {
+  const { data: wf } = await admin
+    .from('workflows')
+    .select('id, name, is_active')
+    .eq('id', args.workflow_id)
+    .eq('business_id', ctx.businessId)
+    .single()
+
+  if (!wf) return { success: false, error: 'İş akışı bulunamadı' }
+
+  const preview = `${args.is_active ? '✓ Aktifleştir' : '⏸ Pasifleştir'}: "${wf.name}"`
+  return await createPendingAction(
+    admin, ctx, 'toggle_workflow',
+    { workflow_id: wf.id, is_active: !!args.is_active },
+    preview,
+    { name: wf.name, is_active: !!args.is_active },
+  )
 }
