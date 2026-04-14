@@ -141,7 +141,7 @@ const { businessId, userId, staffId, staffName, staffRole, permissions, sector, 
 ## Modal & Z-Index Standardı
 - **Dialog/DialogOverlay:** `z-[60]` (`components/ui/dialog.tsx`)
 - **Inline modal backdrop'lar:** `z-[60]` (`fixed inset-0 bg-black/40 z-[60]`)
-- **ConfirmDialog:** `z-[60]` / `z-[61]` (`components/ui/confirm-dialog.tsx`)
+- **ConfirmDialog:** `z-[110]` / `z-[111]` (`components/ui/confirm-dialog.tsx`) — tüm modal/panellerin üstünde
 - **Lightbox (resim görüntüleyici):** `z-[70]` (modal'ların üstünde)
 - **TopBar:** `sticky top-0 z-30` — modal overlay'ler bunun üstünde olmalı
 - **Sidebar mobile:** `z-40` / `z-50`

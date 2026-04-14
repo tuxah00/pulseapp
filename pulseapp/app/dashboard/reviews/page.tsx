@@ -71,6 +71,7 @@ export default function ReviewsPage() {
     setRespondingTo(null)
     setResponseText('')
     fetchReviews()
+    window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Yanıt kaydedildi' } }))
   }
 
   async function handleAiDraft(review: ReviewWithJoin) {
