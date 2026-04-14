@@ -67,24 +67,37 @@ export async function POST(req: NextRequest) {
   if (paidAmount >= total) payment_status = 'paid'
   else if (paidAmount > 0) payment_status = 'partial'
 
-  // Fiş numarası: RCP-YYYY-XXXX (max-based, silinenler dahil yıl bazlı sıralı)
+  // Fiş + fatura numaralarını paralel getir (max-based, silinenler dahil yıl bazlı sıralı)
   const year = new Date().getFullYear()
-  const { data: lastReceipt } = await supabase
-    .from('pos_transactions')
-    .select('receipt_number')
-    .eq('business_id', businessId)
-    .like('receipt_number', `RCP-${year}-%`)
-    .order('receipt_number', { ascending: false })
-    .limit(1)
-    .single()
+  const isPaid = payment_status === 'paid'
+  const [receiptRes, invRes] = await Promise.all([
+    supabase
+      .from('pos_transactions')
+      .select('receipt_number')
+      .eq('business_id', businessId)
+      .like('receipt_number', `RCP-${year}-%`)
+      .order('receipt_number', { ascending: false })
+      .limit(1)
+      .single(),
+    isPaid
+      ? supabase
+          .from('invoices')
+          .select('invoice_number')
+          .eq('business_id', businessId)
+          .like('invoice_number', `INV-${year}-%`)
+          .order('invoice_number', { ascending: false })
+          .limit(1)
+          .single()
+      : Promise.resolve({ data: null }),
+  ])
 
-  const lastReceiptSeq = lastReceipt?.receipt_number
-    ? parseInt(String(lastReceipt.receipt_number).split('-')[2]) || 0
+  const lastReceiptSeq = receiptRes.data?.receipt_number
+    ? parseInt(String(receiptRes.data.receipt_number).split('-')[2]) || 0
     : 0
   const receipt_number = `RCP-${year}-${String(lastReceiptSeq + 1).padStart(4, '0')}`
 
   let invoice_id: string | null = null
-  if (payment_status === 'paid') {
+  if (isPaid) {
     const invoiceItems: InvoiceItem[] = items.map((item: POSItem) => ({
       service_name: item.name,
       quantity: item.quantity,
@@ -94,16 +107,7 @@ export async function POST(req: NextRequest) {
       type: item.type,
     }))
 
-    // Fatura numarası: INV-YYYY-XXXX (silinenler dahil max-based — invoices/route.ts ile tutarlı)
-    const { data: lastInv } = await supabase
-      .from('invoices')
-      .select('invoice_number')
-      .eq('business_id', businessId)
-      .like('invoice_number', `INV-${year}-%`)
-      .order('invoice_number', { ascending: false })
-      .limit(1)
-      .single()
-
+    const lastInv = invRes.data as { invoice_number?: string } | null
     const lastInvSeq = lastInv?.invoice_number
       ? parseInt(String(lastInv.invoice_number).split('-')[2]) || 0
       : 0

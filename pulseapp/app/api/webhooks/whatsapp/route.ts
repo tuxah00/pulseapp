@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     .limit(1)
 
   const customer = customers?.[0]
-  let businessId = customer?.business_id
+  const businessId = customer?.business_id
 
   if (!businessId) {
     // Müşteri bulunamadı — orphan mesaj güvenlik riski (saldırgan ilk işletmeyi spam'leyebilir)

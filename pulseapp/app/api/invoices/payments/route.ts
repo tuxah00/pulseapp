@@ -49,16 +49,15 @@ export async function POST(req: NextRequest) {
   // İade kontrolü
   const isRefund = payment_type === 'refund'
   const paymentAmount = isRefund ? -Math.abs(amount) : Math.abs(amount)
+  const currentPaid = parseFloat(invoice.paid_amount) || 0
+  const invoiceTotal = parseFloat(invoice.total)
 
   // İade limiti: mevcut ödenen tutardan fazla iade yapılamaz
-  if (isRefund) {
-    const currentPaid = parseFloat(invoice.paid_amount) || 0
-    if (Math.abs(amount) > currentPaid + 0.01) {
-      return NextResponse.json(
-        { error: `İade tutarı mevcut ödenen tutardan (${currentPaid}₺) fazla olamaz` },
-        { status: 400 }
-      )
-    }
+  if (isRefund && Math.abs(amount) > currentPaid + 0.01) {
+    return NextResponse.json(
+      { error: `İade tutarı mevcut ödenen tutardan (${currentPaid}₺) fazla olamaz` },
+      { status: 400 }
+    )
   }
 
   // Ödeme kaydı oluştur
@@ -81,9 +80,7 @@ export async function POST(req: NextRequest) {
   if (paymentError) return NextResponse.json({ error: paymentError.message }, { status: 500 })
 
   // paid_amount güncelle (2 ondalık yuvarlama — floating point hatalarını engeller)
-  const rawPaidAmount = (parseFloat(invoice.paid_amount) || 0) + paymentAmount
-  const newPaidAmount = Math.max(0, Math.round(rawPaidAmount * 100) / 100)
-  const invoiceTotal = parseFloat(invoice.total)
+  const newPaidAmount = Math.max(0, Math.round((currentPaid + paymentAmount) * 100) / 100)
 
   // Status otomatik belirle (0.01₺ epsilon ile float precision koruması)
   let newStatus = invoice.status

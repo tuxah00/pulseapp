@@ -184,8 +184,8 @@ export async function POST(req: NextRequest) {
       break
     }
     insertError = error
-    // Duplicate key hatası değilse hemen dur
-    if (!String(error.message || '').toLowerCase().includes('duplicate')) break
+    // Sadece unique_violation (Postgres 23505) durumunda tekrar dene
+    if ((error as { code?: string }).code !== '23505') break
   }
 
   if (insertError || !invoice) {
