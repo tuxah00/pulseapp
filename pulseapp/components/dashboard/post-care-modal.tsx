@@ -1,8 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { X, Send, FileText, ChevronDown, Loader2 } from 'lucide-react'
+import { X, Send, FileText, Loader2 } from 'lucide-react'
 import { Portal } from '@/components/ui/portal'
+import { CustomSelect } from '@/components/ui/custom-select'
 import { getPluginTemplates, renderTemplate } from '@/lib/plugins/registry'
 import type { SectorType } from '@/types'
 
@@ -158,19 +159,12 @@ export function PostCareModal({
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Şablon Seçin
                     </label>
-                    <div className="relative">
-                      <select
-                        value={selectedTemplate}
-                        onChange={e => handleTemplateSelect(e.target.value)}
-                        className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm appearance-none cursor-pointer"
-                      >
-                        <option value="">Şablon seçin...</option>
-                        {templates.map(t => (
-                          <option key={t.key} value={t.key}>{t.name}</option>
-                        ))}
-                      </select>
-                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-                    </div>
+                    <CustomSelect
+                      options={templates.map(t => ({ value: t.key, label: t.name }))}
+                      value={selectedTemplate}
+                      onChange={handleTemplateSelect}
+                      placeholder="Şablon seçin..."
+                    />
                   </div>
                 )}
 
