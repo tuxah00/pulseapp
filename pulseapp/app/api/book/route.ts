@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
+import { isValidUUID } from '@/lib/utils/validate'
 
 export async function GET(req: NextRequest) {
   const businessId = req.nextUrl.searchParams.get('businessId')
-  if (!businessId) {
-    return NextResponse.json({ error: 'businessId gerekli' }, { status: 400 })
+  if (!businessId || !isValidUUID(businessId)) {
+    return NextResponse.json({ error: 'Geçersiz businessId' }, { status: 400 })
   }
 
   const supabase = createAdminClient()
@@ -42,9 +44,13 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const businessId = req.nextUrl.searchParams.get('businessId')
-  if (!businessId) {
-    return NextResponse.json({ error: 'businessId gerekli' }, { status: 400 })
+  if (!businessId || !isValidUUID(businessId)) {
+    return NextResponse.json({ error: 'Geçersiz businessId' }, { status: 400 })
   }
+
+  // Rate limit — public endpoint, spam koruması
+  const rl = checkRateLimit(req, RATE_LIMITS.publicBooking)
+  if (rl.limited) return rl.response
 
   const supabase = createAdminClient()
   const body = await req.json()
@@ -60,6 +66,28 @@ export async function POST(req: NextRequest) {
 
   if (!service_id || !appointment_date || !start_time || !customer_name || !customer_phone) {
     return NextResponse.json({ error: 'Eksik alanlar' }, { status: 400 })
+  }
+
+  // Temel input validasyonu
+  if (typeof customer_name !== 'string' || customer_name.trim().length < 2 || customer_name.length > 100) {
+    return NextResponse.json({ error: 'Geçersiz isim' }, { status: 400 })
+  }
+  if (typeof customer_phone !== 'string' || customer_phone.replace(/\D/g, '').length < 10) {
+    return NextResponse.json({ error: 'Geçersiz telefon' }, { status: 400 })
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(appointment_date)) {
+    return NextResponse.json({ error: 'Geçersiz tarih formatı' }, { status: 400 })
+  }
+  if (!/^\d{2}:\d{2}$/.test(start_time)) {
+    return NextResponse.json({ error: 'Geçersiz saat formatı' }, { status: 400 })
+  }
+  if (!isValidUUID(service_id) || (staff_id && !isValidUUID(staff_id))) {
+    return NextResponse.json({ error: 'Geçersiz id' }, { status: 400 })
+  }
+  // Geçmiş tarih kontrolü
+  const today = new Date().toISOString().slice(0, 10)
+  if (appointment_date < today) {
+    return NextResponse.json({ error: 'Geçmiş tarihe randevu oluşturulamaz' }, { status: 400 })
   }
 
   const { data: business } = await supabase

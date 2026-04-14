@@ -2,17 +2,25 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendMessage } from '@/lib/messaging/send'
 import { normalizePhone, phoneOrFilter } from '@/lib/utils/phone'
+import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
+import { isValidUUID } from '@/lib/utils/validate'
+import crypto from 'crypto'
 
 function generateOTP(): string {
-  return String(Math.floor(100000 + Math.random() * 900000))
+  // crypto.randomInt kriptografik olarak güvenli
+  return String(crypto.randomInt(100000, 1000000))
 }
 
 // POST — OTP üret ve gönder
 export async function POST(request: NextRequest) {
+  // IP bazlı rate limit — SMS bombing koruması
+  const rl = checkRateLimit(request, RATE_LIMITS.auth)
+  if (rl.limited) return rl.response
+
   const body = await request.json()
   const { businessId, phone } = body
 
-  if (!businessId || !phone) {
+  if (!businessId || !phone || !isValidUUID(businessId)) {
     return NextResponse.json({ error: 'businessId ve telefon numarası zorunludur' }, { status: 400 })
   }
 
