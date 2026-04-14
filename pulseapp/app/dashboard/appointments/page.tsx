@@ -1063,19 +1063,21 @@ export default function AppointmentsPage() {
   }
 
   // Geçmiş + sonuçsuz randevu: tek tarama ile Set oluştur, her yerde O(1) lookup
-  const { unresolvedIds, unresolvedCount } = useMemo(() => {
+  const { unresolvedIds, unresolvedCount, pastIds } = useMemo(() => {
     const today = new Date().toISOString().split('T')[0]
     const nowMin = `${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`
     const ids = new Set<string>()
+    const pids = new Set<string>()
     for (const a of appointments) {
+      const isInPast = a.appointment_date < today || (a.appointment_date === today && a.end_time <= nowMin)
+      if (isInPast) pids.add(a.id)
       if (a.status === 'completed' || a.status === 'cancelled' || a.status === 'no_show') continue
-      if (a.appointment_date < today || (a.appointment_date === today && a.end_time <= nowMin)) {
-        ids.add(a.id)
-      }
+      if (isInPast) ids.add(a.id)
     }
-    return { unresolvedIds: ids, unresolvedCount: ids.size }
+    return { unresolvedIds: ids, unresolvedCount: ids.size, pastIds: pids }
   }, [appointments])
   const isPastUnresolved = (apt: AppointmentView) => unresolvedIds.has(apt.id)
+  const isPast = (apt: AppointmentView) => pastIds.has(apt.id)
 
   const totalCount = appointments.length
   const confirmedCount = appointments.filter(a => a.status === 'confirmed').length
@@ -1655,7 +1657,8 @@ export default function AppointmentsPage() {
                                         'absolute rounded-md px-1.5 py-0.5 overflow-hidden cursor-grab active:cursor-grabbing hover:opacity-90 transition-opacity border border-white/20',
                                         staffColors[colorIdx],
                                         draggingId === apt.id && 'opacity-50',
-                                        isPastUnresolved(apt) && UNRESOLVED_BORDER
+                                        isPast(apt) && 'opacity-50',
+                                        isPastUnresolved(apt) && UNRESOLVED_BORDER_ONLY
                                       )}
                                       style={{ top: topPos, height: h, left: `${colLeft}%`, width: `${colWidth - 1}%` }}
                                       onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
@@ -1799,7 +1802,7 @@ export default function AppointmentsPage() {
                                   staffColors[colorIdx],
                                   staffTextColors[colorIdx],
                                   draggingId === apt.id && 'opacity-50',
-                                  unresolved && 'opacity-50'
+                                  isPast(apt) && 'opacity-50'
                                 )}
                               >
                                 {formatTime(apt.start_time)} {apt.customers?.name || 'İsimsiz'}
@@ -1995,7 +1998,8 @@ export default function AppointmentsPage() {
                                 'absolute left-0.5 right-0.5 rounded-md px-1.5 py-0.5 overflow-hidden cursor-grab active:cursor-grabbing hover:opacity-90 transition-opacity border border-white/20',
                                 staffColors[col.colorIdx],
                                 draggingId === apt.id && 'opacity-50',
-                                isPastUnresolved(apt) && UNRESOLVED_BORDER
+                                isPast(apt) && 'opacity-50',
+                                isPastUnresolved(apt) && UNRESOLVED_BORDER_ONLY
                               )}
                               style={{ top, height }}
                               onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
@@ -2209,7 +2213,8 @@ export default function AppointmentsPage() {
                               className={cn(
                                 'absolute left-0.5 right-0.5 rounded-md px-1.5 py-0.5 overflow-hidden cursor-grab active:cursor-grabbing hover:opacity-80 transition-opacity text-white border border-white/20',
                                 draggingId === apt.id && 'opacity-50',
-                                isPastUnresolved(apt) && UNRESOLVED_BORDER
+                                isPast(apt) && 'opacity-50',
+                                isPastUnresolved(apt) && UNRESOLVED_BORDER_ONLY
                               )}
                               style={{ top, height, backgroundColor: col.color }}
                               onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
