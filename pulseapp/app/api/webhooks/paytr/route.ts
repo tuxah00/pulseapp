@@ -59,9 +59,13 @@ export async function POST(req: NextRequest) {
 
   const { businessId, planType } = parsed
 
-  // Abonelik sonu tarihini hesapla (1 ay)
+  // Abonelik sonu tarihini hesapla (1 ay) — ay sonu taşması koruması (31 Ocak → 28 Şubat)
   const nextBillingDate = new Date()
+  const originalDay = nextBillingDate.getDate()
+  nextBillingDate.setDate(1)
   nextBillingDate.setMonth(nextBillingDate.getMonth() + 1)
+  const lastDayOfNextMonth = new Date(nextBillingDate.getFullYear(), nextBillingDate.getMonth() + 1, 0).getDate()
+  nextBillingDate.setDate(Math.min(originalDay, lastDayOfNextMonth))
 
   // İşletmenin aboneliğini güncelle
   const { error } = await admin

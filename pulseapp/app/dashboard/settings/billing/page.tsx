@@ -105,12 +105,12 @@ export default function BillingPage() {
       })
       const data = await res.json()
       if (!res.ok) {
-        alert(data.error || 'Ödeme başlatılamadı')
+        window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: data.error || 'Ödeme başlatılamadı' } }))
         return
       }
       setIframeUrl(data.iframeUrl)
     } catch {
-      alert('Bağlantı hatası')
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: 'Bağlantı hatası' } }))
     } finally {
       setUpgrading(null)
     }

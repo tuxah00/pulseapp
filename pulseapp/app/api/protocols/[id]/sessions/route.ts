@@ -51,23 +51,32 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 
   // Protokolün completed_sessions sayısını güncelle
   if (status === 'completed' || status === 'skipped') {
-    const { count } = await supabase
-      .from('protocol_sessions')
-      .select('id', { count: 'exact', head: true })
-      .eq('protocol_id', params.id)
-      .eq('status', 'completed')
+    const [{ count: completedCountRaw }, { count: resolvedCountRaw }] = await Promise.all([
+      supabase
+        .from('protocol_sessions')
+        .select('id', { count: 'exact', head: true })
+        .eq('protocol_id', params.id)
+        .eq('status', 'completed'),
+      supabase
+        .from('protocol_sessions')
+        .select('id', { count: 'exact', head: true })
+        .eq('protocol_id', params.id)
+        .in('status', ['completed', 'skipped']),
+    ])
 
-    const completedCount = count ?? 0
+    const completedCount = completedCountRaw ?? 0
+    const resolvedCount = resolvedCountRaw ?? 0
     const protocolUpdate: Record<string, unknown> = { completed_sessions: completedCount }
 
     // Protokolün total_sessions'ına bakarak otomatik tamamla
+    // (tüm seanslar completed veya skipped ise — atlanan seanslar protokolü bloklamamalı)
     const { data: protocol } = await supabase
       .from('treatment_protocols')
       .select('total_sessions')
       .eq('id', params.id)
       .single()
 
-    if (protocol && completedCount >= protocol.total_sessions) {
+    if (protocol && resolvedCount >= protocol.total_sessions) {
       protocolUpdate.status = 'completed'
     }
 

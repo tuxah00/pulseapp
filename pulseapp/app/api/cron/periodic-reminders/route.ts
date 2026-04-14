@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendMessage } from '@/lib/messaging/send'
+import { verifyCronAuth } from '@/lib/api/verify-cron'
 
 /**
  * Periyodik Kontrol Hatırlatıcı
@@ -12,12 +13,8 @@ import { sendMessage } from '@/lib/messaging/send'
  * son diş kontrolünden 180 gün geçen müşterilere SMS gönderilir.
  */
 export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get('authorization')
-  const cronSecret = process.env.CRON_SECRET
-
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
-  }
+  const cronErr = verifyCronAuth(request)
+  if (cronErr) return cronErr
 
   const supabase = createAdminClient()
   const now = new Date()

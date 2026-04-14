@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { requirePermission } from '@/lib/api/with-permission'
 
 const BUCKET_NAME = 'records-files'
 const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB
@@ -10,16 +12,32 @@ const ALLOWED_EXTENSIONS = new Set([
 ])
 
 export async function POST(req: NextRequest) {
-  const supabase = createAdminClient()
+  const auth = await requirePermission(req, 'records')
+  if (!auth.ok) return auth.response
+  const { businessId } = auth.ctx
 
   const formData = await req.formData()
   const file = formData.get('file') as File | null
-  const businessId = formData.get('businessId') as string | null
   const recordId = formData.get('recordId') as string | null
 
-  if (!file || !businessId || !recordId) {
-    return NextResponse.json({ error: 'file, businessId and recordId are required' }, { status: 400 })
+  if (!file || !recordId) {
+    return NextResponse.json({ error: 'file and recordId are required' }, { status: 400 })
   }
+
+  // recordId'nin bu işletmeye ait olduğunu doğrula (cross-tenant koruma)
+  const supabaseAuth = createServerSupabaseClient()
+  const { data: record } = await supabaseAuth
+    .from('business_records')
+    .select('id')
+    .eq('id', recordId)
+    .eq('business_id', businessId)
+    .single()
+
+  if (!record) {
+    return NextResponse.json({ error: 'Kayıt bulunamadı' }, { status: 404 })
+  }
+
+  const supabase = createAdminClient()
 
   // Dosya tipi kontrolü
   const fileExt = file.name.split('.').pop()?.toLowerCase() || ''

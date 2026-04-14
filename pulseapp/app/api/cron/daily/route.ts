@@ -79,6 +79,7 @@ export async function GET(request: NextRequest) {
     .eq('appointment_date', tomorrowDate)
     .in('status', ['confirmed', 'pending'])
     .eq('reminder_24h_sent', false)
+    .is('deleted_at', null)
 
   for (const apt of (appointments24h || []) as unknown as ReminderAppointment[]) {
     const customer = apt.customers
@@ -111,6 +112,7 @@ export async function GET(request: NextRequest) {
     .lte('start_time', windowEndStr)
     .in('status', ['confirmed', 'pending'])
     .eq('reminder_2h_sent', false)
+    .is('deleted_at', null)
 
   for (const apt of (appointments2h || []) as unknown as ReminderAppointment[]) {
     const customer = apt.customers
@@ -136,6 +138,7 @@ export async function GET(request: NextRequest) {
     `)
     .eq('status', 'completed')
     .eq('review_requested', false)
+    .is('deleted_at', null)
 
   for (const apt of (completedApts || []) as unknown as ReviewAppointment[]) {
     const customer = apt.customers
@@ -275,6 +278,7 @@ export async function GET(request: NextRequest) {
     .select('appointment_date, start_time, end_time, staff_id, service_id, business_id')
     .in('status', ['cancelled', 'no_show'])
     .eq('appointment_date', todayStr)
+    .is('deleted_at', null)
 
   for (const apt of (cancelledToday || []) as CancelledAppointment[]) {
     // Aynı tarih/saat/personel için bekleme listesi kayıtlarını bul
