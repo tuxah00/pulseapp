@@ -403,7 +403,6 @@ export const ASSISTANT_TOOLS: ChatCompletionTool[] = [
       },
     },
   },
-  // Grup 14: Stratejik Analitik
   {
     type: 'function',
     function: {
@@ -658,7 +657,6 @@ export async function executeAssistantTool(
         return await handleUpdateService(admin, ctx, args)
       case 'send_message':
         return await handleSendMessage(admin, ctx, args)
-      // Stratejik analitik (Faz 3)
       case 'get_revenue_breakdown':
         return await handleGetRevenueBreakdown(admin, businessId, args)
       case 'get_customer_lifetime_value':
@@ -1558,11 +1556,17 @@ async function handleSendMessage(
   )
 }
 
-// ── Stratejik Analitik Handler'ları (Faz 3) ──
+const PAID_STATUSES = ['paid', 'partial'] as const
+const ANALYTICS_QUERY_LIMIT = 5000
+
+const round2 = (n: number): number => Math.round(n * 100) / 100
+const round1 = (n: number): number => Math.round(n * 10) / 10
+const paidAmount = (inv: { paid_amount?: number | null; total?: number | null }): number =>
+  inv.paid_amount || inv.total || 0
 
 function defaultMonthStart(): string {
   const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-01`
 }
 
 function defaultToday(): string {
@@ -1577,56 +1581,55 @@ async function handleGetRevenueBreakdown(
   const to = (args.date_to as string) || defaultToday()
   const limit = Math.min(args.limit || 10, 25)
 
+  const selectCols = groupBy === 'customer_type'
+    ? 'id, total, paid_amount, status, staff_name, created_at, items, customer_id, customers(segment)'
+    : 'id, total, paid_amount, status, staff_name, created_at, items'
+
   const { data: invoices, error } = await admin
     .from('invoices')
-    .select('id, total, paid_amount, status, staff_name, created_at, items, customer_id, customers(name, segment)')
+    .select(selectCols)
     .eq('business_id', businessId)
     .is('deleted_at', null)
-    .in('status', ['paid', 'partial'])
+    .in('status', PAID_STATUSES as unknown as string[])
     .gte('created_at', from)
     .lte('created_at', to + 'T23:59:59')
+    .limit(ANALYTICS_QUERY_LIMIT)
 
   if (error) return { success: false, error: error.message }
   if (!invoices || invoices.length === 0) {
     return { success: true, data: { group_by: groupBy, from, to, breakdown: [], totals: { revenue: 0, count: 0, avg_ticket: 0 } } }
   }
 
-  const totalRevenue = invoices.reduce((s, inv: any) => s + (inv.paid_amount || inv.total || 0), 0)
+  const totalRevenue = invoices.reduce((s, inv: any) => s + paidAmount(inv), 0)
   const bucket = new Map<string, { revenue: number; count: number }>()
+  const bump = (key: string, revenue: number) => {
+    const cur = bucket.get(key) || { revenue: 0, count: 0 }
+    cur.revenue += revenue
+    cur.count += 1
+    bucket.set(key, cur)
+  }
 
   for (const inv of invoices as any[]) {
     if (groupBy === 'service') {
       const items = (inv.items || []) as { service_name?: string; total?: number }[]
-      for (const it of items) {
-        const key = it.service_name || 'Diğer'
-        const cur = bucket.get(key) || { revenue: 0, count: 0 }
-        cur.revenue += it.total || 0
-        cur.count += 1
-        bucket.set(key, cur)
-      }
-    } else {
-      let key = 'Diğer'
-      if (groupBy === 'staff') key = inv.staff_name || 'Belirtilmemiş'
-      else if (groupBy === 'customer_type') {
-        const cust = Array.isArray(inv.customers) ? inv.customers[0] : inv.customers
-        key = cust?.segment || 'unknown'
-      } else if (groupBy === 'period') {
-        const d = new Date(inv.created_at)
-        key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-      }
-      const cur = bucket.get(key) || { revenue: 0, count: 0 }
-      cur.revenue += inv.paid_amount || inv.total || 0
-      cur.count += 1
-      bucket.set(key, cur)
+      for (const it of items) bump(it.service_name || 'Diğer', it.total || 0)
+    } else if (groupBy === 'staff') {
+      bump(inv.staff_name || 'Belirtilmemiş', paidAmount(inv))
+    } else if (groupBy === 'customer_type') {
+      const cust = Array.isArray(inv.customers) ? inv.customers[0] : inv.customers
+      bump(cust?.segment || 'unknown', paidAmount(inv))
+    } else if (groupBy === 'period') {
+      const d = new Date(inv.created_at)
+      bump(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`, paidAmount(inv))
     }
   }
 
   const breakdown = Array.from(bucket.entries())
     .map(([label, d]) => ({
       label,
-      revenue: Math.round(d.revenue * 100) / 100,
+      revenue: round2(d.revenue),
       count: d.count,
-      percentage: totalRevenue > 0 ? Math.round((d.revenue / totalRevenue) * 1000) / 10 : 0,
+      percentage: totalRevenue > 0 ? round1((d.revenue / totalRevenue) * 100) : 0,
     }))
     .sort((a, b) => groupBy === 'period' ? a.label.localeCompare(b.label) : b.revenue - a.revenue)
     .slice(0, limit)
@@ -1636,9 +1639,9 @@ async function handleGetRevenueBreakdown(
     data: {
       group_by: groupBy, from, to, breakdown,
       totals: {
-        revenue: Math.round(totalRevenue * 100) / 100,
+        revenue: round2(totalRevenue),
         count: invoices.length,
-        avg_ticket: Math.round((totalRevenue / invoices.length) * 100) / 100,
+        avg_ticket: round2(totalRevenue / invoices.length),
       },
     },
   }
@@ -1680,11 +1683,11 @@ async function handleGetCLV(
       name: c.name,
       phone: c.phone,
       segment: c.segment,
-      total_spend: Math.round(totalSpend * 100) / 100,
+      total_spend: round2(totalSpend),
       visit_count: visits,
-      avg_spend: Math.round(avgSpend * 100) / 100,
-      monthly_frequency: Math.round(monthlyFreq * 100) / 100,
-      estimated_annual_value: Math.round(annualValue * 100) / 100,
+      avg_spend: round2(avgSpend),
+      monthly_frequency: round2(monthlyFreq),
+      estimated_annual_value: round2(annualValue),
       days_since_last_visit: daysSinceLast,
       customer_age_months: ageMonths,
     }
@@ -1713,6 +1716,7 @@ async function handleGetOccupancyStats(
     .is('deleted_at', null)
     .gte('appointment_date', from)
     .lte('appointment_date', to)
+    .limit(ANALYTICS_QUERY_LIMIT)
   if (staffId) q = q.eq('staff_id', staffId)
 
   const { data: apts, error } = await q
@@ -1839,6 +1843,7 @@ async function handleGetStaffPerformance(
     .is('deleted_at', null)
     .gte('appointment_date', from)
     .lte('appointment_date', to)
+    .limit(ANALYTICS_QUERY_LIMIT)
   if (staffId) aq = aq.eq('staff_id', staffId)
 
   let iq = admin
@@ -1846,33 +1851,48 @@ async function handleGetStaffPerformance(
     .select('staff_id, total, paid_amount')
     .eq('business_id', businessId)
     .is('deleted_at', null)
-    .in('status', ['paid', 'partial'])
+    .in('status', PAID_STATUSES as unknown as string[])
     .gte('created_at', from)
     .lte('created_at', to + 'T23:59:59')
+    .limit(ANALYTICS_QUERY_LIMIT)
   if (staffId) iq = iq.eq('staff_id', staffId)
 
   const [{ data: apts }, { data: invoices }] = await Promise.all([aq, iq])
 
+  type AgRow = { total: number; completed: number; cancelled: number; no_show: number; revenue: number }
+  const empty = (): AgRow => ({ total: 0, completed: 0, cancelled: 0, no_show: 0, revenue: 0 })
+  const byStaff = new Map<string, AgRow>()
+
+  for (const a of (apts || []) as any[]) {
+    if (!a.staff_id) continue
+    const row = byStaff.get(a.staff_id) || empty()
+    row.total += 1
+    if (a.status === 'completed') row.completed += 1
+    else if (a.status === 'cancelled') row.cancelled += 1
+    else if (a.status === 'no_show') row.no_show += 1
+    byStaff.set(a.staff_id, row)
+  }
+  for (const i of (invoices || []) as any[]) {
+    if (!i.staff_id) continue
+    const row = byStaff.get(i.staff_id) || empty()
+    row.revenue += paidAmount(i)
+    byStaff.set(i.staff_id, row)
+  }
+
   const performance = staffList.map((s: any) => {
-    const sa = (apts || []).filter((a: any) => a.staff_id === s.id)
-    const totalApts = sa.length
-    const completedApts = sa.filter((a: any) => a.status === 'completed').length
-    const cancelledApts = sa.filter((a: any) => a.status === 'cancelled').length
-    const noShowApts = sa.filter((a: any) => a.status === 'no_show').length
-    const si = (invoices || []).filter((i: any) => i.staff_id === s.id)
-    const totalRevenue = si.reduce((sum: number, i: any) => sum + (i.paid_amount || i.total || 0), 0)
+    const row = byStaff.get(s.id) || empty()
     return {
       staff_id: s.id,
       name: s.name,
       role: s.role,
-      total_appointments: totalApts,
-      completed_appointments: completedApts,
-      cancelled_appointments: cancelledApts,
-      no_show_appointments: noShowApts,
-      completion_rate: totalApts > 0 ? Math.round((completedApts / totalApts) * 100) : 0,
-      no_show_rate: totalApts > 0 ? Math.round((noShowApts / totalApts) * 100) : 0,
-      total_revenue: Math.round(totalRevenue * 100) / 100,
-      avg_revenue_per_appointment: completedApts > 0 ? Math.round((totalRevenue / completedApts) * 100) / 100 : 0,
+      total_appointments: row.total,
+      completed_appointments: row.completed,
+      cancelled_appointments: row.cancelled,
+      no_show_appointments: row.no_show,
+      completion_rate: row.total > 0 ? Math.round((row.completed / row.total) * 100) : 0,
+      no_show_rate: row.total > 0 ? Math.round((row.no_show / row.total) * 100) : 0,
+      total_revenue: round2(row.revenue),
+      avg_revenue_per_appointment: row.completed > 0 ? round2(row.revenue / row.completed) : 0,
     }
   })
 
@@ -1892,6 +1912,7 @@ async function handleGetExpenseBreakdown(
     .eq('business_id', businessId)
     .gte('expense_date', from)
     .lte('expense_date', to)
+    .limit(ANALYTICS_QUERY_LIMIT)
 
   if (error) return { success: false, error: error.message }
   if (!expenses || expenses.length === 0) {
@@ -1910,13 +1931,13 @@ async function handleGetExpenseBreakdown(
   const breakdown = Array.from(catMap.entries())
     .map(([category, d]) => ({
       category,
-      amount: Math.round(d.amount * 100) / 100,
+      amount: round2(d.amount),
       count: d.count,
-      percentage: total > 0 ? Math.round((d.amount / total) * 1000) / 10 : 0,
+      percentage: total > 0 ? round1((d.amount / total) * 100) : 0,
     }))
     .sort((a, b) => b.amount - a.amount)
 
-  return { success: true, data: { from, to, total: Math.round(total * 100) / 100, breakdown } }
+  return { success: true, data: { from, to, total: round2(total), breakdown } }
 }
 
 async function sumRevenue(admin: SupabaseAdmin, businessId: string, from: string, to: string): Promise<number> {
@@ -1926,17 +1947,19 @@ async function sumRevenue(admin: SupabaseAdmin, businessId: string, from: string
       .select('total, paid_amount, status')
       .eq('business_id', businessId)
       .is('deleted_at', null)
-      .in('status', ['paid', 'partial'])
+      .in('status', PAID_STATUSES as unknown as string[])
       .gte('created_at', from)
-      .lte('created_at', to + 'T23:59:59'),
+      .lte('created_at', to + 'T23:59:59')
+      .limit(ANALYTICS_QUERY_LIMIT),
     admin
       .from('income')
       .select('amount')
       .eq('business_id', businessId)
       .gte('income_date', from)
-      .lte('income_date', to),
+      .lte('income_date', to)
+      .limit(ANALYTICS_QUERY_LIMIT),
   ])
-  const invSum = (invoices || []).reduce((s: number, i: any) => s + (i.paid_amount || i.total || 0), 0)
+  const invSum = (invoices || []).reduce((s: number, i: any) => s + paidAmount(i), 0)
   const incSum = (income || []).reduce((s: number, i: any) => s + Number(i.amount || 0), 0)
   return invSum + incSum
 }
@@ -1948,6 +1971,7 @@ async function sumExpenses(admin: SupabaseAdmin, businessId: string, from: strin
     .eq('business_id', businessId)
     .gte('expense_date', from)
     .lte('expense_date', to)
+    .limit(ANALYTICS_QUERY_LIMIT)
   return (data || []).reduce((s: number, e: any) => s + Number(e.amount || 0), 0)
 }
 
@@ -1959,6 +1983,7 @@ async function countAppointments(admin: SupabaseAdmin, businessId: string, from:
     .is('deleted_at', null)
     .gte('appointment_date', from)
     .lte('appointment_date', to)
+    .limit(ANALYTICS_QUERY_LIMIT)
   const arr = data || []
   return {
     total: arr.length,
@@ -1994,17 +2019,17 @@ async function handleGetProfitLoss(
     success: true,
     data: {
       from, to,
-      revenue: Math.round(revenue * 100) / 100,
-      expenses: Math.round(expenses * 100) / 100,
-      net_profit: Math.round(net * 100) / 100,
-      margin_percentage: Math.round(margin * 10) / 10,
+      revenue: round2(revenue),
+      expenses: round2(expenses),
+      net_profit: round2(net),
+      margin_percentage: round1(margin),
     },
   }
 }
 
 function pctChange(current: number, previous: number): number | null {
   if (previous === 0) return current === 0 ? 0 : null
-  return Math.round(((current - previous) / previous) * 1000) / 10
+  return round1(((current - previous) / previous) * 100)
 }
 
 async function handleComparePeriods(
@@ -2037,16 +2062,16 @@ async function handleComparePeriods(
     data: {
       current: { from: cf, to: ct },
       previous: { from: pf, to: pt },
-      revenue: { current: Math.round(curRev * 100) / 100, previous: Math.round(prevRev * 100) / 100, change_pct: pctChange(curRev, prevRev) },
-      expenses: { current: Math.round(curExp * 100) / 100, previous: Math.round(prevExp * 100) / 100, change_pct: pctChange(curExp, prevExp) },
+      revenue: { current: round2(curRev), previous: round2(prevRev), change_pct: pctChange(curRev, prevRev) },
+      expenses: { current: round2(curExp), previous: round2(prevExp), change_pct: pctChange(curExp, prevExp) },
       net_profit: {
-        current: Math.round((curRev - curExp) * 100) / 100,
-        previous: Math.round((prevRev - prevExp) * 100) / 100,
+        current: round2(curRev - curExp),
+        previous: round2(prevRev - prevExp),
         change_pct: pctChange(curRev - curExp, prevRev - prevExp),
       },
       appointments: { current: curApts.total, previous: prevApts.total, change_pct: pctChange(curApts.total, prevApts.total) },
       new_customers: { current: curNew, previous: prevNew, change_pct: pctChange(curNew, prevNew) },
-      completion_rate: { current: Math.round(curCompletionRate * 10) / 10, previous: Math.round(prevCompletionRate * 10) / 10, change_pct: pctChange(curCompletionRate, prevCompletionRate) },
+      completion_rate: { current: round1(curCompletionRate), previous: round1(prevCompletionRate), change_pct: pctChange(curCompletionRate, prevCompletionRate) },
     },
   }
 }
