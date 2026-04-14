@@ -97,6 +97,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { token:
       .eq('appointment_date', date)
       .neq('id', appointment.id)
       .not('status', 'eq', 'cancelled')
+      .is('deleted_at', null)
       .lt('start_time', endTime)
       .gt('end_time', startTime)
 
