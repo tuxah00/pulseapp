@@ -112,22 +112,22 @@ export async function POST(req: NextRequest) {
 
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 })
 
-  // Fatura tam ödendiyse stok düş
-  if (newStatus === 'paid' && invoice.status !== 'paid' && updatedInvoice?.items) {
+  // Fatura tam ödendiyse stok düş (POS'tan gelen faturalarda POS zaten düşürdüğü için atla)
+  if (newStatus === 'paid' && invoice.status !== 'paid' && !invoice.pos_transaction_id && updatedInvoice?.items) {
     const items = updatedInvoice.items as Array<{ product_id?: string; type?: string; quantity: number }>
     for (const item of items) {
       if (item.product_id && item.type === 'product') {
         const { data: product } = await supabase
           .from('products')
-          .select('stock_quantity')
+          .select('stock_count')
           .eq('id', item.product_id)
           .single()
 
         if (product) {
-          const newQty = Math.max(0, (product.stock_quantity || 0) - item.quantity)
+          const newQty = Math.max(0, (product.stock_count || 0) - item.quantity)
           await supabase
             .from('products')
-            .update({ stock_quantity: newQty, updated_at: new Date().toISOString() })
+            .update({ stock_count: newQty, updated_at: new Date().toISOString() })
             .eq('id', item.product_id)
 
           await supabase.from('stock_movements').insert({
@@ -136,6 +136,37 @@ export async function POST(req: NextRequest) {
             type: 'out',
             quantity: item.quantity,
             notes: `Fatura ${invoice.invoice_number} ile satış`,
+            created_by: user.id,
+          })
+        }
+      }
+    }
+  }
+
+  // İade durumunda stok geri yükle (daha önce düşürülmüşse)
+  if (isRefund && invoice.status === 'paid' && !invoice.pos_transaction_id && updatedInvoice?.items) {
+    const items = updatedInvoice.items as Array<{ product_id?: string; type?: string; quantity: number }>
+    for (const item of items) {
+      if (item.product_id && item.type === 'product') {
+        const { data: product } = await supabase
+          .from('products')
+          .select('stock_count')
+          .eq('id', item.product_id)
+          .single()
+
+        if (product) {
+          const newQty = (product.stock_count || 0) + item.quantity
+          await supabase
+            .from('products')
+            .update({ stock_count: newQty, updated_at: new Date().toISOString() })
+            .eq('id', item.product_id)
+
+          await supabase.from('stock_movements').insert({
+            business_id: invoice.business_id,
+            product_id: item.product_id,
+            type: 'in',
+            quantity: item.quantity,
+            notes: `Fatura ${invoice.invoice_number} iadesi`,
             created_by: user.id,
           })
         }

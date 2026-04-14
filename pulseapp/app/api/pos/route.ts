@@ -143,15 +143,15 @@ export async function POST(req: NextRequest) {
         if (item.product_id && item.type === 'product') {
           const { data: product } = await supabase
             .from('products')
-            .select('stock_quantity')
+            .select('stock_count')
             .eq('id', item.product_id)
             .single()
 
           if (product) {
-            const newQty = Math.max(0, (product.stock_quantity || 0) - item.quantity)
+            const newQty = Math.max(0, (product.stock_count || 0) - item.quantity)
             await supabase
               .from('products')
-              .update({ stock_quantity: newQty, updated_at: new Date().toISOString() })
+              .update({ stock_count: newQty, updated_at: new Date().toISOString() })
               .eq('id', item.product_id)
 
             await supabase.from('stock_movements').insert({

@@ -50,6 +50,8 @@ type WaitlistEntry = {
   customer_name: string
   customer_phone: string
   preferred_date: string | null
+  preferred_time_start: string | null
+  preferred_time_end: string | null
   is_notified: boolean
   is_active: boolean
 }
@@ -89,8 +91,19 @@ export async function GET(request: NextRequest) {
     const settings = business.settings as Record<string, unknown> | null
     if (!settings?.reminder_24h) continue
 
-    await supabase.from('appointments').update({ reminder_24h_sent: true }).eq('id', apt.id)
-    reminders.sent24h++
+    const serviceName = apt.services?.name || 'randevunuz'
+    const message = `Merhaba ${customer.name}! 📅\n\nYarın ${apt.start_time?.slice(0, 5)} saatinde ${business.name} için ${serviceName} randevunuz var. Görüşmek üzere!`
+    const smsResult = await sendSMS({
+      to: customer.phone, body: message,
+      businessId: business.id, customerId: customer.id, messageType: 'system',
+    })
+
+    if (smsResult.success) {
+      await supabase.from('appointments').update({ reminder_24h_sent: true }).eq('id', apt.id)
+      reminders.sent24h++
+    } else {
+      reminders.errors++
+    }
   }
 
   const twoHoursLater = new Date(now.getTime() + 2 * 60 * 60 * 1000)
@@ -122,8 +135,19 @@ export async function GET(request: NextRequest) {
     const settings = business.settings as Record<string, unknown> | null
     if (!settings?.reminder_2h) continue
 
-    await supabase.from('appointments').update({ reminder_2h_sent: true }).eq('id', apt.id)
-    reminders.sent2h++
+    const serviceName = apt.services?.name || 'randevunuz'
+    const message = `Merhaba ${customer.name}! ⏰\n\n${apt.start_time?.slice(0, 5)} saatinde ${business.name} için ${serviceName} randevunuz var. Bekliyoruz!`
+    const smsResult = await sendSMS({
+      to: customer.phone, body: message,
+      businessId: business.id, customerId: customer.id, messageType: 'system',
+    })
+
+    if (smsResult.success) {
+      await supabase.from('appointments').update({ reminder_2h_sent: true }).eq('id', apt.id)
+      reminders.sent2h++
+    } else {
+      reminders.errors++
+    }
   }
 
   // ── 2. Review Requests ────────────────────────────────────────────────────
@@ -221,7 +245,8 @@ export async function GET(request: NextRequest) {
   // ── 4. No-Show Skor Güncelleme ────────────────────────────────────────────
   const noShowScoring = { updated: 0 }
 
-  // Dünkü no_show randevuları olan müşterilerin skorunu güncelle
+  // Dünkü completed veya no_show randevuları olan müşterilerin skorunu güncelle
+  // (sadece no_show değil — completed müşterilerin skoru da düşmeli)
   const yesterdayDate = new Date(now)
   yesterdayDate.setDate(yesterdayDate.getDate() - 1)
   const yesterdayStr = yesterdayDate.toISOString().split('T')[0]
@@ -230,7 +255,7 @@ export async function GET(request: NextRequest) {
     .from('appointments')
     .select('customer_id')
     .eq('appointment_date', yesterdayStr)
-    .eq('status', 'no_show')
+    .in('status', ['completed', 'no_show'])
     .is('deleted_at', null)
 
   const noShowCustomerIds = [...new Set((noShowApts || []).map(a => a.customer_id).filter(Boolean))]
@@ -281,19 +306,27 @@ export async function GET(request: NextRequest) {
     .is('deleted_at', null)
 
   for (const apt of (cancelledToday || []) as CancelledAppointment[]) {
-    // Aynı tarih/saat/personel için bekleme listesi kayıtlarını bul
+    // Aynı tarih/saat/personel/hizmet için bekleme listesi kayıtlarını bul
+    // Filtreler: tarih eşleşmesi + zaman aralığı slotu kapsıyor + staff/service null veya eşleşiyor
     let wlQuery = supabase
       .from('waitlist_entries')
       .select('*')
       .eq('business_id', apt.business_id)
       .eq('is_notified', false)
       .eq('is_active', true)
-
-    wlQuery = wlQuery.eq('preferred_date', apt.appointment_date)
+      .eq('preferred_date', apt.appointment_date)
+      .or(`staff_id.is.null,staff_id.eq.${apt.staff_id}`)
+      .or(`service_id.is.null,service_id.eq.${apt.service_id}`)
+      .order('created_at', { ascending: true })
+      .limit(1) // ilk uygun kayıt — spam koruması
 
     const { data: waitlistItems } = await wlQuery
 
     for (const item of (waitlistItems || []) as WaitlistEntry[]) {
+      // Zaman aralığı kontrolü: tercih aralığı randevu slotunu kapsıyor mu?
+      if (item.preferred_time_start && apt.start_time < item.preferred_time_start) continue
+      if (item.preferred_time_end && apt.start_time > item.preferred_time_end) continue
+
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
       const message = `Merhaba ${item.customer_name}! 😊 Beklediğiniz randevu slotu uygun oldu. Hemen almak için: ${appUrl}/book/${apt.business_id}`
 

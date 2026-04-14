@@ -25,7 +25,7 @@ interface Product {
   id: string
   name: string
   price: number | null
-  stock_quantity: number
+  stock_count: number
   category: string | null
   is_active: boolean
 }
@@ -105,7 +105,7 @@ export default function KasaPage() {
 
     const [svcRes, prodRes, txRes, sessRes] = await Promise.all([
       supabase.from('services').select('*').eq('business_id', businessId).eq('is_active', true).order('sort_order'),
-      supabase.from('products').select('id, name, price, stock_quantity, category, is_active').eq('business_id', businessId).eq('is_active', true).order('name'),
+      supabase.from('products').select('id, name, price, stock_count, category, is_active').eq('business_id', businessId).eq('is_active', true).order('name'),
       fetch(`/api/pos?businessId=${businessId}&from=${new Date().toISOString().split('T')[0]}`).then(r => r.json()),
       fetch(`/api/pos/sessions?businessId=${businessId}`).then(r => r.json()),
     ])
@@ -580,12 +580,12 @@ export default function KasaPage() {
                       quantity: 1, unit_price: prod.price, total: prod.price,
                       product_id: prod.id,
                     })}
-                    disabled={!prod.price || prod.stock_quantity <= 0}
+                    disabled={!prod.price || prod.stock_count <= 0}
                     className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left disabled:opacity-40"
                   >
                     <div className="min-w-0">
                       <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate block">{prod.name}</span>
-                      <span className="text-xs text-gray-400">Stok: {prod.stock_quantity}</span>
+                      <span className="text-xs text-gray-400">Stok: {prod.stock_count}</span>
                     </div>
                     <span className="text-sm text-pulse-900 font-semibold flex-shrink-0 ml-2">
                       {prod.price ? formatCurrency(prod.price) : '—'}
