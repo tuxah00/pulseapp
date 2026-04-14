@@ -98,4 +98,5 @@ export const RATE_LIMITS = {
   publicBooking: { windowMs: 60_000, maxRequests: 20, prefix: 'book' } as RateLimitConfig,
   auth: { windowMs: 300_000, maxRequests: 10, prefix: 'auth' } as RateLimitConfig,
   general: { windowMs: 60_000, maxRequests: 60, prefix: 'gen' } as RateLimitConfig,
+  aiAssistant: { windowMs: 60_000, maxRequests: 30, prefix: 'ai-asst' } as RateLimitConfig,
 } as const

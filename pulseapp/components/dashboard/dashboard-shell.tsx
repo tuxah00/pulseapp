@@ -13,6 +13,10 @@ const CommandPalette = dynamic(() => import('./command-palette'), {
   ssr: false,
   loading: () => null,
 })
+const AIAssistantPanel = dynamic(() => import('./ai-assistant/ai-assistant-panel'), {
+  ssr: false,
+  loading: () => null,
+})
 import type { SectorType, PlanType, StaffPermissions } from '@/types'
 
 interface DashboardShellProps {
@@ -123,6 +127,14 @@ function DashboardShellInner({
       </motion.main>
 
       <CommandPalette open={commandOpen} onClose={() => setCommandOpen(false)} />
+
+      {/* AI Asistan — Floating Panel */}
+      <AIAssistantPanel
+        businessName={businessName}
+        sector={sector}
+        plan={plan}
+        permissions={permissions}
+      />
 
       {/* Sonner toast — dark mode aware */}
       <Toaster

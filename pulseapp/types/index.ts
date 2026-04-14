@@ -1115,3 +1115,54 @@ export interface BlockedSlot {
   created_by: string | null
   created_at: string
 }
+
+// ── AI Assistant Tipleri ──
+
+export type AIMessageRole = 'user' | 'assistant' | 'tool'
+
+export interface AIConversation {
+  id: string
+  business_id: string
+  staff_id: string
+  title: string | null
+  is_onboarding: boolean
+  metadata: Record<string, any>
+  created_at: string
+  updated_at: string
+}
+
+export interface AIMessage {
+  id: string
+  conversation_id: string
+  role: AIMessageRole
+  content: string | null
+  tool_calls: any | null
+  tool_name: string | null
+  tool_call_id: string | null
+  tool_result: any | null
+  tokens_used: number
+  created_at: string
+}
+
+export interface AIUsage {
+  id: string
+  business_id: string
+  staff_id: string
+  month: string
+  message_count: number
+  total_input_tokens: number
+  total_output_tokens: number
+  created_at: string
+  updated_at: string
+}
+
+export interface AIStreamEvent {
+  type: 'text' | 'tool_start' | 'tool_end' | 'done' | 'error' | 'limit'
+  content?: string
+  name?: string
+  label?: string
+  summary?: string
+  conversationId?: string
+  messageId?: string
+  error?: string
+}
