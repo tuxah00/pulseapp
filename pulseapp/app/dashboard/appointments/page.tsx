@@ -1489,6 +1489,10 @@ export default function AppointmentsPage() {
                     {weekDays.map((day, dayIdx) => {
                       const dayAppointments = filteredAppointments.filter(a => a.appointment_date === day)
                       const isDayToday = day === todayStr
+                      const isDayPast = day < todayStr
+                      const nowTimeStr = now
+                        ? `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+                        : '23:59'
                       const weekColData = weekDays.map(d => ({ id: d, date: d }))
 
                       return (
@@ -1615,7 +1619,7 @@ export default function AppointmentsPage() {
                                   const topPos = ((earliest - startHour * 60) / 60) * hourHeight
                                   const h = Math.max(((latest - earliest) / 60) * hourHeight, 28)
                                   const colorIdx = getStaffColorIndex(apts[0].staff_id)
-                                  const mergedIsPast = isPast(apts[0])
+                                  const mergedIsPast = isDayPast || (isDayToday && apts.every(a => a.end_time <= nowTimeStr))
                                   return (
                                     <div
                                       key={`mg-${apts[0].id}`}
@@ -1645,14 +1649,15 @@ export default function AppointmentsPage() {
                                   const colorIdx = getStaffColorIndex(apt.staff_id)
                                   const colWidth = 100 / totalColumns
                                   const colLeft = column * colWidth
-                                  const unresolved = isPastUnresolved(apt)
+                                  const isAptPast = isDayPast || (isDayToday && apt.end_time <= nowTimeStr)
+                                  const isAptUnresolved = isAptPast && apt.status !== 'completed' && apt.status !== 'cancelled' && apt.status !== 'no_show'
                                   return (
                                     <div
                                       key={apt.id}
                                       className="absolute"
                                       style={{ top: topPos, height: h, left: `${colLeft}%`, width: `${colWidth - 1}%` }}
                                     >
-                                      {unresolved && (
+                                      {isAptUnresolved && (
                                         <span className="absolute -top-1 -right-1 z-10 h-2.5 w-2.5 rounded-full bg-red-500 border-2 border-gray-900 pointer-events-none" />
                                       )}
                                       <div
@@ -1665,10 +1670,9 @@ export default function AppointmentsPage() {
                                         onDragEnd={() => setDraggingId(null)}
                                         className={cn(
                                           'absolute inset-0 rounded-md px-1.5 py-0.5 overflow-hidden cursor-grab active:cursor-grabbing hover:opacity-90 transition-opacity border border-white/20',
-                                          staffColors[colorIdx],
-                                          draggingId === apt.id && 'opacity-50'
+                                          staffColors[colorIdx]
                                         )}
-                                        style={{ opacity: draggingId === apt.id ? 0.5 : isPast(apt) ? 0.5 : 1 }}
+                                        style={{ opacity: draggingId === apt.id ? 0.5 : isAptPast ? 0.5 : 1 }}
                                         onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
                                       >
                                         <p className={cn('text-[10px] font-semibold truncate', staffTextColors[colorIdx])}>
