@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { sanitizeOrFilter } from '@/lib/utils/validate'
 
 async function verifyMembership(supabase: ReturnType<typeof createServerSupabaseClient>, userId: string, businessId: string) {
   const { data } = await supabase
@@ -34,8 +35,7 @@ export async function GET(request: NextRequest) {
     .eq('is_active', true)
 
   if (q) {
-    // PostgREST .or() filter injection koruması: özel karakterleri temizle (, ) * vb.)
-    const safeQ = q.replace(/[,()*%\\]/g, '').slice(0, 100)
+    const safeQ = sanitizeOrFilter(q)
     if (safeQ) {
       query = query.or(`name.ilike.%${safeQ}%,phone.ilike.%${safeQ}%`)
     }

@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/api/with-permission'
 
-// Session'ın bu işletmeye ait olduğunu doğrular
+type SessionOwnership = { id: string; class: { business_id: string } | null }
+type AttendanceOwnership = {
+  id: string
+  session: { class: { business_id: string } | null } | null
+}
+
 async function verifySessionOwnership(
   supabase: ReturnType<typeof createServerSupabaseClient>,
   sessionId: string,
@@ -12,12 +17,10 @@ async function verifySessionOwnership(
     .from('class_sessions')
     .select('id, class:classes!inner(business_id)')
     .eq('id', sessionId)
-    .maybeSingle()
-  // @ts-expect-error nested relation tipi
+    .maybeSingle<SessionOwnership>()
   return data?.class?.business_id === businessId
 }
 
-// Attendance kaydının bu işletmeye ait olduğunu doğrular
 async function verifyAttendanceOwnership(
   supabase: ReturnType<typeof createServerSupabaseClient>,
   attendanceId: string,
@@ -27,8 +30,7 @@ async function verifyAttendanceOwnership(
     .from('class_attendance')
     .select('id, session:class_sessions!inner(class:classes!inner(business_id))')
     .eq('id', attendanceId)
-    .maybeSingle()
-  // @ts-expect-error nested relation tipi
+    .maybeSingle<AttendanceOwnership>()
   return data?.session?.class?.business_id === businessId
 }
 

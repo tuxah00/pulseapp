@@ -45,13 +45,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Geçersiz veya süresi dolmuş kod' }, { status: 401 })
   }
 
-  // Timing-safe karşılaştırma
-  const stored = Buffer.from(otpRecord.otp.padEnd(6, '0').slice(0, 6))
-  const provided = Buffer.from(otpStr)
-  const match = stored.length === provided.length && crypto.timingSafeEqual(stored, provided)
+  // Timing-safe karşılaştırma — her iki taraf da /^\d{6}$/ gate'inden geçti, uzunluk garantili
+  const match =
+    otpRecord.otp.length === 6 &&
+    crypto.timingSafeEqual(Buffer.from(otpRecord.otp), Buffer.from(otpStr))
 
   if (!match) {
-    // Yanlış OTP — tek kullanımlık olduğu için kaydı kullanıldı say (brute-force engellemek için)
+    // Yanlış OTP: kayıt tek kullanımlık olduğundan brute-force engellemek için yakılır
     await admin.from('portal_otps').update({ used: true }).eq('id', otpRecord.id)
     return NextResponse.json({ error: 'Hatalı doğrulama kodu' }, { status: 401 })
   }

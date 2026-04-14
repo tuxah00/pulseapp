@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { sanitizeOrFilter } from '@/lib/utils/validate'
 
 export async function GET(req: NextRequest) {
   const supabase = await createServerSupabaseClient()
@@ -41,8 +42,7 @@ export async function GET(req: NextRequest) {
   if (fromDate) query = query.gte('created_at', `${fromDate}T00:00:00`)
   if (toDate) query = query.lte('created_at', `${toDate}T23:59:59`)
   if (searchText) {
-    // PostgREST .or() filter injection koruması
-    const safeSearch = searchText.replace(/[,()*%\\]/g, '').slice(0, 100)
+    const safeSearch = sanitizeOrFilter(searchText)
     if (safeSearch) {
       query = query.or(`staff_name.ilike.%${safeSearch}%,action.ilike.%${safeSearch}%,resource.ilike.%${safeSearch}%,details->>customer_name.ilike.%${safeSearch}%,details->>name.ilike.%${safeSearch}%,details->>email.ilike.%${safeSearch}%,details->>allergen.ilike.%${safeSearch}%,details->>referrer_name.ilike.%${safeSearch}%`)
     }
