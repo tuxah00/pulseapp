@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
@@ -45,6 +45,9 @@ import { ToolbarPopover, SortPopoverContent, FilterPopoverList } from '@/compone
 import { CustomSelect } from '@/components/ui/custom-select'
 import { CustomerSearchSelect } from '@/components/ui/customer-search-select'
 import { Portal } from '@/components/ui/portal'
+
+const UNRESOLVED_BORDER = 'opacity-50 !border-l-[3px] !border-l-red-500'
+const UNRESOLVED_BORDER_ONLY = '!border-l-[3px] !border-l-red-500'
 
 export default function AppointmentsPage() {
   const { businessId, staffId: currentStaffId, staffName: currentStaffName, sector, loading: ctxLoading } = useBusinessContext()
@@ -1022,16 +1025,20 @@ export default function AppointmentsPage() {
   const completedCount = appointments.filter(a => a.status === 'completed').length
   const noShowCount = appointments.filter(a => a.status === 'no_show').length
 
-  // Geçmiş + sonuçsuz randevu kontrolü: tarihi geçmiş ve hala pending/confirmed
-  const todayStr2 = new Date().toISOString().split('T')[0]
-  const nowMinStr = `${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`
-  function isPastUnresolved(apt: AppointmentView): boolean {
-    if (apt.status === 'completed' || apt.status === 'cancelled' || apt.status === 'no_show') return false
-    if (apt.appointment_date < todayStr2) return true
-    if (apt.appointment_date === todayStr2 && apt.end_time <= nowMinStr) return true
-    return false
-  }
-  const unresolvedCount = appointments.filter(a => isPastUnresolved(a)).length
+  // Geçmiş + sonuçsuz randevu: tek tarama ile Set oluştur, her yerde O(1) lookup
+  const { unresolvedIds, unresolvedCount } = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0]
+    const nowMin = `${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`
+    const ids = new Set<string>()
+    for (const a of appointments) {
+      if (a.status === 'completed' || a.status === 'cancelled' || a.status === 'no_show') continue
+      if (a.appointment_date < today || (a.appointment_date === today && a.end_time <= nowMin)) {
+        ids.add(a.id)
+      }
+    }
+    return { unresolvedIds: ids, unresolvedCount: ids.size }
+  }, [appointments])
+  const isPastUnresolved = (apt: AppointmentView) => unresolvedIds.has(apt.id)
 
   // Aksiyon butonları — hem liste hem kutu görünümünde kullanılır
   function ActionButtons({ apt, size = 'md' }: { apt: AppointmentView; size?: 'sm' | 'md' }) {
@@ -1554,7 +1561,7 @@ export default function AppointmentsPage() {
                                         'absolute rounded-md px-1.5 py-0.5 overflow-hidden cursor-grab active:cursor-grabbing hover:opacity-90 transition-opacity border border-white/20',
                                         staffColors[colorIdx],
                                         draggingId === apt.id && 'opacity-50',
-                                        isPastUnresolved(apt) && 'opacity-50 !border-l-[3px] !border-l-red-500'
+                                        isPastUnresolved(apt) && UNRESOLVED_BORDER
                                       )}
                                       style={{ top: topPos, height: h, left: `${colLeft}%`, width: `${colWidth - 1}%` }}
                                       onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
@@ -1894,7 +1901,7 @@ export default function AppointmentsPage() {
                                 'absolute left-0.5 right-0.5 rounded-md px-1.5 py-0.5 overflow-hidden cursor-grab active:cursor-grabbing hover:opacity-90 transition-opacity border border-white/20',
                                 staffColors[col.colorIdx],
                                 draggingId === apt.id && 'opacity-50',
-                                isPastUnresolved(apt) && 'opacity-50 !border-l-[3px] !border-l-red-500'
+                                isPastUnresolved(apt) && UNRESOLVED_BORDER
                               )}
                               style={{ top, height }}
                               onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
@@ -2108,7 +2115,7 @@ export default function AppointmentsPage() {
                               className={cn(
                                 'absolute left-0.5 right-0.5 rounded-md px-1.5 py-0.5 overflow-hidden cursor-grab active:cursor-grabbing hover:opacity-80 transition-opacity text-white border border-white/20',
                                 draggingId === apt.id && 'opacity-50',
-                                isPastUnresolved(apt) && 'opacity-50 !border-l-[3px] !border-l-red-500'
+                                isPastUnresolved(apt) && UNRESOLVED_BORDER
                               )}
                               style={{ top, height, backgroundColor: col.color }}
                               onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
@@ -2278,7 +2285,7 @@ export default function AppointmentsPage() {
                   'hover:border-gray-200 dark:hover:border-gray-700 hover:shadow-sm',
                   timeState === 'past' && 'opacity-60',
                   timeState === 'current' && 'border-green-400 dark:border-green-600 ring-1 ring-green-400 dark:ring-green-600',
-                  isPastUnresolved(apt) && '!border-l-[3px] !border-l-red-500',
+                  isPastUnresolved(apt) && UNRESOLVED_BORDER_ONLY,
                   selectedAppointment?.id === apt.id && 'ring-2 ring-pulse-900 border-pulse-300 dark:border-pulse-700',
                 )}
               >
@@ -2324,7 +2331,7 @@ export default function AppointmentsPage() {
                   'border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900/50',
                   timeState === 'past' && 'opacity-60',
                   timeState === 'current' && 'border-green-400 ring-1 ring-green-400',
-                  isPastUnresolved(apt) && '!border-l-[3px] !border-l-red-500',
+                  isPastUnresolved(apt) && UNRESOLVED_BORDER_ONLY,
                   selectedAppointment?.id === apt.id && 'ring-2 ring-pulse-900',
                 )}
               >
