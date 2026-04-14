@@ -22,6 +22,18 @@ export async function POST(req: NextRequest) {
 
   const admin = createAdminClient()
 
+  // İdempotency: bu merchant_oid zaten işlenmişse tekrar çalıştırma
+  const { data: existingPayment } = await admin
+    .from('payments')
+    .select('id, status')
+    .eq('merchant_oid', data.merchant_oid)
+    .maybeSingle()
+
+  if (existingPayment?.status === 'paid' && data.status === 'success') {
+    // Zaten işlenmiş — PayTR'nin tekrar gönderimi; OK dön ve çık
+    return new Response('OK')
+  }
+
   // payment kaydını güncelle
   await admin
     .from('payments')
@@ -47,9 +59,13 @@ export async function POST(req: NextRequest) {
 
   const { businessId, planType } = parsed
 
-  // Abonelik sonu tarihini hesapla (1 ay)
+  // Abonelik sonu tarihini hesapla (1 ay) — ay sonu taşması koruması (31 Ocak → 28 Şubat)
   const nextBillingDate = new Date()
+  const originalDay = nextBillingDate.getDate()
+  nextBillingDate.setDate(1)
   nextBillingDate.setMonth(nextBillingDate.getMonth() + 1)
+  const lastDayOfNextMonth = new Date(nextBillingDate.getFullYear(), nextBillingDate.getMonth() + 1, 0).getDate()
+  nextBillingDate.setDate(Math.min(originalDay, lastDayOfNextMonth))
 
   // İşletmenin aboneliğini güncelle
   const { error } = await admin

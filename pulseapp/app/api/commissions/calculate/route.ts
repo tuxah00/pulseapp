@@ -98,10 +98,11 @@ export async function POST(request: NextRequest) {
 
     let commission = 0
     if (rule) {
-      if (rule.rate_percent) {
-        commission = (price * rule.rate_percent) / 100
-      } else if (rule.rate_fixed) {
-        commission = rule.rate_fixed
+      // rate_percent null değilse (0 dahil) yüzde uygula; aksi halde fixed kullan
+      if (rule.rate_percent !== null && rule.rate_percent !== undefined) {
+        commission = Math.max(0, (price * rule.rate_percent) / 100)
+      } else if (rule.rate_fixed !== null && rule.rate_fixed !== undefined) {
+        commission = Math.max(0, rule.rate_fixed)
       }
     }
 

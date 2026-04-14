@@ -2,9 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { getAnthropicClient, AI_MODEL, MAX_TOKENS } from '@/lib/ai/client'
 import { getReviewResponseSystemPrompt } from '@/lib/ai/prompts'
+import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit (AI: 10 req/min)
+    const rl = checkRateLimit(request, RATE_LIMITS.ai)
+    if (rl.limited) return rl.response
+
     const supabase = createServerSupabaseClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {

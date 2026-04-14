@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { requirePermission } from '@/lib/api/with-permission'
 
 const DEFAULT_RESERVATION_DURATION = 90 // minutes
 
@@ -83,12 +84,13 @@ async function getReservationDuration(
 }
 
 export async function GET(req: NextRequest) {
+  const auth = await requirePermission(req, 'reservations')
+  if (!auth.ok) return auth.response
+  const { businessId } = auth.ctx
+
   const supabase = createServerSupabaseClient()
   const { searchParams } = new URL(req.url)
-  const businessId = searchParams.get('businessId')
   const date = searchParams.get('date') // YYYY-MM-DD
-
-  if (!businessId) return NextResponse.json({ error: 'businessId required' }, { status: 400 })
 
   let query = supabase
     .from('table_reservations')
@@ -104,12 +106,19 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requirePermission(req, 'reservations')
+  if (!auth.ok) return auth.response
+  const { businessId } = auth.ctx
+
   const supabase = createServerSupabaseClient()
   const rawBody = await req.json()
 
+  // business_id her zaman auth'tan
+  rawBody.business_id = businessId
+
   // Zorunlu alan kontrolü
-  if (!rawBody.business_id || !rawBody.customer_name || !rawBody.table_number || !rawBody.reservation_date || !rawBody.reservation_time) {
-    return NextResponse.json({ error: 'Zorunlu alanlar eksik: business_id, customer_name, table_number, reservation_date, reservation_time' }, { status: 400 })
+  if (!rawBody.customer_name || !rawBody.table_number || !rawBody.reservation_date || !rawBody.reservation_time) {
+    return NextResponse.json({ error: 'Zorunlu alanlar eksik: customer_name, table_number, reservation_date, reservation_time' }, { status: 400 })
   }
 
   const body = pickAllowedFields(rawBody)
@@ -142,12 +151,18 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
+  const auth = await requirePermission(req, 'reservations')
+  if (!auth.ok) return auth.response
+  const { businessId } = auth.ctx
+
   const supabase = createServerSupabaseClient()
   const { searchParams } = new URL(req.url)
   const id = searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
 
   const rawBody = await req.json()
+  // business_id değiştirilemez (tenant boundary)
+  rawBody.business_id = businessId
   const body = pickAllowedFields(rawBody)
 
   // Conflict check for table reservations (exclude current reservation)
@@ -179,12 +194,20 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const auth = await requirePermission(req, 'reservations')
+  if (!auth.ok) return auth.response
+  const { businessId } = auth.ctx
+
   const supabase = createServerSupabaseClient()
   const { searchParams } = new URL(req.url)
   const id = searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
 
-  const { error } = await supabase.from('table_reservations').delete().eq('id', id)
+  const { error } = await supabase
+    .from('table_reservations')
+    .delete()
+    .eq('id', id)
+    .eq('business_id', businessId)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ success: true })
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
 
 async function verifyMembership(supabase: ReturnType<typeof createServerSupabaseClient>, userId: string, businessId: string) {
   const { data } = await supabase
@@ -14,6 +15,9 @@ async function verifyMembership(supabase: ReturnType<typeof createServerSupabase
 
 // POST: AI Tedavi Önerisi
 export async function POST(request: NextRequest) {
+  const rl = checkRateLimit(request, RATE_LIMITS.ai)
+  if (rl.limited) return rl.response
+
   const supabase = createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })

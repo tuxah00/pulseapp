@@ -67,17 +67,37 @@ export async function POST(req: NextRequest) {
   if (paidAmount >= total) payment_status = 'paid'
   else if (paidAmount > 0) payment_status = 'partial'
 
-  // Fiş numarası: RCP-YYYY-XXXX
+  // Fiş + fatura numaralarını paralel getir (max-based, silinenler dahil yıl bazlı sıralı)
   const year = new Date().getFullYear()
-  const { count } = await supabase
-    .from('pos_transactions')
-    .select('*', { count: 'exact', head: true })
-    .eq('business_id', businessId)
+  const isPaid = payment_status === 'paid'
+  const [receiptRes, invRes] = await Promise.all([
+    supabase
+      .from('pos_transactions')
+      .select('receipt_number')
+      .eq('business_id', businessId)
+      .like('receipt_number', `RCP-${year}-%`)
+      .order('receipt_number', { ascending: false })
+      .limit(1)
+      .single(),
+    isPaid
+      ? supabase
+          .from('invoices')
+          .select('invoice_number')
+          .eq('business_id', businessId)
+          .like('invoice_number', `INV-${year}-%`)
+          .order('invoice_number', { ascending: false })
+          .limit(1)
+          .single()
+      : Promise.resolve({ data: null }),
+  ])
 
-  const receipt_number = `RCP-${year}-${String((count || 0) + 1).padStart(4, '0')}`
+  const lastReceiptSeq = receiptRes.data?.receipt_number
+    ? parseInt(String(receiptRes.data.receipt_number).split('-')[2]) || 0
+    : 0
+  const receipt_number = `RCP-${year}-${String(lastReceiptSeq + 1).padStart(4, '0')}`
 
   let invoice_id: string | null = null
-  if (payment_status === 'paid') {
+  if (isPaid) {
     const invoiceItems: InvoiceItem[] = items.map((item: POSItem) => ({
       service_name: item.name,
       quantity: item.quantity,
@@ -87,13 +107,11 @@ export async function POST(req: NextRequest) {
       type: item.type,
     }))
 
-    const { count: invCount } = await supabase
-      .from('invoices')
-      .select('*', { count: 'exact', head: true })
-      .eq('business_id', businessId)
-      .is('deleted_at', null)
-
-    const invoiceNumber = `INV-${year}-${String((invCount || 0) + 1).padStart(4, '0')}`
+    const lastInv = invRes.data as { invoice_number?: string } | null
+    const lastInvSeq = lastInv?.invoice_number
+      ? parseInt(String(lastInv.invoice_number).split('-')[2]) || 0
+      : 0
+    const invoiceNumber = `INV-${year}-${String(lastInvSeq + 1).padStart(4, '0')}`
     const primaryMethod = payments[0]?.method || 'cash'
 
     const { data: invoice } = await supabase
@@ -125,15 +143,15 @@ export async function POST(req: NextRequest) {
         if (item.product_id && item.type === 'product') {
           const { data: product } = await supabase
             .from('products')
-            .select('stock_quantity')
+            .select('stock_count')
             .eq('id', item.product_id)
             .single()
 
           if (product) {
-            const newQty = Math.max(0, (product.stock_quantity || 0) - item.quantity)
+            const newQty = Math.max(0, (product.stock_count || 0) - item.quantity)
             await supabase
               .from('products')
-              .update({ stock_quantity: newQty, updated_at: new Date().toISOString() })
+              .update({ stock_count: newQty, updated_at: new Date().toISOString() })
               .eq('id', item.product_id)
 
             await supabase.from('stock_movements').insert({

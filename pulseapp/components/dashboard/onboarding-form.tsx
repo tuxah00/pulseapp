@@ -5,6 +5,12 @@ import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import { SECTOR_LABELS, type SectorType } from '@/types'
 import { SECTOR_GROUPS } from '@/lib/config/sector-modules'
+import { CustomSelect } from '@/components/ui/custom-select'
+
+// Sektör gruplarını, grup başlığı "— Grup Adı —" şeklinde ayırt edilebilir flat liste
+const SECTOR_OPTIONS = SECTOR_GROUPS.flatMap((group) =>
+  group.sectors.map((s) => ({ value: s, label: `${group.label} — ${SECTOR_LABELS[s]}` })),
+)
 
 interface OnboardingFormProps {
   userId: string
@@ -78,21 +84,11 @@ export default function OnboardingForm({ userId, userEmail, userName }: Onboardi
 
         <div>
           <label htmlFor="sector" className="label">Sektör</label>
-          <select
-            id="sector"
+          <CustomSelect
+            options={SECTOR_OPTIONS}
             value={sector}
-            onChange={(e) => setSector(e.target.value as SectorType)}
-            className="input"
-            required
-          >
-            {SECTOR_GROUPS.map((group) => (
-              <optgroup key={group.label} label={group.label}>
-                {group.sectors.map((s) => (
-                  <option key={s} value={s}>{SECTOR_LABELS[s]}</option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
+            onChange={(v) => setSector(v as SectorType)}
+          />
         </div>
 
         <div>
