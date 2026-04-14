@@ -1,20 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { requirePermission } from '@/lib/api/with-permission'
 
-// GET /api/packages?businessId=...&type=templates|customer&customerId=...&status=...
+// GET /api/packages?type=templates|customer&customerId=...&status=...
 export async function GET(req: NextRequest) {
+  const auth = await requirePermission(req, 'packages')
+  if (!auth.ok) return auth.response
+  const { businessId } = auth.ctx
+
   const supabase = createServerSupabaseClient()
   const { searchParams } = new URL(req.url)
-  const businessId = searchParams.get('businessId')
-  const type = searchParams.get('type') ?? 'templates' // 'templates' | 'customer'
+  const type = searchParams.get('type') ?? 'templates'
   const customerId = searchParams.get('customerId')
   const status = searchParams.get('status')
   const search = searchParams.get('search') ?? ''
 
-  if (!businessId) return NextResponse.json({ error: 'businessId required' }, { status: 400 })
-
   if (type === 'templates') {
-    // Paket şablonları (service_packages)
     const { data, error } = await supabase
       .from('service_packages')
       .select('*, service:services(name, duration_minutes)')
@@ -26,7 +27,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ packages: data })
   }
 
-  // Müşteri paketleri (customer_packages)
   let query = supabase
     .from('customer_packages')
     .select('*, customer:customers(name, phone), service:services(name)')
@@ -42,18 +42,22 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ packages: data })
 }
 
-// POST /api/packages — paket şablonu veya müşteri paketi oluştur
 export async function POST(req: NextRequest) {
+  const auth = await requirePermission(req, 'packages')
+  if (!auth.ok) return auth.response
+  const { businessId } = auth.ctx
+
   const supabase = createServerSupabaseClient()
   const { searchParams } = new URL(req.url)
   const type = searchParams.get('type') ?? 'templates'
   const body = await req.json()
 
   const table = type === 'templates' ? 'service_packages' : 'customer_packages'
+  const payload = { ...body, business_id: businessId }
 
   const { data, error } = await supabase
     .from(table)
-    .insert(body)
+    .insert(payload)
     .select()
     .single()
 
@@ -61,8 +65,11 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ package: data })
 }
 
-// PATCH /api/packages?id=...&type=...
 export async function PATCH(req: NextRequest) {
+  const auth = await requirePermission(req, 'packages')
+  if (!auth.ok) return auth.response
+  const { businessId } = auth.ctx
+
   const supabase = createServerSupabaseClient()
   const { searchParams } = new URL(req.url)
   const id = searchParams.get('id')
@@ -71,11 +78,13 @@ export async function PATCH(req: NextRequest) {
 
   const table = type === 'templates' ? 'service_packages' : 'customer_packages'
   const body = await req.json()
+  delete body.business_id
 
   const { data, error } = await supabase
     .from(table)
     .update(body)
     .eq('id', id)
+    .eq('business_id', businessId)
     .select()
     .single()
 
@@ -83,8 +92,11 @@ export async function PATCH(req: NextRequest) {
   return NextResponse.json({ package: data })
 }
 
-// DELETE /api/packages?id=...&type=...
 export async function DELETE(req: NextRequest) {
+  const auth = await requirePermission(req, 'packages')
+  if (!auth.ok) return auth.response
+  const { businessId } = auth.ctx
+
   const supabase = createServerSupabaseClient()
   const { searchParams } = new URL(req.url)
   const id = searchParams.get('id')
@@ -93,7 +105,11 @@ export async function DELETE(req: NextRequest) {
 
   const table = type === 'templates' ? 'service_packages' : 'customer_packages'
 
-  const { error } = await supabase.from(table).delete().eq('id', id)
+  const { error } = await supabase
+    .from(table)
+    .delete()
+    .eq('id', id)
+    .eq('business_id', businessId)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ success: true })
 }
