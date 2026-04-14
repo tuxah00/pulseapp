@@ -219,19 +219,22 @@ export default function PortalDashboardPage() {
             </div>
           ) : (
             <div className="space-y-2">
-              {upcomingAppointments.map((apt) => (
+              {upcomingAppointments.map((apt) => {
+                const svc = Array.isArray(apt.services) ? apt.services[0] : apt.services
+                const staff = Array.isArray(apt.staff_members) ? apt.staff_members[0] : apt.staff_members
+                return (
                 <div key={apt.id} className="bg-white rounded-2xl border border-gray-100 p-4">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1">
                       <p className="font-medium text-gray-900 text-sm">
-                        {(apt.services as any)?.name || 'Randevu'}
+                        {svc?.name || 'Randevu'}
                       </p>
                       <p className="text-xs text-gray-500 mt-0.5">
                         {formatDate(apt.appointment_date)} · {formatTime(apt.start_time)}
                         {apt.end_time && ` - ${formatTime(apt.end_time)}`}
                       </p>
-                      {(apt.staff_members as any)?.name && (
-                        <p className="text-xs text-gray-400 mt-0.5">{(apt.staff_members as any).name}</p>
+                      {staff?.name && (
+                        <p className="text-xs text-gray-400 mt-0.5">{staff.name}</p>
                       )}
                     </div>
                     <span className={cn('badge text-xs border', STATUS_COLORS[apt.status] || 'bg-gray-100 text-gray-600')}>
@@ -239,7 +242,7 @@ export default function PortalDashboardPage() {
                     </span>
                   </div>
                 </div>
-              ))}
+              )})}
             </div>
           )}
         </div>
@@ -249,12 +252,14 @@ export default function PortalDashboardPage() {
           <div>
             <h2 className="text-base font-semibold text-gray-900 mb-3">Geçmiş Randevular</h2>
             <div className="space-y-2">
-              {pastAppointments.map((apt) => (
+              {pastAppointments.map((apt) => {
+                const svc = Array.isArray(apt.services) ? apt.services[0] : apt.services
+                return (
                 <div key={apt.id} className="bg-white rounded-2xl border border-gray-100 p-4 opacity-80">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1">
                       <p className="font-medium text-gray-800 text-sm">
-                        {(apt.services as any)?.name || 'Randevu'}
+                        {svc?.name || 'Randevu'}
                       </p>
                       <p className="text-xs text-gray-400 mt-0.5">
                         {formatDate(apt.appointment_date)} · {formatTime(apt.start_time)}
