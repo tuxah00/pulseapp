@@ -547,9 +547,26 @@ export async function executeAssistantTool(
   }
 }
 
+// Anahtarlar DB'de 3 harfli (mon/tue/wed/thu/fri/sat/sun), değer: {open, close} veya null
+const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const
 const DAY_NAMES: Record<string, string> = {
-  monday: 'Pazartesi', tuesday: 'Salı', wednesday: 'Çarşamba',
-  thursday: 'Perşembe', friday: 'Cuma', saturday: 'Cumartesi', sunday: 'Pazar',
+  mon: 'Pazartesi', tue: 'Salı', wed: 'Çarşamba',
+  thu: 'Perşembe', fri: 'Cuma', sat: 'Cumartesi', sun: 'Pazar',
+}
+
+function getDayKey(dateStr: string): string {
+  // YYYY-MM-DD → mon/tue/...
+  const d = new Date(dateStr + 'T00:00:00')
+  return DAY_KEYS[d.getDay()]
+}
+
+function getDayHours(workingHours: any, dateStr: string): { open: string; close: string } | null {
+  if (!workingHours) return null
+  const dh = workingHours[getDayKey(dateStr)]
+  // Kapalı gün null olarak kaydedilir; bazı eski kayıtlarda {closed: true} olabilir
+  if (!dh || dh.closed) return null
+  if (!dh.open || !dh.close) return null
+  return { open: dh.open, close: dh.close }
 }
 
 // ── Handler Implementations ──
@@ -610,10 +627,8 @@ async function handleGetAvailableSlots(
 
   if (!biz?.working_hours) return { success: true, data: { musait_saatler: [], not: 'Çalışma saatleri ayarlanmamış' } }
 
-  const dayOfWeek = new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
-  const dayHours = biz.working_hours[dayOfWeek]
-
-  if (!dayHours || dayHours.closed) {
+  const dayHours = getDayHours(biz.working_hours, date)
+  if (!dayHours) {
     return { success: true, data: { musait_saatler: [], not: 'Bu gün kapalı' } }
   }
 
@@ -1173,9 +1188,8 @@ async function handleCreateAppointment(
 
   // Working hours validation
   if (bizWH?.working_hours) {
-    const dayKey = new Date(args.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
-    const dayHours = (bizWH.working_hours as any)[dayKey]
-    if (!dayHours || dayHours.closed) {
+    const dayHours = getDayHours(bizWH.working_hours, args.date)
+    if (!dayHours) {
       return { success: false, error: `${args.date} tarihi işletme için kapalı bir gün` }
     }
     if (timeToMinutes(args.start_time) < timeToMinutes(dayHours.open) || endMin > timeToMinutes(dayHours.close)) {
