@@ -980,6 +980,26 @@ export default function AppointmentsPage() {
     return slots
   }
 
+  // Geçmiş + sonuçsuz randevu: tek tarama ile Set oluştur, her yerde O(1) lookup
+  const { unresolvedIds, unresolvedCount } = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0]
+    const nowMin = `${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`
+    const ids = new Set<string>()
+    for (const a of appointments) {
+      if (a.status === 'completed' || a.status === 'cancelled' || a.status === 'no_show') continue
+      if (a.appointment_date < today || (a.appointment_date === today && a.end_time <= nowMin)) {
+        ids.add(a.id)
+      }
+    }
+    return { unresolvedIds: ids, unresolvedCount: ids.size }
+  }, [appointments])
+  const isPastUnresolved = (apt: AppointmentView) => unresolvedIds.has(apt.id)
+
+  const totalCount = appointments.length
+  const confirmedCount = appointments.filter(a => a.status === 'confirmed').length
+  const completedCount = appointments.filter(a => a.status === 'completed').length
+  const noShowCount = appointments.filter(a => a.status === 'no_show').length
+
   const hasActiveFilters = !!(staffIdFilter || serviceIdFilter)
   const filteredAppointments = (() => {
     let list = appointments.filter(a => {
@@ -1019,26 +1039,6 @@ export default function AppointmentsPage() {
     }
     return list
   })()
-
-  const totalCount = appointments.length
-  const confirmedCount = appointments.filter(a => a.status === 'confirmed').length
-  const completedCount = appointments.filter(a => a.status === 'completed').length
-  const noShowCount = appointments.filter(a => a.status === 'no_show').length
-
-  // Geçmiş + sonuçsuz randevu: tek tarama ile Set oluştur, her yerde O(1) lookup
-  const { unresolvedIds, unresolvedCount } = useMemo(() => {
-    const today = new Date().toISOString().split('T')[0]
-    const nowMin = `${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`
-    const ids = new Set<string>()
-    for (const a of appointments) {
-      if (a.status === 'completed' || a.status === 'cancelled' || a.status === 'no_show') continue
-      if (a.appointment_date < today || (a.appointment_date === today && a.end_time <= nowMin)) {
-        ids.add(a.id)
-      }
-    }
-    return { unresolvedIds: ids, unresolvedCount: ids.size }
-  }, [appointments])
-  const isPastUnresolved = (apt: AppointmentView) => unresolvedIds.has(apt.id)
 
   // Aksiyon butonları — hem liste hem kutu görünümünde kullanılır
   function ActionButtons({ apt, size = 'md' }: { apt: AppointmentView; size?: 'sm' | 'md' }) {
