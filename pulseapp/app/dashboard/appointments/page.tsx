@@ -1064,8 +1064,9 @@ export default function AppointmentsPage() {
 
   // Geçmiş + sonuçsuz randevu: tek tarama ile Set oluştur, her yerde O(1) lookup
   const { unresolvedIds, unresolvedCount, pastIds } = useMemo(() => {
-    const today = new Date().toISOString().split('T')[0]
-    const nowMin = `${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`
+    const n = new Date()
+    const today = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`
+    const nowMin = `${String(n.getHours()).padStart(2, '0')}:${String(n.getMinutes()).padStart(2, '0')}`
     const ids = new Set<string>()
     const pids = new Set<string>()
     for (const a of appointments) {
@@ -1614,6 +1615,7 @@ export default function AppointmentsPage() {
                                   const topPos = ((earliest - startHour * 60) / 60) * hourHeight
                                   const h = Math.max(((latest - earliest) / 60) * hourHeight, 28)
                                   const colorIdx = getStaffColorIndex(apts[0].staff_id)
+                                  const mergedIsPast = isPast(apts[0])
                                   return (
                                     <div
                                       key={`mg-${apts[0].id}`}
@@ -1621,7 +1623,7 @@ export default function AppointmentsPage() {
                                         'absolute left-0 right-0 rounded-md px-2 py-1 cursor-pointer hover:opacity-90 transition-opacity border border-white/20 flex items-center justify-center',
                                         staffColors[colorIdx]
                                       )}
-                                      style={{ top: topPos, height: h }}
+                                      style={{ top: topPos, height: h, opacity: mergedIsPast ? 0.5 : 1 }}
                                       onClick={(e) => {
                                         e.stopPropagation()
                                         const hour = Math.floor(earliest / 60)
@@ -1643,39 +1645,46 @@ export default function AppointmentsPage() {
                                   const colorIdx = getStaffColorIndex(apt.staff_id)
                                   const colWidth = 100 / totalColumns
                                   const colLeft = column * colWidth
+                                  const unresolved = isPastUnresolved(apt)
                                   return (
                                     <div
                                       key={apt.id}
-                                      draggable
-                                      onDragStart={(e) => {
-                                        e.dataTransfer.setData('text/plain', apt.id)
-                                        e.dataTransfer.effectAllowed = 'move'
-                                        setDraggingId(apt.id)
-                                      }}
-                                      onDragEnd={() => setDraggingId(null)}
-                                      className={cn(
-                                        'absolute rounded-md px-1.5 py-0.5 overflow-hidden cursor-grab active:cursor-grabbing hover:opacity-90 transition-opacity border border-white/20',
-                                        staffColors[colorIdx],
-                                        draggingId === apt.id && 'opacity-50',
-                                        isPast(apt) && 'opacity-50',
-                                        isPastUnresolved(apt) && UNRESOLVED_BORDER_ONLY
-                                      )}
+                                      className="absolute"
                                       style={{ top: topPos, height: h, left: `${colLeft}%`, width: `${colWidth - 1}%` }}
-                                      onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
                                     >
-                                      <p className={cn('text-[10px] font-semibold truncate', staffTextColors[colorIdx])}>
-                                        {apt.customers?.name || 'İsimsiz'}
-                                      </p>
-                                      {h > 30 && (
-                                        <p className={cn('text-[9px] truncate opacity-75', staffTextColors[colorIdx])}>
-                                          {apt.services?.name || ''} · {formatTime(apt.start_time)}
-                                        </p>
+                                      {unresolved && (
+                                        <span className="absolute -top-1 -right-1 z-10 h-2.5 w-2.5 rounded-full bg-red-500 border-2 border-gray-900 pointer-events-none" />
                                       )}
-                                      {apt.staff_members?.name && h > 24 && (
-                                        <p className={cn('text-[8px] truncate opacity-60 absolute bottom-0.5 right-1 max-w-[90%] text-right', staffTextColors[colorIdx])}>
-                                          {apt.staff_members.name}
+                                      <div
+                                        draggable
+                                        onDragStart={(e) => {
+                                          e.dataTransfer.setData('text/plain', apt.id)
+                                          e.dataTransfer.effectAllowed = 'move'
+                                          setDraggingId(apt.id)
+                                        }}
+                                        onDragEnd={() => setDraggingId(null)}
+                                        className={cn(
+                                          'absolute inset-0 rounded-md px-1.5 py-0.5 overflow-hidden cursor-grab active:cursor-grabbing hover:opacity-90 transition-opacity border border-white/20',
+                                          staffColors[colorIdx],
+                                          draggingId === apt.id && 'opacity-50'
+                                        )}
+                                        style={{ opacity: draggingId === apt.id ? 0.5 : isPast(apt) ? 0.5 : 1 }}
+                                        onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
+                                      >
+                                        <p className={cn('text-[10px] font-semibold truncate', staffTextColors[colorIdx])}>
+                                          {apt.customers?.name || 'İsimsiz'}
                                         </p>
-                                      )}
+                                        {h > 30 && (
+                                          <p className={cn('text-[9px] truncate opacity-75', staffTextColors[colorIdx])}>
+                                            {apt.services?.name || ''} · {formatTime(apt.start_time)}
+                                          </p>
+                                        )}
+                                        {apt.staff_members?.name && h > 24 && (
+                                          <p className={cn('text-[8px] truncate opacity-60 absolute bottom-0.5 right-1 max-w-[90%] text-right', staffTextColors[colorIdx])}>
+                                            {apt.staff_members.name}
+                                          </p>
+                                        )}
+                                      </div>
                                     </div>
                                   )
                                 })}
@@ -1797,12 +1806,11 @@ export default function AppointmentsPage() {
                                 }}
                                 onDragEnd={() => setDraggingId(null)}
                                 onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
+                                style={{ opacity: draggingId === apt.id ? 0.5 : isPast(apt) ? 0.5 : 1 }}
                                 className={cn(
                                   'rounded px-1.5 py-0.5 text-[10px] font-medium truncate cursor-grab active:cursor-grabbing border border-white/20 hover:opacity-90',
                                   staffColors[colorIdx],
-                                  staffTextColors[colorIdx],
-                                  draggingId === apt.id && 'opacity-50',
-                                  isPast(apt) && 'opacity-50'
+                                  staffTextColors[colorIdx]
                                 )}
                               >
                                 {formatTime(apt.start_time)} {apt.customers?.name || 'İsimsiz'}
@@ -1996,12 +2004,9 @@ export default function AppointmentsPage() {
                               onDragEnd={() => setDraggingId(null)}
                               className={cn(
                                 'absolute left-0.5 right-0.5 rounded-md px-1.5 py-0.5 overflow-hidden cursor-grab active:cursor-grabbing hover:opacity-90 transition-opacity border border-white/20',
-                                staffColors[col.colorIdx],
-                                draggingId === apt.id && 'opacity-50',
-                                isPast(apt) && 'opacity-50',
-                                isPastUnresolved(apt) && UNRESOLVED_BORDER_ONLY
+                                staffColors[col.colorIdx]
                               )}
-                              style={{ top, height }}
+                              style={{ top, height, opacity: draggingId === apt.id ? 0.5 : isPast(apt) ? 0.5 : 1 }}
                               onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
                             >
                               <p className={cn('text-[10px] font-semibold truncate', staffTextColors[col.colorIdx])}>
@@ -2210,13 +2215,8 @@ export default function AppointmentsPage() {
                                 setDraggingId(apt.id)
                               }}
                               onDragEnd={() => setDraggingId(null)}
-                              className={cn(
-                                'absolute left-0.5 right-0.5 rounded-md px-1.5 py-0.5 overflow-hidden cursor-grab active:cursor-grabbing hover:opacity-80 transition-opacity text-white border border-white/20',
-                                draggingId === apt.id && 'opacity-50',
-                                isPast(apt) && 'opacity-50',
-                                isPastUnresolved(apt) && UNRESOLVED_BORDER_ONLY
-                              )}
-                              style={{ top, height, backgroundColor: col.color }}
+                              className="absolute left-0.5 right-0.5 rounded-md px-1.5 py-0.5 overflow-hidden cursor-grab active:cursor-grabbing hover:opacity-80 transition-opacity text-white border border-white/20"
+                              style={{ top, height, backgroundColor: col.color, opacity: draggingId === apt.id ? 0.5 : isPast(apt) ? 0.5 : 1 }}
                               onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
                             >
                               <p className="text-[10px] font-semibold truncate">{apt.customers?.name || 'İsimsiz'}</p>
