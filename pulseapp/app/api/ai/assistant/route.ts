@@ -423,6 +423,20 @@ function summarizeToolResult(toolName: string, data: any): string {
       return `${data.toplam || 0} mesaj getirildi`
     case 'search_audit_logs':
       return `${data.toplam || 0} kayıt bulundu`
+    case 'get_revenue_breakdown':
+      return `${(data.breakdown || []).length} kalem, toplam ${data.totals?.revenue ?? 0}₺`
+    case 'get_customer_lifetime_value':
+      return `${(data.clv || []).length} müşteri analiz edildi`
+    case 'get_occupancy_stats':
+      return `Doluluk: %${data.overall_occupancy ?? 0}`
+    case 'get_staff_performance':
+      return `${(data.performance || []).length} personel analiz edildi`
+    case 'get_expense_breakdown':
+      return `${(data.breakdown || []).length} kategori, toplam ${data.total ?? 0}₺`
+    case 'get_profit_loss':
+      return `Net kâr: ${data.net_profit ?? 0}₺ (%${data.margin_percentage ?? 0})`
+    case 'compare_periods':
+      return `Dönem karşılaştırması hazırlandı`
     default:
       return 'İşlem tamamlandı'
   }

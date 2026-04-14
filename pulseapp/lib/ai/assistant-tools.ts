@@ -403,6 +403,112 @@ export const ASSISTANT_TOOLS: ChatCompletionTool[] = [
       },
     },
   },
+  // Grup 14: Stratejik Analitik
+  {
+    type: 'function',
+    function: {
+      name: 'get_revenue_breakdown',
+      description: 'Gelir dökümü — ödenmiş/kısmi faturalara göre hizmet, personel, dönem veya müşteri segmenti bazında kırılım verir.',
+      parameters: {
+        type: 'object',
+        properties: {
+          group_by: { type: 'string', enum: ['service', 'staff', 'period', 'customer_type'], description: 'Gruplama kriteri (varsayılan: service)' },
+          date_from: { type: 'string', description: 'Başlangıç (YYYY-MM-DD). Varsayılan: bu ayın başı' },
+          date_to: { type: 'string', description: 'Bitiş (YYYY-MM-DD). Varsayılan: bugün' },
+          limit: { type: 'number', description: 'Sonuç sayısı. Varsayılan: 10' },
+        },
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'get_customer_lifetime_value',
+      description: 'Müşteri Yaşam Boyu Değeri (CLV) — belirli müşterinin veya en değerli Top N müşterinin toplam harcama, ziyaret sıklığı, tahmini yıllık değer analizi.',
+      parameters: {
+        type: 'object',
+        properties: {
+          customer_id: { type: 'string', description: 'Tekil müşteri CLV\'si (opsiyonel). Verilmezse Top N listelenir.' },
+          limit: { type: 'number', description: 'Top liste boyutu. Varsayılan: 10' },
+        },
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'get_occupancy_stats',
+      description: 'Doluluk oranı ve verimlilik — randevu yoğunluğu, günlük doluluk %, personel bazında doluluk, tamamlanma/iptal/no-show oranları.',
+      parameters: {
+        type: 'object',
+        properties: {
+          staff_id: { type: 'string', description: 'Personel filtresi (opsiyonel)' },
+          date_from: { type: 'string', description: 'Başlangıç (YYYY-MM-DD). Varsayılan: bu ayın başı' },
+          date_to: { type: 'string', description: 'Bitiş (YYYY-MM-DD). Varsayılan: bugün' },
+        },
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'get_staff_performance',
+      description: 'Personel performans karnesi — her personelin randevu sayısı, tamamlanma oranı, toplam geliri, no-show oranı.',
+      parameters: {
+        type: 'object',
+        properties: {
+          staff_id: { type: 'string', description: 'Tekil personel (opsiyonel). Verilmezse tüm personel listelenir.' },
+          date_from: { type: 'string', description: 'Başlangıç (YYYY-MM-DD). Varsayılan: bu ayın başı' },
+          date_to: { type: 'string', description: 'Bitiş (YYYY-MM-DD). Varsayılan: bugün' },
+        },
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'get_expense_breakdown',
+      description: 'Gider dökümü — kategori bazında toplam gider, dönem filtresi.',
+      parameters: {
+        type: 'object',
+        properties: {
+          date_from: { type: 'string', description: 'Başlangıç (YYYY-MM-DD). Varsayılan: bu ayın başı' },
+          date_to: { type: 'string', description: 'Bitiş (YYYY-MM-DD). Varsayılan: bugün' },
+        },
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'get_profit_loss',
+      description: 'Kâr-zarar raporu — dönem bazında toplam gelir (fatura + manuel gelir), toplam gider, net kâr/zarar ve kâr marjı.',
+      parameters: {
+        type: 'object',
+        properties: {
+          date_from: { type: 'string', description: 'Başlangıç (YYYY-MM-DD). Varsayılan: bu ayın başı' },
+          date_to: { type: 'string', description: 'Bitiş (YYYY-MM-DD). Varsayılan: bugün' },
+        },
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'compare_periods',
+      description: 'İki dönemi karşılaştırır — gelir, gider, randevu sayısı, yeni müşteri, tamamlanma oranı metriklerinde % değişim verir.',
+      parameters: {
+        type: 'object',
+        properties: {
+          current_from: { type: 'string', description: 'Mevcut dönem başlangıç (YYYY-MM-DD)' },
+          current_to: { type: 'string', description: 'Mevcut dönem bitiş (YYYY-MM-DD)' },
+          previous_from: { type: 'string', description: 'Karşılaştırma dönemi başlangıç (YYYY-MM-DD)' },
+          previous_to: { type: 'string', description: 'Karşılaştırma dönemi bitiş (YYYY-MM-DD)' },
+        },
+        required: ['current_from', 'current_to', 'previous_from', 'previous_to'],
+      },
+    },
+  },
 ]
 
 // ── Tool Label Map (UI göstergesi için) ──
@@ -434,6 +540,13 @@ export const TOOL_LABELS: Record<string, string> = {
   create_service: 'Hizmet önizlemesi hazırlanıyor...',
   update_service: 'Hizmet güncellemesi hazırlanıyor...',
   send_message: 'Mesaj önizlemesi hazırlanıyor...',
+  get_revenue_breakdown: 'Gelir dökümü hesaplanıyor...',
+  get_customer_lifetime_value: 'Müşteri değeri hesaplanıyor...',
+  get_occupancy_stats: 'Doluluk analizi yapılıyor...',
+  get_staff_performance: 'Personel performansı hesaplanıyor...',
+  get_expense_breakdown: 'Gider dökümü hesaplanıyor...',
+  get_profit_loss: 'Kâr-zarar raporu hazırlanıyor...',
+  compare_periods: 'Dönemler karşılaştırılıyor...',
 }
 
 // ── Permission Map ──
@@ -465,6 +578,13 @@ const TOOL_PERMISSIONS: Record<string, keyof StaffPermissions> = {
   create_service: 'services',
   update_service: 'services',
   send_message: 'messages',
+  get_revenue_breakdown: 'analytics',
+  get_customer_lifetime_value: 'analytics',
+  get_occupancy_stats: 'analytics',
+  get_staff_performance: 'analytics',
+  get_expense_breakdown: 'analytics',
+  get_profit_loss: 'analytics',
+  compare_periods: 'analytics',
 }
 
 // ── Tool Executor ──
@@ -538,6 +658,21 @@ export async function executeAssistantTool(
         return await handleUpdateService(admin, ctx, args)
       case 'send_message':
         return await handleSendMessage(admin, ctx, args)
+      // Stratejik analitik (Faz 3)
+      case 'get_revenue_breakdown':
+        return await handleGetRevenueBreakdown(admin, businessId, args)
+      case 'get_customer_lifetime_value':
+        return await handleGetCLV(admin, businessId, args)
+      case 'get_occupancy_stats':
+        return await handleGetOccupancyStats(admin, businessId, args)
+      case 'get_staff_performance':
+        return await handleGetStaffPerformance(admin, businessId, args)
+      case 'get_expense_breakdown':
+        return await handleGetExpenseBreakdown(admin, businessId, args)
+      case 'get_profit_loss':
+        return await handleGetProfitLoss(admin, businessId, args)
+      case 'compare_periods':
+        return await handleComparePeriods(admin, businessId, args)
       default:
         return { success: false, error: `Bilinmeyen araç: ${toolName}` }
     }
@@ -1421,6 +1556,499 @@ async function handleSendMessage(
     preview,
     { customer: cust.name, channel },
   )
+}
+
+// ── Stratejik Analitik Handler'ları (Faz 3) ──
+
+function defaultMonthStart(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
+}
+
+function defaultToday(): string {
+  return new Date().toISOString().split('T')[0]
+}
+
+async function handleGetRevenueBreakdown(
+  admin: SupabaseAdmin, businessId: string, args: Record<string, any>,
+) {
+  const groupBy = (args.group_by as string) || 'service'
+  const from = (args.date_from as string) || defaultMonthStart()
+  const to = (args.date_to as string) || defaultToday()
+  const limit = Math.min(args.limit || 10, 25)
+
+  const { data: invoices, error } = await admin
+    .from('invoices')
+    .select('id, total, paid_amount, status, staff_name, created_at, items, customer_id, customers(name, segment)')
+    .eq('business_id', businessId)
+    .is('deleted_at', null)
+    .in('status', ['paid', 'partial'])
+    .gte('created_at', from)
+    .lte('created_at', to + 'T23:59:59')
+
+  if (error) return { success: false, error: error.message }
+  if (!invoices || invoices.length === 0) {
+    return { success: true, data: { group_by: groupBy, from, to, breakdown: [], totals: { revenue: 0, count: 0, avg_ticket: 0 } } }
+  }
+
+  const totalRevenue = invoices.reduce((s, inv: any) => s + (inv.paid_amount || inv.total || 0), 0)
+  const bucket = new Map<string, { revenue: number; count: number }>()
+
+  for (const inv of invoices as any[]) {
+    if (groupBy === 'service') {
+      const items = (inv.items || []) as { service_name?: string; total?: number }[]
+      for (const it of items) {
+        const key = it.service_name || 'Diğer'
+        const cur = bucket.get(key) || { revenue: 0, count: 0 }
+        cur.revenue += it.total || 0
+        cur.count += 1
+        bucket.set(key, cur)
+      }
+    } else {
+      let key = 'Diğer'
+      if (groupBy === 'staff') key = inv.staff_name || 'Belirtilmemiş'
+      else if (groupBy === 'customer_type') {
+        const cust = Array.isArray(inv.customers) ? inv.customers[0] : inv.customers
+        key = cust?.segment || 'unknown'
+      } else if (groupBy === 'period') {
+        const d = new Date(inv.created_at)
+        key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      }
+      const cur = bucket.get(key) || { revenue: 0, count: 0 }
+      cur.revenue += inv.paid_amount || inv.total || 0
+      cur.count += 1
+      bucket.set(key, cur)
+    }
+  }
+
+  const breakdown = Array.from(bucket.entries())
+    .map(([label, d]) => ({
+      label,
+      revenue: Math.round(d.revenue * 100) / 100,
+      count: d.count,
+      percentage: totalRevenue > 0 ? Math.round((d.revenue / totalRevenue) * 1000) / 10 : 0,
+    }))
+    .sort((a, b) => groupBy === 'period' ? a.label.localeCompare(b.label) : b.revenue - a.revenue)
+    .slice(0, limit)
+
+  return {
+    success: true,
+    data: {
+      group_by: groupBy, from, to, breakdown,
+      totals: {
+        revenue: Math.round(totalRevenue * 100) / 100,
+        count: invoices.length,
+        avg_ticket: Math.round((totalRevenue / invoices.length) * 100) / 100,
+      },
+    },
+  }
+}
+
+async function handleGetCLV(
+  admin: SupabaseAdmin, businessId: string, args: Record<string, any>,
+) {
+  const limit = Math.min(args.limit || 10, 25)
+
+  let q = admin
+    .from('customers')
+    .select('id, name, phone, segment, total_visits, total_revenue, last_visit_at, created_at')
+    .eq('business_id', businessId)
+    .eq('is_active', true)
+
+  if (args.customer_id) q = q.eq('id', args.customer_id)
+  else q = q.order('total_revenue', { ascending: false }).limit(limit)
+
+  const { data: customers, error } = await q
+  if (error) return { success: false, error: error.message }
+  if (!customers || customers.length === 0) return { success: true, data: { clv: [] } }
+
+  const now = Date.now()
+  const clv = customers.map((c: any) => {
+    const totalSpend = c.total_revenue || 0
+    const visits = c.total_visits || 0
+    const avgSpend = visits > 0 ? totalSpend / visits : 0
+    const ageMonths = c.created_at
+      ? Math.max(1, Math.floor((now - new Date(c.created_at).getTime()) / (30 * 24 * 60 * 60 * 1000)))
+      : 1
+    const monthlyFreq = visits / ageMonths
+    const annualValue = monthlyFreq * avgSpend * 12
+    const daysSinceLast = c.last_visit_at
+      ? Math.floor((now - new Date(c.last_visit_at).getTime()) / (24 * 60 * 60 * 1000))
+      : null
+    return {
+      customer_id: c.id,
+      name: c.name,
+      phone: c.phone,
+      segment: c.segment,
+      total_spend: Math.round(totalSpend * 100) / 100,
+      visit_count: visits,
+      avg_spend: Math.round(avgSpend * 100) / 100,
+      monthly_frequency: Math.round(monthlyFreq * 100) / 100,
+      estimated_annual_value: Math.round(annualValue * 100) / 100,
+      days_since_last_visit: daysSinceLast,
+      customer_age_months: ageMonths,
+    }
+  })
+
+  return { success: true, data: { clv } }
+}
+
+async function handleGetOccupancyStats(
+  admin: SupabaseAdmin, businessId: string, args: Record<string, any>,
+) {
+  const from = (args.date_from as string) || defaultMonthStart()
+  const to = (args.date_to as string) || defaultToday()
+  const staffId = args.staff_id as string | undefined
+
+  const { data: business } = await admin
+    .from('businesses')
+    .select('working_hours')
+    .eq('id', businessId)
+    .single()
+
+  let q = admin
+    .from('appointments')
+    .select('id, appointment_date, start_time, end_time, status, staff_id, staff_members(name)')
+    .eq('business_id', businessId)
+    .is('deleted_at', null)
+    .gte('appointment_date', from)
+    .lte('appointment_date', to)
+  if (staffId) q = q.eq('staff_id', staffId)
+
+  const { data: apts, error } = await q
+  if (error) return { success: false, error: error.message }
+  if (!apts || apts.length === 0) {
+    return {
+      success: true,
+      data: {
+        from, to,
+        overall_occupancy: 0,
+        stats: { total: 0, completed: 0, cancelled: 0, no_show: 0, completion_rate: 0, cancel_rate: 0, no_show_rate: 0 },
+        by_staff: [],
+        by_day: [],
+      },
+    }
+  }
+
+  const total = apts.length
+  const completed = apts.filter((a: any) => a.status === 'completed').length
+  const cancelled = apts.filter((a: any) => a.status === 'cancelled').length
+  const noShow = apts.filter((a: any) => a.status === 'no_show').length
+
+  const defaultDayMinutes = 9 * 60
+  const wh = (business as any)?.working_hours || {}
+  const getWorkMinutes = (dayIdx: number): number => {
+    const dk = DAY_KEYS[dayIdx]
+    const dh = wh[dk]
+    if (!dh || dh.closed || !dh.open || !dh.close) return 0
+    const [oh, om] = dh.open.split(':').map(Number)
+    const [ch, cm] = dh.close.split(':').map(Number)
+    return (ch * 60 + cm) - (oh * 60 + om)
+  }
+
+  const dayMap = new Map<string, { booked: number; count: number }>()
+  const staffMap = new Map<string, { booked: number; count: number; name: string }>()
+
+  for (const a of apts as any[]) {
+    if (a.status === 'cancelled') continue
+    let dur = 30
+    if (a.start_time && a.end_time) {
+      const [sh, sm] = a.start_time.split(':').map(Number)
+      const [eh, em] = a.end_time.split(':').map(Number)
+      dur = (eh * 60 + em) - (sh * 60 + sm)
+      if (dur <= 0) dur = 30
+    }
+    const dayData = dayMap.get(a.appointment_date) || { booked: 0, count: 0 }
+    dayData.booked += dur
+    dayData.count += 1
+    dayMap.set(a.appointment_date, dayData)
+
+    const sName = Array.isArray(a.staff_members) ? a.staff_members[0]?.name : a.staff_members?.name
+    const sKey = a.staff_id || 'unassigned'
+    const sData = staffMap.get(sKey) || { booked: 0, count: 0, name: sName || 'Atanmamış' }
+    sData.booked += dur
+    sData.count += 1
+    staffMap.set(sKey, sData)
+  }
+
+  const byDay = Array.from(dayMap.entries())
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([date, d]) => {
+      const dayIdx = new Date(date + 'T00:00:00').getDay()
+      const available = getWorkMinutes(dayIdx) || defaultDayMinutes
+      return {
+        date,
+        booked_minutes: d.booked,
+        available_minutes: available,
+        occupancy_rate: Math.min(100, Math.round((d.booked / available) * 100)),
+        appointment_count: d.count,
+      }
+    })
+
+  const totalDays = Math.max(1, dayMap.size)
+  const totalBooked = Array.from(dayMap.values()).reduce((s, d) => s + d.booked, 0)
+  const overall = Math.min(100, Math.round((totalBooked / (totalDays * defaultDayMinutes)) * 100))
+
+  const byStaff = Array.from(staffMap.entries()).map(([id, d]) => ({
+    staff_id: id,
+    name: d.name,
+    booked_minutes: d.booked,
+    appointment_count: d.count,
+    occupancy_rate: Math.min(100, Math.round((d.booked / (totalDays * defaultDayMinutes)) * 100)),
+  }))
+
+  return {
+    success: true,
+    data: {
+      from, to,
+      overall_occupancy: overall,
+      stats: {
+        total, completed, cancelled, no_show: noShow,
+        completion_rate: Math.round((completed / total) * 100),
+        cancel_rate: Math.round((cancelled / total) * 100),
+        no_show_rate: Math.round((noShow / total) * 100),
+      },
+      by_staff: byStaff,
+      by_day: byDay,
+    },
+  }
+}
+
+async function handleGetStaffPerformance(
+  admin: SupabaseAdmin, businessId: string, args: Record<string, any>,
+) {
+  const from = (args.date_from as string) || defaultMonthStart()
+  const to = (args.date_to as string) || defaultToday()
+  const staffId = args.staff_id as string | undefined
+
+  let sq = admin
+    .from('staff_members')
+    .select('id, name, role')
+    .eq('business_id', businessId)
+    .eq('is_active', true)
+  if (staffId) sq = sq.eq('id', staffId)
+
+  const { data: staffList, error: sErr } = await sq
+  if (sErr) return { success: false, error: sErr.message }
+  if (!staffList || staffList.length === 0) return { success: true, data: { performance: [] } }
+
+  let aq = admin
+    .from('appointments')
+    .select('staff_id, status')
+    .eq('business_id', businessId)
+    .is('deleted_at', null)
+    .gte('appointment_date', from)
+    .lte('appointment_date', to)
+  if (staffId) aq = aq.eq('staff_id', staffId)
+
+  let iq = admin
+    .from('invoices')
+    .select('staff_id, total, paid_amount')
+    .eq('business_id', businessId)
+    .is('deleted_at', null)
+    .in('status', ['paid', 'partial'])
+    .gte('created_at', from)
+    .lte('created_at', to + 'T23:59:59')
+  if (staffId) iq = iq.eq('staff_id', staffId)
+
+  const [{ data: apts }, { data: invoices }] = await Promise.all([aq, iq])
+
+  const performance = staffList.map((s: any) => {
+    const sa = (apts || []).filter((a: any) => a.staff_id === s.id)
+    const totalApts = sa.length
+    const completedApts = sa.filter((a: any) => a.status === 'completed').length
+    const cancelledApts = sa.filter((a: any) => a.status === 'cancelled').length
+    const noShowApts = sa.filter((a: any) => a.status === 'no_show').length
+    const si = (invoices || []).filter((i: any) => i.staff_id === s.id)
+    const totalRevenue = si.reduce((sum: number, i: any) => sum + (i.paid_amount || i.total || 0), 0)
+    return {
+      staff_id: s.id,
+      name: s.name,
+      role: s.role,
+      total_appointments: totalApts,
+      completed_appointments: completedApts,
+      cancelled_appointments: cancelledApts,
+      no_show_appointments: noShowApts,
+      completion_rate: totalApts > 0 ? Math.round((completedApts / totalApts) * 100) : 0,
+      no_show_rate: totalApts > 0 ? Math.round((noShowApts / totalApts) * 100) : 0,
+      total_revenue: Math.round(totalRevenue * 100) / 100,
+      avg_revenue_per_appointment: completedApts > 0 ? Math.round((totalRevenue / completedApts) * 100) / 100 : 0,
+    }
+  })
+
+  performance.sort((a, b) => b.total_revenue - a.total_revenue)
+  return { success: true, data: { from, to, performance } }
+}
+
+async function handleGetExpenseBreakdown(
+  admin: SupabaseAdmin, businessId: string, args: Record<string, any>,
+) {
+  const from = (args.date_from as string) || defaultMonthStart()
+  const to = (args.date_to as string) || defaultToday()
+
+  const { data: expenses, error } = await admin
+    .from('expenses')
+    .select('category, amount, expense_date, description')
+    .eq('business_id', businessId)
+    .gte('expense_date', from)
+    .lte('expense_date', to)
+
+  if (error) return { success: false, error: error.message }
+  if (!expenses || expenses.length === 0) {
+    return { success: true, data: { from, to, breakdown: [], total: 0 } }
+  }
+
+  const total = expenses.reduce((s: number, e: any) => s + Number(e.amount || 0), 0)
+  const catMap = new Map<string, { amount: number; count: number }>()
+  for (const e of expenses as any[]) {
+    const key = e.category || 'Diğer'
+    const cur = catMap.get(key) || { amount: 0, count: 0 }
+    cur.amount += Number(e.amount || 0)
+    cur.count += 1
+    catMap.set(key, cur)
+  }
+  const breakdown = Array.from(catMap.entries())
+    .map(([category, d]) => ({
+      category,
+      amount: Math.round(d.amount * 100) / 100,
+      count: d.count,
+      percentage: total > 0 ? Math.round((d.amount / total) * 1000) / 10 : 0,
+    }))
+    .sort((a, b) => b.amount - a.amount)
+
+  return { success: true, data: { from, to, total: Math.round(total * 100) / 100, breakdown } }
+}
+
+async function sumRevenue(admin: SupabaseAdmin, businessId: string, from: string, to: string): Promise<number> {
+  const [{ data: invoices }, { data: income }] = await Promise.all([
+    admin
+      .from('invoices')
+      .select('total, paid_amount, status')
+      .eq('business_id', businessId)
+      .is('deleted_at', null)
+      .in('status', ['paid', 'partial'])
+      .gte('created_at', from)
+      .lte('created_at', to + 'T23:59:59'),
+    admin
+      .from('income')
+      .select('amount')
+      .eq('business_id', businessId)
+      .gte('income_date', from)
+      .lte('income_date', to),
+  ])
+  const invSum = (invoices || []).reduce((s: number, i: any) => s + (i.paid_amount || i.total || 0), 0)
+  const incSum = (income || []).reduce((s: number, i: any) => s + Number(i.amount || 0), 0)
+  return invSum + incSum
+}
+
+async function sumExpenses(admin: SupabaseAdmin, businessId: string, from: string, to: string): Promise<number> {
+  const { data } = await admin
+    .from('expenses')
+    .select('amount')
+    .eq('business_id', businessId)
+    .gte('expense_date', from)
+    .lte('expense_date', to)
+  return (data || []).reduce((s: number, e: any) => s + Number(e.amount || 0), 0)
+}
+
+async function countAppointments(admin: SupabaseAdmin, businessId: string, from: string, to: string) {
+  const { data } = await admin
+    .from('appointments')
+    .select('status')
+    .eq('business_id', businessId)
+    .is('deleted_at', null)
+    .gte('appointment_date', from)
+    .lte('appointment_date', to)
+  const arr = data || []
+  return {
+    total: arr.length,
+    completed: arr.filter((a: any) => a.status === 'completed').length,
+  }
+}
+
+async function countNewCustomers(admin: SupabaseAdmin, businessId: string, from: string, to: string): Promise<number> {
+  const { count } = await admin
+    .from('customers')
+    .select('id', { count: 'exact', head: true })
+    .eq('business_id', businessId)
+    .gte('created_at', from)
+    .lte('created_at', to + 'T23:59:59')
+  return count || 0
+}
+
+async function handleGetProfitLoss(
+  admin: SupabaseAdmin, businessId: string, args: Record<string, any>,
+) {
+  const from = (args.date_from as string) || defaultMonthStart()
+  const to = (args.date_to as string) || defaultToday()
+
+  const [revenue, expenses] = await Promise.all([
+    sumRevenue(admin, businessId, from, to),
+    sumExpenses(admin, businessId, from, to),
+  ])
+
+  const net = revenue - expenses
+  const margin = revenue > 0 ? (net / revenue) * 100 : 0
+
+  return {
+    success: true,
+    data: {
+      from, to,
+      revenue: Math.round(revenue * 100) / 100,
+      expenses: Math.round(expenses * 100) / 100,
+      net_profit: Math.round(net * 100) / 100,
+      margin_percentage: Math.round(margin * 10) / 10,
+    },
+  }
+}
+
+function pctChange(current: number, previous: number): number | null {
+  if (previous === 0) return current === 0 ? 0 : null
+  return Math.round(((current - previous) / previous) * 1000) / 10
+}
+
+async function handleComparePeriods(
+  admin: SupabaseAdmin, businessId: string, args: Record<string, any>,
+) {
+  const cf = args.current_from as string
+  const ct = args.current_to as string
+  const pf = args.previous_from as string
+  const pt = args.previous_to as string
+  if (!cf || !ct || !pf || !pt) {
+    return { success: false, error: 'Her iki dönem için başlangıç ve bitiş tarihi zorunludur' }
+  }
+
+  const [curRev, prevRev, curExp, prevExp, curApts, prevApts, curNew, prevNew] = await Promise.all([
+    sumRevenue(admin, businessId, cf, ct),
+    sumRevenue(admin, businessId, pf, pt),
+    sumExpenses(admin, businessId, cf, ct),
+    sumExpenses(admin, businessId, pf, pt),
+    countAppointments(admin, businessId, cf, ct),
+    countAppointments(admin, businessId, pf, pt),
+    countNewCustomers(admin, businessId, cf, ct),
+    countNewCustomers(admin, businessId, pf, pt),
+  ])
+
+  const curCompletionRate = curApts.total > 0 ? (curApts.completed / curApts.total) * 100 : 0
+  const prevCompletionRate = prevApts.total > 0 ? (prevApts.completed / prevApts.total) * 100 : 0
+
+  return {
+    success: true,
+    data: {
+      current: { from: cf, to: ct },
+      previous: { from: pf, to: pt },
+      revenue: { current: Math.round(curRev * 100) / 100, previous: Math.round(prevRev * 100) / 100, change_pct: pctChange(curRev, prevRev) },
+      expenses: { current: Math.round(curExp * 100) / 100, previous: Math.round(prevExp * 100) / 100, change_pct: pctChange(curExp, prevExp) },
+      net_profit: {
+        current: Math.round((curRev - curExp) * 100) / 100,
+        previous: Math.round((prevRev - prevExp) * 100) / 100,
+        change_pct: pctChange(curRev - curExp, prevRev - prevExp),
+      },
+      appointments: { current: curApts.total, previous: prevApts.total, change_pct: pctChange(curApts.total, prevApts.total) },
+      new_customers: { current: curNew, previous: prevNew, change_pct: pctChange(curNew, prevNew) },
+      completion_rate: { current: Math.round(curCompletionRate * 10) / 10, previous: Math.round(prevCompletionRate * 10) / 10, change_pct: pctChange(curCompletionRate, prevCompletionRate) },
+    },
+  }
 }
 
 // ── Helpers ──
