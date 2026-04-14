@@ -79,11 +79,12 @@ export default function TodayAppointments({ appointments }: TodayAppointmentsPro
             const isDone = apt.status === 'completed' || apt.status === 'cancelled'
 
             return (
-              <div
+              <a
+                href={`/dashboard/appointments?appointmentId=${apt.id}`}
                 key={apt.id}
                 className={cn(
                   'group relative flex items-center gap-3 rounded-xl px-3.5 py-3 transition-all duration-150',
-                  'border',
+                  'border cursor-pointer',
                   active
                     ? 'border-green-400/60 dark:border-green-500/40 bg-green-50/60 dark:bg-green-950/20 shadow-sm shadow-green-500/10'
                     : 'border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700 hover:bg-gray-50/50 dark:hover:bg-gray-800/30',
@@ -137,7 +138,7 @@ export default function TodayAppointments({ appointments }: TodayAppointmentsPro
                     {config.label}
                   </span>
                 </div>
-              </div>
+              </a>
             )
           })}
 

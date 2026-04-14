@@ -126,6 +126,8 @@ export async function PATCH(request: NextRequest, { params }: { params: { token:
       type: 'appointment',
       title: 'Randevu Değiştirildi',
       body: `${custName} — ${svcName} — ${date} ${startTime}`,
+      related_id: appointment.id,
+      related_type: 'appointment',
       is_read: false,
     })
   } catch { /* bildirim hatası işlemi etkilemez */ }
@@ -185,6 +187,8 @@ export async function DELETE(request: NextRequest, { params }: { params: { token
       type: 'appointment',
       title: 'Randevu İptal Edildi (Online)',
       body: `${custName} — ${svcName} — ${appointment.appointment_date} ${appointment.start_time}`,
+      related_id: appointment.id,
+      related_type: 'appointment',
       is_read: false,
     })
   } catch { /* bildirim hatası işlemi etkilemez */ }

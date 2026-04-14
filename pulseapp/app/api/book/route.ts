@@ -123,23 +123,77 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  let conflictQuery = supabase
-    .from('appointments')
-    .select('id')
-    .eq('business_id', businessId)
-    .eq('appointment_date', appointment_date)
-    .in('status', ['pending', 'confirmed'])
-    .lt('start_time', end_time)
-    .gt('end_time', start_time)
+  let assignedStaffId: string | null = staff_id || null
 
   if (staff_id) {
-    conflictQuery = conflictQuery.eq('staff_id', staff_id)
-  }
+    // Belirli personel seçildi — sadece onun çakışmasını kontrol et
+    const { data: conflicts } = await supabase
+      .from('appointments')
+      .select('id')
+      .eq('business_id', businessId)
+      .eq('appointment_date', appointment_date)
+      .eq('staff_id', staff_id)
+      .in('status', ['pending', 'confirmed'])
+      .lt('start_time', end_time)
+      .gt('end_time', start_time)
 
-  const { data: conflicts } = await conflictQuery
+    if (conflicts && conflicts.length > 0) {
+      return NextResponse.json({ error: 'Bu saat dolu. Lütfen başka bir saat seçin.' }, { status: 409 })
+    }
+  } else {
+    // "Fark etmez" — müsait personel bul ve otomatik ata
+    const { data: staffList } = await supabase
+      .from('staff_members')
+      .select('id')
+      .eq('business_id', businessId)
+      .eq('is_active', true)
 
-  if (conflicts && conflicts.length > 0) {
-    return NextResponse.json({ error: 'Bu saat dolu. Lütfen başka bir saat seçin.' }, { status: 409 })
+    if (staffList && staffList.length > 0) {
+      // İzin kontrolü
+      const sIds = staffList.map(s => s.id)
+      const { data: offShifts } = await supabase
+        .from('shifts')
+        .select('staff_id')
+        .eq('business_id', businessId)
+        .eq('shift_date', appointment_date)
+        .eq('shift_type', 'off')
+        .in('staff_id', sIds)
+
+      const offSet = new Set((offShifts || []).map(s => s.staff_id))
+
+      // Her personelin çakışmasını kontrol et
+      const { data: allAppts } = await supabase
+        .from('appointments')
+        .select('staff_id, start_time, end_time')
+        .eq('business_id', businessId)
+        .eq('appointment_date', appointment_date)
+        .in('status', ['pending', 'confirmed'])
+        .in('staff_id', sIds)
+
+      const [sH, sM] = start_time.split(':').map(Number)
+      const [eH, eM] = end_time.split(':').map(Number)
+      const reqStart = sH * 60 + sM
+      const reqEnd = eH * 60 + eM
+
+      for (const s of staffList) {
+        if (offSet.has(s.id)) continue
+        const staffAppts = (allAppts || []).filter(a => a.staff_id === s.id)
+        const hasConflict = staffAppts.some(a => {
+          const [ash, asm] = a.start_time.split(':').map(Number)
+          const [aeh, aem] = a.end_time.split(':').map(Number)
+          return (ash * 60 + asm) < reqEnd && (aeh * 60 + aem) > reqStart
+        })
+        if (!hasConflict) {
+          assignedStaffId = s.id
+          break
+        }
+      }
+
+      if (!assignedStaffId) {
+        return NextResponse.json({ error: 'Bu saat dolu. Lütfen başka bir saat seçin.' }, { status: 409 })
+      }
+    }
+    // Personel yoksa staff_id = null ile devam et (eski davranış)
   }
 
   const normalizedPhone = customer_phone.replace(/\s/g, '')
@@ -183,7 +237,7 @@ export async function POST(req: NextRequest) {
       business_id: businessId,
       customer_id: customerId,
       service_id,
-      staff_id: staff_id || null,
+      staff_id: assignedStaffId,
       appointment_date,
       start_time,
       end_time,
@@ -207,6 +261,8 @@ export async function POST(req: NextRequest) {
       type: 'appointment',
       title: 'Yeni Online Randevu',
       body: `${customer_name} – ${service.name} – ${start_time}`,
+      related_id: appointment.id,
+      related_type: 'appointment',
       is_read: false,
     })
   } catch { /* bildirim hatası randevu oluşturmayı etkilemez */ }

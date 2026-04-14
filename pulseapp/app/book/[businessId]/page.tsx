@@ -100,7 +100,7 @@ export default function BookingPage() {
   const [waitlistStaffId, setWaitlistStaffId] = useState('')
   const [waitlistEarliest, setWaitlistEarliest] = useState(false)
   const [autoBookEnabled, setAutoBookEnabled] = useState(false)
-  const [autoBookResult, setAutoBookResult] = useState<{ date: string; time: string } | null>(null)
+  const [autoBookResult, setAutoBookResult] = useState<{ date: string; time: string; staffName?: string } | null>(null)
 
   const [kvkkConsent, setKvkkConsent] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -164,47 +164,80 @@ export default function BookingPage() {
 
   async function handleSubmit() {
     if (!selectedServiceId || !customerName || !customerPhone) return
-    // Normal randevu: tarih+saat zorunlu, auto-book modunda değilse
+    // Normal mod: tarih+saat zorunlu; auto-book modunda gerekmez
     if (!autoBookEnabled && (!selectedDate || !selectedTime)) return
 
     setSubmitting(true)
     setSubmitError(null)
 
     try {
-      let finalDate = selectedDate
-      let finalTime = selectedTime
+      if (autoBookEnabled) {
+        // Otomatik randevu: sunucu tarafında en yakın slot bulup atar
+        const res = await fetch(`/api/public/business/${businessId}/auto-book`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            serviceId: selectedServiceId,
+            name: customerName.trim(),
+            phone: customerPhone.replace(/\s/g, ''),
+            staffId: selectedStaffId || undefined,
+            notes: undefined,
+          }),
+        })
 
-      // Otomatik randevu: en yakın müsait saati bul
-      if (autoBookEnabled && selectedService) {
-        const found = await findEarliestSlot()
-        if (!found) {
-          setSubmitError('Önümüzdeki 14 gün içinde müsait saat bulunamadı. Lütfen bekleme listesine kaydolun.')
+        if (!res.ok) {
+          const data = await res.json()
+          setSubmitError(data.error || 'Otomatik randevu oluşturulamadı')
           setSubmitting(false)
           return
         }
-        finalDate = found.date
-        finalTime = found.time
-        setAutoBookResult(found)
+
+        const data = await res.json()
+        setAutoBookResult({
+          date: data.date,
+          time: data.startTime,
+          staffName: data.staffName || undefined,
+        })
+      } else {
+        // Normal randevu akışı
+        const res = await fetch(`/api/book?businessId=${businessId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            service_id: selectedServiceId,
+            staff_id: selectedStaffId || undefined,
+            appointment_date: selectedDate,
+            start_time: selectedTime,
+            customer_name: customerName.trim(),
+            customer_phone: customerPhone.replace(/\s/g, ''),
+          }),
+        })
+
+        if (!res.ok) {
+          const data = await res.json()
+          setSubmitError(data.error || 'Randevu oluşturulamadı')
+          setSubmitting(false)
+          return
+        }
       }
 
-      const res = await fetch(`/api/book?businessId=${businessId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          service_id: selectedServiceId,
-          staff_id: selectedStaffId || undefined,
-          appointment_date: finalDate,
-          start_time: finalTime,
-          customer_name: customerName.trim(),
-          customer_phone: customerPhone.replace(/\s/g, ''),
-        }),
-      })
-
-      if (!res.ok) {
-        const data = await res.json()
-        setSubmitError(data.error || 'Randevu oluşturulamadı')
-        setSubmitting(false)
-        return
+      // Bekleme listesine de kaydet (işaretliyse)
+      if (waitlistEnabled) {
+        try {
+          await fetch(`/api/public/business/${businessId}/waitlist`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              customerName: customerName.trim(),
+              customerPhone: customerPhone.replace(/\s/g, ''),
+              serviceId: selectedServiceId,
+              staffId: waitlistStaffId || undefined,
+              preferredDate: waitlistDate || undefined,
+            }),
+          })
+        } catch {
+          // Bekleme listesi hatası randevu başarısını etkilememeli
+        }
       }
 
       // Bekleme listesine de kaydet (işaretliyse)
@@ -250,41 +283,6 @@ export default function BookingPage() {
     setSubmitting(false)
   }
 
-  /** Önümüzdeki 14 gün içinde en yakın müsait slot'u bulur */
-  async function findEarliestSlot(): Promise<{ date: string; time: string } | null> {
-    if (!selectedService || !business) return null
-    const today = new Date()
-    for (let d = 0; d < 14; d++) {
-      const checkDate = new Date(today)
-      checkDate.setDate(today.getDate() + d)
-      const dateStr = `${checkDate.getFullYear()}-${String(checkDate.getMonth() + 1).padStart(2, '0')}-${String(checkDate.getDate()).padStart(2, '0')}`
-      const dayKey = getDayKey(dateStr)
-      if (!business.working_hours[dayKey]) continue // kapalı gün
-
-      try {
-        const params = new URLSearchParams({ date: dateStr, duration: String(selectedService.duration_minutes) })
-        if (selectedStaffId) params.set('staffId', selectedStaffId)
-        const res = await fetch(`/api/public/business/${businessId}/slots?${params}`)
-        if (!res.ok) continue
-        const data = await res.json()
-        const slots: string[] = data.slots || []
-
-        // Bugünse, geçmiş saatleri filtrele
-        if (d === 0) {
-          const now = today.getHours() * 60 + today.getMinutes()
-          const futureSlots = slots.filter(s => {
-            const [h, m] = s.split(':').map(Number)
-            return h * 60 + m > now
-          })
-          if (futureSlots.length > 0) return { date: dateStr, time: futureSlots[0] }
-        } else if (slots.length > 0) {
-          return { date: dateStr, time: slots[0] }
-        }
-      } catch { continue }
-    }
-    return null
-  }
-
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-24">
@@ -327,6 +325,9 @@ export default function BookingPage() {
             <SummaryRow label="Hizmet" value={selectedService?.name ?? ''} />
             <SummaryRow label="Tarih" value={formatDate(autoBookResult?.date ?? selectedDate)} />
             <SummaryRow label="Saat" value={autoBookResult?.time ?? selectedTime ?? ''} />
+            {autoBookResult?.staffName && (
+              <SummaryRow label="Personel" value={autoBookResult.staffName} />
+            )}
             {selectedService?.price != null && (
               <SummaryRow label="Ücret" value={formatPrice(selectedService.price)} />
             )}
@@ -340,6 +341,13 @@ export default function BookingPage() {
             )}
           </div>
 
+          {autoBookResult && (
+            <div className="mt-3 rounded-xl bg-amber-50 border border-amber-200 p-3 text-sm text-amber-700 flex gap-2">
+              <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+              <span>Randevunuz <strong>onay bekliyor</strong>. İşletme tarafından onaylandığında bilgilendirileceksiniz.</span>
+            </div>
+          )}
+
           <button
             onClick={() => {
               setStep(1)
@@ -349,6 +357,8 @@ export default function BookingPage() {
               setSelectedStaffId('')
               setCustomerName('')
               setCustomerPhone('')
+              setAutoBookEnabled(false)
+              setAutoBookResult(null)
               setWaitlistEnabled(false)
               setWaitlistTime('')
               setWaitlistDate('')
@@ -659,9 +669,8 @@ export default function BookingPage() {
                   onChange={(e) => {
                     setAutoBookEnabled(e.target.checked)
                     if (e.target.checked) {
+                      // Auto-book seçilince manuel tarih/saat seçimine gerek yok
                       setWaitlistEnabled(false)
-                      setSelectedTime(null)
-                      setSelectedDate('')
                     }
                   }}
                   className="mt-0.5 h-4 w-4 rounded border-gray-300 text-green-500 focus:ring-green-500"

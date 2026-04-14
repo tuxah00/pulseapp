@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
@@ -44,6 +45,9 @@ import { ToolbarPopover, SortPopoverContent, FilterPopoverList } from '@/compone
 import { CustomSelect } from '@/components/ui/custom-select'
 import { CustomerSearchSelect } from '@/components/ui/customer-search-select'
 import { Portal } from '@/components/ui/portal'
+
+const UNRESOLVED_BORDER = 'opacity-50 !border-l-[3px] !border-l-red-500'
+const UNRESOLVED_BORDER_ONLY = '!border-l-[3px] !border-l-red-500'
 
 export default function AppointmentsPage() {
   const { businessId, staffId: currentStaffId, staffName: currentStaffName, sector, loading: ctxLoading } = useBusinessContext()
@@ -113,6 +117,33 @@ export default function AppointmentsPage() {
   const gridRef = useRef<HTMLDivElement>(null)
 
   const supabase = createClient()
+  const searchParams = useSearchParams()
+  const router = useRouter()
+
+  // Bildirimden gelen appointmentId parametresini oku ve detay panelini aç
+  useEffect(() => {
+    const appointmentId = searchParams.get('appointmentId')
+    if (!appointmentId || !businessId || ctxLoading) return
+
+    async function openFromNotification() {
+      const { data } = await supabase
+        .from('appointments')
+        .select('*, customers(name, phone), services(name, duration_minutes, price), staff_members(name)')
+        .eq('id', appointmentId!)
+        .eq('business_id', businessId)
+        .is('deleted_at', null)
+        .single()
+
+      if (data) {
+        // Randevunun tarihine git
+        setSelectedDate(data.appointment_date)
+        setSelectedAppointment(data)
+      }
+      // URL'den parametreyi temizle (geri tuşunda tekrar açılmasın)
+      router.replace('/dashboard/appointments', { scroll: false })
+    }
+    openFromNotification()
+  }, [searchParams, businessId, ctxLoading])
 
   // Hafta hesaplama yardımcıları
   function getWeekRange(dateStr: string): { start: string; end: string } {
@@ -1031,10 +1062,32 @@ export default function AppointmentsPage() {
     return slots
   }
 
+  // Geçmiş + sonuçsuz randevu: tek tarama ile Set oluştur, her yerde O(1) lookup
+  const { unresolvedIds, unresolvedCount } = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0]
+    const nowMin = `${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`
+    const ids = new Set<string>()
+    for (const a of appointments) {
+      if (a.status === 'completed' || a.status === 'cancelled' || a.status === 'no_show') continue
+      if (a.appointment_date < today || (a.appointment_date === today && a.end_time <= nowMin)) {
+        ids.add(a.id)
+      }
+    }
+    return { unresolvedIds: ids, unresolvedCount: ids.size }
+  }, [appointments])
+  const isPastUnresolved = (apt: AppointmentView) => unresolvedIds.has(apt.id)
+
+  const totalCount = appointments.length
+  const confirmedCount = appointments.filter(a => a.status === 'confirmed').length
+  const completedCount = appointments.filter(a => a.status === 'completed').length
+  const noShowCount = appointments.filter(a => a.status === 'no_show').length
+
   const hasActiveFilters = !!(staffIdFilter || serviceIdFilter)
   const filteredAppointments = (() => {
     let list = appointments.filter(a => {
-      if (statusFilter && a.status !== statusFilter) return false
+      if (statusFilter === 'unresolved') {
+        if (!isPastUnresolved(a)) return false
+      } else if (statusFilter && a.status !== statusFilter) return false
       if (staffIdFilter && a.staff_id !== staffIdFilter) return false
       if (serviceIdFilter && a.service_id !== serviceIdFilter) return false
       if (!search.trim()) return true
@@ -1068,11 +1121,6 @@ export default function AppointmentsPage() {
     }
     return list
   })()
-
-  const totalCount = appointments.length
-  const confirmedCount = appointments.filter(a => a.status === 'confirmed').length
-  const completedCount = appointments.filter(a => a.status === 'completed').length
-  const noShowCount = appointments.filter(a => a.status === 'no_show').length
 
   // Aksiyon butonları — hem liste hem kutu görünümünde kullanılır
   function ActionButtons({ apt, size = 'md' }: { apt: AppointmentView; size?: 'sm' | 'md' }) {
@@ -1217,11 +1265,12 @@ export default function AppointmentsPage() {
 
       {/* Mini İstatistik + Görünüm butonları */}
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className="grid flex-1 grid-cols-4 gap-2">
+        <div className="grid flex-1 grid-cols-5 gap-2">
           <button onClick={() => setStatusFilter(null)} className={cn('rounded-2xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 p-3 text-center transition-all hover:shadow-sm', statusFilter === null && 'ring-2 ring-gray-400 dark:ring-gray-500')}><p className="text-xl font-bold text-gray-900 dark:text-gray-100">{totalCount}</p><p className="text-xs text-gray-500 mt-0.5">Toplam</p></button>
           <button onClick={() => setStatusFilter(statusFilter === 'confirmed' ? null : 'confirmed')} className={cn('rounded-2xl border border-blue-100 dark:border-blue-900/40 bg-blue-50 dark:bg-blue-950/30 p-3 text-center transition-all hover:shadow-sm', statusFilter === 'confirmed' && 'ring-2 ring-blue-500')}><p className="text-xl font-bold text-blue-600 dark:text-blue-400">{confirmedCount}</p><p className="text-xs text-gray-500 mt-0.5">Onaylı</p></button>
           <button onClick={() => setStatusFilter(statusFilter === 'completed' ? null : 'completed')} className={cn('rounded-2xl border border-green-100 dark:border-green-900/40 bg-green-50 dark:bg-green-950/30 p-3 text-center transition-all hover:shadow-sm', statusFilter === 'completed' && 'ring-2 ring-green-500')}><p className="text-xl font-bold text-green-600 dark:text-green-400">{completedCount}</p><p className="text-xs text-gray-500 mt-0.5">Tamamlandı</p></button>
           <button onClick={() => setStatusFilter(statusFilter === 'no_show' ? null : 'no_show')} className={cn('rounded-2xl border border-red-100 dark:border-red-900/40 bg-red-50 dark:bg-red-950/30 p-3 text-center transition-all hover:shadow-sm', statusFilter === 'no_show' && 'ring-2 ring-red-500')}><p className="text-xl font-bold text-red-600 dark:text-red-400">{noShowCount}</p><p className="text-xs text-gray-500 mt-0.5">Gelmedi</p></button>
+          <button onClick={() => setStatusFilter(statusFilter === 'unresolved' ? null : 'unresolved')} className={cn('rounded-2xl border border-amber-100 dark:border-amber-900/40 bg-amber-50 dark:bg-amber-950/30 p-3 text-center transition-all hover:shadow-sm', statusFilter === 'unresolved' && 'ring-2 ring-amber-500')}><p className="text-xl font-bold text-amber-600 dark:text-amber-400">{unresolvedCount}</p><p className="text-xs text-gray-500 mt-0.5">Belirsiz</p></button>
         </div>
         <div className="flex justify-end">
           <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
@@ -1240,9 +1289,28 @@ export default function AppointmentsPage() {
                   value={serviceIdFilter}
                   onChange={setServiceIdFilter}
                 />
-                {hasActiveFilters && (
+                <div className="border-t border-gray-100 dark:border-gray-700" />
+                <div>
+                  <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Durum</p>
+                  <div className="space-y-0.5">
+                    <button
+                      onClick={() => setStatusFilter(statusFilter === 'unresolved' ? null : 'unresolved')}
+                      className={cn(
+                        'w-full text-left px-3 py-1.5 rounded-lg text-sm transition-colors flex items-center gap-2',
+                        statusFilter === 'unresolved'
+                          ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 font-medium'
+                          : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                      )}
+                    >
+                      <span className="h-2 w-2 rounded-full bg-red-500 flex-shrink-0" />
+                      Sonuçlandırılmamış
+                      {unresolvedCount > 0 && <span className="ml-auto text-xs text-gray-400">{unresolvedCount}</span>}
+                    </button>
+                  </div>
+                </div>
+                {(hasActiveFilters || statusFilter === 'unresolved') && (
                   <div className="border-t border-gray-100 dark:border-gray-700 pt-2">
-                    <button onClick={() => { setStaffIdFilter(''); setServiceIdFilter('') }}
+                    <button onClick={() => { setStaffIdFilter(''); setServiceIdFilter(''); setStatusFilter(null) }}
                       className="w-full text-xs text-center py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-center gap-1">
                       <X className="h-3 w-3" /> Temizle
                     </button>
@@ -1416,7 +1484,7 @@ export default function AppointmentsPage() {
 
                     {/* ── Katman 4: Tıklama alanı + randevu blokları (arka plan yok — sadece etkileşim) ── */}
                     {weekDays.map((day, dayIdx) => {
-                      const dayAppointments = appointments.filter(a => a.appointment_date === day)
+                      const dayAppointments = filteredAppointments.filter(a => a.appointment_date === day)
                       const isDayToday = day === todayStr
                       const weekColData = weekDays.map(d => ({ id: d, date: d }))
 
@@ -1586,7 +1654,8 @@ export default function AppointmentsPage() {
                                       className={cn(
                                         'absolute rounded-md px-1.5 py-0.5 overflow-hidden cursor-grab active:cursor-grabbing hover:opacity-90 transition-opacity border border-white/20',
                                         staffColors[colorIdx],
-                                        draggingId === apt.id && 'opacity-50'
+                                        draggingId === apt.id && 'opacity-50',
+                                        isPastUnresolved(apt) && UNRESOLVED_BORDER
                                       )}
                                       style={{ top: topPos, height: h, left: `${colLeft}%`, width: `${colWidth - 1}%` }}
                                       onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
@@ -1667,7 +1736,7 @@ export default function AppointmentsPage() {
                   const [dy, dm, dd] = day.split('-').map(Number)
                   const isOtherMonth = dy !== curY || dm !== curM
                   const isDayToday = day === todayStr
-                  const dayApts = appointments
+                  const dayApts = filteredAppointments
                     .filter(a => a.appointment_date === day)
                     .sort((a, b) => a.start_time.localeCompare(b.start_time))
                   const visible = dayApts.slice(0, MAX_VISIBLE_PER_DAY)
@@ -1706,29 +1775,35 @@ export default function AppointmentsPage() {
                           <span className="text-[10px] text-gray-400 tabular-nums">{dayApts.length}</span>
                         )}
                       </div>
-                      <div className="flex flex-col gap-1 overflow-hidden">
+                      <div className="flex flex-col gap-1.5">
                         {visible.map((apt) => {
                           const colorIdx = getStaffColorIndex(apt.staff_id)
+                          const unresolved = isPastUnresolved(apt)
                           return (
-                            <div
-                              key={apt.id}
-                              draggable
-                              onDragStart={(e) => {
-                                e.stopPropagation()
-                                e.dataTransfer.setData('text/plain', apt.id)
-                                e.dataTransfer.effectAllowed = 'move'
-                                setDraggingId(apt.id)
-                              }}
-                              onDragEnd={() => setDraggingId(null)}
-                              onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
-                              className={cn(
-                                'rounded px-1.5 py-0.5 text-[10px] font-medium truncate cursor-grab active:cursor-grabbing border border-white/20 hover:opacity-90',
-                                staffColors[colorIdx],
-                                staffTextColors[colorIdx],
-                                draggingId === apt.id && 'opacity-50'
+                            <div key={apt.id} className="relative">
+                              {unresolved && (
+                                <span className="absolute -top-1 -right-1 z-10 h-2.5 w-2.5 rounded-full bg-red-500 border-2 border-gray-900 pointer-events-none" />
                               )}
-                            >
-                              {formatTime(apt.start_time)} {apt.customers?.name || 'İsimsiz'}
+                              <div
+                                draggable
+                                onDragStart={(e) => {
+                                  e.stopPropagation()
+                                  e.dataTransfer.setData('text/plain', apt.id)
+                                  e.dataTransfer.effectAllowed = 'move'
+                                  setDraggingId(apt.id)
+                                }}
+                                onDragEnd={() => setDraggingId(null)}
+                                onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
+                                className={cn(
+                                  'rounded px-1.5 py-0.5 text-[10px] font-medium truncate cursor-grab active:cursor-grabbing border border-white/20 hover:opacity-90',
+                                  staffColors[colorIdx],
+                                  staffTextColors[colorIdx],
+                                  draggingId === apt.id && 'opacity-50',
+                                  unresolved && 'opacity-50'
+                                )}
+                              >
+                                {formatTime(apt.start_time)} {apt.customers?.name || 'İsimsiz'}
+                              </div>
                             </div>
                           )
                         })}
@@ -1748,7 +1823,7 @@ export default function AppointmentsPage() {
       ) : viewMode === 'staff' ? (
         /* ── Personel Takvimi — günlük, her kolon bir personel ── */
         (() => {
-          const dayApts = appointments.filter(a => a.appointment_date === selectedDate)
+          const dayApts = filteredAppointments.filter(a => a.appointment_date === selectedDate)
           const staffColors = ['bg-blue-200 dark:bg-blue-800', 'bg-green-200 dark:bg-green-800', 'bg-purple-200 dark:bg-purple-800', 'bg-amber-200 dark:bg-amber-800', 'bg-pink-200 dark:bg-pink-800', 'bg-cyan-200 dark:bg-cyan-800', 'bg-orange-200 dark:bg-orange-800', 'bg-rose-200 dark:bg-rose-800']
           const staffTextColors = ['text-blue-800 dark:text-blue-200', 'text-green-800 dark:text-green-200', 'text-purple-800 dark:text-purple-200', 'text-amber-800 dark:text-amber-200', 'text-pink-800 dark:text-pink-200', 'text-cyan-800 dark:text-cyan-200', 'text-orange-800 dark:text-orange-200', 'text-rose-800 dark:text-rose-200']
           const hourHeight = 60
@@ -1919,7 +1994,8 @@ export default function AppointmentsPage() {
                               className={cn(
                                 'absolute left-0.5 right-0.5 rounded-md px-1.5 py-0.5 overflow-hidden cursor-grab active:cursor-grabbing hover:opacity-90 transition-opacity border border-white/20',
                                 staffColors[col.colorIdx],
-                                draggingId === apt.id && 'opacity-50'
+                                draggingId === apt.id && 'opacity-50',
+                                isPastUnresolved(apt) && UNRESOLVED_BORDER
                               )}
                               style={{ top, height }}
                               onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
@@ -1975,7 +2051,7 @@ export default function AppointmentsPage() {
             )
           }
 
-          const dayApts = appointments.filter(a => a.appointment_date === selectedDate)
+          const dayApts = filteredAppointments.filter(a => a.appointment_date === selectedDate)
           const hourHeight = 60
           const toMinutes = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
 
@@ -2132,7 +2208,8 @@ export default function AppointmentsPage() {
                               onDragEnd={() => setDraggingId(null)}
                               className={cn(
                                 'absolute left-0.5 right-0.5 rounded-md px-1.5 py-0.5 overflow-hidden cursor-grab active:cursor-grabbing hover:opacity-80 transition-opacity text-white border border-white/20',
-                                draggingId === apt.id && 'opacity-50'
+                                draggingId === apt.id && 'opacity-50',
+                                isPastUnresolved(apt) && UNRESOLVED_BORDER
                               )}
                               style={{ top, height, backgroundColor: col.color }}
                               onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
@@ -2302,6 +2379,7 @@ export default function AppointmentsPage() {
                   'hover:border-gray-200 dark:hover:border-gray-700 hover:shadow-sm',
                   timeState === 'past' && 'opacity-60',
                   timeState === 'current' && 'border-green-400 dark:border-green-600 ring-1 ring-green-400 dark:ring-green-600',
+                  isPastUnresolved(apt) && UNRESOLVED_BORDER_ONLY,
                   selectedAppointment?.id === apt.id && 'ring-2 ring-pulse-900 border-pulse-300 dark:border-pulse-700',
                 )}
               >
@@ -2318,6 +2396,7 @@ export default function AppointmentsPage() {
                       <span className="font-semibold text-sm text-gray-900 dark:text-gray-100">{apt.customers?.name || 'İsimsiz'}</span>
                       <span className={`badge text-xs ${getStatusColor(apt.status)}`}>{STATUS_LABELS[apt.status as keyof typeof STATUS_LABELS]}</span>
                       {apt.recurrence_group_id && <span title="Tekrarlayan randevu"><Repeat className="h-3.5 w-3.5 text-purple-400" /></span>}
+                      {isPastUnresolved(apt) && <span className="h-2.5 w-2.5 rounded-full bg-red-500 flex-shrink-0" title="Sonuç girilmemiş" />}
                     </div>
                     <div className="mt-0.5 flex items-center gap-2 text-xs text-gray-400">
                       {apt.services?.name && <span>{apt.services.name}</span>}
@@ -2346,6 +2425,7 @@ export default function AppointmentsPage() {
                   'border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900/50',
                   timeState === 'past' && 'opacity-60',
                   timeState === 'current' && 'border-green-400 ring-1 ring-green-400',
+                  isPastUnresolved(apt) && UNRESOLVED_BORDER_ONLY,
                   selectedAppointment?.id === apt.id && 'ring-2 ring-pulse-900',
                 )}
               >

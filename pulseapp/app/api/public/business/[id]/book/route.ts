@@ -131,6 +131,8 @@ export async function POST(
     type: 'appointment',
     title: 'Yeni Online Randevu',
     message: `${name} — ${service.name} — ${date} ${startTime}`,
+    related_id: appointment.id,
+    related_type: 'appointment',
     is_read: false,
   })
 

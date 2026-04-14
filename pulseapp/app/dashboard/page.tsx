@@ -99,7 +99,7 @@ export default async function DashboardPage() {
 
       supabase
         .from('notifications')
-        .select('id, type, title, body, is_read, created_at')
+        .select('id, type, title, body, is_read, created_at, related_id, related_type')
         .eq('business_id', businessId)
         .eq('is_read', false)
         .order('created_at', { ascending: false })
@@ -337,8 +337,11 @@ export default async function DashboardPage() {
                 {notifications.map((notif) => {
                   const isNew = notif.created_at && (Date.now() - new Date(notif.created_at).getTime()) < 24 * 60 * 60 * 1000
                   const typeConfig = NOTIF_CONFIG[notif.type as keyof typeof NOTIF_CONFIG] || NOTIF_CONFIG.system
+                  const notifHref = (notif.type === 'appointment' || notif.related_type === 'appointment') && notif.related_id
+                    ? `/dashboard/appointments?appointmentId=${notif.related_id}`
+                    : '/dashboard/notifications'
                   return (
-                    <div key={notif.id} className="flex gap-3 items-start group">
+                    <a key={notif.id} href={notifHref} className="flex gap-3 items-start group hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-lg p-1 -m-1 transition-colors">
                       <div className={`flex-shrink-0 flex h-8 w-8 items-center justify-center rounded-lg mt-0.5 ${typeConfig.bg}`}>
                         <typeConfig.Icon className={`h-4 w-4 ${typeConfig.color}`} />
                       </div>
@@ -353,7 +356,7 @@ export default async function DashboardPage() {
                         </div>
                         <p className="text-xs text-gray-400 truncate mt-0.5">{notif.body}</p>
                       </div>
-                    </div>
+                    </a>
                   )
                 })}
               </div>

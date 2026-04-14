@@ -109,7 +109,9 @@ export default function NotificationsPage() {
     }
 
     // Navigate based on type
-    if (notif.related_type === 'appointment') {
+    if ((notif.related_type === 'appointment' || notif.type === 'appointment') && notif.related_id) {
+      router.push(`/dashboard/appointments?appointmentId=${notif.related_id}`)
+    } else if (notif.related_type === 'appointment' || notif.type === 'appointment') {
       router.push('/dashboard/appointments')
     } else if (notif.related_type === 'review' || notif.type === 'review') {
       router.push('/dashboard/reviews')
