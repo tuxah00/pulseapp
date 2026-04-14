@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getEffectivePermissions, type StaffRole } from '@/types'
 import { executePendingAction, cancelPendingAction } from '@/lib/ai/assistant-actions'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
 
@@ -42,15 +41,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(res)
   }
 
-  const role = staff.role as StaffRole
-  const permissions = getEffectivePermissions(role, staff.permissions)
-
   const result = await executePendingAction(admin, action_id, {
-    userId: user.id,
     staffId: staff.id,
     businessId: staff.business_id,
-    role,
-    permissions,
     staffName: staff.name,
   })
 

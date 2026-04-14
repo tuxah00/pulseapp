@@ -2,7 +2,7 @@ import type { ChatCompletionTool } from 'openai/resources/chat/completions'
 import type { createAdminClient } from '@/lib/supabase/admin'
 import type { AuthContext } from '@/lib/api/with-permission'
 import type { StaffPermissions } from '@/types'
-import { createPendingAction } from '@/lib/ai/assistant-actions'
+import { createPendingAction, cancelPendingAction } from '@/lib/ai/assistant-actions'
 
 type SupabaseAdmin = ReturnType<typeof createAdminClient>
 type ToolCtx = AuthContext & { staffName: string; conversationId: string | null }
@@ -531,6 +531,49 @@ export const ASSISTANT_TOOLS: ChatCompletionTool[] = [
       parameters: { type: 'object', properties: {} },
     },
   },
+  // Grup 10: Zamanlanmış Eylemler (Faz 5)
+  {
+    type: 'function',
+    function: {
+      name: 'schedule_action',
+      description: 'Mevcut bir yazma aracı sonucunu (örn. send_message, create_appointment) ileri tarihli çalışacak şekilde zamanlar. Önce ilgili yazma aracını çağır, dönen action_id ile bu tool\'u kullan.',
+      parameters: {
+        type: 'object',
+        properties: {
+          action_id: { type: 'string', description: 'Zamanlanacak pending action ID' },
+          scheduled_for: { type: 'string', description: 'ISO tarih-saat (YYYY-MM-DDTHH:mm veya tam ISO). İşletme yerel saatiyle girilebilir.' },
+        },
+        required: ['action_id', 'scheduled_for'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'list_scheduled_actions',
+      description: 'Bekleyen (zamanlanmış) eylemleri listeler.',
+      parameters: {
+        type: 'object',
+        properties: {
+          limit: { type: 'number', description: 'Maksimum sonuç sayısı (varsayılan 20)' },
+        },
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'cancel_scheduled_action',
+      description: 'Zamanlanmış bir eylemi iptal eder.',
+      parameters: {
+        type: 'object',
+        properties: {
+          action_id: { type: 'string', description: 'İptal edilecek pending/scheduled action ID' },
+        },
+        required: ['action_id'],
+      },
+    },
+  },
 ]
 
 // ── Tool Label Map (UI göstergesi için) ──
@@ -571,6 +614,9 @@ export const TOOL_LABELS: Record<string, string> = {
   compare_periods: 'Dönemler karşılaştırılıyor...',
   detect_risk_customers: 'Risk altındaki müşteriler tespit ediliyor...',
   detect_anomalies: 'Anomali taraması yapılıyor...',
+  schedule_action: 'Eylem zamanlanıyor...',
+  list_scheduled_actions: 'Planlı eylemler listeleniyor...',
+  cancel_scheduled_action: 'Zamanlanmış eylem iptal ediliyor...',
 }
 
 // ── Permission Map ──
@@ -611,6 +657,9 @@ const TOOL_PERMISSIONS: Record<string, keyof StaffPermissions> = {
   compare_periods: 'analytics',
   detect_risk_customers: 'customers',
   detect_anomalies: 'analytics',
+  schedule_action: 'dashboard',
+  list_scheduled_actions: 'dashboard',
+  cancel_scheduled_action: 'dashboard',
 }
 
 // ── Tool Executor ──
@@ -702,6 +751,12 @@ export async function executeAssistantTool(
         return await handleDetectRiskCustomers(admin, businessId, args)
       case 'detect_anomalies':
         return await handleDetectAnomalies(admin, businessId)
+      case 'schedule_action':
+        return await handleScheduleAction(admin, ctx, args)
+      case 'list_scheduled_actions':
+        return await handleListScheduledActions(admin, ctx, args)
+      case 'cancel_scheduled_action':
+        return await handleCancelScheduledAction(admin, ctx, args)
       default:
         return { success: false, error: `Bilinmeyen araç: ${toolName}` }
     }
@@ -2235,4 +2290,101 @@ function minutesToTime(minutes: number): string {
   const h = Math.floor(minutes / 60)
   const m = minutes % 60
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+}
+
+// ── Faz 5: Scheduled Actions Handlers ──
+
+function parseScheduledFor(raw: string): string | null {
+  if (!raw) return null
+  // Accept YYYY-MM-DDTHH:mm (local) or full ISO. Interpret naïve as Turkey local (+03:00).
+  const hasTz = /Z|[+-]\d{2}:?\d{2}$/.test(raw)
+  let d: Date
+  if (hasTz) {
+    d = new Date(raw)
+  } else {
+    // Treat as Turkey local (UTC+3, no DST)
+    d = new Date(raw + '+03:00')
+  }
+  if (isNaN(d.getTime())) return null
+  return d.toISOString()
+}
+
+async function handleScheduleAction(
+  admin: SupabaseAdmin, ctx: ToolCtx, args: Record<string, any>,
+) {
+  const actionId = args.action_id as string
+  const scheduledForIso = parseScheduledFor(args.scheduled_for as string)
+  if (!scheduledForIso) return { success: false, error: 'Geçersiz tarih/saat formatı' }
+  if (new Date(scheduledForIso).getTime() <= Date.now()) {
+    return { success: false, error: 'Zamanlanan an gelecekte olmalı' }
+  }
+
+  const { data: action, error } = await admin
+    .from('ai_pending_actions')
+    .select('id, staff_id, business_id, status, preview')
+    .eq('id', actionId)
+    .single()
+
+  if (error || !action) return { success: false, error: 'Eylem bulunamadı' }
+  if (action.business_id !== ctx.businessId) return { success: false, error: 'Yetkisiz' }
+  if (action.staff_id !== ctx.staffId) return { success: false, error: 'Yetkisiz' }
+  if (action.status !== 'pending' && action.status !== 'scheduled') {
+    return { success: false, error: 'Bu eylem zaten işlenmiş' }
+  }
+
+  const { error: updErr } = await admin
+    .from('ai_pending_actions')
+    .update({ status: 'scheduled', scheduled_for: scheduledForIso })
+    .eq('id', actionId)
+
+  if (updErr) return { success: false, error: 'Zamanlama kaydedilemedi' }
+
+  return {
+    success: true,
+    data: {
+      action_id: actionId,
+      scheduled_for: scheduledForIso,
+      preview: action.preview,
+      message: `✓ Planlandı: ${new Date(scheduledForIso).toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' })}`,
+    },
+  }
+}
+
+async function handleListScheduledActions(
+  admin: SupabaseAdmin, ctx: ToolCtx, args: Record<string, any>,
+) {
+  const limit = Math.min(args.limit || 20, 50)
+  const { data, error } = await admin
+    .from('ai_pending_actions')
+    .select('id, action_type, preview, scheduled_for, created_at')
+    .eq('business_id', ctx.businessId)
+    .eq('status', 'scheduled')
+    .order('scheduled_for', { ascending: true })
+    .limit(limit)
+
+  if (error) return { success: false, error: 'Listelenemedi' }
+
+  return {
+    success: true,
+    data: {
+      count: (data || []).length,
+      actions: (data || []).map((a: any) => ({
+        action_id: a.id,
+        action_type: a.action_type,
+        preview: a.preview,
+        scheduled_for: a.scheduled_for,
+        scheduled_for_local: a.scheduled_for
+          ? new Date(a.scheduled_for).toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' })
+          : null,
+      })),
+    },
+  }
+}
+
+async function handleCancelScheduledAction(
+  admin: SupabaseAdmin, ctx: ToolCtx, args: Record<string, any>,
+) {
+  const res = await cancelPendingAction(admin, args.action_id, ctx.staffId, ctx.businessId)
+  if (!res.ok) return { success: false, error: res.message }
+  return { success: true, data: { message: '✓ Zamanlanmış eylem iptal edildi' } }
 }

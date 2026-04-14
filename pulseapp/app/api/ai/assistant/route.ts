@@ -441,6 +441,12 @@ function summarizeToolResult(toolName: string, data: any): string {
       return `${data.toplam || 0} risk altında müşteri bulundu`
     case 'detect_anomalies':
       return `${(data.anomalies || []).length} anomali tespit edildi`
+    case 'schedule_action':
+      return data.message || '✓ Planlandı'
+    case 'list_scheduled_actions':
+      return `${data.count || 0} planlı eylem`
+    case 'cancel_scheduled_action':
+      return data.message || '✓ İptal edildi'
     default:
       return 'İşlem tamamlandı'
   }

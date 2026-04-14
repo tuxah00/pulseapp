@@ -2,6 +2,7 @@
   "crons": [
     { "path": "/api/cron/daily", "schedule": "0 9 * * *" },
     { "path": "/api/cron/birthday", "schedule": "0 8 * * *" },
-    { "path": "/api/cron/ai-daily-brief", "schedule": "0 5 * * *" }
+    { "path": "/api/cron/ai-daily-brief", "schedule": "0 5 * * *" },
+    { "path": "/api/cron/ai-scheduled-runner", "schedule": "*/5 * * * *" }
   ]
 }

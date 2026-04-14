@@ -350,6 +350,13 @@ ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'dietitian';
 ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'tutoring';
 ```
 
+31. **AI zamanlanmış eylemler** (`048_ai_scheduled_actions.sql`): ✅ Uygulandı (2026-04-15)
+```sql
+-- ai_pending_actions: scheduled_for TIMESTAMPTZ, recurrence_rule JSONB kolonları
+-- status CHECK genişletildi: 'scheduled' ve 'failed' eklendi
+-- idx_ai_pending_actions_scheduled partial index (status='scheduled')
+```
+
 ## Faz 2: Estetik Klinik Özellik Seti (2026-04-04)
 
 ### Yeni Tablolar

@@ -32,7 +32,9 @@ export async function createPendingAction(
   payload: Record<string, any>,
   preview: string,
   details: Record<string, any> = {},
+  options: { scheduledFor?: string | null } = {},
 ): Promise<ConfirmationRequired | { success: false; error: string }> {
+  const scheduledFor = options.scheduledFor || null
   const { data, error } = await admin
     .from('ai_pending_actions')
     .insert({
@@ -42,6 +44,8 @@ export async function createPendingAction(
       action_type: actionType,
       payload,
       preview,
+      scheduled_for: scheduledFor,
+      status: scheduledFor ? 'scheduled' : 'pending',
     })
     .select('id')
     .single()
@@ -56,7 +60,7 @@ export async function createPendingAction(
     action_id: data.id,
     action_type: actionType,
     preview,
-    details,
+    details: { ...details, ...(scheduledFor ? { scheduled_for: scheduledFor } : {}) },
   }
 }
 
@@ -70,10 +74,16 @@ export interface ActionExecuteResult {
  * Bekleyen aksiyonu yürütür. Dispatch table burada.
  * Her action type için executor fonksiyonu çalıştırılır.
  */
+export type ExecutorCtx = {
+  businessId: string
+  staffId: string
+  staffName: string
+}
+
 export async function executePendingAction(
   admin: SupabaseAdmin,
   actionId: string,
-  ctx: AuthContext & { staffName: string },
+  ctx: ExecutorCtx,
 ): Promise<ActionExecuteResult> {
   // Load pending action
   const { data: action, error } = await admin
@@ -83,7 +93,9 @@ export async function executePendingAction(
     .single()
 
   if (error || !action) return { ok: false, message: 'Eylem bulunamadı' }
-  if (action.status !== 'pending') return { ok: false, message: 'Bu eylem zaten işlenmiş' }
+  if (action.status !== 'pending' && action.status !== 'scheduled') {
+    return { ok: false, message: 'Bu eylem zaten işlenmiş' }
+  }
   if (action.staff_id !== ctx.staffId) return { ok: false, message: 'Yetkisiz erişim' }
   if (new Date(action.expires_at) < new Date()) {
     await admin.from('ai_pending_actions').update({ status: 'expired' }).eq('id', actionId)
@@ -133,11 +145,13 @@ export async function executePendingAction(
     result = { ok: false, message: 'İşlem sırasında hata oluştu' }
   }
 
-  // Update pending action row
+  // Update pending action row. On fail: scheduled → 'failed' (runner won't retry);
+  // pending → stay 'pending' (user can retry).
+  const wasScheduled = action.status === 'scheduled'
   await admin
     .from('ai_pending_actions')
     .update({
-      status: result.ok ? 'executed' : 'pending', // keep pending on fail so user can retry
+      status: result.ok ? 'executed' : (wasScheduled ? 'failed' : 'pending'),
       executed_at: result.ok ? new Date().toISOString() : null,
       result: { ok: result.ok, message: result.message },
     })
@@ -147,17 +161,23 @@ export async function executePendingAction(
 }
 
 export async function cancelPendingAction(
-  admin: SupabaseAdmin, actionId: string, staffId: string,
+  admin: SupabaseAdmin,
+  actionId: string,
+  staffId: string,
+  businessId?: string,
 ): Promise<{ ok: boolean; message: string }> {
   const { data: action } = await admin
     .from('ai_pending_actions')
-    .select('staff_id, status, preview')
+    .select('staff_id, business_id, status, preview')
     .eq('id', actionId)
     .single()
 
   if (!action) return { ok: false, message: 'Eylem bulunamadı' }
   if (action.staff_id !== staffId) return { ok: false, message: 'Yetkisiz' }
-  if (action.status !== 'pending') return { ok: false, message: 'Zaten işlenmiş' }
+  if (businessId && action.business_id !== businessId) return { ok: false, message: 'Yetkisiz' }
+  if (action.status !== 'pending' && action.status !== 'scheduled') {
+    return { ok: false, message: 'Zaten işlenmiş' }
+  }
 
   await admin.from('ai_pending_actions').update({ status: 'cancelled' }).eq('id', actionId)
   return { ok: true, message: 'İptal edildi' }
@@ -167,7 +187,7 @@ export async function cancelPendingAction(
 
 async function execCreateAppointment(
   admin: SupabaseAdmin,
-  ctx: AuthContext & { staffName: string },
+  ctx: ExecutorCtx,
   p: Record<string, any>,
 ): Promise<ActionExecuteResult> {
   // Re-check conflict just before insert
@@ -216,7 +236,7 @@ async function execCreateAppointment(
 
 async function execCancelAppointment(
   admin: SupabaseAdmin,
-  ctx: AuthContext & { staffName: string },
+  ctx: ExecutorCtx,
   p: Record<string, any>,
 ): Promise<ActionExecuteResult> {
   const { error } = await admin
@@ -242,7 +262,7 @@ async function execCancelAppointment(
 
 async function execUpdateAppointmentStatus(
   admin: SupabaseAdmin,
-  ctx: AuthContext & { staffName: string },
+  ctx: ExecutorCtx,
   p: Record<string, any>,
 ): Promise<ActionExecuteResult> {
   const { error } = await admin
@@ -268,7 +288,7 @@ async function execUpdateAppointmentStatus(
 
 async function execRescheduleAppointment(
   admin: SupabaseAdmin,
-  ctx: AuthContext & { staffName: string },
+  ctx: ExecutorCtx,
   p: Record<string, any>,
 ): Promise<ActionExecuteResult> {
   const { error } = await admin
@@ -299,7 +319,7 @@ async function execRescheduleAppointment(
 
 async function execCreateCustomer(
   admin: SupabaseAdmin,
-  ctx: AuthContext & { staffName: string },
+  ctx: ExecutorCtx,
   p: Record<string, any>,
 ): Promise<ActionExecuteResult> {
   const { data, error } = await admin.from('customers').insert({
@@ -330,7 +350,7 @@ async function execCreateCustomer(
 
 async function execUpdateCustomer(
   admin: SupabaseAdmin,
-  ctx: AuthContext & { staffName: string },
+  ctx: ExecutorCtx,
   p: Record<string, any>,
 ): Promise<ActionExecuteResult> {
   const updates: Record<string, any> = {}
@@ -364,7 +384,7 @@ async function execUpdateCustomer(
 
 async function execDeleteCustomer(
   admin: SupabaseAdmin,
-  ctx: AuthContext & { staffName: string },
+  ctx: ExecutorCtx,
   p: Record<string, any>,
 ): Promise<ActionExecuteResult> {
   const { error } = await admin
@@ -390,7 +410,7 @@ async function execDeleteCustomer(
 
 async function execCreateService(
   admin: SupabaseAdmin,
-  ctx: AuthContext & { staffName: string },
+  ctx: ExecutorCtx,
   p: Record<string, any>,
 ): Promise<ActionExecuteResult> {
   const { data, error } = await admin.from('services').insert({
@@ -419,7 +439,7 @@ async function execCreateService(
 
 async function execUpdateService(
   admin: SupabaseAdmin,
-  ctx: AuthContext & { staffName: string },
+  ctx: ExecutorCtx,
   p: Record<string, any>,
 ): Promise<ActionExecuteResult> {
   const updates: Record<string, any> = {}
@@ -452,7 +472,7 @@ async function execUpdateService(
 
 async function execSendMessage(
   admin: SupabaseAdmin,
-  ctx: AuthContext & { staffName: string },
+  ctx: ExecutorCtx,
   p: Record<string, any>,
 ): Promise<ActionExecuteResult> {
   // Insert message row (outbound); actual SMS/WhatsApp sending is handled by existing pipeline
