@@ -134,6 +134,8 @@ export default function BusinessSettingsPage() {
   // Sticky save bar
   const saveBtnRef = useRef<HTMLButtonElement>(null)
   const [saveBtnVisible, setSaveBtnVisible] = useState(true)
+  const prevSaveBtnVisibleRef = useRef(true)
+  const [saveBtnAnimating, setSaveBtnAnimating] = useState(false)
   const isDirty = useMemo(
     () => JSON.stringify(settings) !== JSON.stringify(savedSettings),
     [settings, savedSettings]
@@ -201,6 +203,19 @@ export default function BusinessSettingsPage() {
     observer.observe(el)
     return () => observer.disconnect()
   }, [activeTab])
+
+  // Orijinal buton alanı ekrana girdiğinde (false→true) slide-in animasyonu tetikle
+  useEffect(() => {
+    if (saveBtnVisible && !prevSaveBtnVisibleRef.current) {
+      setSaveBtnAnimating(true)
+      const t = setTimeout(() => setSaveBtnAnimating(false), 500)
+      prevSaveBtnVisibleRef.current = true
+      return () => clearTimeout(t)
+    }
+    if (!saveBtnVisible) {
+      prevSaveBtnVisibleRef.current = false
+    }
+  }, [saveBtnVisible])
 
   useEffect(() => {
     if (businessId) fetchRooms()
@@ -1059,7 +1074,7 @@ export default function BusinessSettingsPage() {
               )}
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-2 border-t border-gray-100 dark:border-gray-800">
+            <div className={cn("flex items-center justify-end gap-3 pt-2 border-t border-gray-100 dark:border-gray-800", isDirty && saveBtnAnimating && "save-btn-animate")}>
               {isDirty && (
                 <button
                   type="button"
