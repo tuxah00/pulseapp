@@ -22,14 +22,23 @@ interface Business {
   sector?: string
 }
 
+interface ServiceJoin {
+  name: string
+  price?: number
+}
+
+interface StaffJoin {
+  name: string
+}
+
 interface Appointment {
   id: string
   appointment_date: string
   start_time: string
   end_time?: string
   status: string
-  services?: { name: string; price?: number }
-  staff_members?: { name: string }
+  services?: ServiceJoin | ServiceJoin[] | null
+  staff_members?: StaffJoin | StaffJoin[] | null
 }
 
 const STATUS_LABELS: Record<string, string> = {
