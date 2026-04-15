@@ -6,9 +6,8 @@ import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { Loader2, Save, Sparkles } from 'lucide-react'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { logAudit } from '@/lib/utils/audit'
+import { CUSTOM_INSTRUCTIONS_MAX, DEFAULT_TONE } from '@/lib/ai/assistant-prompts'
 import type { AIAssistantTone, AIPreferences, BusinessSettings } from '@/types'
-
-const CUSTOM_INSTRUCTIONS_MAX = 1000
 
 const TONE_OPTIONS: { value: AIAssistantTone; label: string; description: string }[] = [
   { value: 'samimi', label: 'Samimi', description: 'Doğal, sıcak, profesyonel (varsayılan)' },
@@ -17,7 +16,7 @@ const TONE_OPTIONS: { value: AIAssistantTone; label: string; description: string
 ]
 
 const DEFAULT_PREFS: AIPreferences = {
-  tone: 'samimi',
+  tone: DEFAULT_TONE,
   auto_brief_enabled: false,
   brief_time: '08:00',
   default_reminder_hours: 24,
