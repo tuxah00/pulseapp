@@ -179,9 +179,9 @@ Aşağıdaki özellikler **kod tarafında tamamlanmış** ama production'da çal
 
 | Özellik | Gerekli Abonelik | Durum |
 |---------|------------------|-------|
-| AI zamanlanmış eylemler cron (`/api/cron/ai-scheduled-runner`) | Vercel Pro ($20/ay) | Kod hazır, `vercel.json`'a cron satırı eklenmedi |
+| AI zamanlanmış eylemler cron (`/api/cron/ai-scheduled-runner`) | Vercel Pro ($20/ay) | Kod hazır; **taslak cron**: `{ "path": "/api/cron/ai-scheduled-runner", "schedule": "*/5 * * * *" }` — abonelik açılınca `vercel.json`'a eklenecek |
 | Kampanya gönderim cron (`/api/cron/campaigns`) | Vercel Pro | Kod hazır, cron tetiklenmiyor |
-| Günlük AI brief cron (`/api/cron/ai-daily-brief`) | Vercel Pro | Faz 4'te eklenecek |
+| Günlük AI brief cron (`/api/cron/ai-daily-brief`) | Vercel Pro | Kod hazır (Faz 4); **taslak cron**: `{ "path": "/api/cron/ai-daily-brief", "schedule": "0 5 * * *" }` — abonelik açılınca `vercel.json`'a eklenecek |
 | Hatırlatma / winback / doğum günü / yorum SMS cron'ları | Vercel Pro | Kod hazır, cron tetiklenmiyor |
 | PayTR ödeme akışı | PayTR merchant hesabı | Env eklenince aktif |
 | Paraşüt e-Fatura | Paraşüt API erişimi | Env eklenince aktif |
