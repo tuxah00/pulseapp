@@ -41,10 +41,6 @@ function fmtPct(v: number | null): string {
   return `${v.toFixed(1)}%`
 }
 
-function severityRank(s: Recommendation['severity']): number {
-  return s === 'critical' ? 0 : s === 'high' ? 1 : s === 'medium' ? 2 : 3
-}
-
 export default function InsightsPage() {
   const [data, setData] = useState<InsightsSummary | null>(null)
   const [loading, setLoading] = useState(true)
@@ -97,10 +93,8 @@ export default function InsightsPage() {
     )
   }
 
-  const topRecs = [...data.recommendations]
-    .sort((a, b) => severityRank(a.severity) - severityRank(b.severity))
-    .slice(0, 3)
-
+  const topRecs = data.recommendations.slice(0, 3)
+  const restRecs = data.recommendations.slice(3)
   const ctx = data.seasonal.current_context
 
   return (
@@ -254,12 +248,9 @@ export default function InsightsPage() {
             </h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {data.recommendations
-              .sort((a, b) => severityRank(a.severity) - severityRank(b.severity))
-              .slice(3)
-              .map(rec => (
-                <StrategyCard key={rec.id} rec={rec} compact />
-              ))}
+            {restRecs.map(rec => (
+              <StrategyCard key={rec.id} rec={rec} compact />
+            ))}
           </div>
         </section>
       )}

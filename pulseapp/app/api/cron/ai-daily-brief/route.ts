@@ -78,7 +78,10 @@ async function generateAndStoreBrief(
       .limit(100),
     handleDetectAnomalies(admin, businessId),
     handleDetectRiskCustomers(admin, businessId, { limit: 5 }),
-    computeStrategicRecommendations(admin, businessId, sector).catch(() => []),
+    computeStrategicRecommendations(admin, businessId, sector).catch(err => {
+      console.error('[ai-daily-brief] strategic recs failed:', err)
+      return []
+    }),
   ])
 
   const todayApts = todayAptsRes.data || []

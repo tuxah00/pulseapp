@@ -3,18 +3,10 @@ import type { createAdminClient } from '@/lib/supabase/admin'
 import {
   SECTOR_STRATEGY,
   getCurrentSeasonalContext,
-  getHighDemandMonths,
+  DEMAND_LABELS_TR,
 } from '@/lib/ai/strategic-context'
 
 type SupabaseAdmin = ReturnType<typeof createAdminClient>
-
-// ============================================
-// İçgörü Hesaplayıcı Modülü — Faz 12
-// Hem İş Zekası sayfası hem de recommend_strategic_actions
-// tool'u tarafından çağrılan tekil hesaplayıcılar.
-// ============================================
-
-// ── Tipler ──
 
 export type Quadrant = 'star' | 'cash_cow' | 'question' | 'dog'
 
@@ -74,7 +66,6 @@ export interface InsightsSummary {
   margin: ServiceMarginRow[]
   seasonal: {
     monthly: MonthlyRevenuePoint[]
-    highlight_months: { month: number; demand: 'high' | 'peak' }[]
     current_context: {
       current_label: string
       current_demand: string
@@ -86,7 +77,6 @@ export interface InsightsSummary {
   recommendations: Recommendation[]
 }
 
-// ── Yardımcılar ──
 
 const MONTH_LABELS_SHORT = [
   'Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz',
@@ -118,7 +108,6 @@ function paidAmount(inv: any): number {
 
 const PAID_STATUSES = ['paid', 'partial']
 
-// ── 1. Hizmet Marj/Çeyrek Analizi ──
 
 export interface InsightsPeriod {
   from: string // YYYY-MM-DD
@@ -189,7 +178,6 @@ export async function computeMarginAnalysis(
   return rows.sort((a, b) => b.revenue - a.revenue)
 }
 
-// ── 2. Mevsimsel Trend (12 ay + YoY) ──
 
 export async function computeSeasonalTrend(
   admin: SupabaseAdmin,
@@ -240,7 +228,6 @@ export async function computeSeasonalTrend(
   return monthly
 }
 
-// ── 3. Kohort Retention ──
 
 export async function computeCohortRetention(
   admin: SupabaseAdmin,
@@ -329,15 +316,15 @@ export async function computeCohortRetention(
   return cells
 }
 
-// ── 4. KPI Özet ──
 
 export async function computeKpi(
   admin: SupabaseAdmin,
   businessId: string,
   period: InsightsPeriod,
   sector: SectorType,
+  precomputedMargin?: ServiceMarginRow[],
 ): Promise<InsightKpi> {
-  const [invResult, custResult, aptResult, businessResult] = await Promise.all([
+  const [invResult, custResult, aptResult, expResult] = await Promise.all([
     admin
       .from('invoices')
       .select('total, paid_amount, status, created_at')
@@ -360,18 +347,16 @@ export async function computeKpi(
       .lte('appointment_date', period.to),
     admin
       .from('expenses')
-      .select('amount, date')
+      .select('amount, expense_date')
       .eq('business_id', businessId)
-      .gte('date', period.from)
-      .lte('date', period.to),
+      .gte('expense_date', period.from)
+      .lte('expense_date', period.to),
   ])
 
-  // Gelir
   const invoices = (invResult.data || []) as any[]
   const totalRevenue = invoices.reduce((s, inv) => s + paidAmount(inv), 0)
 
-  // Giderler (kâr marjı için)
-  const expenses = (businessResult.data || []) as any[]
+  const expenses = (expResult.data || []) as any[]
   const totalExpenses = expenses.reduce((s, e) => s + Number(e.amount || 0), 0)
   const marginPct = totalRevenue > 0
     ? round1(((totalRevenue - totalExpenses) / totalRevenue) * 100)
@@ -411,8 +396,7 @@ export async function computeKpi(
     ? round1((activeRecent / customers.length) * 100)
     : null
 
-  // Hizmet konsantrasyonu
-  const margin = await computeMarginAnalysis(admin, businessId, period)
+  const margin = precomputedMargin ?? await computeMarginAnalysis(admin, businessId, period)
   const topShare = margin.length > 0 ? margin[0].revenue_share : null
 
   return {
@@ -425,24 +409,21 @@ export async function computeKpi(
   }
 }
 
-// ── 5. Stratejik Öneri Motoru ──
 
 export async function computeStrategicRecommendations(
   admin: SupabaseAdmin,
   businessId: string,
   sector: SectorType,
-  opts: { focus?: Recommendation['focus'] } = {},
+  opts: { focus?: Recommendation['focus']; precomputedKpi?: InsightKpi; precomputedMargin?: ServiceMarginRow[] } = {},
 ): Promise<Recommendation[]> {
   const now = new Date()
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
   const today = now.toISOString().slice(0, 10)
   const period: InsightsPeriod = { from: monthStart, to: today }
 
-  const [kpi, margin, strategy] = [
-    await computeKpi(admin, businessId, period, sector),
-    await computeMarginAnalysis(admin, businessId, period),
-    SECTOR_STRATEGY[sector] ?? SECTOR_STRATEGY.other,
-  ]
+  const margin = opts.precomputedMargin ?? await computeMarginAnalysis(admin, businessId, period)
+  const kpi = opts.precomputedKpi ?? await computeKpi(admin, businessId, period, sector, margin)
+  const strategy = SECTOR_STRATEGY[sector] ?? SECTOR_STRATEGY.other
   const seasonal = getCurrentSeasonalContext(sector, now)
 
   const recs: Recommendation[] = []
@@ -629,7 +610,6 @@ export async function computeStrategicRecommendations(
   return filtered
 }
 
-// ── 6. Atomik Özet (endpoint + AI tool için tek çağrı) ──
 
 export async function computeInsightsSummary(
   admin: SupabaseAdmin,
@@ -637,18 +617,18 @@ export async function computeInsightsSummary(
   sector: SectorType,
   period: InsightsPeriod,
 ): Promise<InsightsSummary> {
-  const [kpi, margin, monthly, cohort, recommendations] = await Promise.all([
-    computeKpi(admin, businessId, period, sector),
+  const [margin, monthly, cohort] = await Promise.all([
     computeMarginAnalysis(admin, businessId, period),
     computeSeasonalTrend(admin, businessId, sector),
     computeCohortRetention(admin, businessId, { cohortMonths: 6 }),
-    computeStrategicRecommendations(admin, businessId, sector),
   ])
+  const kpi = await computeKpi(admin, businessId, period, sector, margin)
+  const recommendations = await computeStrategicRecommendations(
+    admin, businessId, sector,
+    { precomputedKpi: kpi, precomputedMargin: margin },
+  )
 
   const ctx = getCurrentSeasonalContext(sector)
-  const demandLabels: Record<string, string> = {
-    low: 'düşük', normal: 'normal', high: 'yüksek', peak: 'zirve',
-  }
 
   return {
     sector,
@@ -657,16 +637,13 @@ export async function computeInsightsSummary(
     margin,
     seasonal: {
       monthly,
-      highlight_months: getHighDemandMonths(sector).filter(
-        m => m.demand === 'peak' || m.demand === 'high',
-      ) as { month: number; demand: 'high' | 'peak' }[],
       current_context: {
         current_label: ctx.currentLabel,
-        current_demand: demandLabels[ctx.currentDemand] || ctx.currentDemand,
+        current_demand: DEMAND_LABELS_TR[ctx.currentDemand],
         current_note: ctx.currentNote,
         upcoming: ctx.upcoming.map(u => ({
           label: u.label,
-          demand: demandLabels[u.demand] || u.demand,
+          demand: DEMAND_LABELS_TR[u.demand],
           note: u.note,
         })),
       },
