@@ -28,19 +28,37 @@ function generateSlots(open: string, close: string, durationMinutes: number): st
   return slots
 }
 
-/** Bir listedeki randevulardan dolu minute-set'i döndürür */
-function occupiedMinutes(appointments: { start_time: string; end_time: string }[]): Set<number> {
-  const set = new Set<number>()
-  for (const appt of appointments) {
-    const [sh, sm] = appt.start_time.split(':').map(Number)
-    const [eh, em] = appt.end_time.split(':').map(Number)
-    let cur = sh * 60 + sm
-    while (cur < eh * 60 + em) {
-      set.add(cur)
-      cur += 30
-    }
-  }
-  return set
+function toMinutes(time: string): number {
+  const [h, m] = time.split(':').map(Number)
+  return h * 60 + m
+}
+
+/** Slot'un mevcut randevularla çakışıp çakışmadığını doğrudan kontrol eder (30dk granülasyon yok) */
+function hasConflict(
+  slotStart: number,
+  duration: number,
+  appointments: { start_time: string; end_time: string }[]
+): boolean {
+  const slotEnd = slotStart + duration
+  return appointments.some(apt => {
+    const aptStart = toMinutes(apt.start_time)
+    const aptEnd = toMinutes(apt.end_time)
+    return slotStart < aptEnd && slotEnd > aptStart
+  })
+}
+
+/** Slot'un bloklanmış saat dilimleriyle çakışıp çakışmadığını kontrol eder */
+function isBlockedSlot(
+  slotStart: number,
+  duration: number,
+  blocked: { start_time: string; end_time: string }[]
+): boolean {
+  const slotEnd = slotStart + duration
+  return blocked.some(b => {
+    const bStart = toMinutes(b.start_time)
+    const bEnd = toMinutes(b.end_time)
+    return slotStart < bEnd && slotEnd > bStart
+  })
 }
 
 export async function GET(
@@ -80,6 +98,20 @@ export async function GET(
 
   const allSlots = generateSlots(hours.open, hours.close, duration)
 
+  // Bloklanmış saatler (işletme geneli + personele özel)
+  let blockedQuery = supabase
+    .from('blocked_slots')
+    .select('start_time, end_time, staff_id')
+    .eq('business_id', params.id)
+    .eq('date', date)
+
+  const { data: blockedRaw } = await blockedQuery
+
+  // İşletme geneli bloklar (staff_id null) + seçili personele özel bloklar
+  const blockedSlots = (blockedRaw || []).filter(b =>
+    b.staff_id === null || b.staff_id === staffId
+  )
+
   if (staffId) {
     // Belirli personel için: vardiya izni var mı kontrol et
     const { data: shiftOff } = await supabase
@@ -103,18 +135,17 @@ export async function GET(
       .eq('staff_id', staffId)
       .eq('appointment_date', date)
       .in('status', ['pending', 'confirmed'])
+      .is('deleted_at', null)
 
-    const occupied = occupiedMinutes(existing || [])
-    const slotMinutes = (s: string) => {
-      const [h, m] = s.split(':').map(Number)
-      return h * 60 + m
-    }
-    const available = allSlots.filter(s => !occupied.has(slotMinutes(s)))
+    const available = allSlots.filter(s => {
+      const slotMin = toMinutes(s)
+      return !hasConflict(slotMin, duration, existing || []) &&
+             !isBlockedSlot(slotMin, duration, blockedSlots)
+    })
     return NextResponse.json({ slots: available, open: hours.open, close: hours.close })
   }
 
   // "Herhangi bir personel" modu
-  // Aktif personel listesini çek
   const { data: staffList } = await supabase
     .from('staff_members')
     .select('id')
@@ -129,29 +160,27 @@ export async function GET(
       .eq('business_id', params.id)
       .eq('appointment_date', date)
       .in('status', ['pending', 'confirmed'])
+      .is('deleted_at', null)
 
-    const occupied = occupiedMinutes(existing || [])
-    const slotMinutes = (s: string) => {
-      const [h, m] = s.split(':').map(Number)
-      return h * 60 + m
-    }
-    const available = allSlots.filter(s => !occupied.has(slotMinutes(s)))
+    const available = allSlots.filter(s => {
+      const slotMin = toMinutes(s)
+      return !hasConflict(slotMin, duration, existing || []) &&
+             !isBlockedSlot(slotMin, duration, blockedSlots)
+    })
     return NextResponse.json({ slots: available, open: hours.open, close: hours.close })
   }
 
-  // Her personel için müsait slotları hesapla, union al (en az 1 personel müsaitse slot açık)
   const staffIds = staffList.map(s => s.id)
 
-  // Tüm personelin o günkü randevularını tek sorguda çek
   const { data: allAppts } = await supabase
     .from('appointments')
     .select('staff_id, start_time, end_time')
     .eq('business_id', params.id)
     .eq('appointment_date', date)
     .in('status', ['pending', 'confirmed'])
+    .is('deleted_at', null)
     .in('staff_id', staffIds)
 
-  // İzin günlerini çek
   const { data: offShifts } = await supabase
     .from('shifts')
     .select('staff_id')
@@ -162,19 +191,19 @@ export async function GET(
 
   const offStaffIds = new Set((offShifts || []).map(s => s.staff_id))
 
-  const slotMinutes = (s: string) => {
-    const [h, m] = s.split(':').map(Number)
-    return h * 60 + m
-  }
-
   // Her slot için: en az 1 personelin müsait olup olmadığını kontrol et
   const available = allSlots.filter(slotStr => {
-    const slotMin = slotMinutes(slotStr)
+    const slotMin = toMinutes(slotStr)
+    // Önce işletme geneli blok kontrolü
+    if (isBlockedSlot(slotMin, duration, blockedSlots)) return false
+    // En az 1 personel müsait mi?
     return staffIds.some(sid => {
-      if (offStaffIds.has(sid)) return false // bu personel izinli
+      if (offStaffIds.has(sid)) return false
+      // Bu personele özel blok var mı?
+      const staffBlocked = (blockedRaw || []).filter(b => b.staff_id === sid)
+      if (isBlockedSlot(slotMin, duration, staffBlocked)) return false
       const staffAppts = (allAppts || []).filter(a => a.staff_id === sid)
-      const occupied = occupiedMinutes(staffAppts)
-      return !occupied.has(slotMin)
+      return !hasConflict(slotMin, duration, staffAppts)
     })
   })
 

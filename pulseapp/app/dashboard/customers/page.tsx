@@ -1263,7 +1263,15 @@ export default function CustomersPage() {
               </div>
               <div>
                 <label htmlFor="custBday" className="label">Doğum Tarihi (opsiyonel)</label>
-                <input id="custBday" type="date" max={new Date().toISOString().slice(0, 10)} {...register('birthday')} className="input" />
+                <input
+                  id="custBday"
+                  type="date"
+                  {...register('birthday')}
+                  className="input"
+                  min={(() => { const d = new Date(); d.setFullYear(d.getFullYear() - 120); return d.toISOString().split('T')[0] })()}
+                  max={new Date().toISOString().slice(0, 10)}
+                />
+
                 {errors.birthday && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.birthday.message}</p>}
               </div>
               <div>

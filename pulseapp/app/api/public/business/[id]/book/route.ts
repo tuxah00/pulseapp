@@ -5,6 +5,7 @@ import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
 import { validateBody } from '@/lib/api/validate'
 import { publicBookingSchema } from '@/lib/schemas'
 import { normalizePhone, phoneOrFilter } from '@/lib/utils/phone'
+import { sendSMS } from '@/lib/sms/send'
 
 const supabase = createAdminClient()
 
@@ -111,6 +112,8 @@ export async function POST(
     reminder_24h_sent: false,
     reminder_2h_sent: false,
     review_requested: false,
+    manage_token: crypto.randomUUID(),
+    token_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
   }
 
   if (staffId) appointmentData.staff_id = staffId
@@ -118,7 +121,7 @@ export async function POST(
   const { data: appointment, error: apptError } = await supabase
     .from('appointments')
     .insert(appointmentData)
-    .select('id')
+    .select('id, manage_token')
     .single()
 
   if (apptError || !appointment) {
@@ -136,9 +139,40 @@ export async function POST(
     is_read: false,
   })
 
+  // Müşteriye SMS ile onay bildirimi gönder (Twilio varsa)
+  try {
+    const { data: biz } = await supabase
+      .from('businesses')
+      .select('name')
+      .eq('id', params.id)
+      .single()
+    const manageUrl = process.env.NEXT_PUBLIC_APP_URL
+      ? `${process.env.NEXT_PUBLIC_APP_URL}/book/manage/${appointment.manage_token}`
+      : null
+    const smsBody = [
+      `✅ Randevunuz alındı!`,
+      `📋 Hizmet: ${service.name}`,
+      `📅 Tarih: ${date}`,
+      `🕐 Saat: ${startTime} - ${endTime}`,
+      biz?.name ? `🏢 İşletme: ${biz.name}` : null,
+      manageUrl ? `\nRandevunuzu görüntüleyin:\n${manageUrl}` : null,
+    ].filter(Boolean).join('\n')
+    await sendSMS({
+      to: normalizedPhone,
+      body: smsBody,
+      businessId: params.id,
+      customerId,
+      messageType: 'system',
+    })
+  } catch (err) {
+    console.error('Booking SMS hatası:', err)
+    // SMS hatası randevu oluşturmayı etkilemez
+  }
+
   return NextResponse.json({
     success: true,
     appointmentId: appointment.id,
+    manageToken: appointment.manage_token,
     message: 'Randevunuz başarıyla oluşturuldu!',
     details: {
       service: service.name,
