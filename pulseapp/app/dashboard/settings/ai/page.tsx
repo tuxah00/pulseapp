@@ -29,8 +29,8 @@ const DEFAULT_PREFS: AIPreferences = {
 export default function AISettingsPage() {
   const supabase = createClient()
   const { confirm } = useConfirm()
-  const { businessId, staffId, staffName, permissions, loading: ctxLoading } = useBusinessContext()
-  const tutorial = useTutorial()
+  const { businessId, staffId, staffName, permissions, sector, loading: ctxLoading } = useBusinessContext()
+  const tutorial = useTutorial(sector)
   const [prefs, setPrefs] = useState<AIPreferences>(DEFAULT_PREFS)
   const [savedPrefs, setSavedPrefs] = useState<AIPreferences>(DEFAULT_PREFS)
   const [loading, setLoading] = useState(true)
