@@ -5,7 +5,9 @@ import { sendCampaign } from '@/lib/campaigns/send'
 import { generateInvoiceNumber, generateReceiptNumber } from '@/lib/invoices/numbering'
 import { deductStockFromItems } from '@/lib/invoices/stock'
 import { computeInvoiceTotals } from '@/lib/invoices/calc'
-import type { InvoiceItem } from '@/types'
+import { getToolCategory } from '@/lib/ai/tool-categories'
+import { AI_PERMISSION_TO_STAFF, DEFAULT_AI_PERMISSIONS, getEffectivePermissions } from '@/types'
+import type { AIPermissions, InvoiceItem, StaffPermissions, StaffRole } from '@/types'
 
 type SupabaseAdmin = ReturnType<typeof createAdminClient>
 
@@ -103,6 +105,54 @@ export type ExecutorCtx = {
   staffName: string
 }
 
+/**
+ * AI ↔ kullanıcı yetki kesişimi kontrolü.
+ * Bir AI tool (action_type) çalışabilmesi için:
+ *   1. `business.settings.ai_permissions[category]` true olmalı (işletme AI'a izin vermiş)
+ *   2. Onaylayan kullanıcının `effectivePerms[AI_PERMISSION_TO_STAFF[category]]` true olmalı
+ * İkisinden biri false ise tool reddedilir.
+ */
+async function checkAIPermissionIntersection(
+  admin: SupabaseAdmin,
+  businessId: string,
+  staffId: string,
+  actionType: string,
+): Promise<{ allowed: true } | { allowed: false; reason: string }> {
+  const category = getToolCategory(actionType)
+  if (!category) {
+    return { allowed: false, reason: 'Bu eylem için yetki kategorisi tanımlı değil' }
+  }
+
+  const [{ data: business }, { data: staff }] = await Promise.all([
+    admin.from('businesses').select('settings->ai_permissions').eq('id', businessId).single(),
+    admin.from('staff_members').select('role, permissions').eq('id', staffId).single(),
+  ])
+
+  const aiPermissions: AIPermissions = {
+    ...DEFAULT_AI_PERMISSIONS,
+    ...((business?.ai_permissions as AIPermissions | null) ?? {}),
+  }
+
+  if (aiPermissions[category] !== true) {
+    return { allowed: false, reason: 'Bu işlem için asistana yetki verilmemiş' }
+  }
+
+  if (!staff) {
+    return { allowed: false, reason: 'Onaylayan kullanıcı bulunamadı' }
+  }
+
+  const effectivePerms = getEffectivePermissions(
+    staff.role as StaffRole,
+    (staff.permissions as StaffPermissions | null) ?? null,
+  )
+  const staffKey = AI_PERMISSION_TO_STAFF[category]
+  if (effectivePerms[staffKey] !== true) {
+    return { allowed: false, reason: 'Bu işlem için kendi yetkiniz yok' }
+  }
+
+  return { allowed: true }
+}
+
 export async function executePendingAction(
   admin: SupabaseAdmin,
   actionId: string,
@@ -123,6 +173,39 @@ export async function executePendingAction(
   if (new Date(action.expires_at) < new Date()) {
     await admin.from('ai_pending_actions').update({ status: 'expired' }).eq('id', actionId)
     return { ok: false, message: 'Bu eylem zaman aşımına uğradı, lütfen tekrar sorun' }
+  }
+
+  const permCheck = await checkAIPermissionIntersection(
+    admin,
+    ctx.businessId,
+    ctx.staffId,
+    action.action_type,
+  )
+  if (!permCheck.allowed) {
+    await admin
+      .from('ai_pending_actions')
+      .update({
+        status: 'failed',
+        result: { ok: false, message: permCheck.reason, denied: true },
+      })
+      .eq('id', actionId)
+
+    await logAuditServer({
+      businessId: ctx.businessId,
+      staffId: ctx.staffId,
+      staffName: ctx.staffName,
+      action: 'update',
+      resource: 'settings',
+      details: {
+        via: 'ai_assistant',
+        denied: true,
+        reason: 'permission_denied',
+        action_type: action.action_type,
+        detail: permCheck.reason,
+      },
+    })
+
+    return { ok: false, message: permCheck.reason }
   }
 
   const payload = action.payload as Record<string, any>

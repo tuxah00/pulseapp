@@ -86,7 +86,7 @@ const PERMISSION_MAP: Record<string, keyof StaffPermissions> = {
   '/dashboard/audit': 'settings',
   '/dashboard/kvkk': 'settings',
   '/dashboard/protocols': 'protocols',
-  '/dashboard/referrals': 'referrals',
+  '/dashboard/rewards': 'rewards',
   '/dashboard/campaigns': 'campaigns',
   '/dashboard/waitlist': 'appointments',
   '/dashboard/settings/services': 'services',
