@@ -3,40 +3,10 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/api/with-permission'
 import { validateBody, parsePaginationParams } from '@/lib/api/validate'
 import { invoiceCreateSchema, invoicePatchSchema } from '@/lib/schemas'
+import { deductStockFromItems } from '@/lib/invoices/stock'
+import { generateInvoiceNumber } from '@/lib/invoices/numbering'
+import { computeInvoiceTotals } from '@/lib/invoices/calc'
 import type { InvoiceItem } from '@/types'
-import type { SupabaseClient } from '@supabase/supabase-js'
-
-/** Fatura kalemlerindeki ürünleri stoktan düşer + stock_movements kaydı oluşturur */
-async function deductStock(
-  supabase: SupabaseClient,
-  items: InvoiceItem[],
-  ctx: { businessId: string; invoiceNumber: string; userId: string },
-) {
-  for (const item of items) {
-    if (!item.product_id || item.type !== 'product') continue
-    const { data: product } = await supabase
-      .from('products')
-      .select('stock_count')
-      .eq('id', item.product_id)
-      .single()
-    if (!product) continue
-
-    const newQty = Math.max(0, (product.stock_count || 0) - item.quantity)
-    await supabase
-      .from('products')
-      .update({ stock_count: newQty, updated_at: new Date().toISOString() })
-      .eq('id', item.product_id)
-
-    await supabase.from('stock_movements').insert({
-      business_id: ctx.businessId,
-      product_id: item.product_id,
-      type: 'out',
-      quantity: item.quantity,
-      notes: `Fatura ${ctx.invoiceNumber} ile satış`,
-      created_by: ctx.userId,
-    })
-  }
-}
 
 // GET: Fatura listesi (gelişmiş filtreler)
 export async function GET(req: NextRequest) {
@@ -108,17 +78,15 @@ export async function POST(req: NextRequest) {
   } = result.data
   const business_id = businessId
 
-  const subtotal = items.reduce((sum, item) => sum + item.total, 0)
-  const discountValue = discount_type === 'percentage'
-    ? Math.round(subtotal * (discountInput || 0)) / 100
-    : (discountInput || 0)
-  const taxableAmount = subtotal - discountValue
-  const tax_amount = Math.round(taxableAmount * tax_rate) / 100
-  const total = taxableAmount + tax_amount
+  const { subtotal, discount_value: discountValue, tax_amount, total } = computeInvoiceTotals({
+    subtotal: items.reduce((sum, item) => sum + item.total, 0),
+    tax_rate,
+    discount_amount: discountInput,
+    discount_type,
+  })
 
-  // Fatura numarası oluştur: INV-YYYY-XXXX (yıl bazlı sıralı, silinen dahil)
   const supabase = createServerSupabaseClient()
-  const year = new Date().getFullYear()
+  const invoiceNumber = await generateInvoiceNumber(supabase, business_id)
 
   // Kapora varsa paid_amount ve status belirle
   let initialPaidAmount = 0
@@ -128,70 +96,38 @@ export async function POST(req: NextRequest) {
     initialStatus = deposit_amount >= total ? 'paid' : 'partial'
   }
 
-  // Race condition koruması: unique constraint hatası alırsak numarayı artırıp tekrar dene
-  let invoice: any = null
-  let insertError: any = null
-  const MAX_RETRIES = 5
-  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-    const { data: lastInvoice } = await supabase
-      .from('invoices')
-      .select('invoice_number')
-      .eq('business_id', business_id)
-      .like('invoice_number', `INV-${year}-%`)
-      .order('invoice_number', { ascending: false })
-      .limit(1)
-      .single()
+  const { data: invoice, error } = await supabase
+    .from('invoices')
+    .insert({
+      business_id,
+      customer_id: customer_id || null,
+      appointment_id: appointment_id || null,
+      invoice_number: invoiceNumber,
+      items,
+      subtotal,
+      tax_rate: tax_rate || 0,
+      tax_amount,
+      total,
+      paid_amount: initialPaidAmount,
+      status: initialStatus,
+      notes: notes || null,
+      due_date: due_date || null,
+      staff_id: staffId,
+      staff_name: staff_name || null,
+      payment_type: payment_type || 'standard',
+      installment_count: installment_count || null,
+      installment_frequency: installment_frequency || null,
+      discount_amount: discountValue,
+      discount_type: discount_type || null,
+      discount_description: discount_description || null,
+      customer_tax_id: customer_tax_id || null,
+      customer_tax_office: customer_tax_office || null,
+      customer_company_name: customer_company_name || null,
+    })
+    .select('*, customers(name, phone)')
+    .single()
 
-    const lastSeq = lastInvoice
-      ? parseInt(lastInvoice.invoice_number.split('-')[2]) || 0
-      : 0
-    const invoiceNumber = `INV-${year}-${String(lastSeq + 1 + attempt).padStart(4, '0')}`
-
-    const { data, error } = await supabase
-      .from('invoices')
-      .insert({
-        business_id,
-        customer_id: customer_id || null,
-        appointment_id: appointment_id || null,
-        invoice_number: invoiceNumber,
-        items,
-        subtotal,
-        tax_rate: tax_rate || 0,
-        tax_amount,
-        total,
-        paid_amount: initialPaidAmount,
-        status: initialStatus,
-        notes: notes || null,
-        due_date: due_date || null,
-        staff_id: staffId,
-        staff_name: staff_name || null,
-        payment_type: payment_type || 'standard',
-        installment_count: installment_count || null,
-        installment_frequency: installment_frequency || null,
-        discount_amount: discountValue,
-        discount_type: discount_type || null,
-        discount_description: discount_description || null,
-        customer_tax_id: customer_tax_id || null,
-        customer_tax_office: customer_tax_office || null,
-        customer_company_name: customer_company_name || null,
-      })
-      .select('*, customers(name, phone)')
-      .single()
-
-    if (!error) {
-      invoice = data
-      insertError = null
-      break
-    }
-    insertError = error
-    // Sadece unique_violation (Postgres 23505) durumunda tekrar dene
-    if ((error as { code?: string }).code !== '23505') break
-  }
-
-  if (insertError || !invoice) {
-    return NextResponse.json({ error: insertError?.message || 'Fatura oluşturulamadı' }, { status: 500 })
-  }
-  const invoiceNumber = invoice.invoice_number
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   // Kapora ödeme kaydı oluştur
   if (payment_type === 'deposit' && deposit_amount && deposit_amount > 0 && invoice) {
@@ -208,7 +144,7 @@ export async function POST(req: NextRequest) {
 
   // Kaparo ile tam ödeme yapıldıysa stok düş
   if (initialStatus === 'paid' && invoice?.items && Array.isArray(invoice.items)) {
-    await deductStock(supabase, invoice.items as InvoiceItem[], {
+    await deductStockFromItems(supabase, invoice.items as InvoiceItem[], {
       businessId: business_id, invoiceNumber, userId,
     })
   }
@@ -276,7 +212,7 @@ export async function PATCH(req: NextRequest) {
 
   // Fatura ödendi → ürün kalemlerini stoktan düş (sadece önceden ödenmemişse)
   if (body.status === 'paid' && existing?.status !== 'paid' && invoice?.items && Array.isArray(invoice.items)) {
-    await deductStock(supabase, invoice.items as InvoiceItem[], {
+    await deductStockFromItems(supabase, invoice.items as InvoiceItem[], {
       businessId: invoice.business_id, invoiceNumber: invoice.invoice_number, userId,
     })
 

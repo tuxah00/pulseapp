@@ -2,9 +2,10 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import Link from 'next/link'
 import {
   Bot, X, Minimize2, Send, Plus, ChevronDown, Trash2, StopCircle,
-  MessageSquare, Sparkles,
+  MessageSquare, Settings, Sparkles,
 } from 'lucide-react'
 import { useAIAssistant } from '@/lib/hooks/use-ai-assistant'
 import AIMessageBubble from './ai-message-bubble'
@@ -124,6 +125,14 @@ export default function AIAssistantPanel({ businessName, sector, plan, permissio
             <span className="font-semibold text-sm">PulseApp Asistan</span>
           </div>
           <div className="flex items-center gap-1">
+            <Link
+              href="/dashboard/settings/ai"
+              onClick={() => setIsOpen(false)}
+              className="p-1.5 rounded-lg hover:bg-white/20 transition-colors"
+              title="AI Tercihleri"
+            >
+              <Settings className="w-4 h-4" />
+            </Link>
             <button
               onClick={() => setIsMinimized(!isMinimized)}
               className="p-1.5 rounded-lg hover:bg-white/20 transition-colors"

@@ -6,6 +6,7 @@ import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
 import { getOpenAIClient, ASSISTANT_MODEL, ASSISTANT_MAX_TOKENS } from '@/lib/ai/openai-client'
 import { buildAssistantSystemPrompt, buildOnboardingSystemPrompt } from '@/lib/ai/assistant-prompts'
 import { ASSISTANT_TOOLS, TOOL_LABELS, executeAssistantTool } from '@/lib/ai/assistant-tools'
+import { deriveBlocksFromToolResult } from '@/lib/ai/assistant-blocks'
 import { AI_LIMITS } from '@/lib/ai/assistant-limits'
 import type { AuthContext } from '@/lib/api/with-permission'
 import type { PlanType } from '@/types'
@@ -66,7 +67,7 @@ export async function POST(req: NextRequest) {
   const [{ data: biz }, { data: usage }] = await Promise.all([
     admin
       .from('businesses')
-      .select('subscription_plan, working_hours, name, sector')
+      .select('subscription_plan, working_hours, name, sector, settings')
       .eq('id', staff.business_id)
       .single(),
     admin
@@ -145,6 +146,7 @@ export async function POST(req: NextRequest) {
       permissions,
       workingHours: biz?.working_hours,
       services,
+      aiPreferences: biz?.settings?.ai_preferences,
     })
   }
 
@@ -280,6 +282,13 @@ export async function POST(req: NextRequest) {
                 ? (result.requires_confirmation ? 'Onay bekliyor' : summarizeToolResult(tc.name, result.data))
                 : result.error || 'Hata oluştu'
               send({ type: 'tool_end', name: tc.name, summary })
+
+              // Emit rich UI blocks (Faz 9) for read-only tool results
+              if (result.success && !result.requires_confirmation && result.data) {
+                for (const block of deriveBlocksFromToolResult(tc.name, result.data)) {
+                  send({ type: 'block', block })
+                }
+              }
 
               // If pending action, emit confirmation event to client (UI renders Onayla/İptal buttons)
               if (result.success && result.requires_confirmation) {
@@ -423,6 +432,42 @@ function summarizeToolResult(toolName: string, data: any): string {
       return `${data.toplam || 0} mesaj getirildi`
     case 'search_audit_logs':
       return `${data.toplam || 0} kayıt bulundu`
+    case 'get_revenue_breakdown':
+      return `${(data.breakdown || []).length} kalem, toplam ${data.totals?.revenue ?? 0}₺`
+    case 'get_customer_lifetime_value':
+      return `${(data.clv || []).length} müşteri analiz edildi`
+    case 'get_occupancy_stats':
+      return `Doluluk: %${data.overall_occupancy ?? 0}`
+    case 'get_staff_performance':
+      return `${(data.performance || []).length} personel analiz edildi`
+    case 'get_expense_breakdown':
+      return `${(data.breakdown || []).length} kategori, toplam ${data.total ?? 0}₺`
+    case 'get_profit_loss':
+      return `Net kâr: ${data.net_profit ?? 0}₺ (%${data.margin_percentage ?? 0})`
+    case 'compare_periods':
+      return `Dönem karşılaştırması hazırlandı`
+    case 'detect_risk_customers':
+      return `${data.toplam || 0} risk altında müşteri bulundu`
+    case 'detect_anomalies':
+      return `${(data.anomalies || []).length} anomali tespit edildi`
+    case 'schedule_action':
+      return data.message || '✓ Planlandı'
+    case 'list_scheduled_actions':
+      return `${data.count || 0} planlı eylem`
+    case 'cancel_scheduled_action':
+      return data.message || '✓ İptal edildi'
+    case 'list_campaigns':
+      return `${data.toplam || 0} kampanya listelendi`
+    case 'estimate_campaign_audience':
+      return `Tahmini hedef kitle: ${data.count || 0} kişi`
+    case 'list_workflows':
+      return `${data.toplam || 0} iş akışı listelendi`
+    case 'list_blocked_slots':
+      return `${data.toplam || 0} bloklu zaman dilimi`
+    case 'list_shifts':
+      return `${data.toplam || 0} vardiya listelendi`
+    case 'list_unpaid_invoices':
+      return `${data.toplam || 0} ödenmemiş fatura (toplam ${data.toplam_bakiye || 0}₺)`
     default:
       return 'İşlem tamamlandı'
   }

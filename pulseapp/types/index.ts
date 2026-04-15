@@ -91,7 +91,7 @@ export type AiClassification =
   | 'appointment' | 'question' | 'complaint' | 'cancellation' | 'greeting' | 'other'
 
 export type ReviewStatus = 'pending' | 'responded' | 'escalated'
-export type NotificationType = 'appointment' | 'review' | 'payment' | 'customer' | 'system' | 'stock_alert'
+export type NotificationType = 'appointment' | 'review' | 'payment' | 'customer' | 'system' | 'stock_alert' | 'ai_brief' | 'ai_alert'
 
 export type InvoiceStatus = 'pending' | 'paid' | 'partial' | 'overdue' | 'cancelled'
 export type PaymentMethod = 'cash' | 'card' | 'transfer' | 'online'
@@ -404,6 +404,25 @@ export interface BusinessSettings {
   visit_bonus_points?: number
   auto_reward_threshold?: number
   redemption_rate?: number  // kaç puan = 1₺ indirim (varsayılan: 10)
+  // AI asistan tercihleri (Faz 10)
+  ai_preferences?: AIPreferences
+  ai_memory?: AIMemory
+}
+
+export type AIAssistantTone = 'samimi' | 'formal' | 'kisa'
+
+export interface AIPreferences {
+  tone?: AIAssistantTone
+  auto_brief_enabled?: boolean
+  brief_time?: string           // 'HH:mm' işletme yerel saati
+  default_reminder_hours?: number
+  custom_instructions?: string  // serbest metin (max ~1000 char)
+}
+
+export interface AIMemory {
+  frequent_customers?: string[]
+  common_services?: string[]
+  learned_patterns?: Record<string, unknown>
 }
 
 
@@ -1157,7 +1176,7 @@ export interface AIUsage {
 }
 
 export interface AIStreamEvent {
-  type: 'text' | 'tool_start' | 'tool_end' | 'done' | 'error' | 'limit' | 'confirmation_required'
+  type: 'text' | 'tool_start' | 'tool_end' | 'done' | 'error' | 'limit' | 'confirmation_required' | 'block'
   content?: string
   name?: string
   label?: string
@@ -1169,4 +1188,53 @@ export interface AIStreamEvent {
   action_type?: string
   preview?: string
   details?: Record<string, unknown>
+  block?: AIBlock
 }
+
+// ── AI Zengin UI Blokları (Faz 9) ──
+export type AIBlockCellVariant = 'money' | 'percent' | 'delta' | 'muted' | 'strong'
+
+export interface AIBlockTableColumn {
+  key: string
+  label: string
+  align?: 'left' | 'right' | 'center'
+  variant?: AIBlockCellVariant
+}
+
+export type AIBlockTableCell = string | number | null | {
+  value: string | number | null
+  variant?: AIBlockCellVariant
+  hint?: string
+}
+
+export interface AIBlockTable {
+  type: 'table'
+  title?: string
+  columns: AIBlockTableColumn[]
+  rows: AIBlockTableCell[][]
+  footer?: string
+}
+
+export interface AIBlockStatCard {
+  label: string
+  value: string
+  delta?: number | null
+  hint?: string
+  tone?: 'default' | 'positive' | 'negative' | 'warning'
+}
+
+export interface AIBlockStatCards {
+  type: 'stat_cards'
+  title?: string
+  cards: AIBlockStatCard[]
+}
+
+export interface AIBlockChart {
+  type: 'chart'
+  chartType: 'line' | 'bar' | 'pie'
+  title?: string
+  labels: string[]
+  series: { name: string; data: number[] }[]
+}
+
+export type AIBlock = AIBlockTable | AIBlockStatCards | AIBlockChart

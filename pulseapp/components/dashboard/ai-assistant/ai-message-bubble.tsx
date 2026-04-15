@@ -2,6 +2,9 @@
 
 import { Bot, Check, User, X, Loader2, AlertTriangle } from 'lucide-react'
 import type { ChatMessage } from '@/lib/hooks/use-ai-assistant'
+import AITableBlock from './ai-table-block'
+import AIStatCards from './ai-stat-cards'
+import AIChartBlock from './ai-chart-block'
 
 interface Props {
   message: ChatMessage
@@ -11,6 +14,7 @@ interface Props {
 export default function AIMessageBubble({ message, onConfirm }: Props) {
   const isUser = message.role === 'user'
   const confirmations = message.confirmations || []
+  const blocks = message.blocks || []
 
   return (
     <div className={`flex gap-3 ${isUser ? 'flex-row-reverse' : ''}`}>
@@ -26,7 +30,9 @@ export default function AIMessageBubble({ message, onConfirm }: Props) {
       </div>
 
       {/* Bubble + Confirmations */}
-      <div className={`flex flex-col gap-2 max-w-[85%] ${isUser ? 'items-end' : 'items-start'}`}>
+      <div
+        className={`flex flex-col gap-2 ${isUser ? 'items-end max-w-[85%]' : 'items-stretch w-full max-w-[95%]'}`}
+      >
         {(message.content || message.isStreaming) && (
           <div
             className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
@@ -48,6 +54,14 @@ export default function AIMessageBubble({ message, onConfirm }: Props) {
             )}
           </div>
         )}
+
+        {/* Rich UI blocks (Faz 9) */}
+        {!isUser && blocks.map((block, i) => {
+          if (block.type === 'table') return <AITableBlock key={i} block={block} />
+          if (block.type === 'stat_cards') return <AIStatCards key={i} block={block} />
+          if (block.type === 'chart') return <AIChartBlock key={i} block={block} />
+          return null
+        })}
 
         {/* Confirmation cards */}
         {confirmations.map(conf => (

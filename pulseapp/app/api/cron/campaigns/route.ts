@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { sendCampaign } from '@/app/api/campaigns/route'
+import { sendCampaign } from '@/lib/campaigns/send'
 import { verifyCronAuth } from '@/lib/api/verify-cron'
 
 /**

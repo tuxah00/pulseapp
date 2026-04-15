@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, useRef } from 'react'
-import type { AIStreamEvent, AIConversation } from '@/types'
+import type { AIStreamEvent, AIConversation, AIBlock } from '@/types'
 
 export interface PendingConfirmation {
   action_id: string
@@ -21,6 +21,7 @@ export interface ChatMessage {
   isStreaming?: boolean
   createdAt: string
   confirmations?: PendingConfirmation[]
+  blocks?: AIBlock[]
 }
 
 interface ToolExecution {
@@ -140,6 +141,20 @@ export function useAIAssistant() {
                 setActiveTools(prev => prev.filter(t => t.status !== 'done'))
               }, 1500)
               break
+
+            case 'block': {
+              const block = (event as any).block as AIBlock | undefined
+              if (block) {
+                setMessages(prev =>
+                  prev.map(m =>
+                    m.id === assistantId
+                      ? { ...m, blocks: [...(m.blocks || []), block] }
+                      : m
+                  )
+                )
+              }
+              break
+            }
 
             case 'confirmation_required': {
               const conf: PendingConfirmation = {
