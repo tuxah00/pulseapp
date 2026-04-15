@@ -14,6 +14,7 @@ export interface TutorialTopic {
  * Sektör fark etmeksizin tüm kullanıcılarda çalışır.
  */
 export const CORE_TUTORIAL_TOPICS: TutorialTopic[] = [
+  // --- Ana akış ---
   {
     pageKey: 'dashboard',
     path: '/dashboard',
@@ -26,7 +27,7 @@ export const CORE_TUTORIAL_TOPICS: TutorialTopic[] = [
     path: '/dashboard/appointments',
     title: 'Randevular',
     skeleton:
-      'Randevuları liste, kutu, haftalık ve aylık görünümde yönet. Sağ üstteki "Yeni Randevu" ile ekle, haftalık/aylık görünümde sürükle-bırak ile zamanı değiştir.',
+      'Randevuları liste, kutu, haftalık ve aylık görünümde yönet. Sağ üstteki "Yeni Randevu" ile ekle; haftalık/aylık görünümde sürükle-bırak ile zamanı değiştir.',
     primaryAction: 'Yeni Randevu butonu',
   },
   {
@@ -37,11 +38,18 @@ export const CORE_TUTORIAL_TOPICS: TutorialTopic[] = [
       'Müşteri kartına tıklayınca Bilgiler ve Geçmiş sekmeleri açılır. Yeni randevu oluşturmadan önce müşteri kaydı gereklidir.',
   },
   {
+    pageKey: 'waitlist',
+    path: '/dashboard/waitlist',
+    title: 'Bekleme Listesi',
+    skeleton:
+      'Dolu saatlerde yer talep eden müşterileri buraya ekle; boşluk oluştuğunda ilk uygun kişiye bildirim gönderirsin. Sağ üstten yeni kayıt ekle.',
+  },
+  {
     pageKey: 'services',
     path: '/dashboard/services',
     title: 'Hizmetler',
     skeleton:
-      'Sunduğun hizmetleri, sürelerini ve fiyatlarını buradan yönet. Randevular bu listedeki hizmetleri baz alır, fiyat değişirse yeni randevulara yansır.',
+      'Sunduğun hizmetleri, sürelerini ve fiyatlarını buradan yönet. Randevular bu listeyi baz alır; fiyat değişirse yeni randevulara yansır.',
   },
   {
     pageKey: 'messages',
@@ -55,7 +63,150 @@ export const CORE_TUTORIAL_TOPICS: TutorialTopic[] = [
     path: '/dashboard/staff',
     title: 'Personeller',
     skeleton:
-      'Personel ekle, rol ata ve yetki yönet. Yeni personel davet linkiyle katılır, modül bazlı izinleri detay panelinden ayarlanır.',
+      'Personel ekle, rol ata ve yetki yönet. Yeni personel davet linkiyle katılır; modül bazlı izinler detay panelinden ayarlanır.',
+  },
+
+  // --- Finans ---
+  {
+    pageKey: 'pos',
+    path: '/dashboard/pos',
+    title: 'Kasa',
+    skeleton:
+      'Anlık satış, tahsilat ve günlük kasa açılış-kapanışını buradan yönet. Yapılan satışlar otomatik fatura oluşturur.',
+  },
+  {
+    pageKey: 'analytics',
+    path: '/dashboard/analytics',
+    title: 'Gelir-Gider',
+    skeleton:
+      'Randevu geliri, fatura, manuel gelir ve giderlerini tek tabloda gör; kâr-zarar ve trend grafiğini buradan izle. Sağ üstten gider veya manuel gelir ekle.',
+  },
+  {
+    pageKey: 'invoices',
+    path: '/dashboard/invoices',
+    title: 'Faturalar',
+    skeleton:
+      'Müşteri faturalarını oluştur, tahsilat al ve taksit/kapora yönet. Ödeme geçmişi fatura detayında saklanır; ürün kalemleri stoktan otomatik düşer.',
+  },
+  {
+    pageKey: 'commissions',
+    path: '/dashboard/commissions',
+    title: 'Prim & Komisyon',
+    skeleton:
+      'Personel bazlı prim/komisyon kazançlarını hesapla ve geçmiş ödemeleri takip et. Politikaları Ayarlar → Prim Politikaları üzerinden tanımlarsın.',
+  },
+
+  // --- İletişim & pazarlama ---
+  {
+    pageKey: 'campaigns',
+    path: '/dashboard/campaigns',
+    title: 'Kampanyalar',
+    skeleton:
+      'SMS/WhatsApp kampanyalarını segmentlere göre oluştur, kitleyi tahmin et ve gönder. Yeni kampanya butonundan başla; istatistikler gönderim sonrası dolar.',
+  },
+  {
+    pageKey: 'workflows',
+    path: '/dashboard/workflows',
+    title: 'Mesaj Akışları',
+    skeleton:
+      'Belirli tetikleyicilere (yeni müşteri, randevu sonrası vb.) otomatik mesaj akışları kur. Akışı aç/kapa, adımlarını düzenle.',
+  },
+  {
+    pageKey: 'notifications',
+    path: '/dashboard/notifications',
+    title: 'Bildirimler',
+    skeleton:
+      'Yeni randevu, ödeme, müşteri mesajı gibi sistem bildirimlerinin tamamı burada listelenir. Okundu olarak işaretleyebilir veya filtreleyebilirsin.',
+  },
+
+  // --- Operasyon ---
+  {
+    pageKey: 'shifts',
+    path: '/dashboard/shifts',
+    title: 'Vardiya',
+    skeleton:
+      'Personel haftalık vardiya tablosunu buradan yönet. Tek tek atama veya "Otomatik Dağıt" ile tanımlı mesaileri dağıt; görseli indirip paylaşabilirsin.',
+  },
+
+  // --- Güvenlik / uyum ---
+  {
+    pageKey: 'audit',
+    path: '/dashboard/audit',
+    title: 'Denetim Kaydı',
+    skeleton:
+      'Personel aksiyonlarının (ekleme, güncelleme, silme) tam kaydı burada. Yalnızca işletme sahibi görebilir; şüpheli durumda filtrele.',
+  },
+  {
+    pageKey: 'kvkk',
+    path: '/dashboard/kvkk',
+    title: 'KVKK',
+    skeleton:
+      'Müşteri aydınlatma/onay kayıtlarını ve veri silme taleplerini buradan yönet. Her müşteri için onay durumu ve tarihi saklanır.',
+  },
+
+  // --- Ayarlar ---
+  {
+    pageKey: 'settings',
+    path: '/dashboard/settings',
+    title: 'Ayarlar',
+    skeleton:
+      'İşletme bilgileri, AI tercihleri, hizmetler, personel yetkileri, mesai tanımları, abonelik ve prim politikaları bu hub üzerinden açılır.',
+  },
+  {
+    pageKey: 'settings_ai',
+    path: '/dashboard/settings/ai',
+    title: 'AI Tercihleri',
+    skeleton:
+      'Asistanın ton (samimi/formal/kısa) tercihlerini, günlük brief saatini, varsayılan hatırlatma süresini ve özel talimatlarını buradan ayarla. Tutorial ipuçlarını da buradan aç/kapat.',
+  },
+  {
+    pageKey: 'settings_business',
+    path: '/dashboard/settings/business',
+    title: 'İşletme Bilgileri',
+    skeleton:
+      'İşletme adı, telefon, adres, çalışma saatleri ve sektör bilgisini buradan güncelle. Çalışma saatleri randevu formu ve müşteri booking sayfasını doğrudan etkiler.',
+  },
+  {
+    pageKey: 'settings_services',
+    path: '/dashboard/settings/services',
+    title: 'Hizmet Ayarları',
+    skeleton:
+      'Hizmet kategorileri, varsayılan süreler ve fiyat politikalarını buradan yönet. Tekil hizmet ekleme/düzenleme Hizmetler sayfasından yapılır.',
+  },
+  {
+    pageKey: 'settings_staff',
+    path: '/dashboard/settings/staff',
+    title: 'Personel Yetkileri',
+    skeleton:
+      'Her personelin modül bazlı yetkilerini (randevu, müşteri, fatura…) ince ayar yap. Değişiklikler anında uygulanır; yanlışlık olursa "Rol Varsayılanına Dön" ile sıfırla.',
+  },
+  {
+    pageKey: 'settings_shifts',
+    path: '/dashboard/settings/shifts',
+    title: 'Vardiya Tanımları',
+    skeleton:
+      'Sabahçı/Öğlenci gibi standart mesai kalıplarını burada tanımla. Tanımlı mesaileri Vardiya sayfasında "Otomatik Dağıt" veya hızlı seçim ile kullanırsın.',
+  },
+  {
+    pageKey: 'settings_billing',
+    path: '/dashboard/settings/billing',
+    title: 'Abonelik & Ödeme',
+    skeleton:
+      'Mevcut plan (Starter/Standard/Pro), ödeme geçmişi ve plan yükseltme seçenekleri burada. PayTR ile kredi kartı ödemesi yapılır.',
+  },
+  {
+    pageKey: 'settings_commissions',
+    path: '/dashboard/settings/commissions',
+    title: 'Prim Politikaları',
+    skeleton:
+      'Personel başına veya hizmet başına prim oranları burada tanımlanır. Politika tanımlandıktan sonra kazançlar Prim & Komisyon sayfasında otomatik hesaplanır.',
+  },
+  {
+    pageKey: 'settings_audit',
+    path: '/dashboard/settings/audit',
+    title: 'Denetim Ayarları',
+    skeleton:
+      'Hangi aksiyonların denetim kaydına yazılacağını ve saklama süresini buradan ayarla. Kayıtları görmek için Denetim sayfasını kullan.',
   },
 ]
 
@@ -64,6 +215,78 @@ export const CORE_TUTORIAL_TOPICS: TutorialTopic[] = [
  * Sidebar'da zaten görünmeyen sayfalar listede olmamalı.
  */
 export const SECTOR_TUTORIAL_TOPICS: Partial<Record<SectorType, TutorialTopic[]>> = {
+  // --- Saç/Güzellik ---
+  hair_salon: [
+    {
+      pageKey: 'packages',
+      path: '/dashboard/packages',
+      title: 'Paket & Seans',
+      skeleton:
+        'Birden çok hizmeti tek pakette sat (örn. 5 saç bakım seansı). Müşteriye atanan paket randevu oluşturuldukça otomatik düşer.',
+    },
+    {
+      pageKey: 'inventory',
+      path: '/dashboard/inventory',
+      title: 'Stoklar',
+      skeleton:
+        'Şampuan, boya, fön malzemeleri gibi ürünleri burada takip et. Faturaya ürün eklendiğinde stok otomatik azalır; kritik seviye uyarısı alırsın.',
+    },
+    {
+      pageKey: 'reviews',
+      path: '/dashboard/reviews',
+      title: 'Yorumlar',
+      skeleton:
+        'Müşteri geri bildirimlerini ve puanları burada gör. Olumsuz yorumlara hızlı yanıt vermek müşteri sadakatini artırır.',
+    },
+  ],
+  barber: [
+    {
+      pageKey: 'packages',
+      path: '/dashboard/packages',
+      title: 'Paket & Seans',
+      skeleton:
+        'Sakal-traş-bakım kombinasyonlarını paket olarak sun. Müşteriye atanan paket seans sayısınca düşer.',
+    },
+    {
+      pageKey: 'inventory',
+      path: '/dashboard/inventory',
+      title: 'Stoklar',
+      skeleton:
+        'Ürün satış ve sarf malzemesi stoklarını burada yönet. Faturaya ürün eklendiğinde stok otomatik düşer.',
+    },
+    {
+      pageKey: 'reviews',
+      path: '/dashboard/reviews',
+      title: 'Yorumlar',
+      skeleton:
+        'Müşteri yorumları burada toplanır. Yüksek puanları sosyal medyada paylaşmak için kolay kopyala.',
+    },
+  ],
+  beauty_salon: [
+    {
+      pageKey: 'packages',
+      path: '/dashboard/packages',
+      title: 'Paket & Seans',
+      skeleton:
+        'Bakım paketlerini (cilt bakımı, tırnak bakımı serisi) burada tanımla. Satış sonrası müşteriye atanan paket seanslarla düşer.',
+    },
+    {
+      pageKey: 'inventory',
+      path: '/dashboard/inventory',
+      title: 'Stoklar',
+      skeleton:
+        'Cilt bakım ürünleri, oje ve sarf malzemesi stoklarını buradan takip et. Faturaya ürün eklendiğinde stok otomatik azalır.',
+    },
+    {
+      pageKey: 'reviews',
+      path: '/dashboard/reviews',
+      title: 'Yorumlar',
+      skeleton:
+        'Müşteri yorumlarını buradan yönet. Olumsuz yoruma hızlı yanıt, itibar yönetiminin temelidir.',
+    },
+  ],
+
+  // --- Klinik ---
   dental_clinic: [
     {
       pageKey: 'records',
@@ -79,8 +302,43 @@ export const SECTOR_TUTORIAL_TOPICS: Partial<Record<SectorType, TutorialTopic[]>
       skeleton:
         'Seansa yayılan tedavileri (implant, ortodonti, kanal) adım adım takip et. Seans sayısı ve aralığı planlanır, her seans bir randevuya bağlanır.',
     },
+    {
+      pageKey: 'packages',
+      path: '/dashboard/packages',
+      title: 'Paket & Seans',
+      skeleton:
+        'Beyazlatma, hijyen, kontrol gibi paketli hizmetleri burada tanımla. Seansla ödeme takibi kolaylaşır.',
+    },
+    {
+      pageKey: 'follow-ups',
+      path: '/dashboard/follow-ups',
+      title: 'Takipler',
+      skeleton:
+        'Tedavi sonrası kontrol takip kuyruğu burada. Planlanmış takipler tarihi gelince hatırlatma SMS\'i olarak gönderilir.',
+    },
+    {
+      pageKey: 'reviews',
+      path: '/dashboard/reviews',
+      title: 'Yorumlar',
+      skeleton:
+        'Hasta geri bildirimlerini ve puanları buradan yönet. Tedavi bitişi sonrası yorum isteği otomatik gönderilebilir.',
+    },
   ],
   medical_aesthetic: [
+    {
+      pageKey: 'protocols',
+      path: '/dashboard/protocols',
+      title: 'Tedavi Protokolleri',
+      skeleton:
+        'Seanslı işlemleri (botoks tazeleme, lazer, mezoterapi kürleri) planla ve takip et. Her seans otomatik hatırlatmaya bağlanır.',
+    },
+    {
+      pageKey: 'packages',
+      path: '/dashboard/packages',
+      title: 'Paket & Seans',
+      skeleton:
+        'Çok seanslı estetik paketlerini burada sat. Müşteriye atanan paket kullanıldıkça düşer.',
+    },
     {
       pageKey: 'records',
       path: '/dashboard/records',
@@ -89,11 +347,25 @@ export const SECTOR_TUTORIAL_TOPICS: Partial<Record<SectorType, TutorialTopic[]>
         'Hastanın alerjileri, öncesi/sonrası fotoğrafları ve işlem geçmişi burada. Yeni işlem öncesi kontrendikasyon kontrolü için dosyayı güncel tut.',
     },
     {
-      pageKey: 'protocols',
-      path: '/dashboard/protocols',
-      title: 'Tedavi Protokolleri',
+      pageKey: 'follow-ups',
+      path: '/dashboard/follow-ups',
+      title: 'Takipler',
       skeleton:
-        'Seanslı işlemleri (botoks tazeleme, lazer, mezoterapi kürleri) planla ve takip et. Her seans otomatik hatırlatmaya bağlanır.',
+        'İşlem sonrası takip aramaları/mesajları kuyruğu burada. Tatmin, yan etki ve sonraki randevu planı için kritik.',
+    },
+    {
+      pageKey: 'referrals',
+      path: '/dashboard/referrals',
+      title: 'Referanslar',
+      skeleton:
+        'Müşteri tavsiye sistemi — yeni hasta getiren müşteriye ödül tanımla ve dönüşümü takip et.',
+    },
+    {
+      pageKey: 'reviews',
+      path: '/dashboard/reviews',
+      title: 'Yorumlar',
+      skeleton:
+        'Hasta yorumları ve puanları burada. Tedavi sonrası otomatik yorum isteği sistem tarafından gönderilebilir.',
     },
   ],
   physiotherapy: [
@@ -111,16 +383,30 @@ export const SECTOR_TUTORIAL_TOPICS: Partial<Record<SectorType, TutorialTopic[]>
       skeleton:
         'Seanslı fizik tedavi programlarını planla. Seans sayısı, aralık ve hedef kazanımlar burada tanımlanır.',
     },
-  ],
-  veterinary: [
     {
-      pageKey: 'records',
-      path: '/dashboard/records',
-      title: 'Hasta Dosyaları',
+      pageKey: 'packages',
+      path: '/dashboard/packages',
+      title: 'Paket & Seans',
       skeleton:
-        'Her hayvanın aşı kartı, muayene notları ve ilaç geçmişi burada. Sahip bilgisi müşteri kartında tutulur.',
+        'Seanslı tedavi paketlerini burada sat. Seans kullanıldıkça otomatik düşer.',
+    },
+    {
+      pageKey: 'follow-ups',
+      path: '/dashboard/follow-ups',
+      title: 'Takipler',
+      skeleton:
+        'Seanslar arası kontrol ve devam takibi kuyruğu burada.',
+    },
+    {
+      pageKey: 'reviews',
+      path: '/dashboard/reviews',
+      title: 'Yorumlar',
+      skeleton:
+        'Hasta memnuniyet puanları ve yorumları burada.',
     },
   ],
+
+  // --- Danışmanlık ---
   psychologist: [
     {
       pageKey: 'records',
@@ -128,6 +414,20 @@ export const SECTOR_TUTORIAL_TOPICS: Partial<Record<SectorType, TutorialTopic[]>
       title: 'Danışan Dosyaları',
       skeleton:
         'Seans notları, değerlendirme ölçekleri ve tedavi planları burada. Gizlilik nedeniyle yalnızca yetkili personel görür.',
+    },
+    {
+      pageKey: 'packages',
+      path: '/dashboard/packages',
+      title: 'Paket & Seans',
+      skeleton:
+        'Seans paketlerini burada tanımla (ör. 10 seanslık terapi paketi).',
+    },
+    {
+      pageKey: 'follow-ups',
+      path: '/dashboard/follow-ups',
+      title: 'Takipler',
+      skeleton:
+        'Seanslar arası kontrol ve devam takibi kuyruğu.',
     },
   ],
   lawyer: [
@@ -147,6 +447,20 @@ export const SECTOR_TUTORIAL_TOPICS: Partial<Record<SectorType, TutorialTopic[]>
       skeleton:
         'Danışanın ölçümleri, hedefleri ve haftalık diyet listeleri burada. İlerleme grafiği müşteri panelinden izlenir.',
     },
+    {
+      pageKey: 'packages',
+      path: '/dashboard/packages',
+      title: 'Paket & Seans',
+      skeleton:
+        'Kilo yönetimi paketlerini (aylık/üç aylık) buradan sat.',
+    },
+    {
+      pageKey: 'follow-ups',
+      path: '/dashboard/follow-ups',
+      title: 'Takipler',
+      skeleton:
+        'Haftalık kontrol ve ölçüm takibi kuyruğu burada.',
+    },
   ],
   tutoring: [
     {
@@ -156,39 +470,103 @@ export const SECTOR_TUTORIAL_TOPICS: Partial<Record<SectorType, TutorialTopic[]>
       skeleton:
         'Her öğrencinin ders programı, sınav sonuçları ve veli bilgisi burada. Derslere göre gelişim takip edilir.',
     },
-  ],
-  restaurant: [
     {
-      pageKey: 'reservations',
-      path: '/dashboard/reservations',
-      title: 'Rezervasyonlar',
+      pageKey: 'packages',
+      path: '/dashboard/packages',
+      title: 'Paket & Seans',
       skeleton:
-        'Masa rezervasyonlarını yönet. Gelen talepleri onayla, masa ve saat ataması buradan yapılır.',
-    },
-    {
-      pageKey: 'orders',
-      path: '/dashboard/orders',
-      title: 'Siparişler',
-      skeleton:
-        'Aktif siparişleri takip et. Yeni sipariş ekleme, masa bazlı adisyon ve ödeme akışı buradan yönetilir.',
+        'Ders paketlerini (aylık, dönemlik) buradan sat. Kalan ders sayısı otomatik düşer.',
     },
   ],
-  cafe: [
+
+  // --- Veteriner ---
+  veterinary: [
     {
-      pageKey: 'reservations',
-      path: '/dashboard/reservations',
-      title: 'Rezervasyonlar',
+      pageKey: 'records',
+      path: '/dashboard/records',
+      title: 'Hasta Dosyaları',
       skeleton:
-        'Masa rezervasyonlarını yönet. Gelen talepleri onayla, masa ve saat ataması buradan yapılır.',
+        'Her hayvanın aşı kartı, muayene notları ve ilaç geçmişi burada. Sahip bilgisi müşteri kartında tutulur.',
     },
     {
-      pageKey: 'orders',
-      path: '/dashboard/orders',
-      title: 'Siparişler',
+      pageKey: 'packages',
+      path: '/dashboard/packages',
+      title: 'Paket & Seans',
       skeleton:
-        'Aktif siparişleri takip et. Yeni sipariş ekleme, masa bazlı adisyon ve ödeme akışı buradan yönetilir.',
+        'Aşı takvimi, kontrol paketleri gibi hizmet kombinasyonlarını burada tanımla.',
+    },
+    {
+      pageKey: 'follow-ups',
+      path: '/dashboard/follow-ups',
+      title: 'Takipler',
+      skeleton:
+        'Aşı hatırlatma ve kontrol takibi kuyruğu burada. Tarih gelince otomatik SMS gider.',
+    },
+    {
+      pageKey: 'reviews',
+      path: '/dashboard/reviews',
+      title: 'Yorumlar',
+      skeleton:
+        'Müşteri yorumları ve puanları burada.',
     },
   ],
+
+  // --- Oto ---
+  auto_service: [
+    {
+      pageKey: 'packages',
+      path: '/dashboard/packages',
+      title: 'Paket & Seans',
+      skeleton:
+        'Periyodik bakım paketlerini burada tanımla. Hizmet aralıkları otomatik hatırlatma oluşturur.',
+    },
+    {
+      pageKey: 'records',
+      path: '/dashboard/records',
+      title: 'Araç Kayıtları',
+      skeleton:
+        'Her aracın plaka, km, geçmiş işlem ve parça bilgisi burada. Sahip müşteri kartına bağlanır.',
+    },
+    {
+      pageKey: 'inventory',
+      path: '/dashboard/inventory',
+      title: 'Stoklar',
+      skeleton:
+        'Yedek parça ve yağ stoklarını burada yönet. Faturaya parça eklendiğinde stok otomatik düşer.',
+    },
+    {
+      pageKey: 'reviews',
+      path: '/dashboard/reviews',
+      title: 'Yorumlar',
+      skeleton:
+        'Müşteri yorumları ve puanları burada.',
+    },
+  ],
+  car_wash: [
+    {
+      pageKey: 'packages',
+      path: '/dashboard/packages',
+      title: 'Paket & Seans',
+      skeleton:
+        'Aylık yıkama paketleri ve abonelikleri burada tanımla.',
+    },
+    {
+      pageKey: 'records',
+      path: '/dashboard/records',
+      title: 'Araç Kayıtları',
+      skeleton:
+        'Plaka, araç tipi ve geçmiş yıkama kayıtları burada.',
+    },
+    {
+      pageKey: 'reviews',
+      path: '/dashboard/reviews',
+      title: 'Yorumlar',
+      skeleton:
+        'Müşteri yorumları ve puanları burada.',
+    },
+  ],
+
+  // --- Fitness / wellness ---
   fitness: [
     {
       pageKey: 'memberships',
@@ -196,6 +574,34 @@ export const SECTOR_TUTORIAL_TOPICS: Partial<Record<SectorType, TutorialTopic[]>
       title: 'Üyelikler',
       skeleton:
         'Aylık/yıllık üyelik paketlerini tanımla ve üye durumlarını takip et. Süresi yaklaşan üyelere hatırlatma gönderilir.',
+    },
+    {
+      pageKey: 'classes',
+      path: '/dashboard/classes',
+      title: 'Sınıf Programı',
+      skeleton:
+        'Grup dersleri programını yönet. Kapasite, eğitmen ve katılımcı listesi buradan izlenir.',
+    },
+    {
+      pageKey: 'classes_attendance',
+      path: '/dashboard/classes/attendance',
+      title: 'Devam Takibi',
+      skeleton:
+        'Derslere katılımı tek tıkla işaretle. Üye derse girdikçe paket/üyelik hakkı otomatik düşer.',
+    },
+    {
+      pageKey: 'packages',
+      path: '/dashboard/packages',
+      title: 'Paket & Seans',
+      skeleton:
+        'PT seansı ve özel ders paketlerini burada sat.',
+    },
+    {
+      pageKey: 'reviews',
+      path: '/dashboard/reviews',
+      title: 'Yorumlar',
+      skeleton:
+        'Üye yorumları ve puanları burada.',
     },
   ],
   yoga_pilates: [
@@ -213,6 +619,171 @@ export const SECTOR_TUTORIAL_TOPICS: Partial<Record<SectorType, TutorialTopic[]>
       skeleton:
         'Paket ve üyelik planlarını yönet. Kalan ders hakkı üye panelinde otomatik güncellenir.',
     },
+    {
+      pageKey: 'classes_attendance',
+      path: '/dashboard/classes/attendance',
+      title: 'Devam Takibi',
+      skeleton:
+        'Derslere katılımı tek tıkla işaretle. Üye derse girdikçe kalan ders hakkı otomatik düşer.',
+    },
+    {
+      pageKey: 'packages',
+      path: '/dashboard/packages',
+      title: 'Paket & Seans',
+      skeleton:
+        'Özel ders ve etkinlik paketlerini burada tanımla.',
+    },
+    {
+      pageKey: 'reviews',
+      path: '/dashboard/reviews',
+      title: 'Yorumlar',
+      skeleton:
+        'Üye yorumları ve puanları burada.',
+    },
+  ],
+  spa_massage: [
+    {
+      pageKey: 'memberships',
+      path: '/dashboard/memberships',
+      title: 'Üyelikler',
+      skeleton:
+        'Aylık spa üyelikleri ve masaj paketlerini burada tanımla.',
+    },
+    {
+      pageKey: 'packages',
+      path: '/dashboard/packages',
+      title: 'Paket & Seans',
+      skeleton:
+        'Çok seanslı masaj ve bakım paketlerini buradan sat.',
+    },
+    {
+      pageKey: 'reviews',
+      path: '/dashboard/reviews',
+      title: 'Yorumlar',
+      skeleton:
+        'Müşteri yorumları ve puanları burada.',
+    },
+  ],
+
+  // --- Yaratıcı / sanat ---
+  photo_studio: [
+    {
+      pageKey: 'packages',
+      path: '/dashboard/packages',
+      title: 'Paket & Seans',
+      skeleton:
+        'Düğün, bebek, aile çekimi gibi paketleri burada tanımla.',
+    },
+    {
+      pageKey: 'portfolio',
+      path: '/dashboard/portfolio',
+      title: 'Portfolyo',
+      skeleton:
+        'Çekim örneklerini kategoriler halinde yükle. Müşteri booking sayfasında portfolyo otomatik gösterilir.',
+    },
+    {
+      pageKey: 'reviews',
+      path: '/dashboard/reviews',
+      title: 'Yorumlar',
+      skeleton:
+        'Müşteri yorumları ve puanları burada.',
+    },
+  ],
+  tattoo_piercing: [
+    {
+      pageKey: 'packages',
+      path: '/dashboard/packages',
+      title: 'Paket & Seans',
+      skeleton:
+        'Büyük tasarımlar için seanslı paketleri burada tanımla.',
+    },
+    {
+      pageKey: 'portfolio',
+      path: '/dashboard/portfolio',
+      title: 'Portfolyo',
+      skeleton:
+        'Yapılan dövme/piercing örneklerini yükle. Müşteri booking sayfasında sanatçı başına portfolyo gösterilir.',
+    },
+    {
+      pageKey: 'reviews',
+      path: '/dashboard/reviews',
+      title: 'Yorumlar',
+      skeleton:
+        'Müşteri yorumları ve puanları burada.',
+    },
+  ],
+
+  // --- Yeme-içme ---
+  restaurant: [
+    {
+      pageKey: 'reservations',
+      path: '/dashboard/reservations',
+      title: 'Rezervasyonlar',
+      skeleton:
+        'Masa rezervasyonlarını yönet. Gelen talepleri onayla, masa ve saat ataması buradan yapılır.',
+    },
+    {
+      pageKey: 'orders',
+      path: '/dashboard/orders',
+      title: 'Siparişler',
+      skeleton:
+        'Aktif siparişleri takip et. Yeni sipariş ekleme, masa bazlı adisyon ve ödeme akışı buradan yönetilir.',
+    },
+    {
+      pageKey: 'reviews',
+      path: '/dashboard/reviews',
+      title: 'Yorumlar',
+      skeleton:
+        'Müşteri yorumları ve puanları burada.',
+    },
+  ],
+  cafe: [
+    {
+      pageKey: 'reservations',
+      path: '/dashboard/reservations',
+      title: 'Rezervasyonlar',
+      skeleton:
+        'Masa rezervasyonlarını yönet. Gelen talepleri onayla, masa ve saat ataması buradan yapılır.',
+    },
+    {
+      pageKey: 'orders',
+      path: '/dashboard/orders',
+      title: 'Siparişler',
+      skeleton:
+        'Aktif siparişleri takip et. Yeni sipariş ekleme, masa bazlı adisyon ve ödeme akışı buradan yönetilir.',
+    },
+    {
+      pageKey: 'reviews',
+      path: '/dashboard/reviews',
+      title: 'Yorumlar',
+      skeleton:
+        'Müşteri yorumları ve puanları burada.',
+    },
+  ],
+
+  // --- Genel ---
+  other: [
+    {
+      pageKey: 'packages',
+      path: '/dashboard/packages',
+      title: 'Paket & Seans',
+      skeleton:
+        'Çok seanslı hizmet paketlerini burada tanımla.',
+    },
+    {
+      pageKey: 'inventory',
+      path: '/dashboard/inventory',
+      title: 'Stoklar',
+      skeleton:
+        'Ürün ve sarf malzemesi stoklarını buradan takip et.',
+    },
+    {
+      pageKey: 'reviews',
+      path: '/dashboard/reviews',
+      title: 'Yorumlar',
+      skeleton:
+        'Müşteri yorumları ve puanları burada.',
+    },
   ],
 }
 
@@ -221,7 +792,9 @@ export function getTutorialTopicsForSector(sector: SectorType): TutorialTopic[] 
 }
 
 export function findTopicByPath(path: string, sector: SectorType): TutorialTopic | null {
-  return getTutorialTopicsForSector(sector).find(t => t.path === path) ?? null
+  // Query string'leri at, yalnızca pathname eşleştir
+  const clean = path.split('?')[0].split('#')[0]
+  return getTutorialTopicsForSector(sector).find(t => t.path === clean) ?? null
 }
 
 export function findTopicByKey(pageKey: string, sector: SectorType): TutorialTopic | null {
