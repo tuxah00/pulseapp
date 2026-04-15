@@ -400,7 +400,7 @@ export default function AISettingsPage() {
                 <tr className="border-b border-gray-100 dark:border-gray-700">
                   <th className="text-left py-2 px-2 font-medium text-gray-500 dark:text-gray-400 text-xs">Kategori</th>
                   <th className="text-center py-2 px-2 font-medium text-gray-500 dark:text-gray-400 text-xs w-20">Okuma</th>
-                  <th className="text-center py-2 px-2 font-medium text-gray-500 dark:text-gray-400 text-xs w-20">Yazma</th>
+                  <th className="text-center py-2 px-2 font-medium text-gray-500 dark:text-gray-400 text-xs w-20">Eylem</th>
                 </tr>
               </thead>
               <tbody>
