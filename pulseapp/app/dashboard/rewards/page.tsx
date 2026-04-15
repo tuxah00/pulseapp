@@ -389,24 +389,25 @@ export default function RewardsPage() {
                           {(referred?.phone || r.referred_phone) && <p className="text-xs text-gray-500 flex items-center gap-1"><Phone className="h-3 w-3" /> {referred?.phone || r.referred_phone}</p>}
                         </div>
                       </div>
-                      <div className="w-[180px] flex-shrink-0 text-right">
+                      <div className="w-[160px] flex-shrink-0 text-right">
                         {r.reward_type ? (
-                          <p className="text-xs text-purple-600 dark:text-purple-400 flex items-center gap-1 justify-end mb-0.5">
-                            <Gift className="h-3 w-3" />
-                            {r.reward_value}{r.reward_type === 'discount_percent' ? '%' : r.reward_type === 'discount_amount' ? '₺' : ''} {REWARD_TYPE_LABELS[r.reward_type]}
+                          <p className="text-xs text-purple-600 dark:text-purple-400 flex items-center gap-1 justify-end mb-1 truncate">
+                            <Gift className="h-3 w-3 flex-shrink-0" />
+                            <span className="truncate">{r.reward_value}{r.reward_type === 'discount_percent' ? '%' : r.reward_type === 'discount_amount' ? '₺' : ''} {REWARD_TYPE_LABELS[r.reward_type]}</span>
                           </p>
                         ) : (
-                          <p className="text-xs text-gray-300 dark:text-gray-600 mb-0.5">—</p>
+                          <p className="text-xs text-gray-300 dark:text-gray-600 mb-1">—</p>
                         )}
                         <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${sc.bg} ${sc.text}`}>
                           <Icon className="h-3 w-3" /> {REFERRAL_STATUS_LABELS[r.status]}
                         </span>
-                        {r.status === 'rewarded' && <p className="text-[10px] text-green-500 mt-0.5">Ödül verildi</p>}
                       </div>
-                      <div className="w-[80px] flex-shrink-0 flex gap-1 justify-end">
-                        {r.status === 'pending' && (
-                          <button onClick={() => handleReward(r.id)} className="text-xs px-2 py-1 rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200 transition-colors">Ödül Ver</button>
-                        )}
+                      <div className="w-[90px] flex-shrink-0 flex justify-end">
+                        {r.status === 'pending' ? (
+                          <button onClick={() => handleReward(r.id)} className="text-xs px-2 py-1 rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200 transition-colors whitespace-nowrap">Ödül Ver</button>
+                        ) : r.status === 'rewarded' ? (
+                          <span className="text-[10px] text-green-500 whitespace-nowrap">Ödül verildi</span>
+                        ) : null}
                       </div>
                     </div>
                   </AnimatedItem>
