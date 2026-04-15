@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendMessage } from '@/lib/messaging/send'
 import { verifyCronAuth } from '@/lib/api/verify-cron'
+import { isBirthdayToday } from '@/lib/utils/birthday'
 
 export async function GET(request: NextRequest) {
   const authErr = verifyCronAuth(request)
@@ -13,8 +14,6 @@ export async function GET(request: NextRequest) {
   // Türkiye saat dilimi (UTC+3)
   const trDate = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Istanbul' }))
   const trHour = trDate.getHours()
-  const todayMonth = trDate.getMonth() + 1
-  const todayDay = trDate.getDate()
   const todayStart = new Date(trDate.getFullYear(), trDate.getMonth(), trDate.getDate()).toISOString()
 
   const report = { sent: 0, skipped: 0, errors: 0 }
@@ -47,15 +46,10 @@ export async function GET(request: NextRequest) {
 
     if (!customers || customers.length === 0) continue
 
-    // Bugün doğum günü olanları filtrele
+    // Bugün doğum günü olanları filtrele (29 Şubat artık yıl fallback'i dahil)
     const birthdayCustomers = customers.filter(c => {
       if (!c.birthday || !c.phone) return false
-      try {
-        const parts = c.birthday.split('-')
-        return parseInt(parts[1], 10) === todayMonth && parseInt(parts[2], 10) === todayDay
-      } catch {
-        return false
-      }
+      return isBirthdayToday(c.birthday, trDate)
     })
 
     if (birthdayCustomers.length === 0) continue
