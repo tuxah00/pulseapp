@@ -43,6 +43,13 @@ export interface InsightKpi {
   total_customers: number
 }
 
+export interface OperationalPulse {
+  peak_hour: { hour: number; label: string; count: number } | null
+  cancellation_rate: number | null // yüzde (cancelled + no_show) / toplam
+  new_vs_returning: { new_count: number; returning_count: number; new_pct: number } | null
+  weekly_revenue_delta: number | null // son 7 gün vs önceki 7 gün %
+}
+
 export type RecommendationSeverity = 'critical' | 'high' | 'medium' | 'info'
 
 export interface Recommendation {
@@ -63,6 +70,7 @@ export interface InsightsSummary {
   sector: SectorType
   period: { from: string; to: string }
   kpi: InsightKpi
+  pulse: OperationalPulse
   margin: ServiceMarginRow[]
   seasonal: {
     monthly: MonthlyRevenuePoint[]
@@ -611,16 +619,130 @@ export async function computeStrategicRecommendations(
 }
 
 
+export async function computeOperationalPulse(
+  admin: SupabaseAdmin,
+  businessId: string,
+): Promise<OperationalPulse> {
+  const now = new Date()
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+  const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+  const thirtyDaysAgoIso = thirtyDaysAgo.toISOString().slice(0, 10)
+  const todayIso = now.toISOString().slice(0, 10)
+
+  const [aptRes, custRes, invRes] = await Promise.all([
+    admin
+      .from('appointments')
+      .select('start_time, status, customer_id, appointment_date')
+      .eq('business_id', businessId)
+      .is('deleted_at', null)
+      .gte('appointment_date', thirtyDaysAgoIso)
+      .lte('appointment_date', todayIso),
+    admin
+      .from('customers')
+      .select('id, created_at')
+      .eq('business_id', businessId)
+      .eq('is_active', true)
+      .gte('created_at', thirtyDaysAgo.toISOString()),
+    admin
+      .from('invoices')
+      .select('paid_amount, total, created_at, status')
+      .eq('business_id', businessId)
+      .is('deleted_at', null)
+      .in('status', PAID_STATUSES)
+      .gte('created_at', fourteenDaysAgo.toISOString()),
+  ])
+
+  const apts = (aptRes.data || []) as any[]
+
+  // Peak hour (son 30 gün, iptal/no-show hariç)
+  const hourCounts = new Map<number, number>()
+  let cancelled = 0
+  for (const a of apts) {
+    if (a.status === 'cancelled' || a.status === 'no_show') {
+      cancelled++
+      continue
+    }
+    if (!a.start_time) continue
+    const h = Number(String(a.start_time).split(':')[0])
+    if (Number.isFinite(h)) hourCounts.set(h, (hourCounts.get(h) || 0) + 1)
+  }
+
+  let peak: OperationalPulse['peak_hour'] = null
+  if (hourCounts.size > 0) {
+    let bestHour = -1
+    let bestCount = 0
+    for (const [h, c] of hourCounts) {
+      if (c > bestCount) { bestCount = c; bestHour = h }
+    }
+    if (bestHour >= 0) {
+      peak = {
+        hour: bestHour,
+        label: `${String(bestHour).padStart(2, '0')}:00 - ${String((bestHour + 1) % 24).padStart(2, '0')}:00`,
+        count: bestCount,
+      }
+    }
+  }
+
+  const cancellationRate = apts.length > 0
+    ? round1((cancelled / apts.length) * 100)
+    : null
+
+  // Yeni vs dönen müşteri (son 30 gün gelen müşterilerden)
+  const customersInPeriod = new Set<string>()
+  for (const a of apts) {
+    if (a.status === 'cancelled' || a.status === 'no_show') continue
+    if (a.customer_id) customersInPeriod.add(a.customer_id)
+  }
+  const newCustomers = new Set(((custRes.data || []) as any[]).map(c => c.id))
+  let newCount = 0
+  let returningCount = 0
+  for (const id of customersInPeriod) {
+    if (newCustomers.has(id)) newCount++
+    else returningCount++
+  }
+  const totalActive = newCount + returningCount
+  const newVsReturning: OperationalPulse['new_vs_returning'] = totalActive > 0
+    ? {
+        new_count: newCount,
+        returning_count: returningCount,
+        new_pct: round1((newCount / totalActive) * 100),
+      }
+    : null
+
+  // Haftalık gelir trendi
+  const invoices = (invRes.data || []) as any[]
+  let lastWeek = 0
+  let prevWeek = 0
+  for (const inv of invoices) {
+    const d = new Date(inv.created_at)
+    const amount = paidAmount(inv)
+    if (d >= sevenDaysAgo) lastWeek += amount
+    else if (d >= fourteenDaysAgo) prevWeek += amount
+  }
+  const weeklyDelta = prevWeek > 0
+    ? round1(((lastWeek - prevWeek) / prevWeek) * 100)
+    : (lastWeek > 0 ? 100 : null)
+
+  return {
+    peak_hour: peak,
+    cancellation_rate: cancellationRate,
+    new_vs_returning: newVsReturning,
+    weekly_revenue_delta: weeklyDelta,
+  }
+}
+
 export async function computeInsightsSummary(
   admin: SupabaseAdmin,
   businessId: string,
   sector: SectorType,
   period: InsightsPeriod,
 ): Promise<InsightsSummary> {
-  const [margin, monthly, cohort] = await Promise.all([
+  const [margin, monthly, cohort, pulse] = await Promise.all([
     computeMarginAnalysis(admin, businessId, period),
     computeSeasonalTrend(admin, businessId, sector),
     computeCohortRetention(admin, businessId, { cohortMonths: 6 }),
+    computeOperationalPulse(admin, businessId),
   ])
   const kpi = await computeKpi(admin, businessId, period, sector, margin)
   const recommendations = await computeStrategicRecommendations(
@@ -634,6 +756,7 @@ export async function computeInsightsSummary(
     sector,
     period,
     kpi,
+    pulse,
     margin,
     seasonal: {
       monthly,

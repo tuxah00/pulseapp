@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requirePermission } from '@/lib/api/with-permission'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { computeInsightsSummary } from '@/lib/analytics/insights'
+import { fetchMacroContext } from '@/lib/analytics/macro-context'
 import type { SectorType } from '@/types'
 
 // GET: İş Zekası sayfası için atomik özet verisi
-// Hem KPI hem marjin/kohort/mevsimsel/öneri bir seferde döner.
+// KPI + operasyonel nabız + marj/kohort/mevsimsel/öneri + makro bağlam (kur + haftalık brief)
 export async function GET(request: NextRequest) {
   const auth = await requirePermission(request, 'analytics')
   if (!auth.ok) return auth.response
@@ -21,7 +22,6 @@ export async function GET(request: NextRequest) {
 
   const admin = createAdminClient()
 
-  // Sektör bilgisi (öneriler + mevsimsel bağlam için gerekli)
   const { data: business, error: bizErr } = await admin
     .from('businesses')
     .select('sector')
@@ -35,8 +35,14 @@ export async function GET(request: NextRequest) {
   const sector = (business.sector as SectorType) || 'other'
 
   try {
-    const summary = await computeInsightsSummary(admin, businessId, sector, { from, to })
-    return NextResponse.json(summary)
+    const [summary, macro] = await Promise.all([
+      computeInsightsSummary(admin, businessId, sector, { from, to }),
+      fetchMacroContext(admin, sector).catch(err => {
+        console.error('[insights/summary] macro fetch failed:', err)
+        return { snapshot: null, brief: null }
+      }),
+    ])
+    return NextResponse.json({ ...summary, macro })
   } catch (err: any) {
     console.error('[insights/summary] compute error:', err)
     return NextResponse.json(

@@ -9,24 +9,24 @@ interface Props {
 
 const QUAD_LABEL: Record<Quadrant, { label: string; tone: string; desc: string }> = {
   star: {
-    label: 'Yıldız',
+    label: 'Kazandıran Hizmetler',
     tone: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
-    desc: 'Yüksek gelir × yüksek ortalama bilet',
+    desc: 'Hem çok satılıyor hem yüksek bilet — öne çıkar',
   },
   cash_cow: {
-    label: 'Nakit İneği',
+    label: 'Popüler Hizmetler',
     tone: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
-    desc: 'Yüksek gelir × düşük bilet (hacim)',
+    desc: 'Çok satılan ama bileti düşük — hacim geliri',
   },
   question: {
-    label: 'Soru İşareti',
+    label: 'Büyüme Fırsatı',
     tone: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-    desc: 'Düşük gelir × yüksek bilet (potansiyel)',
+    desc: 'Bileti yüksek ama az satılıyor — pazarlamayla büyür',
   },
   dog: {
-    label: 'Köpek',
+    label: 'Zayıf Satanlar',
     tone: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400',
-    desc: 'Düşük gelir × düşük bilet',
+    desc: 'Az satılıyor ve bileti düşük — gözden geçir',
   },
 }
 

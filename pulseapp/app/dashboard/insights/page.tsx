@@ -3,23 +3,31 @@
 import { useEffect, useState } from 'react'
 import {
   TrendingUp, Users, Activity, Layers, Loader2, AlertTriangle,
-  Sparkles, Calendar, Target, Lightbulb,
+  Sparkles, Calendar, Target, Lightbulb, HeartPulse,
 } from 'lucide-react'
-import type { InsightsSummary, Recommendation } from '@/lib/analytics/insights'
+import type { InsightsSummary } from '@/lib/analytics/insights'
+import type { MacroContext } from '@/lib/analytics/macro-context'
 import StrategyCard from '@/components/dashboard/insights/strategy-card'
 import SeasonalChart from '@/components/dashboard/insights/seasonal-chart'
 import QuadrantTable from '@/components/dashboard/insights/quadrant-table'
 import CohortHeatmap from '@/components/dashboard/insights/cohort-heatmap'
+import PulseCards from '@/components/dashboard/insights/pulse-cards'
+import MacroPanel from '@/components/dashboard/insights/macro-panel'
+
+interface SummaryWithMacro extends InsightsSummary {
+  macro: MacroContext | null
+}
 
 interface StatCardProps {
   icon: React.ReactNode
   label: string
   value: string
   hint?: string
+  interpretation?: string
   tone?: 'default' | 'warning' | 'good'
 }
 
-function StatCard({ icon, label, value, hint, tone = 'default' }: StatCardProps) {
+function StatCard({ icon, label, value, hint, interpretation, tone = 'default' }: StatCardProps) {
   const toneClass =
     tone === 'warning' ? 'text-amber-600 dark:text-amber-400' :
     tone === 'good' ? 'text-emerald-600 dark:text-emerald-400' :
@@ -32,6 +40,11 @@ function StatCard({ icon, label, value, hint, tone = 'default' }: StatCardProps)
       </div>
       <div className={`text-2xl font-semibold ${toneClass}`}>{value}</div>
       {hint && <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">{hint}</div>}
+      {interpretation && (
+        <div className="text-[11px] text-gray-600 dark:text-gray-300 mt-1 italic">
+          {interpretation}
+        </div>
+      )}
     </div>
   )
 }
@@ -41,8 +54,36 @@ function fmtPct(v: number | null): string {
   return `${v.toFixed(1)}%`
 }
 
+function marginInterpretation(v: number | null): string {
+  if (v == null) return 'Yeterli gelir-gider verisi henüz yok.'
+  if (v >= 30) return 'Sağlıklı — her 100₺ gelirin 30₺\'den fazlası elinizde kalıyor.'
+  if (v >= 15) return 'Ortalama — kâr var ama gider tarafı optimize edilebilir.'
+  return 'Dikkat — gelirin büyük kısmı giderlere gidiyor.'
+}
+
+function occupancyInterpretation(v: number | null): string {
+  if (v == null) return 'Çalışma saati verisi eksik olabilir.'
+  if (v >= 70) return 'Dolusunuz — fiyat artırımı veya kapasite ekleme zamanı.'
+  if (v >= 40) return 'Makul doluluk — boş slotları kampanyayla doldurabilirsiniz.'
+  return 'Düşük doluluk — pazarlama ve hatırlatma öncelik olmalı.'
+}
+
+function retentionInterpretation(v: number | null): string {
+  if (v == null) return 'Elde tutma hesaplanamadı.'
+  if (v >= 40) return 'İyi — müşterileriniz geri dönüyor.'
+  if (v >= 20) return 'Orta — takip mesajı ve ödül sistemi etkiyi artırır.'
+  return 'Zayıf — müşterileriniz çoğunlukla dönmüyor, neden araştırılmalı.'
+}
+
+function concentrationInterpretation(v: number | null): string {
+  if (v == null) return '—'
+  if (v > 60) return 'Riskli konsantrasyon — gelirin büyük kısmı tek hizmete bağlı.'
+  if (v > 40) return 'Orta — birkaç hizmete çeşitlendirin.'
+  return 'Dengeli hizmet karışımı.'
+}
+
 export default function InsightsPage() {
-  const [data, setData] = useState<InsightsSummary | null>(null)
+  const [data, setData] = useState<SummaryWithMacro | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -106,17 +147,17 @@ export default function InsightsPage() {
           İş Zekası
         </h1>
         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-          Stratejik içgörüler ve kâr odaklı öneriler — sektör + veri + mevsim bağlamında.
+          İşletmenizin nabzı, kâr fırsatları ve gündem — sade Türkçe yorumlarla.
         </p>
       </div>
 
-      {/* Asistan Özeti — top 3 öneri */}
+      {/* Öncelikli Öneriler */}
       {topRecs.length > 0 && (
         <section className="space-y-3">
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-pulse-900 dark:text-pulse-300" />
             <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-              Öncelikli Öneriler
+              Bu Hafta Dikkat Etmen Gerekenler
             </h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -127,20 +168,24 @@ export default function InsightsPage() {
         </section>
       )}
 
-      {/* KPI Şeridi */}
+      {/* Stratejik KPI'lar */}
       <section className="space-y-2">
         <div className="flex items-center gap-2">
           <Target className="w-4 h-4 text-pulse-900 dark:text-pulse-300" />
           <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-            Stratejik KPI&apos;lar
+            Sağlık Durumu
           </h2>
+          <span className="text-[11px] text-gray-500 dark:text-gray-400">
+            · Bu ay, son 90 gün bazlı
+          </span>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <StatCard
             icon={<TrendingUp className="w-4 h-4" />}
             label="Kâr Marjı"
             value={fmtPct(data.kpi.margin_percentage)}
-            hint="Dönem faturaları − giderler"
+            hint="Dönem geliri − giderler"
+            interpretation={marginInterpretation(data.kpi.margin_percentage)}
             tone={
               data.kpi.margin_percentage == null ? 'default' :
               data.kpi.margin_percentage >= 30 ? 'good' :
@@ -152,6 +197,7 @@ export default function InsightsPage() {
             label="Doluluk"
             value={fmtPct(data.kpi.occupancy_percentage)}
             hint="Dolu slot / toplam kapasite"
+            interpretation={occupancyInterpretation(data.kpi.occupancy_percentage)}
             tone={
               data.kpi.occupancy_percentage == null ? 'default' :
               data.kpi.occupancy_percentage >= 70 ? 'good' :
@@ -160,9 +206,10 @@ export default function InsightsPage() {
           />
           <StatCard
             icon={<Users className="w-4 h-4" />}
-            label="Müşteri Elde Tutma"
+            label="Geri Dönüş Oranı"
             value={fmtPct(data.kpi.retention_percentage)}
             hint="90 gün içinde tekrar gelme"
+            interpretation={retentionInterpretation(data.kpi.retention_percentage)}
             tone={
               data.kpi.retention_percentage == null ? 'default' :
               data.kpi.retention_percentage >= 40 ? 'good' :
@@ -171,9 +218,10 @@ export default function InsightsPage() {
           />
           <StatCard
             icon={<Layers className="w-4 h-4" />}
-            label="Hizmet Konsantrasyonu"
+            label="Gelir Dağılımı"
             value={fmtPct(data.kpi.service_concentration)}
-            hint="En üst hizmetin gelir payı"
+            hint="En çok gelir getiren hizmetin payı"
+            interpretation={concentrationInterpretation(data.kpi.service_concentration)}
             tone={
               data.kpi.service_concentration == null ? 'default' :
               data.kpi.service_concentration > 60 ? 'warning' : 'default'
@@ -182,13 +230,30 @@ export default function InsightsPage() {
         </div>
       </section>
 
-      {/* Mevsimsel Tahmin */}
+      {/* Operasyonel Nabız */}
+      <section className="space-y-2">
+        <div className="flex items-center gap-2">
+          <HeartPulse className="w-4 h-4 text-pulse-900 dark:text-pulse-300" />
+          <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+            Operasyonel Nabız
+          </h2>
+          <span className="text-[11px] text-gray-500 dark:text-gray-400">
+            · Son 30 gün + haftalık trend
+          </span>
+        </div>
+        <PulseCards pulse={data.pulse} />
+      </section>
+
+      {/* Dış Dünya — Makro bağlam */}
+      <MacroPanel macro={data.macro} />
+
+      {/* Mevsimsel Trend */}
       <section className="card p-4 cursor-default space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4 text-pulse-900 dark:text-pulse-300" />
             <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-              12 Aylık Trend ve Mevsim
+              Yıllık Gelir Trendi ve Mevsim
             </h2>
           </div>
           <span className="text-[11px] text-gray-500 dark:text-gray-400">
@@ -203,7 +268,7 @@ export default function InsightsPage() {
         )}
         {ctx.upcoming && ctx.upcoming.length > 0 && (
           <div className="text-xs text-gray-600 dark:text-gray-400 space-y-0.5">
-            <div className="font-medium text-gray-700 dark:text-gray-300">Yaklaşan:</div>
+            <div className="font-medium text-gray-700 dark:text-gray-300">Yaklaşan dönem:</div>
             {ctx.upcoming.map((u, i) => (
               <div key={i}>
                 • <strong>{u.label}</strong> ({u.demand}) — {u.note}
@@ -213,13 +278,16 @@ export default function InsightsPage() {
         )}
       </section>
 
-      {/* Hizmet Kuadrantı */}
+      {/* Hizmet Karışımı */}
       <section className="space-y-2">
         <div className="flex items-center gap-2">
           <Layers className="w-4 h-4 text-pulse-900 dark:text-pulse-300" />
           <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-            Hizmet Karmasında Yıldızlar ve Köpekler
+            Hizmet Karışımı
           </h2>
+          <span className="text-[11px] text-gray-500 dark:text-gray-400">
+            · Hangi hizmet ne kadar kazandırıyor
+          </span>
         </div>
         <QuadrantTable rows={data.margin} />
       </section>
@@ -229,11 +297,12 @@ export default function InsightsPage() {
         <div className="flex items-center gap-2">
           <Users className="w-4 h-4 text-pulse-900 dark:text-pulse-300" />
           <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-            Müşteri Kohort Analizi
+            Müşteriler Ne Kadar Geri Dönüyor?
           </h2>
         </div>
         <p className="text-xs text-gray-500 dark:text-gray-400">
-          Her ay kazanılan müşterilerin sonraki aylarda geri dönüş oranı.
+          Her ay yeni kazanılan müşterilerin sonraki aylarda tekrar randevu alma oranı.
+          Yeşil = dönüş güçlü, gri = dönüş zayıf.
         </p>
         <CohortHeatmap cohort={data.cohort} />
       </section>
