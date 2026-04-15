@@ -1157,7 +1157,7 @@ export interface AIUsage {
 }
 
 export interface AIStreamEvent {
-  type: 'text' | 'tool_start' | 'tool_end' | 'done' | 'error' | 'limit' | 'confirmation_required'
+  type: 'text' | 'tool_start' | 'tool_end' | 'done' | 'error' | 'limit' | 'confirmation_required' | 'block'
   content?: string
   name?: string
   label?: string
@@ -1169,4 +1169,53 @@ export interface AIStreamEvent {
   action_type?: string
   preview?: string
   details?: Record<string, unknown>
+  block?: AIBlock
 }
+
+// ── AI Zengin UI Blokları (Faz 9) ──
+export type AIBlockCellVariant = 'money' | 'percent' | 'delta' | 'muted' | 'strong'
+
+export interface AIBlockTableColumn {
+  key: string
+  label: string
+  align?: 'left' | 'right' | 'center'
+  variant?: AIBlockCellVariant
+}
+
+export type AIBlockTableCell = string | number | null | {
+  value: string | number | null
+  variant?: AIBlockCellVariant
+  hint?: string
+}
+
+export interface AIBlockTable {
+  type: 'table'
+  title?: string
+  columns: AIBlockTableColumn[]
+  rows: AIBlockTableCell[][]
+  footer?: string
+}
+
+export interface AIBlockStatCard {
+  label: string
+  value: string
+  delta?: number | null
+  hint?: string
+  tone?: 'default' | 'positive' | 'negative' | 'warning'
+}
+
+export interface AIBlockStatCards {
+  type: 'stat_cards'
+  title?: string
+  cards: AIBlockStatCard[]
+}
+
+export interface AIBlockChart {
+  type: 'chart'
+  chartType: 'line' | 'bar' | 'pie'
+  title?: string
+  labels: string[]
+  series: { name: string; data: number[] }[]
+}
+
+export type AIBlock = AIBlockTable | AIBlockStatCards | AIBlockChart

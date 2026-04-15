@@ -6,6 +6,7 @@ import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
 import { getOpenAIClient, ASSISTANT_MODEL, ASSISTANT_MAX_TOKENS } from '@/lib/ai/openai-client'
 import { buildAssistantSystemPrompt, buildOnboardingSystemPrompt } from '@/lib/ai/assistant-prompts'
 import { ASSISTANT_TOOLS, TOOL_LABELS, executeAssistantTool } from '@/lib/ai/assistant-tools'
+import { deriveBlocksFromToolResult } from '@/lib/ai/assistant-blocks'
 import { AI_LIMITS } from '@/lib/ai/assistant-limits'
 import type { AuthContext } from '@/lib/api/with-permission'
 import type { PlanType } from '@/types'
@@ -280,6 +281,13 @@ export async function POST(req: NextRequest) {
                 ? (result.requires_confirmation ? 'Onay bekliyor' : summarizeToolResult(tc.name, result.data))
                 : result.error || 'Hata oluştu'
               send({ type: 'tool_end', name: tc.name, summary })
+
+              // Emit rich UI blocks (Faz 9) for read-only tool results
+              if (result.success && !result.requires_confirmation && result.data) {
+                for (const block of deriveBlocksFromToolResult(tc.name, result.data)) {
+                  send({ type: 'block', block })
+                }
+              }
 
               // If pending action, emit confirmation event to client (UI renders Onayla/İptal buttons)
               if (result.success && result.requires_confirmation) {
