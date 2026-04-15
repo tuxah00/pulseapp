@@ -397,11 +397,20 @@
 
 /* ── Sticky Save Bar ── */
 @keyframes sticky-bar-in {
-  from { transform: translateX(100%); opacity: 0; }
-  to   { transform: translateX(0);    opacity: 1; }
+  from { transform: translateY(8px); opacity: 0; }
+  to   { transform: translateY(0);   opacity: 1; }
 }
 .sticky-save-bar {
-  animation: sticky-bar-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: sticky-bar-in 0.25s ease-out forwards;
+}
+
+/* ── Original Save Button Slide-in (sağdan sola spring) ── */
+@keyframes save-btn-slide-in {
+  from { transform: translateX(40px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+.save-btn-animate {
+  animation: save-btn-slide-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 /* ── Form zorunlu alan ── */

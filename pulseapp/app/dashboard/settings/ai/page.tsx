@@ -68,6 +68,8 @@ export default function AISettingsPage() {
   // Sticky save bar
   const saveBtnRef = useRef<HTMLButtonElement>(null)
   const [saveBtnVisible, setSaveBtnVisible] = useState(true)
+  const prevSaveBtnVisibleRef = useRef(true)
+  const [saveBtnAnimating, setSaveBtnAnimating] = useState(false)
   const isDirty = useMemo(
     () =>
       JSON.stringify(prefs) !== JSON.stringify(savedPrefs) ||
@@ -112,6 +114,19 @@ export default function AISettingsPage() {
     observer.observe(el)
     return () => observer.disconnect()
   }, [loading, ctxLoading])
+
+  // Orijinal buton alanı ekrana girdiğinde (false→true) slide-in animasyonu tetikle
+  useEffect(() => {
+    if (saveBtnVisible && !prevSaveBtnVisibleRef.current) {
+      setSaveBtnAnimating(true)
+      const t = setTimeout(() => setSaveBtnAnimating(false), 500)
+      prevSaveBtnVisibleRef.current = true
+      return () => clearTimeout(t)
+    }
+    if (!saveBtnVisible) {
+      prevSaveBtnVisibleRef.current = false
+    }
+  }, [saveBtnVisible])
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
@@ -453,7 +468,7 @@ export default function AISettingsPage() {
           </div>
         )}
 
-        <div className="flex items-center justify-end gap-3 pt-2 border-t border-gray-100 dark:border-gray-800">
+        <div className={cn("flex items-center justify-end gap-3 pt-2 border-t border-gray-100 dark:border-gray-800", isDirty && saveBtnAnimating && "save-btn-animate")}>
           {saveSuccess && (
             <span className="text-sm text-green-700 dark:text-green-300 mr-2">✓ Kaydedildi</span>
           )}
