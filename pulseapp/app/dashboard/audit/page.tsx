@@ -122,9 +122,9 @@ function formatAuditDetail(log: AuditLog): string {
 
   // Hizmet oluşturma/silme
   if (log.resource === 'service') {
-    const svcName = d.service_name || d.name || ''
+    const svcName = d.service_name || d.name
     const parts: string[] = []
-    if (svcName) parts.push(svcName)
+    if (svcName) parts.push(String(svcName))
     if (d.duration_minutes) parts.push(`${d.duration_minutes} dk`)
     if (d.new_price != null) parts.push(`₺${d.new_price}`)
     return parts.join(' · ')
