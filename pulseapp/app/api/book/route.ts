@@ -133,6 +133,10 @@ export async function POST(req: NextRequest) {
 
   const [h, m] = start_time.split(':').map(Number)
   const totalMin = h * 60 + m + service.duration_minutes
+  // Gece yarısı aşımı: 23:30 + 60dk = "24:30" gibi invalid time olmasın
+  if (totalMin >= 24 * 60) {
+    return NextResponse.json({ error: 'Randevu gece yarısını aşamaz' }, { status: 400 })
+  }
   const endH = Math.floor(totalMin / 60)
   const endM = totalMin % 60
   const end_time = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`

@@ -41,6 +41,15 @@ export const customerCreateSchema = z.object({
     .or(z.literal('').transform(() => undefined)),
   birthday: z
     .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Geçersiz tarih formatı')
+    .refine((d) => {
+      const today = new Date().toISOString().slice(0, 10)
+      return d <= today
+    }, { message: 'Doğum tarihi gelecekte olamaz' })
+    .refine((d) => {
+      const year = parseInt(d.slice(0, 4), 10)
+      return year >= 1900 && year <= new Date().getFullYear()
+    }, { message: 'Geçersiz doğum yılı' })
     .optional()
     .or(z.literal('').transform(() => undefined)),
 })

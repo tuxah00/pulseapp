@@ -128,7 +128,9 @@ export default function PortalDashboardPage() {
     setLoggingOut(true)
     try {
       await fetch('/api/portal/logout', { method: 'DELETE' })
-    } catch { /* ignore */ } finally {
+    } catch {
+      /* ignore */
+    } finally {
       router.replace(`/portal/${businessId}`)
     }
   }
@@ -279,7 +281,7 @@ export default function PortalDashboardPage() {
                     </span>
                   </div>
                 </div>
-              ))}
+              )})}
             </div>
           </div>
         )}
