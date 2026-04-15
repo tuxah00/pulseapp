@@ -1,0 +1,100 @@
+name: Sync main to feature branches
+
+# main'e her push olduğunda (yani bir PR merge edildiğinde),
+# claude/* ile başlayan tüm açık branch'lere main otomatik merge edilir.
+# Çakışma olursa o branch atlanır ve Issue açılır.
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: {}  # Elle de tetiklenebilir (Actions sekmesinden "Run workflow")
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Sync main into every claude/* branch
+        run: |
+          set -e
+          git fetch origin --prune
+
+          # main ile başlayan dallar HARIÇ, origin/claude/* dallarını listele
+          branches=$(git for-each-ref --format='%(refname:short)' refs/remotes/origin/claude/ | sed 's|^origin/||')
+
+          if [ -z "$branches" ]; then
+            echo "Senkronize edilecek claude/* dalı yok."
+            exit 0
+          fi
+
+          failed_branches=""
+
+          for branch in $branches; do
+            echo ""
+            echo "================================================"
+            echo "İşleniyor: $branch"
+            echo "================================================"
+
+            git checkout -B "$branch" "origin/$branch"
+
+            # Zaten güncelse atla
+            if git merge-base --is-ancestor origin/main "origin/$branch"; then
+              echo "[$branch] Zaten main ile güncel, atlanıyor."
+              continue
+            fi
+
+            # Main'i merge etmeyi dene
+            if git merge origin/main --no-edit -m "chore: main otomatik senkronize edildi"; then
+              git push origin "$branch"
+              echo "[$branch] ✓ Main merge edildi ve push'landı."
+            else
+              echo "[$branch] ✗ Çakışma! Branch atlandı."
+              git merge --abort || true
+              failed_branches="$failed_branches $branch"
+            fi
+          done
+
+          # Çakışan branch'ler için issue aç
+          if [ -n "$failed_branches" ]; then
+            echo "FAILED_BRANCHES=$failed_branches" >> "$GITHUB_ENV"
+          fi
+
+      - name: Open issue for conflicted branches
+        if: env.FAILED_BRANCHES != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const failed = (process.env.FAILED_BRANCHES || '').trim().split(/\s+/).filter(Boolean);
+            if (failed.length === 0) return;
+
+            const body = [
+              'Main dalı güncellendi ama aşağıdaki branch\'lere otomatik merge edilemedi (çakışma var):',
+              '',
+              ...failed.map(b => `- \`${b}\` — çözmek için:\n  \`\`\`bash\n  git checkout ${b}\n  git pull\n  git merge origin/main\n  # çakışmaları çöz, sonra:\n  git push\n  \`\`\``),
+              '',
+              `Main commit: ${context.sha}`,
+            ].join('\n');
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Branch senkronizasyonu: ${failed.length} dalda çakışma var`,
+              body,
+              labels: ['sync-conflict'],
+            });
