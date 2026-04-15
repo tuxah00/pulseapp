@@ -1,11 +1,12 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, useRef, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { useTutorial } from '@/lib/hooks/use-tutorial'
-import { Loader2, RotateCcw, Save, ShieldCheck, Sparkles } from 'lucide-react'
+import { Loader2, RotateCcw, Save, ShieldCheck, Sparkles, X } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { logAudit } from '@/lib/utils/audit'
 import { CUSTOM_INSTRUCTIONS_MAX, DEFAULT_TONE } from '@/lib/ai/assistant-prompts'
@@ -52,15 +53,27 @@ const PERMISSION_GROUPS: {
 export default function AISettingsPage() {
   const supabase = createClient()
   const { confirm } = useConfirm()
-  const { businessId, staffId, staffName, permissions, loading: ctxLoading } = useBusinessContext()
-  const tutorial = useTutorial()
+  const { businessId, staffId, staffName, permissions, sector, loading: ctxLoading } = useBusinessContext()
+  const tutorial = useTutorial(sector)
   const [prefs, setPrefs] = useState<AIPreferences>(DEFAULT_PREFS)
+  const [savedPrefs, setSavedPrefs] = useState<AIPreferences>(DEFAULT_PREFS)
   const [aiPermissions, setAiPermissions] = useState<AIPermissions>(DEFAULT_AI_PERMISSIONS)
+  const [savedAiPermissions, setSavedAiPermissions] = useState<AIPermissions>(DEFAULT_AI_PERMISSIONS)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [tutorialBusy, setTutorialBusy] = useState(false)
+
+  // Sticky save bar
+  const saveBtnRef = useRef<HTMLButtonElement>(null)
+  const [saveBtnVisible, setSaveBtnVisible] = useState(true)
+  const isDirty = useMemo(
+    () =>
+      JSON.stringify(prefs) !== JSON.stringify(savedPrefs) ||
+      JSON.stringify(aiPermissions) !== JSON.stringify(savedAiPermissions),
+    [prefs, savedPrefs, aiPermissions, savedAiPermissions]
+  )
 
   const fetchPrefs = useCallback(async () => {
     if (!businessId) return
@@ -75,8 +88,12 @@ export default function AISettingsPage() {
       setError('Tercihler yüklenemedi: ' + err.message)
     } else {
       const settings = (data?.settings || {}) as BusinessSettings
-      setPrefs({ ...DEFAULT_PREFS, ...(settings.ai_preferences || {}) })
-      setAiPermissions({ ...DEFAULT_AI_PERMISSIONS, ...(settings.ai_permissions || {}) })
+      const loaded = { ...DEFAULT_PREFS, ...(settings.ai_preferences || {}) }
+      setPrefs(loaded)
+      setSavedPrefs(loaded)
+      const loadedPerms = { ...DEFAULT_AI_PERMISSIONS, ...(settings.ai_permissions || {}) }
+      setAiPermissions(loadedPerms)
+      setSavedAiPermissions(loadedPerms)
     }
     setLoading(false)
   }, [businessId, supabase])
@@ -85,9 +102,22 @@ export default function AISettingsPage() {
     if (!ctxLoading && businessId) fetchPrefs()
   }, [ctxLoading, businessId, fetchPrefs])
 
+  useEffect(() => {
+    const el = saveBtnRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      ([entry]) => setSaveBtnVisible(entry.isIntersecting),
+      { threshold: 0.5 }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [loading, ctxLoading])
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
     if (!businessId) return
+    const snapshot = { ...prefs }
+    const permsSnapshot = { ...aiPermissions }
     setSaving(true)
     setError(null)
     setSaveSuccess(false)
@@ -116,6 +146,8 @@ export default function AISettingsPage() {
       window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: upErr.message } }))
     } else {
       setSaveSuccess(true)
+      setSavedPrefs(snapshot)
+      setSavedAiPermissions(permsSnapshot)
       setTimeout(() => setSaveSuccess(false), 3000)
       window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'AI tercihleri kaydedildi' } }))
       logAudit({
@@ -150,6 +182,33 @@ export default function AISettingsPage() {
 
   return (
     <div className="max-w-3xl mx-auto p-4 sm:p-6">
+      {/* Sticky Save Bar */}
+      {isDirty && !saveBtnVisible && (
+        <div className="fixed bottom-0 left-0 lg:left-64 right-0 z-40 sticky-save-bar">
+          <div className="border-t border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm">
+            <div className="flex items-center justify-end gap-3 px-6 py-4">
+              <span className="text-sm text-gray-400 dark:text-gray-500 mr-2">Kaydedilmemiş değişiklikler var</span>
+              <button
+                type="button"
+                onClick={() => { setPrefs(savedPrefs); setAiPermissions(savedAiPermissions) }}
+                className="btn-secondary"
+              >
+                <X className="mr-1.5 h-4 w-4" />
+                Değişiklikleri Geri Al
+              </button>
+              <button
+                type="button"
+                disabled={saving}
+                onClick={() => handleSave({ preventDefault: () => {} } as React.FormEvent)}
+                className="btn-primary"
+              >
+                {saving ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Save className="mr-1.5 h-4 w-4" />}
+                Kaydet
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <header className="mb-6 flex items-center gap-3">
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white">
           <Sparkles className="w-5 h-5" />
@@ -394,14 +453,25 @@ export default function AISettingsPage() {
           </div>
         )}
 
-        <div className="flex items-center justify-end gap-3">
+        <div className="flex items-center justify-end gap-3 pt-2 border-t border-gray-100 dark:border-gray-800">
           {saveSuccess && (
-            <span className="text-sm text-green-700 dark:text-green-300">✓ Kaydedildi</span>
+            <span className="text-sm text-green-700 dark:text-green-300 mr-2">✓ Kaydedildi</span>
+          )}
+          {isDirty && (
+            <button
+              type="button"
+              onClick={() => { setPrefs(savedPrefs); setAiPermissions(savedAiPermissions) }}
+              className="btn-secondary"
+            >
+              <X className="mr-1.5 h-4 w-4" />
+              Değişiklikleri Geri Al
+            </button>
           )}
           <button
+            ref={saveBtnRef}
             type="submit"
-            disabled={saving}
-            className="btn-primary inline-flex items-center gap-2 disabled:opacity-50"
+            disabled={saving || !isDirty}
+            className={cn('btn-primary inline-flex items-center gap-2', !isDirty && 'opacity-50 cursor-not-allowed')}
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             Kaydet
