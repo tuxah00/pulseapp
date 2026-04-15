@@ -38,6 +38,7 @@ type AppointmentView = AppointmentRow & {
   staff_members: { name: string } | null
 }
 import { logAudit } from '@/lib/utils/audit'
+import { addMonthsSafe } from '@/lib/utils/date-range'
 import { getCustomerLabelSingular } from '@/lib/config/sector-modules'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
@@ -269,9 +270,9 @@ export default function AppointmentsPage() {
   }, [showModal])
 
   function changeDate(days: number) {
-    const d = new Date(selectedDate + 'T12:00:00')
+    let d = new Date(selectedDate + 'T12:00:00')
     if (viewMode === 'month') {
-      d.setMonth(d.getMonth() + days)
+      d = addMonthsSafe(d, days)
     } else if (viewMode === 'week') {
       d.setDate(d.getDate() + days * 7)
     } else {
@@ -354,7 +355,7 @@ export default function AppointmentsPage() {
 
   function calculateEndTime(start: string, durationMinutes: number): string {
     const [h, m] = start.split(':').map(Number)
-    const totalMin = h * 60 + m + durationMinutes
+    const totalMin = Math.min(h * 60 + m + durationMinutes, 23 * 60 + 59)
     return `${String(Math.floor(totalMin / 60)).padStart(2, '0')}:${String(totalMin % 60).padStart(2, '0')}`
   }
 
@@ -387,10 +388,10 @@ export default function AppointmentsPage() {
     const [y, m, d] = startDate.split('-').map(Number)
     const baseDate = new Date(y, m - 1, d)
     for (let i = 0; i < count; i++) {
-      const dt = new Date(baseDate)
+      let dt = new Date(baseDate)
       if (frequency === 'weekly') dt.setDate(baseDate.getDate() + i * 7)
       else if (frequency === 'biweekly') dt.setDate(baseDate.getDate() + i * 14)
-      else if (frequency === 'monthly') dt.setMonth(baseDate.getMonth() + i)
+      else if (frequency === 'monthly') dt = addMonthsSafe(baseDate, i)
       const dateStr = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`
       dates.push(dateStr)
     }

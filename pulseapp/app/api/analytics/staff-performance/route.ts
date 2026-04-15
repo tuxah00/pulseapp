@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/api/with-permission'
+import { toInclusiveEnd } from '@/lib/utils/date-range'
 
 // GET: Personel performans karnesi
 export async function GET(request: NextRequest) {
@@ -49,8 +50,9 @@ export async function GET(request: NextRequest) {
     .is('deleted_at', null)
     .in('status', ['paid', 'partial'])
 
+  const toEnd = toInclusiveEnd(to)
   if (from) invQuery = invQuery.gte('created_at', from)
-  if (to) invQuery = invQuery.lte('created_at', to)
+  if (toEnd) invQuery = invQuery.lte('created_at', toEnd)
   if (staffId) invQuery = invQuery.eq('staff_id', staffId)
 
   let reviewQuery = supabase
@@ -59,7 +61,7 @@ export async function GET(request: NextRequest) {
     .eq('business_id', businessId)
 
   if (from) reviewQuery = reviewQuery.gte('created_at', from)
-  if (to) reviewQuery = reviewQuery.lte('created_at', to)
+  if (toEnd) reviewQuery = reviewQuery.lte('created_at', toEnd)
 
   const [{ data: appointments }, { data: invoices }, { data: reviews }] = await Promise.all([
     aptQuery,

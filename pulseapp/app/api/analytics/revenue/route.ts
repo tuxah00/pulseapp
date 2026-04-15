@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/api/with-permission'
+import { toInclusiveEnd } from '@/lib/utils/date-range'
 
 // GET: Gelişmiş gelir analizi
 export async function GET(request: NextRequest) {
@@ -24,7 +25,8 @@ export async function GET(request: NextRequest) {
     .in('status', ['paid', 'partial'])
 
   if (from) query = query.gte('created_at', from)
-  if (to) query = query.lte('created_at', to)
+  const toEnd = toInclusiveEnd(to)
+  if (toEnd) query = query.lte('created_at', toEnd)
 
   const { data: invoices, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
