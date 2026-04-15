@@ -113,16 +113,21 @@ function formatAuditDetail(log: AuditLog): string {
 
   // Hizmet fiyat değişikliği
   if (log.resource === 'service' && (d.old_price !== undefined || d.new_price !== undefined)) {
-    const svcName = d.service_name || ''
+    const svcName = d.service_name || d.name || ''
     if (d.old_price !== undefined && d.new_price !== undefined) {
-      return `${svcName}: ₺${d.old_price} → ₺${d.new_price}`
+      return `${svcName}${svcName ? ': ' : ''}₺${d.old_price} → ₺${d.new_price}`
     }
-    return String(svcName)
+    return svcName ? `${svcName}${d.new_price != null ? ` · ₺${d.new_price}` : ''}` : ''
   }
 
   // Hizmet oluşturma/silme
   if (log.resource === 'service') {
-    return d.service_name ? String(d.service_name) : ''
+    const svcName = d.service_name || d.name || ''
+    const parts: string[] = []
+    if (svcName) parts.push(svcName)
+    if (d.duration_minutes) parts.push(`${d.duration_minutes} dk`)
+    if (d.new_price != null) parts.push(`₺${d.new_price}`)
+    return parts.join(' · ')
   }
 
   // Fatura

@@ -591,7 +591,12 @@ async function execCreateService(
     action: 'create',
     resource: 'service',
     resourceId: data.id,
-    details: { via: 'ai_assistant', name: p.name },
+    details: {
+      via: 'ai_assistant',
+      service_name: p.name,
+      ...(p.price != null ? { new_price: p.price } : {}),
+      ...(p.duration_minutes != null ? { duration_minutes: p.duration_minutes } : {}),
+    },
   })
 
   return { ok: true, message: `✓ ${p.name} hizmeti eklendi`, data: { id: data.id } }
@@ -602,6 +607,14 @@ async function execUpdateService(
   ctx: ExecutorCtx,
   p: Record<string, any>,
 ): Promise<ActionExecuteResult> {
+  // Mevcut hizmet bilgilerini al (audit için ad ve eski fiyat)
+  const { data: existing } = await admin
+    .from('services')
+    .select('name, price')
+    .eq('id', p.service_id)
+    .eq('business_id', ctx.businessId)
+    .single()
+
   const updates: Record<string, any> = {}
   if (p.name !== undefined) updates.name = p.name
   if (p.duration_minutes !== undefined) updates.duration_minutes = p.duration_minutes
@@ -617,6 +630,15 @@ async function execUpdateService(
 
   if (error) return { ok: false, message: 'Güncelleme başarısız: ' + error.message }
 
+  const auditDetails: Record<string, any> = {
+    via: 'ai_assistant',
+    service_name: p.name ?? existing?.name ?? '',
+  }
+  if (p.price !== undefined && existing?.price !== p.price) {
+    auditDetails.old_price = existing?.price
+    auditDetails.new_price = p.price
+  }
+
   await logAuditServer({
     businessId: ctx.businessId,
     staffId: ctx.staffId,
@@ -624,7 +646,7 @@ async function execUpdateService(
     action: 'update',
     resource: 'service',
     resourceId: p.service_id,
-    details: { via: 'ai_assistant', updates: JSON.stringify(updates) },
+    details: auditDetails,
   })
 
   return { ok: true, message: '✓ Hizmet güncellendi' }
