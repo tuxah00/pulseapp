@@ -1272,7 +1272,7 @@ export default function CustomersPage() {
               </div>
               <div>
                 <label htmlFor="custBday" className="label">Doğum Tarihi (opsiyonel)</label>
-                <input id="custBday" type="date" {...register('birthday')} className="input" />
+                <input id="custBday" type="date" {...register('birthday')} className="input" max={new Date().toISOString().split('T')[0]} />
                 {errors.birthday && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.birthday.message}</p>}
               </div>
               <div>
