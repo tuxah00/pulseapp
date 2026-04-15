@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { getCustomerLabelSingular } from '@/lib/config/sector-modules'
+import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import {
   Plus, Clock, Search, Loader2, Phone, Calendar, User, Bell, BellOff, Trash2, X, ShieldX, CheckCircle
@@ -40,6 +41,7 @@ interface ServiceOption {
 export default function WaitlistPage() {
   const { businessId, sector, loading: ctxLoading, permissions } = useBusinessContext()
   const customerLabel = getCustomerLabelSingular(sector ?? undefined)
+  const supabase = createClient()
 
   const [entries, setEntries] = useState<WaitlistEntry[]>([])
   const [loading, setLoading] = useState(true)
@@ -75,11 +77,15 @@ export default function WaitlistPage() {
   const fetchServices = useCallback(async () => {
     if (!businessId) return
     try {
-      const res = await fetch('/api/services')
-      const json = await res.json()
-      setServices((json.services || []).map((s: any) => ({ id: s.id, name: s.name })))
+      const { data } = await supabase
+        .from('services')
+        .select('id, name')
+        .eq('business_id', businessId)
+        .eq('is_active', true)
+        .order('sort_order')
+      setServices((data || []).map((s: any) => ({ id: s.id, name: s.name })))
     } catch { /* ignore */ }
-  }, [businessId])
+  }, [businessId, supabase])
 
   useEffect(() => { fetchEntries() }, [fetchEntries])
   useEffect(() => { fetchServices() }, [fetchServices])
