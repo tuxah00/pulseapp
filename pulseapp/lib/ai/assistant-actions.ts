@@ -20,6 +20,14 @@ export type PendingActionType =
   | 'send_campaign'
   | 'create_workflow'
   | 'toggle_workflow'
+  | 'update_working_hours'
+  | 'create_blocked_slot'
+  | 'delete_blocked_slot'
+  | 'assign_shift'
+  | 'create_shift_definition'
+  | 'invite_staff'
+  | 'update_staff_permissions'
+  | 'update_business_settings'
 
 export interface ConfirmationRequired {
   success: true
@@ -153,6 +161,30 @@ export async function executePendingAction(
         break
       case 'toggle_workflow':
         result = await execToggleWorkflow(admin, ctx, payload)
+        break
+      case 'update_working_hours':
+        result = await execUpdateWorkingHours(admin, ctx, payload)
+        break
+      case 'create_blocked_slot':
+        result = await execCreateBlockedSlot(admin, ctx, payload)
+        break
+      case 'delete_blocked_slot':
+        result = await execDeleteBlockedSlot(admin, ctx, payload)
+        break
+      case 'assign_shift':
+        result = await execAssignShift(admin, ctx, payload)
+        break
+      case 'create_shift_definition':
+        result = await execCreateShiftDefinition(admin, ctx, payload)
+        break
+      case 'invite_staff':
+        result = await execInviteStaff(admin, ctx, payload)
+        break
+      case 'update_staff_permissions':
+        result = await execUpdateStaffPermissions(admin, ctx, payload)
+        break
+      case 'update_business_settings':
+        result = await execUpdateBusinessSettings(admin, ctx, payload)
         break
       default:
         result = { ok: false, message: 'Bilinmeyen eylem türü' }
@@ -648,4 +680,232 @@ async function execToggleWorkflow(
   })
 
   return { ok: true, message: p.is_active ? '✓ İş akışı aktifleştirildi' : '✓ İş akışı pasifleştirildi' }
+}
+
+// ── Faz 7: Sistem Yönetimi Executors ─────────────────────────────────
+
+async function execUpdateWorkingHours(
+  admin: SupabaseAdmin,
+  ctx: ExecutorCtx,
+  p: Record<string, any>,
+): Promise<ActionExecuteResult> {
+  const { error } = await admin
+    .from('businesses')
+    .update({ working_hours: p.working_hours })
+    .eq('id', ctx.businessId)
+
+  if (error) return { ok: false, message: 'Güncelleme başarısız: ' + error.message }
+
+  await logAuditServer({
+    businessId: ctx.businessId,
+    staffId: ctx.staffId,
+    staffName: ctx.staffName,
+    action: 'update',
+    resource: 'settings',
+    details: { via: 'ai_assistant', field: 'working_hours' },
+  })
+
+  return { ok: true, message: '✓ Çalışma saatleri güncellendi' }
+}
+
+async function execCreateBlockedSlot(
+  admin: SupabaseAdmin,
+  ctx: ExecutorCtx,
+  p: Record<string, any>,
+): Promise<ActionExecuteResult> {
+  const { data, error } = await admin.from('blocked_slots').insert({
+    business_id: ctx.businessId,
+    date: p.date,
+    start_time: p.start_time,
+    end_time: p.end_time,
+    staff_id: p.staff_id,
+    reason: p.reason,
+  }).select('id').single()
+
+  if (error || !data) return { ok: false, message: 'Blok oluşturulamadı: ' + (error?.message || '') }
+
+  await logAuditServer({
+    businessId: ctx.businessId,
+    staffId: ctx.staffId,
+    staffName: ctx.staffName,
+    action: 'create',
+    resource: 'appointment',
+    resourceId: data.id,
+    details: { via: 'ai_assistant', kind: 'blocked_slot', date: p.date },
+  })
+
+  return { ok: true, message: '✓ Zaman dilimi bloklandı', data: { id: data.id } }
+}
+
+async function execDeleteBlockedSlot(
+  admin: SupabaseAdmin,
+  ctx: ExecutorCtx,
+  p: Record<string, any>,
+): Promise<ActionExecuteResult> {
+  const { error } = await admin
+    .from('blocked_slots')
+    .delete()
+    .eq('id', p.blocked_slot_id)
+    .eq('business_id', ctx.businessId)
+
+  if (error) return { ok: false, message: 'Silme başarısız: ' + error.message }
+
+  await logAuditServer({
+    businessId: ctx.businessId,
+    staffId: ctx.staffId,
+    staffName: ctx.staffName,
+    action: 'delete',
+    resource: 'appointment',
+    resourceId: p.blocked_slot_id,
+    details: { via: 'ai_assistant', kind: 'blocked_slot' },
+  })
+
+  return { ok: true, message: '✓ Blok kaldırıldı' }
+}
+
+async function execAssignShift(
+  admin: SupabaseAdmin,
+  ctx: ExecutorCtx,
+  p: Record<string, any>,
+): Promise<ActionExecuteResult> {
+  const { data, error } = await admin.from('shifts').upsert({
+    business_id: ctx.businessId,
+    staff_id: p.staff_id,
+    shift_date: p.shift_date,
+    start_time: p.start_time,
+    end_time: p.end_time,
+    shift_type: p.shift_type,
+    notes: p.notes,
+  }, { onConflict: 'business_id,staff_id,shift_date' }).select('id').single()
+
+  if (error || !data) return { ok: false, message: 'Vardiya atanamadı: ' + (error?.message || '') }
+
+  await logAuditServer({
+    businessId: ctx.businessId,
+    staffId: ctx.staffId,
+    staffName: ctx.staffName,
+    action: 'create',
+    resource: 'shift',
+    resourceId: data.id,
+    details: { via: 'ai_assistant', shift_date: p.shift_date, shift_type: p.shift_type },
+  })
+
+  return { ok: true, message: '✓ Vardiya atandı', data: { id: data.id } }
+}
+
+async function execCreateShiftDefinition(
+  admin: SupabaseAdmin,
+  ctx: ExecutorCtx,
+  p: Record<string, any>,
+): Promise<ActionExecuteResult> {
+  const { data: biz } = await admin
+    .from('businesses').select('settings').eq('id', ctx.businessId).single()
+
+  const settings = (biz?.settings || {}) as Record<string, any>
+  const defs = Array.isArray(settings.shift_definitions) ? settings.shift_definitions : []
+  const next = [...defs, { name: p.name, start: p.start, end: p.end }]
+
+  const { error } = await admin
+    .from('businesses')
+    .update({ settings: { ...settings, shift_definitions: next } })
+    .eq('id', ctx.businessId)
+
+  if (error) return { ok: false, message: 'Kaydedilemedi: ' + error.message }
+
+  await logAuditServer({
+    businessId: ctx.businessId,
+    staffId: ctx.staffId,
+    staffName: ctx.staffName,
+    action: 'update',
+    resource: 'settings',
+    details: { via: 'ai_assistant', field: 'shift_definitions', added: p.name },
+  })
+
+  return { ok: true, message: `✓ Mesai tanımı eklendi: ${p.name}` }
+}
+
+async function execInviteStaff(
+  admin: SupabaseAdmin,
+  ctx: ExecutorCtx,
+  p: Record<string, any>,
+): Promise<ActionExecuteResult> {
+  const { data, error } = await admin.from('staff_invitations').insert({
+    business_id: ctx.businessId,
+    invited_by: ctx.staffId,
+    email: p.email,
+    role: p.role,
+  }).select('token').single()
+
+  if (error || !data) return { ok: false, message: 'Davet oluşturulamadı: ' + (error?.message || '') }
+
+  await logAuditServer({
+    businessId: ctx.businessId,
+    staffId: ctx.staffId,
+    staffName: ctx.staffName,
+    action: 'create',
+    resource: 'staff',
+    details: { via: 'ai_assistant', kind: 'invitation', role: p.role, email: p.email },
+  })
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://pulseapp.vercel.app'
+  const link = `${appUrl}/invite/${data.token}`
+  return { ok: true, message: `✓ Davet linki oluşturuldu: ${link}`, data: { token: data.token, link } }
+}
+
+async function execUpdateStaffPermissions(
+  admin: SupabaseAdmin,
+  ctx: ExecutorCtx,
+  p: Record<string, any>,
+): Promise<ActionExecuteResult> {
+  // Merge with current permissions so partial updates work
+  const merged = { ...(p.current || {}), ...(p.permissions || {}) }
+
+  const { error } = await admin
+    .from('staff_members')
+    .update({ permissions: merged })
+    .eq('id', p.staff_id)
+    .eq('business_id', ctx.businessId)
+
+  if (error) return { ok: false, message: 'Güncelleme başarısız: ' + error.message }
+
+  await logAuditServer({
+    businessId: ctx.businessId,
+    staffId: ctx.staffId,
+    staffName: ctx.staffName,
+    action: 'update',
+    resource: 'permissions',
+    resourceId: p.staff_id,
+    details: { via: 'ai_assistant', changes: JSON.stringify(p.permissions) },
+  })
+
+  return { ok: true, message: '✓ Yetkiler güncellendi' }
+}
+
+async function execUpdateBusinessSettings(
+  admin: SupabaseAdmin,
+  ctx: ExecutorCtx,
+  p: Record<string, any>,
+): Promise<ActionExecuteResult> {
+  const { data: biz } = await admin
+    .from('businesses').select('settings').eq('id', ctx.businessId).single()
+
+  const merged = { ...(biz?.settings || {}), ...(p.settings || {}) }
+
+  const { error } = await admin
+    .from('businesses')
+    .update({ settings: merged })
+    .eq('id', ctx.businessId)
+
+  if (error) return { ok: false, message: 'Güncelleme başarısız: ' + error.message }
+
+  await logAuditServer({
+    businessId: ctx.businessId,
+    staffId: ctx.staffId,
+    staffName: ctx.staffName,
+    action: 'update',
+    resource: 'settings',
+    details: { via: 'ai_assistant', updated_keys: Object.keys(p.settings || {}).join(',') },
+  })
+
+  return { ok: true, message: '✓ İşletme ayarları güncellendi' }
 }

@@ -453,6 +453,10 @@ function summarizeToolResult(toolName: string, data: any): string {
       return `Tahmini hedef kitle: ${data.count || 0} kişi`
     case 'list_workflows':
       return `${data.toplam || 0} iş akışı listelendi`
+    case 'list_blocked_slots':
+      return `${data.toplam || 0} bloklu zaman dilimi`
+    case 'list_shifts':
+      return `${data.toplam || 0} vardiya listelendi`
     default:
       return 'İşlem tamamlandı'
   }

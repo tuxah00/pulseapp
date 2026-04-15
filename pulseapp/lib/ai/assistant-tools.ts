@@ -703,6 +703,180 @@ export const ASSISTANT_TOOLS: ChatCompletionTool[] = [
       },
     },
   },
+  // ── Faz 7: Sistem Yönetimi ─────────────────────────────────────────
+  {
+    type: 'function',
+    function: {
+      name: 'update_working_hours',
+      description: 'İşletmenin çalışma saatlerini günlük bazda günceller. Onay ister.',
+      parameters: {
+        type: 'object',
+        properties: {
+          days: {
+            type: 'array',
+            description: 'Güncellenecek günler. Sadece belirtilenler değişir; kapatmak için closed=true.',
+            items: {
+              type: 'object',
+              properties: {
+                day: { type: 'string', enum: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] },
+                closed: { type: 'boolean', description: 'true ise bu gün kapalı olur' },
+                open: { type: 'string', description: 'HH:MM (ör. 09:00)' },
+                close: { type: 'string', description: 'HH:MM (ör. 18:00)' },
+              },
+              required: ['day'],
+            },
+          },
+        },
+        required: ['days'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'list_blocked_slots',
+      description: 'Belirli bir aralıkta randevu alınamayacak bloklanmış zaman dilimlerini listeler.',
+      parameters: {
+        type: 'object',
+        properties: {
+          from: { type: 'string', description: 'YYYY-MM-DD (varsayılan: bugün)' },
+          to: { type: 'string', description: 'YYYY-MM-DD (varsayılan: 30 gün sonra)' },
+        },
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'create_blocked_slot',
+      description: 'Belirli tarih ve saat aralığını randevuya kapatır (izin, toplantı vb.). Onay ister.',
+      parameters: {
+        type: 'object',
+        properties: {
+          date: { type: 'string', description: 'YYYY-MM-DD' },
+          start_time: { type: 'string', description: 'HH:MM' },
+          end_time: { type: 'string', description: 'HH:MM' },
+          staff_id: { type: 'string', description: 'Sadece belirli personeli blokla (opsiyonel)' },
+          reason: { type: 'string' },
+        },
+        required: ['date', 'start_time', 'end_time'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'delete_blocked_slot',
+      description: 'Bir bloklanmış zaman dilimini kaldırır. Onay ister.',
+      parameters: {
+        type: 'object',
+        properties: {
+          blocked_slot_id: { type: 'string' },
+        },
+        required: ['blocked_slot_id'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'list_shifts',
+      description: 'Belirli bir hafta için personel vardiyalarını listeler.',
+      parameters: {
+        type: 'object',
+        properties: {
+          week_start: { type: 'string', description: 'YYYY-MM-DD (Pazartesi)' },
+          week_end: { type: 'string', description: 'YYYY-MM-DD (Pazar)' },
+        },
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'assign_shift',
+      description: 'Bir personele belirli gün için vardiya atar. Onay ister.',
+      parameters: {
+        type: 'object',
+        properties: {
+          staff_id: { type: 'string' },
+          shift_date: { type: 'string', description: 'YYYY-MM-DD' },
+          shift_type: { type: 'string', enum: ['regular', 'off'], description: 'off = izinli' },
+          start_time: { type: 'string', description: 'HH:MM (regular için zorunlu)' },
+          end_time: { type: 'string', description: 'HH:MM (regular için zorunlu)' },
+          notes: { type: 'string' },
+        },
+        required: ['staff_id', 'shift_date', 'shift_type'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'create_shift_definition',
+      description: 'İşletme ayarlarına mesai tanımı ekler (ör. "Sabahçı 08:00-14:00"). Onay ister.',
+      parameters: {
+        type: 'object',
+        properties: {
+          name: { type: 'string', description: 'Mesai adı (Sabahçı/Öğlenci vb.)' },
+          start: { type: 'string', description: 'HH:MM' },
+          end: { type: 'string', description: 'HH:MM' },
+        },
+        required: ['name', 'start', 'end'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'invite_staff',
+      description: 'Yeni personel için davet linki oluşturur. Onay ister. Sadece owner.',
+      parameters: {
+        type: 'object',
+        properties: {
+          email: { type: 'string', description: 'Personelin e-postası (opsiyonel)' },
+          role: { type: 'string', enum: ['staff', 'manager'], description: 'Varsayılan: staff' },
+        },
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'update_staff_permissions',
+      description: 'Bir personelin yetkilerini günceller. Onay ister. Sadece owner.',
+      parameters: {
+        type: 'object',
+        properties: {
+          staff_id: { type: 'string' },
+          permissions: {
+            type: 'object',
+            description: 'StaffPermissions objesi (değiştirilecek anahtarlar)',
+            additionalProperties: { type: 'boolean' },
+          },
+        },
+        required: ['staff_id', 'permissions'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'update_business_settings',
+      description: 'İşletme ayarlarını günceller (hatırlatmalar, WhatsApp, sadakat vb.). Onay ister.',
+      parameters: {
+        type: 'object',
+        properties: {
+          settings: {
+            type: 'object',
+            description: 'BusinessSettings partial. Örnek anahtarlar: reminder_24h, reminder_2h, auto_review_request, whatsapp_enabled, default_channel, birthday_sms_enabled, loyalty_enabled, points_per_currency, periodic_reminder_enabled.',
+            additionalProperties: true,
+          },
+        },
+        required: ['settings'],
+      },
+    },
+  },
 ]
 
 // ── Tool Label Map (UI göstergesi için) ──
@@ -753,6 +927,16 @@ export const TOOL_LABELS: Record<string, string> = {
   list_workflows: 'İş akışları listeleniyor...',
   create_workflow: 'İş akışı önizlemesi hazırlanıyor...',
   toggle_workflow: 'İş akışı durumu değiştiriliyor...',
+  update_working_hours: 'Çalışma saatleri önizlemesi hazırlanıyor...',
+  list_blocked_slots: 'Bloklanmış saatler listeleniyor...',
+  create_blocked_slot: 'Blok önizlemesi hazırlanıyor...',
+  delete_blocked_slot: 'Blok kaldırma önizlemesi hazırlanıyor...',
+  list_shifts: 'Vardiyalar listeleniyor...',
+  assign_shift: 'Vardiya önizlemesi hazırlanıyor...',
+  create_shift_definition: 'Mesai tanımı önizlemesi hazırlanıyor...',
+  invite_staff: 'Davet linki önizlemesi hazırlanıyor...',
+  update_staff_permissions: 'Yetki güncellemesi hazırlanıyor...',
+  update_business_settings: 'Ayar güncellemesi hazırlanıyor...',
 }
 
 // ── Permission Map ──
@@ -803,6 +987,16 @@ const TOOL_PERMISSIONS: Record<string, keyof StaffPermissions> = {
   list_workflows: 'workflows',
   create_workflow: 'workflows',
   toggle_workflow: 'workflows',
+  update_working_hours: 'settings',
+  list_blocked_slots: 'appointments',
+  create_blocked_slot: 'appointments',
+  delete_blocked_slot: 'appointments',
+  list_shifts: 'shifts',
+  assign_shift: 'shifts',
+  create_shift_definition: 'shifts',
+  invite_staff: 'staff',
+  update_staff_permissions: 'staff',
+  update_business_settings: 'settings',
 }
 
 // ── Tool Executor ──
@@ -914,6 +1108,26 @@ export async function executeAssistantTool(
         return await handleCreateWorkflow(admin, ctx, args)
       case 'toggle_workflow':
         return await handleToggleWorkflow(admin, ctx, args)
+      case 'update_working_hours':
+        return await handleUpdateWorkingHours(admin, ctx, args)
+      case 'list_blocked_slots':
+        return await handleListBlockedSlots(admin, ctx, args)
+      case 'create_blocked_slot':
+        return await handleCreateBlockedSlot(admin, ctx, args)
+      case 'delete_blocked_slot':
+        return await handleDeleteBlockedSlot(admin, ctx, args)
+      case 'list_shifts':
+        return await handleListShifts(admin, ctx, args)
+      case 'assign_shift':
+        return await handleAssignShift(admin, ctx, args)
+      case 'create_shift_definition':
+        return await handleCreateShiftDefinition(admin, ctx, args)
+      case 'invite_staff':
+        return await handleInviteStaff(admin, ctx, args)
+      case 'update_staff_permissions':
+        return await handleUpdateStaffPermissions(admin, ctx, args)
+      case 'update_business_settings':
+        return await handleUpdateBusinessSettings(admin, ctx, args)
       default:
         return { success: false, error: `Bilinmeyen araç: ${toolName}` }
     }
@@ -2732,5 +2946,297 @@ async function handleToggleWorkflow(
     { workflow_id: wf.id, is_active: !!args.is_active },
     preview,
     { name: wf.name, is_active: !!args.is_active },
+  )
+}
+
+// ── Faz 7: Sistem Yönetimi Handlers ──────────────────────────────────
+
+const VALID_DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const
+const HHMM_RE = /^([01]\d|2[0-3]):[0-5]\d$/
+
+function validateHHMM(s: any): s is string {
+  return typeof s === 'string' && HHMM_RE.test(s)
+}
+
+async function handleUpdateWorkingHours(
+  admin: SupabaseAdmin, ctx: ToolCtx, args: Record<string, any>,
+) {
+  if (!Array.isArray(args.days) || args.days.length === 0) {
+    return { success: false, error: 'En az bir gün belirtin' }
+  }
+
+  const { data: biz } = await admin
+    .from('businesses').select('working_hours').eq('id', ctx.businessId).single()
+
+  const current = (biz?.working_hours || {}) as Record<string, any>
+  const next = { ...current }
+  const summary: string[] = []
+
+  for (const d of args.days) {
+    if (!VALID_DAY_KEYS.includes(d.day)) {
+      return { success: false, error: `Geçersiz gün: ${d.day}` }
+    }
+    if (d.closed) {
+      next[d.day] = null
+      summary.push(`${DAY_NAMES[d.day]}: Kapalı`)
+    } else {
+      if (!validateHHMM(d.open) || !validateHHMM(d.close)) {
+        return { success: false, error: `${DAY_NAMES[d.day]} için HH:MM formatında saat gerekli` }
+      }
+      next[d.day] = { open: d.open, close: d.close }
+      summary.push(`${DAY_NAMES[d.day]}: ${d.open} - ${d.close}`)
+    }
+  }
+
+  const preview = `🕑 Çalışma saatleri güncellenecek:\n${summary.join('\n')}`
+  return await createPendingAction(
+    admin, ctx, 'update_working_hours',
+    { working_hours: next },
+    preview,
+    { changes: summary },
+  )
+}
+
+async function handleListBlockedSlots(
+  admin: SupabaseAdmin, ctx: ToolCtx, args: Record<string, any>,
+) {
+  const today = new Date().toISOString().split('T')[0]
+  const from = args.from || today
+  const to = args.to || new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0]
+
+  const { data, error } = await admin
+    .from('blocked_slots')
+    .select('id, date, start_time, end_time, reason, staff_id, room_id')
+    .eq('business_id', ctx.businessId)
+    .gte('date', from)
+    .lte('date', to)
+    .order('date', { ascending: true })
+
+  if (error) return { success: false, error: 'Listelenemedi' }
+  return {
+    success: true,
+    data: {
+      toplam: (data || []).length,
+      bloklar: (data || []).map((b: any) => ({
+        id: b.id,
+        tarih: b.date,
+        saat: `${b.start_time?.slice(0, 5)} - ${b.end_time?.slice(0, 5)}`,
+        sebep: b.reason || '-',
+        personel_id: b.staff_id,
+      })),
+    },
+  }
+}
+
+async function handleCreateBlockedSlot(
+  admin: SupabaseAdmin, ctx: ToolCtx, args: Record<string, any>,
+) {
+  if (!args.date || !validateHHMM(args.start_time) || !validateHHMM(args.end_time)) {
+    return { success: false, error: 'Tarih ve HH:MM formatında başlangıç/bitiş saati zorunludur' }
+  }
+  if (args.start_time >= args.end_time) {
+    return { success: false, error: 'Bitiş saati başlangıçtan sonra olmalı' }
+  }
+
+  let staffLabel = 'Tüm personel'
+  if (args.staff_id) {
+    const { data: staff } = await admin
+      .from('staff_members').select('name').eq('id', args.staff_id).eq('business_id', ctx.businessId).single()
+    if (!staff) return { success: false, error: 'Personel bulunamadı' }
+    staffLabel = staff.name
+  }
+
+  const preview = `🚫 ${args.date} ${args.start_time}-${args.end_time} blokları\nKapsam: ${staffLabel}${args.reason ? `\nSebep: ${args.reason}` : ''}`
+  return await createPendingAction(
+    admin, ctx, 'create_blocked_slot',
+    {
+      date: args.date,
+      start_time: args.start_time,
+      end_time: args.end_time,
+      staff_id: args.staff_id || null,
+      reason: args.reason || null,
+    },
+    preview,
+    { date: args.date },
+  )
+}
+
+async function handleDeleteBlockedSlot(
+  admin: SupabaseAdmin, ctx: ToolCtx, args: Record<string, any>,
+) {
+  const { data: slot } = await admin
+    .from('blocked_slots')
+    .select('id, date, start_time, end_time, reason')
+    .eq('id', args.blocked_slot_id)
+    .eq('business_id', ctx.businessId)
+    .single()
+
+  if (!slot) return { success: false, error: 'Blok bulunamadı' }
+
+  const preview = `♻️ Blok kaldırılacak: ${slot.date} ${slot.start_time?.slice(0, 5)}-${slot.end_time?.slice(0, 5)}${slot.reason ? ` (${slot.reason})` : ''}`
+  return await createPendingAction(
+    admin, ctx, 'delete_blocked_slot',
+    { blocked_slot_id: slot.id },
+    preview,
+  )
+}
+
+async function handleListShifts(
+  admin: SupabaseAdmin, ctx: ToolCtx, args: Record<string, any>,
+) {
+  const weekStart = args.week_start || new Date().toISOString().split('T')[0]
+  const weekEnd = args.week_end || new Date(Date.now() + 6 * 86400000).toISOString().split('T')[0]
+
+  const { data, error } = await admin
+    .from('shifts')
+    .select('id, staff_id, shift_date, start_time, end_time, shift_type, notes, staff_members(name)')
+    .eq('business_id', ctx.businessId)
+    .gte('shift_date', weekStart)
+    .lte('shift_date', weekEnd)
+    .order('shift_date', { ascending: true })
+
+  if (error) return { success: false, error: 'Listelenemedi' }
+  return {
+    success: true,
+    data: {
+      toplam: (data || []).length,
+      vardiyalar: (data || []).map((s: any) => ({
+        id: s.id,
+        personel: s.staff_members?.name,
+        tarih: s.shift_date,
+        saat: s.shift_type === 'off' ? 'İzinli' : `${s.start_time?.slice(0, 5)} - ${s.end_time?.slice(0, 5)}`,
+        tip: s.shift_type,
+        not: s.notes,
+      })),
+    },
+  }
+}
+
+async function handleAssignShift(
+  admin: SupabaseAdmin, ctx: ToolCtx, args: Record<string, any>,
+) {
+  if (!args.staff_id || !args.shift_date) {
+    return { success: false, error: 'Personel ve tarih zorunludur' }
+  }
+  if (!['regular', 'off'].includes(args.shift_type)) {
+    return { success: false, error: 'Geçersiz vardiya türü' }
+  }
+  if (args.shift_type === 'regular') {
+    if (!validateHHMM(args.start_time) || !validateHHMM(args.end_time)) {
+      return { success: false, error: 'Düzenli vardiya için HH:MM formatında başlangıç/bitiş zorunludur' }
+    }
+    if (args.start_time >= args.end_time) {
+      return { success: false, error: 'Bitiş saati başlangıçtan sonra olmalı' }
+    }
+  }
+
+  const { data: staff } = await admin
+    .from('staff_members').select('name').eq('id', args.staff_id).eq('business_id', ctx.businessId).single()
+  if (!staff) return { success: false, error: 'Personel bulunamadı' }
+
+  const timeStr = args.shift_type === 'off' ? 'İzinli' : `${args.start_time}-${args.end_time}`
+  const preview = `📅 ${staff.name} — ${args.shift_date} — ${timeStr}${args.notes ? `\nNot: ${args.notes}` : ''}`
+  return await createPendingAction(
+    admin, ctx, 'assign_shift',
+    {
+      staff_id: args.staff_id,
+      shift_date: args.shift_date,
+      shift_type: args.shift_type,
+      start_time: args.shift_type === 'regular' ? args.start_time : null,
+      end_time: args.shift_type === 'regular' ? args.end_time : null,
+      notes: args.notes || null,
+    },
+    preview,
+    { staff_name: staff.name },
+  )
+}
+
+async function handleCreateShiftDefinition(
+  admin: SupabaseAdmin, ctx: ToolCtx, args: Record<string, any>,
+) {
+  if (!args.name || !validateHHMM(args.start) || !validateHHMM(args.end)) {
+    return { success: false, error: 'Ad ve HH:MM formatında başlangıç/bitiş zorunludur' }
+  }
+  if (args.start >= args.end) {
+    return { success: false, error: 'Bitiş saati başlangıçtan sonra olmalı' }
+  }
+
+  const preview = `⚙️ Mesai tanımı eklenecek: "${args.name}" — ${args.start}-${args.end}`
+  return await createPendingAction(
+    admin, ctx, 'create_shift_definition',
+    { name: args.name, start: args.start, end: args.end },
+    preview,
+  )
+}
+
+async function handleInviteStaff(
+  admin: SupabaseAdmin, ctx: ToolCtx, args: Record<string, any>,
+) {
+  if (ctx.role !== 'owner') {
+    return { success: false, error: 'Sadece işletme sahibi davet oluşturabilir' }
+  }
+  const role = args.role || 'staff'
+  if (!['staff', 'manager'].includes(role)) {
+    return { success: false, error: 'Geçersiz rol (staff veya manager olmalı)' }
+  }
+
+  const preview = `👥 Davet linki oluşturulacak\nRol: ${role}${args.email ? `\nE-posta: ${args.email}` : ''}`
+  return await createPendingAction(
+    admin, ctx, 'invite_staff',
+    { email: args.email || null, role },
+    preview,
+    { role },
+  )
+}
+
+async function handleUpdateStaffPermissions(
+  admin: SupabaseAdmin, ctx: ToolCtx, args: Record<string, any>,
+) {
+  if (ctx.role !== 'owner') {
+    return { success: false, error: 'Sadece işletme sahibi yetki değiştirebilir' }
+  }
+  if (!args.staff_id || !args.permissions || typeof args.permissions !== 'object') {
+    return { success: false, error: 'Personel ID ve permissions objesi zorunludur' }
+  }
+
+  const { data: target } = await admin
+    .from('staff_members')
+    .select('id, name, role, permissions')
+    .eq('id', args.staff_id)
+    .eq('business_id', ctx.businessId)
+    .single()
+
+  if (!target) return { success: false, error: 'Personel bulunamadı' }
+  if (target.role === 'owner') return { success: false, error: 'Sahibin yetkileri değiştirilemez' }
+
+  const changes = Object.entries(args.permissions)
+    .map(([k, v]) => `${k}: ${v ? 'açık' : 'kapalı'}`)
+    .join(', ')
+  const preview = `🔒 ${target.name} yetkileri güncellenecek\n${changes}`
+
+  return await createPendingAction(
+    admin, ctx, 'update_staff_permissions',
+    { staff_id: target.id, permissions: args.permissions, current: target.permissions || {} },
+    preview,
+    { staff_name: target.name },
+  )
+}
+
+async function handleUpdateBusinessSettings(
+  admin: SupabaseAdmin, ctx: ToolCtx, args: Record<string, any>,
+) {
+  if (!args.settings || typeof args.settings !== 'object' || Object.keys(args.settings).length === 0) {
+    return { success: false, error: 'Güncellenecek en az bir ayar belirtin' }
+  }
+
+  const changes = Object.entries(args.settings)
+    .map(([k, v]) => `${k}: ${JSON.stringify(v)}`)
+    .join('\n')
+  const preview = `⚙️ İşletme ayarları güncellenecek:\n${changes}`
+
+  return await createPendingAction(
+    admin, ctx, 'update_business_settings',
+    { settings: args.settings },
+    preview,
   )
 }
