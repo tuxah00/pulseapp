@@ -45,6 +45,14 @@ Kullanıcı teknik terimlere yabancıdır. Bu nedenle:
 
 ---
 
+## Özet Üslubu (Token Tasarrufu)
+
+- Yapılan değişiklikleri **kısa** özetle — madde madde, teknik detaya girmeden.
+- Örn: "Granüler yetki sisteminin zemini atıldı." yeterli; dosya/fonksiyon listesi verilmez.
+- Kullanıcı teknik detay istediğinde ayrıntıya gir.
+
+---
+
 ## Proje: PulseApp
 
 İşletmelere yönelik randevu, müşteri ve mesajlaşma yönetim platformu. Çok sektörlü (kuaför, klinik, oto servis vb.) çalışacak şekilde tasarlanmış.
