@@ -2,6 +2,9 @@ import type { createAdminClient } from '@/lib/supabase/admin'
 import type { AuthContext } from '@/lib/api/with-permission'
 import { logAuditServer } from '@/lib/utils/audit'
 import { sendCampaign } from '@/lib/campaigns/send'
+import { generateInvoiceNumber } from '@/lib/invoices/numbering'
+import { deductStockFromItems } from '@/lib/invoices/stock'
+import type { InvoiceItem } from '@/types'
 
 type SupabaseAdmin = ReturnType<typeof createAdminClient>
 
@@ -28,6 +31,12 @@ export type PendingActionType =
   | 'invite_staff'
   | 'update_staff_permissions'
   | 'update_business_settings'
+  | 'create_invoice'
+  | 'record_invoice_payment'
+  | 'generate_invoice_from_appointment'
+  | 'create_pos_transaction'
+  | 'record_expense'
+  | 'record_manual_income'
 
 export interface ConfirmationRequired {
   success: true
@@ -185,6 +194,24 @@ export async function executePendingAction(
         break
       case 'update_business_settings':
         result = await execUpdateBusinessSettings(admin, ctx, payload)
+        break
+      case 'create_invoice':
+        result = await execCreateInvoice(admin, ctx, payload)
+        break
+      case 'record_invoice_payment':
+        result = await execRecordInvoicePayment(admin, ctx, payload)
+        break
+      case 'generate_invoice_from_appointment':
+        result = await execGenerateInvoiceFromAppointment(admin, ctx, payload)
+        break
+      case 'create_pos_transaction':
+        result = await execCreatePosTransaction(admin, ctx, payload)
+        break
+      case 'record_expense':
+        result = await execRecordExpense(admin, ctx, payload)
+        break
+      case 'record_manual_income':
+        result = await execRecordManualIncome(admin, ctx, payload)
         break
       default:
         result = { ok: false, message: 'Bilinmeyen eylem türü' }
@@ -908,4 +935,285 @@ async function execUpdateBusinessSettings(
   })
 
   return { ok: true, message: '✓ İşletme ayarları güncellendi' }
+}
+
+// ─── Faz 8: Finans Executors ──────────────────────────────────────────
+
+async function execCreateInvoice(
+  admin: SupabaseAdmin,
+  ctx: ExecutorCtx,
+  p: Record<string, any>,
+): Promise<ActionExecuteResult> {
+  const invoiceNumber = await generateInvoiceNumber(admin, ctx.businessId)
+  const { data, error } = await admin
+    .from('invoices')
+    .insert({
+      business_id: ctx.businessId,
+      customer_id: p.customer_id,
+      invoice_number: invoiceNumber,
+      items: p.items,
+      subtotal: p.subtotal,
+      tax_rate: p.tax_rate || 0,
+      tax_amount: p.tax_amount || 0,
+      total: p.total,
+      paid_amount: 0,
+      status: 'pending',
+      discount_amount: p.discount_amount || 0,
+      discount_type: p.discount_type,
+      due_date: p.due_date,
+      notes: p.notes,
+      staff_id: ctx.staffId,
+      staff_name: ctx.staffName,
+      payment_type: 'standard',
+    })
+    .select('id, invoice_number, total')
+    .single()
+
+  if (error || !data) return { ok: false, message: 'Fatura oluşturulamadı: ' + (error?.message || '') }
+
+  await logAuditServer({
+    businessId: ctx.businessId,
+    staffId: ctx.staffId,
+    staffName: ctx.staffName,
+    action: 'create',
+    resource: 'invoice',
+    resourceId: data.id,
+    details: { via: 'ai_assistant', invoice_number: data.invoice_number, total: data.total },
+  })
+
+  return { ok: true, message: `✓ Fatura ${data.invoice_number} oluşturuldu (${data.total}₺)`, data: { id: data.id } }
+}
+
+async function execRecordInvoicePayment(
+  admin: SupabaseAdmin,
+  ctx: ExecutorCtx,
+  p: Record<string, any>,
+): Promise<ActionExecuteResult> {
+  const { data: invoice } = await admin
+    .from('invoices')
+    .select('id, business_id, invoice_number, total, paid_amount, status, items')
+    .eq('id', p.invoice_id)
+    .eq('business_id', ctx.businessId)
+    .is('deleted_at', null)
+    .single()
+
+  if (!invoice) return { ok: false, message: 'Fatura bulunamadı' }
+
+  const isRefund = p.payment_type === 'refund'
+  const signedAmount = isRefund ? -Math.abs(p.amount) : Math.abs(p.amount)
+
+  const { error: payErr } = await admin.from('invoice_payments').insert({
+    business_id: invoice.business_id,
+    invoice_id: invoice.id,
+    amount: Math.abs(p.amount),
+    method: p.method,
+    payment_type: p.payment_type || 'payment',
+    installment_number: p.installment_number || null,
+    notes: p.notes || null,
+    staff_id: ctx.staffId,
+    staff_name: ctx.staffName,
+  })
+  if (payErr) return { ok: false, message: 'Ödeme kaydedilemedi: ' + payErr.message }
+
+  const newPaid = Math.max(0, (Number(invoice.paid_amount) || 0) + signedAmount)
+  const total = Number(invoice.total) || 0
+  const newStatus = newPaid >= total ? 'paid' : newPaid > 0 ? 'partial' : 'pending'
+  const updateObj: Record<string, unknown> = {
+    paid_amount: newPaid,
+    status: newStatus,
+    updated_at: new Date().toISOString(),
+  }
+  if (newStatus === 'paid') {
+    updateObj.paid_at = new Date().toISOString()
+    updateObj.payment_method = p.method
+  }
+
+  const { error: upErr } = await admin
+    .from('invoices')
+    .update(updateObj)
+    .eq('id', invoice.id)
+  if (upErr) return { ok: false, message: 'Fatura güncellenemedi: ' + upErr.message }
+
+  // Tam ödeme tamamlandıysa stok düş (standart akışla tutarlı)
+  if (newStatus === 'paid' && invoice.status !== 'paid' && Array.isArray(invoice.items)) {
+    await deductStockFromItems(admin, invoice.items as InvoiceItem[], {
+      businessId: invoice.business_id,
+      invoiceNumber: invoice.invoice_number,
+    })
+  }
+
+  await logAuditServer({
+    businessId: ctx.businessId,
+    staffId: ctx.staffId,
+    staffName: ctx.staffName,
+    action: 'pay',
+    resource: 'invoice',
+    resourceId: invoice.id,
+    details: {
+      via: 'ai_assistant',
+      invoice_number: invoice.invoice_number,
+      amount: p.amount,
+      method: p.method,
+      new_status: newStatus,
+    },
+  })
+
+  return { ok: true, message: `✓ Ödeme kaydedildi (${invoice.invoice_number}) — durum: ${newStatus}` }
+}
+
+async function execGenerateInvoiceFromAppointment(
+  admin: SupabaseAdmin,
+  ctx: ExecutorCtx,
+  p: Record<string, any>,
+): Promise<ActionExecuteResult> {
+  const invoiceNumber = await generateInvoiceNumber(admin, ctx.businessId)
+  const { data, error } = await admin
+    .from('invoices')
+    .insert({
+      business_id: ctx.businessId,
+      customer_id: p.customer_id,
+      appointment_id: p.appointment_id,
+      invoice_number: invoiceNumber,
+      items: p.items,
+      subtotal: p.subtotal,
+      tax_rate: p.tax_rate || 0,
+      tax_amount: p.tax_amount || 0,
+      total: p.total,
+      paid_amount: 0,
+      status: 'pending',
+      staff_id: ctx.staffId,
+      staff_name: ctx.staffName,
+      payment_type: 'standard',
+    })
+    .select('id, invoice_number, total')
+    .single()
+
+  if (error || !data) return { ok: false, message: 'Fatura oluşturulamadı: ' + (error?.message || '') }
+
+  await logAuditServer({
+    businessId: ctx.businessId,
+    staffId: ctx.staffId,
+    staffName: ctx.staffName,
+    action: 'create',
+    resource: 'invoice',
+    resourceId: data.id,
+    details: {
+      via: 'ai_assistant',
+      source: 'appointment',
+      appointment_id: p.appointment_id,
+      invoice_number: data.invoice_number,
+      total: data.total,
+    },
+  })
+
+  return { ok: true, message: `✓ Randevudan fatura oluşturuldu (${data.invoice_number})`, data: { id: data.id } }
+}
+
+async function execCreatePosTransaction(
+  admin: SupabaseAdmin,
+  ctx: ExecutorCtx,
+  p: Record<string, any>,
+): Promise<ActionExecuteResult> {
+  const year = new Date().getFullYear()
+  const { count } = await admin
+    .from('pos_transactions')
+    .select('*', { count: 'exact', head: true })
+    .eq('business_id', ctx.businessId)
+  const receipt_number = `RCP-${year}-${String((count || 0) + 1).padStart(4, '0')}`
+
+  const payments = [{ method: p.payment_method, amount: p.total }]
+
+  const { data, error } = await admin
+    .from('pos_transactions')
+    .insert({
+      business_id: ctx.businessId,
+      customer_id: p.customer_id || null,
+      staff_id: ctx.staffId,
+      transaction_type: 'sale',
+      items: p.items,
+      subtotal: p.subtotal,
+      discount_amount: p.discount_amount || 0,
+      tax_amount: 0,
+      total: p.total,
+      payments,
+      payment_status: 'paid',
+      receipt_number,
+      notes: p.notes || null,
+    })
+    .select('id, receipt_number, total')
+    .single()
+
+  if (error || !data) return { ok: false, message: 'POS satışı oluşturulamadı: ' + (error?.message || '') }
+
+  await logAuditServer({
+    businessId: ctx.businessId,
+    staffId: ctx.staffId,
+    staffName: ctx.staffName,
+    action: 'create',
+    resource: 'pos_transaction',
+    resourceId: data.id,
+    details: {
+      via: 'ai_assistant',
+      receipt_number: data.receipt_number,
+      total: data.total,
+      method: p.payment_method,
+    },
+  })
+
+  return { ok: true, message: `✓ POS satışı kaydedildi (${data.receipt_number})`, data: { id: data.id } }
+}
+
+async function execLedgerEntry(
+  admin: SupabaseAdmin,
+  ctx: ExecutorCtx,
+  p: Record<string, any>,
+  kind: 'expense' | 'income',
+): Promise<ActionExecuteResult> {
+  const table = kind === 'expense' ? 'expenses' : 'income'
+  const dateCol = kind === 'expense' ? 'expense_date' : 'income_date'
+  const row: Record<string, unknown> = {
+    business_id: ctx.businessId,
+    category: p.category,
+    description: p.description || null,
+    amount: p.amount,
+    [dateCol]: p.date,
+    is_recurring: !!p.is_recurring,
+    recurring_period: p.recurring_period || null,
+    custom_interval_days: p.custom_interval_days || null,
+  }
+
+  const { data, error } = await admin.from(table).insert(row).select('id').single()
+  if (error || !data) {
+    const label = kind === 'expense' ? 'Gider' : 'Gelir'
+    return { ok: false, message: `${label} kaydedilemedi: ` + (error?.message || '') }
+  }
+
+  await logAuditServer({
+    businessId: ctx.businessId,
+    staffId: ctx.staffId,
+    staffName: ctx.staffName,
+    action: 'create',
+    resource: kind,
+    resourceId: data.id,
+    details: { via: 'ai_assistant', category: p.category, amount: p.amount },
+  })
+
+  const label = kind === 'expense' ? 'Gider' : 'Gelir'
+  return { ok: true, message: `✓ ${label} kaydedildi (${p.category} — ${p.amount}₺)` }
+}
+
+async function execRecordExpense(
+  admin: SupabaseAdmin,
+  ctx: ExecutorCtx,
+  p: Record<string, any>,
+): Promise<ActionExecuteResult> {
+  return execLedgerEntry(admin, ctx, p, 'expense')
+}
+
+async function execRecordManualIncome(
+  admin: SupabaseAdmin,
+  ctx: ExecutorCtx,
+  p: Record<string, any>,
+): Promise<ActionExecuteResult> {
+  return execLedgerEntry(admin, ctx, p, 'income')
 }

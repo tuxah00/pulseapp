@@ -457,6 +457,8 @@ function summarizeToolResult(toolName: string, data: any): string {
       return `${data.toplam || 0} bloklu zaman dilimi`
     case 'list_shifts':
       return `${data.toplam || 0} vardiya listelendi`
+    case 'list_unpaid_invoices':
+      return `${data.toplam || 0} ödenmemiş fatura (toplam ${data.toplam_bakiye || 0}₺)`
     default:
       return 'İşlem tamamlandı'
   }

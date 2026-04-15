@@ -877,6 +877,158 @@ export const ASSISTANT_TOOLS: ChatCompletionTool[] = [
       },
     },
   },
+  // ── Faz 8: Finans (Fatura, Ödeme, POS, Gider, Gelir) ────────────────
+  {
+    type: 'function',
+    function: {
+      name: 'list_unpaid_invoices',
+      description: 'Ödenmemiş (pending/partial/overdue) faturaları listeler.',
+      parameters: {
+        type: 'object',
+        properties: {
+          customer_id: { type: 'string', description: 'Sadece belirli müşterinin faturaları (opsiyonel)' },
+          limit: { type: 'number', description: 'Maks. kayıt sayısı (varsayılan 20)' },
+        },
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'create_invoice',
+      description: 'Yeni bir fatura oluşturur (draft durumunda). Onay ister.',
+      parameters: {
+        type: 'object',
+        properties: {
+          customer_id: { type: 'string' },
+          items: {
+            type: 'array',
+            description: 'Fatura kalemleri',
+            items: {
+              type: 'object',
+              properties: {
+                service_name: { type: 'string' },
+                quantity: { type: 'number' },
+                unit_price: { type: 'number' },
+                type: { type: 'string', enum: ['service', 'product'] },
+                product_id: { type: 'string' },
+              },
+              required: ['service_name', 'quantity', 'unit_price'],
+            },
+          },
+          tax_rate: { type: 'number', description: 'KDV oranı (%). Varsayılan 0.' },
+          discount_amount: { type: 'number', description: 'İndirim tutarı' },
+          discount_type: { type: 'string', enum: ['percentage', 'fixed'] },
+          due_date: { type: 'string', description: 'YYYY-MM-DD' },
+          notes: { type: 'string' },
+        },
+        required: ['customer_id', 'items'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'record_invoice_payment',
+      description: 'Bir faturaya ödeme kaydeder (tam, kısmi, taksit veya kapora). Onay ister.',
+      parameters: {
+        type: 'object',
+        properties: {
+          invoice_id: { type: 'string' },
+          amount: { type: 'number' },
+          method: { type: 'string', enum: ['cash', 'card', 'transfer', 'online'] },
+          payment_type: { type: 'string', enum: ['payment', 'deposit', 'installment', 'refund'] },
+          installment_number: { type: 'number' },
+          notes: { type: 'string' },
+        },
+        required: ['invoice_id', 'amount', 'method'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'generate_invoice_from_appointment',
+      description: 'Tamamlanmış bir randevudan otomatik fatura oluşturur (hizmet adı + fiyatı). Onay ister.',
+      parameters: {
+        type: 'object',
+        properties: {
+          appointment_id: { type: 'string' },
+          tax_rate: { type: 'number' },
+        },
+        required: ['appointment_id'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'create_pos_transaction',
+      description: 'Kasada (POS) satış işlemi oluşturur. Onay ister.',
+      parameters: {
+        type: 'object',
+        properties: {
+          customer_id: { type: 'string' },
+          items: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                name: { type: 'string' },
+                qty: { type: 'number' },
+                price: { type: 'number' },
+              },
+              required: ['name', 'qty', 'price'],
+            },
+          },
+          payment_method: { type: 'string', enum: ['cash', 'card', 'transfer', 'online'] },
+          discount_amount: { type: 'number' },
+          notes: { type: 'string' },
+        },
+        required: ['items', 'payment_method'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'record_expense',
+      description: 'Yeni bir gider kaydı oluşturur. Onay ister.',
+      parameters: {
+        type: 'object',
+        properties: {
+          category: { type: 'string', description: 'Ör: Kira, Elektrik, Personel, Malzeme, Diğer' },
+          amount: { type: 'number' },
+          expense_date: { type: 'string', description: 'YYYY-MM-DD (varsayılan bugün)' },
+          description: { type: 'string' },
+          is_recurring: { type: 'boolean' },
+          recurring_period: { type: 'string', enum: ['weekly', 'biweekly', 'monthly', 'quarterly', 'yearly', 'custom'] },
+          custom_interval_days: { type: 'number' },
+        },
+        required: ['category', 'amount'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'record_manual_income',
+      description: 'Randevu/fatura dışı manuel gelir kaydı (komisyon, ürün satışı, kira vb.). Onay ister.',
+      parameters: {
+        type: 'object',
+        properties: {
+          category: { type: 'string', description: 'Ör: Hizmet Geliri, Ürün Satışı, Komisyon, Kira Geliri, Paket/Üyelik, Diğer' },
+          amount: { type: 'number' },
+          income_date: { type: 'string', description: 'YYYY-MM-DD' },
+          description: { type: 'string' },
+          is_recurring: { type: 'boolean' },
+          recurring_period: { type: 'string', enum: ['weekly', 'biweekly', 'monthly', 'quarterly', 'yearly', 'custom'] },
+          custom_interval_days: { type: 'number' },
+        },
+        required: ['category', 'amount'],
+      },
+    },
+  },
 ]
 
 // ── Tool Label Map (UI göstergesi için) ──
@@ -937,6 +1089,13 @@ export const TOOL_LABELS: Record<string, string> = {
   invite_staff: 'Davet linki önizlemesi hazırlanıyor...',
   update_staff_permissions: 'Yetki güncellemesi hazırlanıyor...',
   update_business_settings: 'Ayar güncellemesi hazırlanıyor...',
+  list_unpaid_invoices: 'Ödenmemiş faturalar listeleniyor...',
+  create_invoice: 'Fatura önizlemesi hazırlanıyor...',
+  record_invoice_payment: 'Ödeme önizlemesi hazırlanıyor...',
+  generate_invoice_from_appointment: 'Randevudan fatura hazırlanıyor...',
+  create_pos_transaction: 'POS satış önizlemesi hazırlanıyor...',
+  record_expense: 'Gider önizlemesi hazırlanıyor...',
+  record_manual_income: 'Gelir önizlemesi hazırlanıyor...',
 }
 
 // ── Permission Map ──
@@ -997,6 +1156,13 @@ const TOOL_PERMISSIONS: Record<string, keyof StaffPermissions> = {
   invite_staff: 'staff',
   update_staff_permissions: 'staff',
   update_business_settings: 'settings',
+  list_unpaid_invoices: 'invoices',
+  create_invoice: 'invoices',
+  record_invoice_payment: 'invoices',
+  generate_invoice_from_appointment: 'invoices',
+  create_pos_transaction: 'pos',
+  record_expense: 'analytics',
+  record_manual_income: 'analytics',
 }
 
 // ── Tool Executor ──
@@ -1128,6 +1294,20 @@ export async function executeAssistantTool(
         return await handleUpdateStaffPermissions(admin, ctx, args)
       case 'update_business_settings':
         return await handleUpdateBusinessSettings(admin, ctx, args)
+      case 'list_unpaid_invoices':
+        return await handleListUnpaidInvoices(admin, ctx, args)
+      case 'create_invoice':
+        return await handleCreateInvoice(admin, ctx, args)
+      case 'record_invoice_payment':
+        return await handleRecordInvoicePayment(admin, ctx, args)
+      case 'generate_invoice_from_appointment':
+        return await handleGenerateInvoiceFromAppointment(admin, ctx, args)
+      case 'create_pos_transaction':
+        return await handleCreatePosTransaction(admin, ctx, args)
+      case 'record_expense':
+        return await handleRecordExpense(admin, ctx, args)
+      case 'record_manual_income':
+        return await handleRecordManualIncome(admin, ctx, args)
       default:
         return { success: false, error: `Bilinmeyen araç: ${toolName}` }
     }
@@ -3239,4 +3419,299 @@ async function handleUpdateBusinessSettings(
     { settings: args.settings },
     preview,
   )
+}
+
+// ─── Faz 8: Finans (Fatura, Ödeme, POS, Gider, Gelir) ─────────────────
+
+async function handleListUnpaidInvoices(
+  admin: SupabaseAdmin, ctx: ToolCtx, args: Record<string, any>,
+) {
+  const limit = Math.min(args.limit || 20, 50)
+  let query = admin
+    .from('invoices')
+    .select('id, invoice_number, customer_id, total, paid_amount, status, due_date, created_at, customers(name)')
+    .eq('business_id', ctx.businessId)
+    .is('deleted_at', null)
+    .in('status', ['pending', 'partial', 'overdue'])
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (args.customer_id) query = query.eq('customer_id', args.customer_id)
+
+  const { data, error } = await query
+  if (error) return { success: false, error: 'Faturalar alınamadı' }
+
+  const rows = (data || []).map((inv: any) => ({
+    id: inv.id,
+    fatura_no: inv.invoice_number,
+    musteri: inv.customers?.name || '—',
+    toplam: inv.total,
+    odenen: inv.paid_amount || 0,
+    kalan: Math.max(0, (inv.total || 0) - (inv.paid_amount || 0)),
+    durum: inv.status,
+    vade: inv.due_date,
+  }))
+
+  return {
+    success: true,
+    data: {
+      toplam: rows.length,
+      toplam_bakiye: round2(rows.reduce((s, r) => s + r.kalan, 0)),
+      faturalar: rows,
+    },
+  }
+}
+
+function normalizeInvoiceItems(rawItems: any[]): {
+  items: Array<{ service_name: string; quantity: number; unit_price: number; total: number; type?: string; product_id?: string }>
+  subtotal: number
+} {
+  const items = rawItems.map((it: any) => {
+    const quantity = Number(it.quantity) || 1
+    const unit_price = Number(it.unit_price) || 0
+    const total = round2(quantity * unit_price)
+    return {
+      service_name: String(it.service_name || ''),
+      quantity,
+      unit_price,
+      total,
+      ...(it.type ? { type: it.type } : {}),
+      ...(it.product_id ? { product_id: it.product_id } : {}),
+    }
+  })
+  const subtotal = round2(items.reduce((s, it) => s + it.total, 0))
+  return { items, subtotal }
+}
+
+async function handleCreateInvoice(
+  admin: SupabaseAdmin, ctx: ToolCtx, args: Record<string, any>,
+) {
+  if (!args.customer_id) return { success: false, error: 'Müşteri zorunlu' }
+  if (!Array.isArray(args.items) || args.items.length === 0) {
+    return { success: false, error: 'En az bir fatura kalemi gerekli' }
+  }
+
+  const { data: cust } = await admin
+    .from('customers')
+    .select('name')
+    .eq('id', args.customer_id)
+    .eq('business_id', ctx.businessId)
+    .single()
+  if (!cust) return { success: false, error: 'Müşteri bulunamadı' }
+
+  const { items, subtotal } = normalizeInvoiceItems(args.items)
+  const taxRate = Number(args.tax_rate) || 0
+  const discountInput = Number(args.discount_amount) || 0
+  const discountValue = args.discount_type === 'percentage'
+    ? round2(subtotal * discountInput / 100)
+    : discountInput
+  const taxableAmount = subtotal - discountValue
+  const taxAmount = round2(taxableAmount * taxRate / 100)
+  const total = round2(taxableAmount + taxAmount)
+
+  const itemsList = items.slice(0, 5).map(i => `• ${i.service_name} x${i.quantity} = ${i.total}₺`).join('\n')
+  const more = items.length > 5 ? `\n… ve ${items.length - 5} kalem daha` : ''
+  const preview = `🧾 Fatura oluşturulacak — ${cust.name}\n${itemsList}${more}\nAra toplam: ${subtotal}₺${discountValue ? `\nİndirim: -${discountValue}₺` : ''}${taxAmount ? `\nKDV: ${taxAmount}₺` : ''}\n**Toplam: ${total}₺**`
+
+  return await createPendingAction(
+    admin, ctx, 'create_invoice',
+    {
+      customer_id: args.customer_id,
+      items,
+      subtotal,
+      tax_rate: taxRate,
+      tax_amount: taxAmount,
+      discount_amount: discountValue,
+      discount_type: args.discount_type || null,
+      total,
+      due_date: args.due_date || null,
+      notes: args.notes || null,
+    },
+    preview,
+    { customer: cust.name, total },
+  )
+}
+
+async function handleRecordInvoicePayment(
+  admin: SupabaseAdmin, ctx: ToolCtx, args: Record<string, any>,
+) {
+  if (!args.invoice_id) return { success: false, error: 'Fatura zorunlu' }
+  const amount = Number(args.amount)
+  if (!amount || amount <= 0) return { success: false, error: 'Tutar geçersiz' }
+  if (!args.method) return { success: false, error: 'Ödeme yöntemi zorunlu' }
+
+  const { data: inv } = await admin
+    .from('invoices')
+    .select('id, invoice_number, total, paid_amount, status, customers(name)')
+    .eq('id', args.invoice_id)
+    .eq('business_id', ctx.businessId)
+    .is('deleted_at', null)
+    .single()
+
+  if (!inv) return { success: false, error: 'Fatura bulunamadı' }
+  const remaining = Math.max(0, (inv.total || 0) - (inv.paid_amount || 0))
+  const paymentType = args.payment_type || 'payment'
+  if (paymentType !== 'refund' && amount > remaining + 0.01) {
+    return { success: false, error: `Ödeme tutarı kalan bakiyeyi (${remaining}₺) aşıyor` }
+  }
+
+  const custName = (inv as any).customers?.name || '—'
+  const preview = `💰 Fatura ödemesi — ${(inv as any).invoice_number} (${custName})\n${args.method.toUpperCase()} • ${amount}₺${paymentType !== 'payment' ? ` (${paymentType})` : ''}\nKalan: ${remaining}₺ → ${Math.max(0, remaining - amount)}₺`
+
+  return await createPendingAction(
+    admin, ctx, 'record_invoice_payment',
+    {
+      invoice_id: args.invoice_id,
+      amount,
+      method: args.method,
+      payment_type: paymentType,
+      installment_number: args.installment_number || null,
+      notes: args.notes || null,
+    },
+    preview,
+    { invoice_number: (inv as any).invoice_number, amount },
+  )
+}
+
+async function handleGenerateInvoiceFromAppointment(
+  admin: SupabaseAdmin, ctx: ToolCtx, args: Record<string, any>,
+) {
+  if (!args.appointment_id) return { success: false, error: 'Randevu zorunlu' }
+
+  const { data: apt } = await admin
+    .from('appointments')
+    .select('id, customer_id, status, appointment_date, customers(name), services(name, price)')
+    .eq('id', args.appointment_id)
+    .eq('business_id', ctx.businessId)
+    .is('deleted_at', null)
+    .single()
+
+  if (!apt) return { success: false, error: 'Randevu bulunamadı' }
+  const service = (apt as any).services
+  const customer = (apt as any).customers
+  if (!service?.price) return { success: false, error: 'Hizmet fiyatı tanımlı değil, elle fatura oluşturun' }
+  if (!apt.customer_id) return { success: false, error: 'Randevuda müşteri yok' }
+
+  const items = [{
+    service_name: service.name,
+    quantity: 1,
+    unit_price: service.price,
+    total: service.price,
+    type: 'service',
+  }]
+  const taxRate = Number(args.tax_rate) || 0
+  const subtotal = service.price
+  const taxAmount = round2(subtotal * taxRate / 100)
+  const total = round2(subtotal + taxAmount)
+
+  const preview = `🧾 Randevudan fatura — ${customer?.name || '—'}\n• ${service.name} = ${service.price}₺${taxAmount ? `\nKDV: ${taxAmount}₺` : ''}\n**Toplam: ${total}₺**`
+
+  return await createPendingAction(
+    admin, ctx, 'generate_invoice_from_appointment',
+    {
+      appointment_id: args.appointment_id,
+      customer_id: apt.customer_id,
+      items,
+      subtotal,
+      tax_rate: taxRate,
+      tax_amount: taxAmount,
+      total,
+    },
+    preview,
+    { customer: customer?.name, total },
+  )
+}
+
+async function handleCreatePosTransaction(
+  admin: SupabaseAdmin, ctx: ToolCtx, args: Record<string, any>,
+) {
+  if (!Array.isArray(args.items) || args.items.length === 0) {
+    return { success: false, error: 'En az bir kalem gerekli' }
+  }
+  if (!args.payment_method) return { success: false, error: 'Ödeme yöntemi zorunlu' }
+
+  const items = args.items.map((it: any) => {
+    const qty = Number(it.qty) || 1
+    const unit_price = Number(it.price) || 0
+    const total = round2(qty * unit_price)
+    return { name: String(it.name || ''), quantity: qty, unit_price, total }
+  })
+  const subtotal = round2(items.reduce((s: number, it: any) => s + it.total, 0))
+  const discount = Number(args.discount_amount) || 0
+  const total = round2(subtotal - discount)
+
+  let customerName = '—'
+  if (args.customer_id) {
+    const { data: c } = await admin
+      .from('customers')
+      .select('name')
+      .eq('id', args.customer_id)
+      .eq('business_id', ctx.businessId)
+      .single()
+    customerName = c?.name || '—'
+  }
+
+  const itemsList = items.slice(0, 4).map((i: any) => `• ${i.name} x${i.quantity} = ${i.total}₺`).join('\n')
+  const more = items.length > 4 ? `\n… ve ${items.length - 4} kalem daha` : ''
+  const preview = `🛒 POS satışı — ${customerName}\n${itemsList}${more}${discount ? `\nİndirim: -${discount}₺` : ''}\n${args.payment_method.toUpperCase()} • **Toplam: ${total}₺**`
+
+  return await createPendingAction(
+    admin, ctx, 'create_pos_transaction',
+    {
+      customer_id: args.customer_id || null,
+      items,
+      subtotal,
+      discount_amount: discount,
+      total,
+      payment_method: args.payment_method,
+      notes: args.notes || null,
+    },
+    preview,
+    { customer: customerName, total },
+  )
+}
+
+async function handleLedgerEntry(
+  admin: SupabaseAdmin,
+  ctx: ToolCtx,
+  args: Record<string, any>,
+  kind: 'expense' | 'income',
+) {
+  const amount = Number(args.amount)
+  if (!args.category) return { success: false, error: 'Kategori zorunlu' }
+  if (!amount || amount <= 0) return { success: false, error: 'Tutar geçersiz' }
+
+  const today = new Date().toISOString().slice(0, 10)
+  const date = (kind === 'expense' ? args.expense_date : args.income_date) || today
+  const recurring = args.is_recurring ? `\n🔁 Tekrar: ${args.recurring_period || '—'}` : ''
+  const label = kind === 'expense' ? '💸 Gider kaydı' : '💵 Gelir kaydı'
+  const preview = `${label} — ${args.category}\nTutar: ${amount}₺ • Tarih: ${date}${args.description ? `\n${args.description}` : ''}${recurring}`
+
+  return await createPendingAction(
+    admin, ctx,
+    kind === 'expense' ? 'record_expense' : 'record_manual_income',
+    {
+      category: args.category,
+      amount,
+      date,
+      description: args.description || null,
+      is_recurring: !!args.is_recurring,
+      recurring_period: args.recurring_period || null,
+      custom_interval_days: args.custom_interval_days || null,
+    },
+    preview,
+    { category: args.category, amount },
+  )
+}
+
+async function handleRecordExpense(
+  admin: SupabaseAdmin, ctx: ToolCtx, args: Record<string, any>,
+) {
+  return handleLedgerEntry(admin, ctx, args, 'expense')
+}
+
+async function handleRecordManualIncome(
+  admin: SupabaseAdmin, ctx: ToolCtx, args: Record<string, any>,
+) {
+  return handleLedgerEntry(admin, ctx, args, 'income')
 }

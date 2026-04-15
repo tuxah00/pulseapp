@@ -3,40 +3,9 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/api/with-permission'
 import { validateBody, parsePaginationParams } from '@/lib/api/validate'
 import { invoiceCreateSchema, invoicePatchSchema } from '@/lib/schemas'
+import { deductStockFromItems } from '@/lib/invoices/stock'
+import { generateInvoiceNumber } from '@/lib/invoices/numbering'
 import type { InvoiceItem } from '@/types'
-import type { SupabaseClient } from '@supabase/supabase-js'
-
-/** Fatura kalemlerindeki ürünleri stoktan düşer + stock_movements kaydı oluşturur */
-async function deductStock(
-  supabase: SupabaseClient,
-  items: InvoiceItem[],
-  ctx: { businessId: string; invoiceNumber: string; userId: string },
-) {
-  for (const item of items) {
-    if (!item.product_id || item.type !== 'product') continue
-    const { data: product } = await supabase
-      .from('products')
-      .select('stock_quantity')
-      .eq('id', item.product_id)
-      .single()
-    if (!product) continue
-
-    const newQty = Math.max(0, (product.stock_quantity || 0) - item.quantity)
-    await supabase
-      .from('products')
-      .update({ stock_quantity: newQty, updated_at: new Date().toISOString() })
-      .eq('id', item.product_id)
-
-    await supabase.from('stock_movements').insert({
-      business_id: ctx.businessId,
-      product_id: item.product_id,
-      type: 'out',
-      quantity: item.quantity,
-      notes: `Fatura ${ctx.invoiceNumber} ile satış`,
-      created_by: ctx.userId,
-    })
-  }
-}
 
 // GET: Fatura listesi (gelişmiş filtreler)
 export async function GET(req: NextRequest) {
@@ -116,22 +85,8 @@ export async function POST(req: NextRequest) {
   const tax_amount = Math.round(taxableAmount * tax_rate) / 100
   const total = taxableAmount + tax_amount
 
-  // Fatura numarası oluştur: INV-YYYY-XXXX (yıl bazlı sıralı, silinen dahil)
   const supabase = createServerSupabaseClient()
-  const year = new Date().getFullYear()
-  const { data: lastInvoice } = await supabase
-    .from('invoices')
-    .select('invoice_number')
-    .eq('business_id', business_id)
-    .like('invoice_number', `INV-${year}-%`)
-    .order('invoice_number', { ascending: false })
-    .limit(1)
-    .single()
-
-  const lastSeq = lastInvoice
-    ? parseInt(lastInvoice.invoice_number.split('-')[2]) || 0
-    : 0
-  const invoiceNumber = `INV-${year}-${String(lastSeq + 1).padStart(4, '0')}`
+  const invoiceNumber = await generateInvoiceNumber(supabase, business_id)
 
   // Kapora varsa paid_amount ve status belirle
   let initialPaidAmount = 0
@@ -189,7 +144,7 @@ export async function POST(req: NextRequest) {
 
   // Kaparo ile tam ödeme yapıldıysa stok düş
   if (initialStatus === 'paid' && invoice?.items && Array.isArray(invoice.items)) {
-    await deductStock(supabase, invoice.items as InvoiceItem[], {
+    await deductStockFromItems(supabase, invoice.items as InvoiceItem[], {
       businessId: business_id, invoiceNumber, userId,
     })
   }
@@ -257,7 +212,7 @@ export async function PATCH(req: NextRequest) {
 
   // Fatura ödendi → ürün kalemlerini stoktan düş (sadece önceden ödenmemişse)
   if (body.status === 'paid' && existing?.status !== 'paid' && invoice?.items && Array.isArray(invoice.items)) {
-    await deductStock(supabase, invoice.items as InvoiceItem[], {
+    await deductStockFromItems(supabase, invoice.items as InvoiceItem[], {
       businessId: invoice.business_id, invoiceNumber: invoice.invoice_number, userId,
     })
 
