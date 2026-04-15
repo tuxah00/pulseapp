@@ -5,15 +5,22 @@ import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
-import { Plus, Pencil, Trash2, Loader2, UserPlus, X, Mail, Phone, Settings, LayoutList, LayoutGrid, Check, ArrowUpDown, BadgePercent, TrendingUp } from 'lucide-react'
+import { Plus, Pencil, Trash2, Loader2, UserPlus, X, Mail, Phone, LayoutList, LayoutGrid, Check, ArrowUpDown, BadgePercent } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Portal } from '@/components/ui/portal'
 import CompactBoxCard from '@/components/ui/compact-box-card'
 import { ToolbarPopover, SortPopoverContent } from '@/components/ui/toolbar-popover'
-import type { StaffMember, StaffRole, StaffPermissions } from '@/types'
+import type { StaffMember, StaffRole, StaffPermissions, StaffWritePermissions } from '@/types'
 import { logAudit } from '@/lib/utils/audit'
 import { formatCurrency } from '@/lib/utils'
-import { DEFAULT_PERMISSIONS, getEffectivePermissions } from '@/types'
+import {
+  DEFAULT_PERMISSIONS,
+  DEFAULT_WRITE_PERMISSIONS,
+  getEffectivePermissions,
+  getEffectiveWritePermissions,
+  READ_ONLY_PERMISSION_KEYS,
+  WRITABLE_PERMISSION_KEYS,
+} from '@/types'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { getCustomerLabel } from '@/lib/config/sector-modules'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
@@ -103,14 +110,12 @@ export default function StaffPage() {
   const [email, setEmail] = useState('')
   const [permsSaving, setPermsSaving] = useState(false)
   const [permsSaved, setPermsSaved] = useState(false)
-  const [permPopupStaff, setPermPopupStaff] = useState<StaffMember | null>(null)
   const [localPerms, setLocalPerms] = useState<StaffPermissions | null>(null)
+  const [localWritePerms, setLocalWritePerms] = useState<StaffWritePermissions | null>(null)
 
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [isClosingInviteModal, setIsClosingInviteModal] = useState(false)
   const closeInviteModal = () => setIsClosingInviteModal(true)
-  const [permPopupClosing, setPermPopupClosing] = useState(false)
-  const closePermPopup = () => setPermPopupClosing(true)
   const [inviteRole, setInviteRole] = useState<'manager' | 'staff'>('staff')
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteLink, setInviteLink] = useState<string | null>(null)
@@ -230,89 +235,20 @@ export default function StaffPage() {
     })
   }
 
-  async function handlePermissionToggle(member: StaffMember, key: keyof StaffPermissions, value: boolean) {
-    setPermsSaving(true)
-    setPermsSaved(false)
-    const currentPerms = getEffectivePermissions(member.role, member.permissions)
-    const newPerms: StaffPermissions = { ...currentPerms, [key]: value }
-    const { error: err } = await supabase
-      .from('staff_members')
-      .update({ permissions: newPerms })
-      .eq('id', member.id)
-    if (err) {
-      console.error('Yetki güncelleme hatası:', err)
-    } else {
-      setSelectedStaff(prev => prev?.id === member.id ? { ...prev, permissions: newPerms } as StaffMember : prev)
-      setStaff(prev => prev.map(s => s.id === member.id ? { ...s, permissions: newPerms } : s))
-      setPermsSaved(true)
-      setTimeout(() => setPermsSaved(false), 2000)
-      await logAudit({
-        businessId: businessId!,
-        staffId: currentStaffId,
-        staffName: currentStaffName,
-        action: 'update',
-        resource: 'permissions',
-        resourceId: member.id,
-        details: {
-          target_name: member.name,
-          target_role: ROLE_LABELS[member.role],
-          permission_label: permissionLabels[key],
-          permission_key: key,
-          enabled: value,
-        },
-      })
-    }
-    setPermsSaving(false)
-  }
-
-  async function handleToggleAll(member: StaffMember, value: boolean) {
-    setPermsSaving(true)
-    setPermsSaved(false)
-    const newPerms: StaffPermissions = {} as StaffPermissions
-    for (const key of Object.keys(permissionLabels) as (keyof StaffPermissions)[]) {
-      newPerms[key] = value
-    }
-    const { error: err } = await supabase
-      .from('staff_members')
-      .update({ permissions: newPerms })
-      .eq('id', member.id)
-    if (err) {
-      console.error('Yetki güncelleme hatası:', err)
-    } else {
-      setSelectedStaff(prev => prev?.id === member.id ? { ...prev, permissions: newPerms } as StaffMember : prev)
-      setStaff(prev => prev.map(s => s.id === member.id ? { ...s, permissions: newPerms } : s))
-      setPermPopupStaff(prev => prev?.id === member.id ? { ...prev, permissions: newPerms } as StaffMember : prev)
-      setPermsSaved(true)
-      setTimeout(() => setPermsSaved(false), 2000)
-      await logAudit({
-        businessId: businessId!,
-        staffId: currentStaffId,
-        staffName: currentStaffName,
-        action: 'update',
-        resource: 'permissions',
-        resourceId: member.id,
-        details: {
-          target_name: member.name,
-          action_desc: value ? 'Tüm yetkiler açıldı' : 'Tüm yetkiler kapatıldı',
-        },
-      })
-    }
-    setPermsSaving(false)
-  }
-
   async function handleBatchSavePermissions() {
     if (!selectedStaff || !localPerms) return
     setPermsSaving(true)
     setPermsSaved(false)
+    const writePermsToSave = localWritePerms ?? {}
     const { error: err } = await supabase
       .from('staff_members')
-      .update({ permissions: localPerms })
+      .update({ permissions: localPerms, write_permissions: writePermsToSave })
       .eq('id', selectedStaff.id)
     if (err) {
       console.error('Yetki güncelleme hatası:', err)
     } else {
-      setSelectedStaff(prev => prev ? { ...prev, permissions: localPerms } as StaffMember : null)
-      setStaff(prev => prev.map(s => s.id === selectedStaff.id ? { ...s, permissions: localPerms } : s))
+      setSelectedStaff(prev => prev ? { ...prev, permissions: localPerms, write_permissions: writePermsToSave } as StaffMember : null)
+      setStaff(prev => prev.map(s => s.id === selectedStaff.id ? { ...s, permissions: localPerms, write_permissions: writePermsToSave } as StaffMember : s))
       setPermsSaved(true)
       setTimeout(() => setPermsSaved(false), 2000)
       await logAudit({
@@ -324,7 +260,7 @@ export default function StaffPage() {
         resourceId: selectedStaff.id,
         details: {
           target_name: selectedStaff.name,
-          action_desc: 'Yetkiler toplu güncellendi',
+          action_desc: 'Yetkiler toplu güncellendi (görüntüle + düzenle)',
         },
       })
     }
@@ -415,7 +351,7 @@ export default function StaffPage() {
           title={member.name}
           colorClass={member.role === 'owner' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-pulse-100 text-pulse-900'}
           selected={selectedStaff?.id === member.id}
-          onClick={() => { setSelectedStaff(member); setLocalPerms(getEffectivePermissions(member.role, member.permissions)); setPermsSaved(false); fetchStaffCommission(member.id) }}
+          onClick={() => { setSelectedStaff(member); setLocalPerms(getEffectivePermissions(member.role, member.permissions)); setLocalWritePerms(getEffectiveWritePermissions(member.role, (member as any).write_permissions ?? null)); setPermsSaved(false); fetchStaffCommission(member.id) }}
           className={cn(
             isMe && 'bg-blue-50/50 dark:bg-blue-900/10',
             member.role === 'owner' && 'border-amber-200 dark:border-amber-800/50',
@@ -427,7 +363,7 @@ export default function StaffPage() {
     return (
       <AnimatedItem
         key={member.id}
-        onClick={() => { setSelectedStaff(member); setLocalPerms(getEffectivePermissions(member.role, member.permissions)); setPermsSaved(false); fetchStaffCommission(member.id) }}
+        onClick={() => { setSelectedStaff(member); setLocalPerms(getEffectivePermissions(member.role, member.permissions)); setLocalWritePerms(getEffectiveWritePermissions(member.role, (member as any).write_permissions ?? null)); setPermsSaved(false); fetchStaffCommission(member.id) }}
         className={cn(
           'card p-4 hover:shadow-md transition-all cursor-pointer',
           selectedStaff?.id === member.id && 'ring-2 ring-pulse-900',
@@ -460,11 +396,6 @@ export default function StaffPage() {
             </div>
             {canEdit && (
               <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                {canPerms && (
-                  <button onClick={() => setPermPopupStaff(member)} className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:text-purple-600 transition-colors" title="Yetkiler">
-                    <Settings className="h-4 w-4" />
-                  </button>
-                )}
                 <button onClick={() => openEditModal(member)} className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 transition-colors" title="Düzenle">
                   <Pencil className="h-4 w-4" />
                 </button>
@@ -647,7 +578,7 @@ export default function StaffPage() {
                 </div>
               )}
 
-              {/* Erişim Yetkileri — batch save */}
+              {/* Erişim Yetkileri — iki sütunlu (Görüntüle / Düzenle) */}
               {canEditPermissions(currentUserRole as StaffRole, selectedStaff.role) && localPerms && (
                 <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
                   <div className="flex items-center justify-between mb-3">
@@ -656,31 +587,133 @@ export default function StaffPage() {
                       <span className="flex items-center gap-1 text-xs text-green-600"><Check className="h-3 w-3" /> Kaydedildi</span>
                     )}
                   </div>
+
+                  {/* Şablon ve hızlı eylemler */}
+                  <div className="flex flex-wrap items-center gap-2 mb-4">
+                    <div className="min-w-[160px]">
+                      <CustomSelect
+                        placeholder="Şablon uygula..."
+                        value=""
+                        onChange={(v) => {
+                          if (!v) return
+                          const roleKey = v as StaffRole
+                          setLocalPerms({ ...DEFAULT_PERMISSIONS[roleKey] })
+                          setLocalWritePerms({ ...DEFAULT_WRITE_PERMISSIONS[roleKey] })
+                        }}
+                        options={[
+                          { value: 'manager', label: 'Yönetici Şablonu' },
+                          { value: 'staff', label: 'Personel Şablonu' },
+                        ]}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const allOn: StaffPermissions = {} as StaffPermissions
+                        for (const k of Object.keys(permissionLabels) as (keyof StaffPermissions)[]) allOn[k] = true
+                        setLocalPerms(allOn)
+                      }}
+                      className="text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                    >
+                      Tümünü Görüntüle
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next: StaffWritePermissions = {}
+                        for (const k of WRITABLE_PERMISSION_KEYS) next[k] = true
+                        setLocalWritePerms(next)
+                      }}
+                      className="text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                    >
+                      Tümünü Düzenle
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const allOff: StaffPermissions = {} as StaffPermissions
+                        for (const k of Object.keys(permissionLabels) as (keyof StaffPermissions)[]) allOff[k] = false
+                        setLocalPerms(allOff)
+                        setLocalWritePerms({})
+                      }}
+                      className="text-xs px-2.5 py-1.5 rounded-lg border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                    >
+                      Tümünü Kapat
+                    </button>
+                  </div>
+
+                  {/* Başlık satırı */}
+                  <div className="grid grid-cols-[1fr_70px_70px] gap-2 px-2 pb-2 border-b border-gray-200 dark:border-gray-700 text-xs font-medium text-gray-500 dark:text-gray-400">
+                    <span>Modül</span>
+                    <span className="text-center">Görüntüle</span>
+                    <span className="text-center">Düzenle</span>
+                  </div>
+
                   {PERMISSION_CATEGORIES.map(cat => (
                     <div key={cat.label} className="mb-3">
-                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">{cat.label}</p>
-                      <div className="space-y-1">
+                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mt-2 mb-1 px-2">{cat.label}</p>
+                      <div className="space-y-0.5">
                         {cat.keys.map((key) => {
-                          const checked = localPerms[key] === true
+                          const view = localPerms[key] === true
+                          const isReadOnly = (READ_ONLY_PERMISSION_KEYS as readonly string[]).includes(key)
+                          const edit = localWritePerms?.[key] === true
                           return (
-                            <label key={key} className="flex items-center justify-between py-1.5 cursor-pointer group">
+                            <div key={key} className="grid grid-cols-[1fr_70px_70px] items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50">
                               <span className="text-sm text-gray-700 dark:text-gray-300">{permissionLabels[key]}</span>
-                              <div className="relative">
-                                <input
-                                  type="checkbox"
-                                  checked={checked}
-                                  disabled={permsSaving}
-                                  onChange={(e) => setLocalPerms(prev => prev ? { ...prev, [key]: e.target.checked } : prev)}
-                                  className="peer sr-only"
-                                />
-                                <div className="h-5 w-9 rounded-full bg-gray-300 dark:bg-gray-600 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-pulse-900 peer-checked:after:translate-x-4 peer-disabled:opacity-50" />
+
+                              {/* Görüntüle toggle */}
+                              <div className="flex justify-center">
+                                <label className="relative inline-flex cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={view}
+                                    disabled={permsSaving}
+                                    onChange={(e) => {
+                                      const nextView = e.target.checked
+                                      setLocalPerms(prev => prev ? { ...prev, [key]: nextView } : prev)
+                                      if (!nextView) {
+                                        setLocalWritePerms(prev => ({ ...(prev ?? {}), [key]: false }))
+                                      }
+                                    }}
+                                    className="peer sr-only"
+                                  />
+                                  <div className="h-5 w-9 rounded-full bg-gray-300 dark:bg-gray-600 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-pulse-900 peer-checked:after:translate-x-4 peer-disabled:opacity-50" />
+                                </label>
                               </div>
-                            </label>
+
+                              {/* Düzenle toggle */}
+                              <div className="flex justify-center">
+                                {isReadOnly ? (
+                                  <span className="text-xs text-gray-300 dark:text-gray-600" title="Bu modülde düzenleme işlemi yoktur">—</span>
+                                ) : (
+                                  <label className={cn('relative inline-flex', view ? 'cursor-pointer' : 'cursor-not-allowed')}>
+                                    <input
+                                      type="checkbox"
+                                      checked={edit && view}
+                                      disabled={permsSaving || !view}
+                                      onChange={(e) => {
+                                        const nextEdit = e.target.checked
+                                        setLocalWritePerms(prev => ({ ...(prev ?? {}), [key]: nextEdit }))
+                                      }}
+                                      className="peer sr-only"
+                                    />
+                                    <div className={cn(
+                                      "h-5 w-9 rounded-full bg-gray-300 dark:bg-gray-600 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-pulse-900 peer-checked:after:translate-x-4",
+                                      (!view || permsSaving) && 'opacity-40'
+                                    )} />
+                                  </label>
+                                )}
+                              </div>
+                            </div>
                           )
                         })}
                       </div>
                     </div>
                   ))}
+
+                  <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-2 px-2 leading-relaxed">
+                    "Görüntüle" kapalıysa modül hiç görünmez. "Düzenle" kapalıysa personel içeriği görür ama ekleme/güncelleme/silme yapamaz.
+                  </p>
                 </div>
               )}
             </div>
@@ -738,96 +771,6 @@ export default function StaffPage() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-        </Portal>
-      )}
-
-      {/* Yetki Popup Modal — Yeniden tasarlanmış */}
-      {permPopupStaff && (
-        <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 ${permPopupClosing ? 'closing' : ''}`} onClick={closePermPopup} onAnimationEnd={() => { if (permPopupClosing) { setPermPopupStaff(null); setPermPopupClosing(false) } }}>
-          <div className={`modal-content card w-full max-w-md max-h-[85vh] flex flex-col ${permPopupClosing ? 'closing' : ''}`} onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{permPopupStaff.name}</h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  <span className={cn('badge text-xs mr-2', ROLE_COLORS[permPopupStaff.role])}>{ROLE_LABELS[permPopupStaff.role]}</span>
-                  Erişim Yetkileri
-                </p>
-              </div>
-              <button onClick={closePermPopup} className="text-gray-400 hover:text-gray-600">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-5">
-              {/* Tümünü Aç/Kapat */}
-              <div className="flex gap-2 mb-4">
-                <button
-                  onClick={() => handleToggleAll(permPopupStaff, true)}
-                  disabled={permsSaving}
-                  className="flex-1 py-1.5 rounded-lg text-xs font-medium border border-green-200 text-green-700 hover:bg-green-50 dark:border-green-800 dark:text-green-400 dark:hover:bg-green-900/20 transition-colors disabled:opacity-50"
-                >
-                  Tümünü Aç
-                </button>
-                <button
-                  onClick={() => handleToggleAll(permPopupStaff, false)}
-                  disabled={permsSaving}
-                  className="flex-1 py-1.5 rounded-lg text-xs font-medium border border-red-200 text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
-                >
-                  Tümünü Kapat
-                </button>
-              </div>
-
-              {PERMISSION_CATEGORIES.map(cat => (
-                <div key={cat.label} className="mb-5 last:mb-0">
-                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
-                    {cat.label}
-                  </p>
-                  <div className="space-y-0.5">
-                    {cat.keys.map((key) => {
-                      const perms = getEffectivePermissions(permPopupStaff.role, permPopupStaff.permissions)
-                      const checked = perms[key] ?? false
-                      return (
-                        <label key={key} className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors">
-                          <span className="text-sm text-gray-700 dark:text-gray-300">{permissionLabels[key]}</span>
-                          <div className="relative">
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              disabled={permsSaving}
-                              onChange={(e) => {
-                                handlePermissionToggle(permPopupStaff, key, e.target.checked)
-                                setPermPopupStaff(prev => prev ? { ...prev, permissions: { ...getEffectivePermissions(prev.role, prev.permissions), [key]: e.target.checked } } as StaffMember : null)
-                              }}
-                              className="peer sr-only"
-                            />
-                            <div className="h-5 w-9 rounded-full bg-gray-300 dark:bg-gray-600 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-pulse-900 peer-checked:after:translate-x-4 peer-disabled:opacity-50" />
-                          </div>
-                        </label>
-                      )
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Alt bar */}
-            <div className="border-t border-gray-100 dark:border-gray-800 px-5 py-3 flex items-center justify-between">
-              {permsSaving ? (
-                <span className="flex items-center gap-1.5 text-xs text-gray-400">
-                  <Loader2 className="h-3 w-3 animate-spin" /> Kaydediliyor...
-                </span>
-              ) : permsSaved ? (
-                <span className="flex items-center gap-1.5 text-xs text-green-600">
-                  <Check className="h-3.5 w-3.5" /> Kaydedildi
-                </span>
-              ) : (
-                <span className="text-xs text-gray-400">{getPermissionCount(permPopupStaff)}/{Object.keys(permissionLabels).length} yetki açık</span>
-              )}
-              <button onClick={closePermPopup} className="btn-secondary text-sm py-1.5 px-4">Kapat</button>
-            </div>
           </div>
         </div>
         </Portal>
