@@ -58,7 +58,7 @@ const PERMISSION_LABELS: Record<keyof StaffPermissions, string> = {
   invoices: 'Faturalar',
   pos: 'Kasa',
   protocols: 'Tedavi Protokolleri',
-  referrals: 'Referanslar',
+  rewards: 'Ödüller',
   campaigns: 'Kampanyalar',
   workflows: 'Mesaj Akışları',
 }

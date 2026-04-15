@@ -43,7 +43,7 @@ export interface StaffPermissions {
   invoices?: boolean
   pos?: boolean
   protocols?: boolean
-  referrals?: boolean
+  rewards?: boolean
   campaigns?: boolean
   workflows?: boolean
 }
@@ -54,14 +54,14 @@ export const DEFAULT_PERMISSIONS: Record<StaffRole, StaffPermissions> = {
     messages: true, reviews: true, services: true, staff: true, shifts: true,
     settings: true, reservations: true, classes: true, memberships: true,
     packages: true, records: true, portfolio: true, inventory: true, orders: true, invoices: true, pos: true,
-    protocols: true, referrals: true, campaigns: true, workflows: true,
+    protocols: true, rewards: true, campaigns: true, workflows: true,
   },
   manager: {
     dashboard: true, appointments: true, customers: true, analytics: true,
     messages: true, reviews: true, services: true, staff: false, shifts: true,
     settings: false, reservations: true, classes: true, memberships: true,
     packages: true, records: true, portfolio: true, inventory: true, orders: true, invoices: true, pos: true,
-    protocols: true, referrals: true, campaigns: true, workflows: true,
+    protocols: true, rewards: true, campaigns: true, workflows: true,
   },
   staff: {
     dashboard: true, appointments: true, customers: true, analytics: false,
@@ -407,6 +407,7 @@ export interface BusinessSettings {
   // AI asistan tercihleri (Faz 10)
   ai_preferences?: AIPreferences
   ai_memory?: AIMemory
+  ai_permissions?: AIPermissions
 }
 
 export type AIAssistantTone = 'samimi' | 'formal' | 'kisa'
@@ -417,6 +418,89 @@ export interface AIPreferences {
   brief_time?: string           // 'HH:mm' işletme yerel saati
   default_reminder_hours?: number
   custom_instructions?: string  // serbest metin (max ~1000 char)
+}
+
+/**
+ * AI Asistan granular yetkileri — her kategori için ayrı okuma/yazma toggle'ı.
+ * Yetki kontrolü: bir tool çalışırken hem bu yetki (`ai_permissions`) hem
+ * onaylayan kullanıcının `StaffPermissions`'ı TRUE olmalı (kesişim kuralı).
+ */
+export type AIPermissionCategory =
+  | 'appointments_read' | 'appointments_write'
+  | 'customers_read' | 'customers_write'
+  | 'services_read' | 'services_write'
+  | 'staff_read' | 'staff_write'
+  | 'shifts_read' | 'shifts_write'
+  | 'messages_read' | 'messages_write'
+  | 'campaigns_read' | 'campaigns_write'
+  | 'workflows_read' | 'workflows_write'
+  | 'analytics_read'
+  | 'invoices_read' | 'invoices_write'
+  | 'pos_write'
+  | 'expenses_write'
+  | 'settings_read' | 'settings_write'
+  | 'audit_read'
+
+export type AIPermissions = Partial<Record<AIPermissionCategory, boolean>>
+
+/**
+ * AI yetki kategorisi → StaffPermissions alanı eşlemesi.
+ * Onay veren kullanıcının bu StaffPermissions alanı TRUE değilse tool çalışmaz.
+ */
+export const AI_PERMISSION_TO_STAFF: Record<AIPermissionCategory, keyof StaffPermissions> = {
+  appointments_read: 'appointments',
+  appointments_write: 'appointments',
+  customers_read: 'customers',
+  customers_write: 'customers',
+  services_read: 'services',
+  services_write: 'services',
+  staff_read: 'staff',
+  staff_write: 'staff',
+  shifts_read: 'shifts',
+  shifts_write: 'shifts',
+  messages_read: 'messages',
+  messages_write: 'messages',
+  campaigns_read: 'campaigns',
+  campaigns_write: 'campaigns',
+  workflows_read: 'workflows',
+  workflows_write: 'workflows',
+  analytics_read: 'analytics',
+  invoices_read: 'invoices',
+  invoices_write: 'invoices',
+  pos_write: 'pos',
+  expenses_write: 'analytics',
+  settings_read: 'settings',
+  settings_write: 'settings',
+  audit_read: 'settings',
+}
+
+/** Varsayılan AI yetkileri: tüm okumalar açık, yazmalar kapalı. */
+export const DEFAULT_AI_PERMISSIONS: AIPermissions = {
+  appointments_read: true,
+  customers_read: true,
+  services_read: true,
+  staff_read: true,
+  shifts_read: true,
+  messages_read: true,
+  campaigns_read: true,
+  workflows_read: true,
+  analytics_read: true,
+  invoices_read: true,
+  settings_read: true,
+  audit_read: true,
+  // Yazma izinleri varsayılan olarak kapalı; işletme sahibi elle açar
+  appointments_write: false,
+  customers_write: false,
+  services_write: false,
+  staff_write: false,
+  shifts_write: false,
+  messages_write: false,
+  campaigns_write: false,
+  workflows_write: false,
+  invoices_write: false,
+  pos_write: false,
+  expenses_write: false,
+  settings_write: false,
 }
 
 export interface AIMemory {

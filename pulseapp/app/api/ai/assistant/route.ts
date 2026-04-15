@@ -7,6 +7,7 @@ import { getOpenAIClient, ASSISTANT_MODEL, ASSISTANT_MAX_TOKENS } from '@/lib/ai
 import { buildAssistantSystemPrompt, buildOnboardingSystemPrompt, buildPageTutorialPrompt } from '@/lib/ai/assistant-prompts'
 import { findTopicByKey } from '@/lib/ai/tutorial-content'
 import { ASSISTANT_TOOLS, TOOL_LABELS, executeAssistantTool } from '@/lib/ai/assistant-tools'
+import { filterAssistantTools } from '@/lib/ai/tool-categories'
 import { deriveBlocksFromToolResult } from '@/lib/ai/assistant-blocks'
 import { AI_LIMITS } from '@/lib/ai/assistant-limits'
 import type { AuthContext } from '@/lib/api/with-permission'
@@ -174,6 +175,11 @@ export async function POST(req: NextRequest) {
 
   // 9. Stream response
   const openai = getOpenAIClient()
+  const allowedTools = filterAssistantTools(
+    ASSISTANT_TOOLS,
+    biz?.settings?.ai_permissions ?? null,
+    permissions,
+  )
   const messages = [
     { role: 'system' as const, content: systemPrompt },
     ...history,
@@ -202,7 +208,7 @@ export async function POST(req: NextRequest) {
             max_tokens: ASSISTANT_MAX_TOKENS,
             messages: currentMessages,
             // Tutorial modunda tool çağrısı istenmez — kısa açıklama yanıtı beklenir
-            ...(isTutorialMode ? {} : { tools: ASSISTANT_TOOLS }),
+            ...(isTutorialMode || allowedTools.length === 0 ? {} : { tools: allowedTools }),
             stream: true,
           })
 
