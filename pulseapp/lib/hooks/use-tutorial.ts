@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { usePathname } from 'next/navigation'
-import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { findTopicByPath, getTutorialTopicsForSector, type TutorialTopic } from '@/lib/ai/tutorial-content'
 import type { SectorType, TutorialProgress } from '@/types'
 
@@ -20,14 +19,14 @@ interface UseTutorialReturn {
   seenTopics: TutorialTopic[]
 }
 
-export function useTutorial(): UseTutorialReturn {
-  const { sector, loading: ctxLoading } = useBusinessContext()
+// sector opsiyonel: BusinessProvider dışında çağrılan yerler (AI paneli gibi)
+// için prop olarak geçilebilir. Yoksa 'other' sektörüne düşer.
+export function useTutorial(sectorOverride?: SectorType | null): UseTutorialReturn {
   const pathname = usePathname()
   const [progress, setProgress] = useState<TutorialProgress | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (ctxLoading) return
     let cancelled = false
     fetch('/api/ai/tutorial-progress')
       .then(res => res.ok ? res.json() : Promise.reject(new Error(String(res.status))))
@@ -41,9 +40,9 @@ export function useTutorial(): UseTutorialReturn {
         if (!cancelled) setLoading(false)
       })
     return () => { cancelled = true }
-  }, [ctxLoading])
+  }, [])
 
-  const sectorValue = (sector || 'other') as SectorType
+  const sectorValue = (sectorOverride || 'other') as SectorType
 
   const currentTopic = useMemo(
     () => (pathname ? findTopicByPath(pathname, sectorValue) : null),

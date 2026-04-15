@@ -59,7 +59,7 @@ export default function AIAssistantPanel({ businessName, sector, plan, permissio
     shouldRunSetup,
     markSeen,
     markSetupDone,
-  } = useTutorial()
+  } = useTutorial(sector)
 
   const [setupTriggered, setSetupTriggered] = useState(false)
 
