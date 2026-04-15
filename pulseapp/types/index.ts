@@ -404,6 +404,25 @@ export interface BusinessSettings {
   visit_bonus_points?: number
   auto_reward_threshold?: number
   redemption_rate?: number  // kaç puan = 1₺ indirim (varsayılan: 10)
+  // AI asistan tercihleri (Faz 10)
+  ai_preferences?: AIPreferences
+  ai_memory?: AIMemory
+}
+
+export type AIAssistantTone = 'samimi' | 'formal' | 'kisa'
+
+export interface AIPreferences {
+  tone?: AIAssistantTone
+  auto_brief_enabled?: boolean
+  brief_time?: string           // 'HH:mm' işletme yerel saati
+  default_reminder_hours?: number
+  custom_instructions?: string  // serbest metin (max ~1000 char)
+}
+
+export interface AIMemory {
+  frequent_customers?: string[]
+  common_services?: string[]
+  learned_patterns?: Record<string, unknown>
 }
 
 

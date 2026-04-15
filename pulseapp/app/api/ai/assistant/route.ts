@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
   const [{ data: biz }, { data: usage }] = await Promise.all([
     admin
       .from('businesses')
-      .select('subscription_plan, working_hours, name, sector')
+      .select('subscription_plan, working_hours, name, sector, settings')
       .eq('id', staff.business_id)
       .single(),
     admin
@@ -146,6 +146,7 @@ export async function POST(req: NextRequest) {
       permissions,
       workingHours: biz?.working_hours,
       services,
+      aiPreferences: biz?.settings?.ai_preferences,
     })
   }
 

@@ -917,7 +917,17 @@ async function execUpdateBusinessSettings(
   const { data: biz } = await admin
     .from('businesses').select('settings').eq('id', ctx.businessId).single()
 
-  const merged = { ...(biz?.settings || {}), ...(p.settings || {}) }
+  const current = (biz?.settings || {}) as Record<string, unknown>
+  const incoming = (p.settings || {}) as Record<string, unknown>
+  const merged: Record<string, unknown> = { ...current, ...incoming }
+
+  // Nested-merge: ai_preferences, ai_memory — kullanıcı sadece tek alan değişse bile
+  // tüm alt anahtarları silmesin
+  for (const key of ['ai_preferences', 'ai_memory'] as const) {
+    if (incoming[key] && typeof incoming[key] === 'object') {
+      merged[key] = { ...(current[key] as Record<string, unknown> || {}), ...(incoming[key] as Record<string, unknown>) }
+    }
+  }
 
   const { error } = await admin
     .from('businesses')
