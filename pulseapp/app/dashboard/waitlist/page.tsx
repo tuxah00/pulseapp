@@ -11,6 +11,7 @@ import {
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import { CustomerSearchSelect } from '@/components/ui/customer-search-select'
 import { CustomSelect } from '@/components/ui/custom-select'
+import { Portal } from '@/components/ui/portal'
 import { cn } from '@/lib/utils'
 
 interface WaitlistEntry {
@@ -298,6 +299,7 @@ export default function WaitlistPage() {
 
       {/* ═══ Modal: Listeye Ekle ═══ */}
       {(showCreate || closingCreate) && (
+        <Portal>
         <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 ${closingCreate ? 'closing' : ''}`} onClick={() => setClosingCreate(true)} onAnimationEnd={() => { if (closingCreate) { setShowCreate(false); setClosingCreate(false) } }}>
           <div className={`modal-content card w-full max-w-lg dark:bg-gray-900 ${closingCreate ? 'closing' : ''}`} onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
@@ -363,6 +365,7 @@ export default function WaitlistPage() {
             </div>
           </div>
         </div>
+        </Portal>
       )}
     </div>
   )

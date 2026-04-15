@@ -11,6 +11,7 @@ import {
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import EmptyState from '@/components/ui/empty-state'
 import { CustomSelect } from '@/components/ui/custom-select'
+import { Portal } from '@/components/ui/portal'
 import { cn } from '@/lib/utils'
 import type { Campaign, CustomerSegment } from '@/types'
 
@@ -400,6 +401,7 @@ export default function CampaignsPage() {
 
       {/* ═══ Modal: Kampanya Oluştur / Düzenle ═══ */}
       {(showModal || closingModal) && (
+        <Portal>
         <div
           className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 ${closingModal ? 'closing' : ''}`}
           onClick={closeModal}
@@ -587,6 +589,7 @@ export default function CampaignsPage() {
             </div>
           </div>
         </div>
+        </Portal>
       )}
     </div>
   )
