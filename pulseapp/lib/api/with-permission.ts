@@ -107,72 +107,21 @@ export function withPermission(
 
 /**
  * Yazma (POST/PUT/PATCH/DELETE) yetkisi kontrolü yapan middleware.
- * View yetkisi VE write yetkisi birlikte kontrol edilir. Yoksa 403.
- *
- * Kullanım:
- * ```ts
- * export const POST = withWritePermission('invoices', async (req, ctx) => { ... })
- * ```
+ * View yetkisi VE write yetkisi birlikte kontrol edilir.
  */
 export function withWritePermission(
   permission: keyof StaffPermissions,
   handler: PermissionHandler
 ) {
-  return async (req: NextRequest, routeContext?: any) => {
-    try {
-      const supabase = createServerSupabaseClient()
-      const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-      if (authError || !user) {
-        return NextResponse.json({ error: 'Oturum bulunamadı.' }, { status: 401 })
-      }
-
-      const admin = createAdminClient()
-      const { data: staff } = await admin
-        .from('staff_members')
-        .select('id, business_id, role, permissions, write_permissions, is_active')
-        .eq('user_id', user.id)
-        .eq('is_active', true)
-        .limit(1)
-        .single()
-
-      if (!staff) {
-        return NextResponse.json({ error: 'Personel kaydı bulunamadı.' }, { status: 403 })
-      }
-
-      const role = staff.role as StaffRole
-      const effectivePerms = getEffectivePermissions(role, staff.permissions)
-      const effectiveWrite = getEffectiveWritePermissions(role, (staff as any).write_permissions ?? null)
-
-      if (!effectivePerms[permission]) {
-        return NextResponse.json(
-          { error: `Bu sayfayı görme yetkiniz yok: ${permission}` },
-          { status: 403 }
-        )
-      }
-
-      if (!effectiveWrite[permission]) {
-        return NextResponse.json(
-          { error: `Düzenleme yetkiniz yok: ${permission}` },
-          { status: 403 }
-        )
-      }
-
-      const ctx: AuthContext = {
-        userId: user.id,
-        staffId: staff.id,
-        businessId: staff.business_id,
-        role,
-        permissions: effectivePerms,
-        writePermissions: effectiveWrite,
-      }
-
-      return handler(req, ctx)
-    } catch (err: any) {
-      console.error('Write permission middleware hatası:', err)
-      return NextResponse.json({ error: 'Sunucu hatası' }, { status: 500 })
+  return withPermission(permission, (req, ctx) => {
+    if (!ctx.writePermissions[permission]) {
+      return NextResponse.json(
+        { error: `Düzenleme yetkiniz yok: ${permission}` },
+        { status: 403 }
+      )
     }
-  }
+    return handler(req, ctx)
+  })
 }
 
 /**

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useConfirm } from '@/lib/hooks/use-confirm'
@@ -19,7 +19,6 @@ import {
   getEffectivePermissions,
   getEffectiveWritePermissions,
   READ_ONLY_PERMISSION_KEYS,
-  WRITABLE_PERMISSION_KEYS,
 } from '@/types'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { getCustomerLabel } from '@/lib/config/sector-modules'
@@ -88,7 +87,10 @@ function canEditPermissions(myRole: StaffRole, targetRole: StaffRole): boolean {
 
 export default function StaffPage() {
   const { businessId, staffId: currentStaffId, staffName: currentStaffName, sector, loading: ctxLoading, staffRole: currentUserRole, permissions } = useBusinessContext()
-  const permissionLabels = { ...PERMISSION_LABELS, customers: sector ? getCustomerLabel(sector) : 'Müşteriler' }
+  const permissionLabels = useMemo(
+    () => ({ ...PERMISSION_LABELS, customers: sector ? getCustomerLabel(sector) : 'Müşteriler' }),
+    [sector],
+  )
   const [staff, setStaff] = useState<StaffMember[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
@@ -338,8 +340,7 @@ export default function StaffPage() {
 
   const renderStaffCard = (member: StaffMember) => {
     const isMe = currentStaffId === member.id
-    const canEdit = canEditMember(currentUserRole as StaffRole, member.role)
-    const canPerms = canEditPermissions(currentUserRole as StaffRole, member.role)
+    const canManageMember = canEditMember(currentUserRole as StaffRole, member.role)
     const permCount = getPermissionCount(member)
     const totalPerms = Object.keys(permissionLabels).length
 
@@ -394,7 +395,7 @@ export default function StaffPage() {
                 </p>
               )}
             </div>
-            {canEdit && (
+            {canManageMember && (
               <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                 <button onClick={() => openEditModal(member)} className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 transition-colors" title="Düzenle">
                   <Pencil className="h-4 w-4" />
@@ -608,22 +609,14 @@ export default function StaffPage() {
                     </div>
                     <button
                       type="button"
-                      onClick={() => {
-                        const allOn: StaffPermissions = {} as StaffPermissions
-                        for (const k of Object.keys(permissionLabels) as (keyof StaffPermissions)[]) allOn[k] = true
-                        setLocalPerms(allOn)
-                      }}
+                      onClick={() => setLocalPerms({ ...DEFAULT_PERMISSIONS.owner })}
                       className="text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
                     >
                       Tümünü Görüntüle
                     </button>
                     <button
                       type="button"
-                      onClick={() => {
-                        const next: StaffWritePermissions = {}
-                        for (const k of WRITABLE_PERMISSION_KEYS) next[k] = true
-                        setLocalWritePerms(next)
-                      }}
+                      onClick={() => setLocalWritePerms({ ...DEFAULT_WRITE_PERMISSIONS.owner })}
                       className="text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
                     >
                       Tümünü Düzenle
@@ -631,8 +624,9 @@ export default function StaffPage() {
                     <button
                       type="button"
                       onClick={() => {
-                        const allOff: StaffPermissions = {} as StaffPermissions
-                        for (const k of Object.keys(permissionLabels) as (keyof StaffPermissions)[]) allOff[k] = false
+                        const allOff = Object.fromEntries(
+                          (Object.keys(DEFAULT_PERMISSIONS.owner) as (keyof StaffPermissions)[]).map(k => [k, false])
+                        ) as unknown as StaffPermissions
                         setLocalPerms(allOff)
                         setLocalWritePerms({})
                       }}
@@ -712,7 +706,7 @@ export default function StaffPage() {
                   ))}
 
                   <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-2 px-2 leading-relaxed">
-                    "Görüntüle" kapalıysa modül hiç görünmez. "Düzenle" kapalıysa personel içeriği görür ama ekleme/güncelleme/silme yapamaz.
+                    &ldquo;Görüntüle&rdquo; kapalıysa modül hiç görünmez. &ldquo;Düzenle&rdquo; kapalıysa personel içeriği görür ama ekleme/güncelleme/silme yapamaz.
                   </p>
                 </div>
               )}
