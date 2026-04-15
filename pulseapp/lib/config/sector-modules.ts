@@ -31,7 +31,7 @@ const MANAGEMENT_ITEMS: SidebarItem[] = [
   { key: 'invoices', name: 'Faturalar', href: '/dashboard/invoices', iconName: 'Receipt' },
   { key: 'shifts', name: 'Vardiya', href: '/dashboard/shifts', iconName: 'CalendarDays' },
   { key: 'workflows', name: 'Mesaj Akışları', href: '/dashboard/workflows', iconName: 'GitBranch' },
-  { key: 'commissions', name: 'Prim & Komisyon', href: '/dashboard/settings/commissions', iconName: 'BadgePercent' },
+  { key: 'commissions', name: 'Prim & Komisyon', href: '/dashboard/commissions', iconName: 'BadgePercent' },
   { key: 'audit', name: 'Denetim', href: '/dashboard/audit', iconName: 'ShieldCheck' },
   { key: 'kvkk', name: 'KVKK', href: '/dashboard/kvkk', iconName: 'Lock' },
 ]
