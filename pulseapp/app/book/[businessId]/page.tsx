@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import {
   CheckCircle2, ChevronLeft, Loader2, Clock, Calendar,
-  User, Phone, AlertCircle, Bell, MapPin, Zap, CalendarPlus,
+  User, Phone, AlertCircle, Bell, MapPin, Zap, CalendarPlus, UserCircle2,
 } from 'lucide-react'
 import type { WorkingHours } from '@/types'
 import { getInitials } from '@/lib/utils'
@@ -836,7 +836,16 @@ function BusinessHeader({ business }: { business: BusinessData }) {
   const location = [business.district, business.city].filter(Boolean).join(', ')
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden relative">
+      {/* Hesabım butonu — sağ üst köşe */}
+      <a
+        href={`/portal/${business.id}`}
+        className="absolute top-3 right-3 z-10 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/90 backdrop-blur-sm text-blue-600 text-xs font-medium shadow-sm hover:bg-white transition-colors"
+        title="Müşteri portalına giriş"
+      >
+        <UserCircle2 className="h-3.5 w-3.5" />
+        Hesabım
+      </a>
       {/* Üst renkli şerit */}
       <div className="h-20 bg-blue-500" />
 
