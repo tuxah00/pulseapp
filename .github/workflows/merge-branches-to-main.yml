@@ -1,0 +1,96 @@
+name: Merge selected branches to main
+
+# Elle tetiklenen akış: "Actions" sekmesinden "Run workflow" denilince
+# belirtilen branch'ler için main'e PR açar (veya varsa direkt merge eder).
+# PR açılır, onay YALNIZCA senin merge etmenle gerçekleşir.
+
+on:
+  workflow_dispatch:
+    inputs:
+      branches:
+        description: 'Merge edilecek branch'
+        type: choice
+        required: true
+        default: 'all'
+        options:
+          - 'all'
+          - 'pick'
+      pick_branches:
+        description: '"pick" seçtiysen boşlukla ayrılmış isimler (ör: claude/foo claude/bar)'
+        required: false
+        default: ''
+      auto_merge:
+        description: 'PR otomatik merge edilsin mi? (yeşilse hemen main\'e geçer)'
+        type: boolean
+        required: true
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  open-prs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Determine branch list
+        id: list
+        run: |
+          if [ "${{ inputs.branches }}" = "all" ]; then
+            branches=$(git for-each-ref --format='%(refname:short)' refs/remotes/origin/claude/ | sed 's|^origin/||')
+          else
+            branches="${{ inputs.pick_branches }}"
+          fi
+          echo "Seçilen branch'ler: $branches"
+          {
+            echo "branches<<EOF"
+            echo "$branches"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Open/update PRs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          AUTO_MERGE: ${{ inputs.auto_merge }}
+        run: |
+          set -e
+          for branch in ${{ steps.list.outputs.branches }}; do
+            echo "── $branch ──"
+
+            # Main'den farklı commit yoksa atla
+            if git merge-base --is-ancestor "origin/$branch" origin/main; then
+              echo "[$branch] main'de zaten bulunuyor, atlandı."
+              continue
+            fi
+
+            # Açık PR var mı?
+            existing=$(gh pr list --head "$branch" --base main --state open --json number --jq '.[0].number' || echo '')
+
+            if [ -n "$existing" ]; then
+              echo "[$branch] PR #$existing zaten açık."
+              pr_number="$existing"
+            else
+              pr_number=$(gh pr create \
+                --base main \
+                --head "$branch" \
+                --title "merge: $branch → main" \
+                --body "Bu PR \`$branch\` dalını main'e almak için otomatik olarak açıldı. Reviewer onayı gerekir." \
+                | grep -oE '[0-9]+$' || echo '')
+              echo "[$branch] PR #$pr_number açıldı."
+            fi
+
+            if [ "$AUTO_MERGE" = "true" ] && [ -n "$pr_number" ]; then
+              gh pr merge "$pr_number" --merge --auto || \
+                echo "[$branch] Otomatik merge ayarlanamadı (branch protection kuralına takılmış olabilir)."
+            fi
+          done

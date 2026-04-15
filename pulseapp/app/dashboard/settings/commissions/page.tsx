@@ -13,6 +13,7 @@ import { CustomSelect } from '@/components/ui/custom-select'
 import EmptyState from '@/components/ui/empty-state'
 import { createClient } from '@/lib/supabase/client'
 import { formatCurrency } from '@/lib/utils'
+import { addMonthsSafe } from '@/lib/utils/date-range'
 
 interface CommissionRule {
   id: string
@@ -254,8 +255,7 @@ export default function CommissionsPage() {
 
   // Generate period options (last 12 months)
   const periodOptions = Array.from({ length: 12 }, (_, i) => {
-    const d = new Date()
-    d.setMonth(d.getMonth() - i)
+    const d = addMonthsSafe(new Date(), -i)
     const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
     return { value: val, label: formatPeriod(val) }
   })

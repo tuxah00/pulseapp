@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendMessage } from '@/lib/messaging/send'
+import { verifyCronAuth } from '@/lib/api/verify-cron'
 
 // GET — Cron ile çalıştırılan iş akışı adımlarını işle
 export async function GET(request: NextRequest) {
-  const cronSecret = request.headers.get('x-cron-secret')
-  if (cronSecret !== process.env.CRON_SECRET) {
-    return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
-  }
+  const cronErr = verifyCronAuth(request)
+  if (cronErr) return cronErr
 
   const admin = createAdminClient()
   const now = new Date().toISOString()

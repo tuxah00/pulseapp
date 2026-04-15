@@ -25,6 +25,7 @@ import type {
 } from '@/types/db'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { getCustomerLabelSingular, getCustomerLabel } from '@/lib/config/sector-modules'
+import { addMonthsSafe } from '@/lib/utils/date-range'
 
 type AnalyticsTab = 'overview' | 'staff' | 'customers' | 'sources' | 'services' | 'expenses' | 'forecast'
 
@@ -56,8 +57,8 @@ function getPeriodDates(period: 'week' | 'month' | 'year', offset = 0): { start:
   } else if (period === 'month') {
     const months = offset + 1
     const monthsBack = offset
-    start = new Date(now); start.setMonth(now.getMonth() - months)
-    end = new Date(now); end.setMonth(now.getMonth() - monthsBack)
+    start = addMonthsSafe(now, -months)
+    end = addMonthsSafe(now, -monthsBack)
   } else {
     const years = offset + 1
     const yearsBack = offset
@@ -371,7 +372,7 @@ export default function AnalyticsPage() {
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
   const trendDays = period === 'year'
     ? Array.from({ length: 12 }, (_, i) => {
-        const d = new Date(startDate); d.setMonth(d.getMonth() + i)
+        const d = addMonthsSafe(startDate, i)
         const label = d.toLocaleDateString('tr-TR', { month: 'short' })
         const ym = toLocalDate(d).slice(0, 7)
         return { label, count: appointments.filter(a => a.appointment_date?.startsWith(ym)).length }
@@ -390,7 +391,7 @@ export default function AnalyticsPage() {
   const nonDuplicateInvoices = paidInvoices.filter(inv => !inv.appointment_id || !completedAptIds.has(inv.appointment_id))
   const trendRevenue = period === 'year'
     ? Array.from({ length: 12 }, (_, i) => {
-        const d = new Date(startDate); d.setMonth(d.getMonth() + i)
+        const d = addMonthsSafe(startDate, i)
         const label = d.toLocaleDateString('tr-TR', { month: 'short' })
         const ym = toLocalDate(d).slice(0, 7)
         const rev = completed.filter(a => a.appointment_date?.startsWith(ym)).reduce((s, a) => s + (a.services?.price || 0), 0)
@@ -412,7 +413,7 @@ export default function AnalyticsPage() {
   // Gider trendi (açılmış tekrarlayan giderlerle)
   const trendExpenses = period === 'year'
     ? Array.from({ length: 12 }, (_, i) => {
-        const d = new Date(startDate); d.setMonth(d.getMonth() + i)
+        const d = addMonthsSafe(startDate, i)
         const ym = toLocalDate(d).slice(0, 7)
         return expandedExpenses.filter(e => e.date.startsWith(ym)).reduce((s, e) => s + e.amount, 0)
       })

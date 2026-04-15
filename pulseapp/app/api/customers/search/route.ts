@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { sanitizeOrFilter } from '@/lib/utils/validate'
 
 async function verifyMembership(supabase: ReturnType<typeof createServerSupabaseClient>, userId: string, businessId: string) {
   const { data } = await supabase
@@ -34,7 +35,10 @@ export async function GET(request: NextRequest) {
     .eq('is_active', true)
 
   if (q) {
-    query = query.or(`name.ilike.%${q}%,phone.ilike.%${q}%`)
+    const safeQ = sanitizeOrFilter(q)
+    if (safeQ) {
+      query = query.or(`name.ilike.%${safeQ}%,phone.ilike.%${safeQ}%`)
+    }
     query = query.order('name').limit(limitParam)
   } else {
     query = query.order('last_visit_at', { ascending: false, nullsFirst: false })

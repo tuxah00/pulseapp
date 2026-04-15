@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendMessage } from '@/lib/messaging/send'
 import { logAuditServer } from '@/lib/utils/audit'
+import { addMonthsSafe } from '@/lib/utils/date-range'
 
 export async function POST(
   request: NextRequest,
@@ -128,8 +129,7 @@ export async function POST(
   }
 
   // ── 2. Geçmiş müşteriler (son X ay içinde bu hizmeti alanlar, bu ay gelmeyenler) ──
-  const lookbackDate = new Date()
-  lookbackDate.setMonth(lookbackDate.getMonth() - lookbackMonths)
+  const lookbackDate = addMonthsSafe(new Date(), -lookbackMonths)
   const lookbackDateStr = lookbackDate.toISOString().split('T')[0]
 
   const thisMonthStart = new Date()

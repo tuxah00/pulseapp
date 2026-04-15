@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { verifyPaytrCallback, parseOrderId, type PaytrCallbackData } from '@/lib/billing/paytr'
+import { verifyPaytrCallback, parseOrderId, getPlanPriceKurus, type PaytrCallbackData } from '@/lib/billing/paytr'
 
 // POST: PayTR ödeme sonucu webhook
 export async function POST(req: NextRequest) {
@@ -22,8 +22,20 @@ export async function POST(req: NextRequest) {
 
   const admin = createAdminClient()
 
-  // payment kaydını güncelle
-  await admin
+  // İdempotency: bu merchant_oid zaten işlenmişse tekrar çalıştırma
+  const { data: existingPayment } = await admin
+    .from('payments')
+    .select('id, status')
+    .eq('merchant_oid', data.merchant_oid)
+    .maybeSingle()
+
+  if (existingPayment?.status === 'paid' && data.status === 'success') {
+    // Zaten işlenmiş — PayTR'nin tekrar gönderimi; OK dön ve çık
+    return new Response('OK')
+  }
+
+  // payment kaydını güncelle — sadece henüz 'paid' olmayan satırlar (race'e karşı atomik transition)
+  const { data: updatedRows } = await admin
     .from('payments')
     .update({
       status: data.status === 'success' ? 'paid' : 'failed',
@@ -31,6 +43,8 @@ export async function POST(req: NextRequest) {
       paid_at: data.status === 'success' ? new Date().toISOString() : null,
     })
     .eq('merchant_oid', data.merchant_oid)
+    .neq('status', 'paid')
+    .select('id')
 
   if (data.status !== 'success') {
     // Başarısız ödeme — sadece logluyoruz
@@ -47,9 +61,27 @@ export async function POST(req: NextRequest) {
 
   const { businessId, planType } = parsed
 
-  // Abonelik sonu tarihini hesapla (1 ay)
+  // Tutar doğrulaması — merchant_oid'deki planType ile ödenen tutar eşleşmeli
+  // (plan escalation saldırısına karşı: starter ödeyip pro aktive etme)
+  const expectedKurus = getPlanPriceKurus(planType)
+  const paidKurus = parseInt(data.total_amount, 10)
+  if (!Number.isFinite(paidKurus) || paidKurus !== expectedKurus) {
+    console.error('PayTR: tutar uyuşmazlığı', { merchant_oid: data.merchant_oid, planType, expectedKurus, paidKurus })
+    return new Response('PAYTR_ERROR: Tutar uyuşmuyor', { status: 400 })
+  }
+
+  // Çifte uzatma koruması: transition 'paid'e gerçekten burada gerçekleşmediyse abonelik uzatma
+  if (!updatedRows || updatedRows.length === 0) {
+    return new Response('OK')
+  }
+
+  // Abonelik sonu tarihini hesapla (1 ay) — ay sonu taşması koruması (31 Ocak → 28 Şubat)
   const nextBillingDate = new Date()
+  const originalDay = nextBillingDate.getDate()
+  nextBillingDate.setDate(1)
   nextBillingDate.setMonth(nextBillingDate.getMonth() + 1)
+  const lastDayOfNextMonth = new Date(nextBillingDate.getFullYear(), nextBillingDate.getMonth() + 1, 0).getDate()
+  nextBillingDate.setDate(Math.min(originalDay, lastDayOfNextMonth))
 
   // İşletmenin aboneliğini güncelle
   const { error } = await admin

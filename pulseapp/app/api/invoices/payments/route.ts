@@ -49,6 +49,16 @@ export async function POST(req: NextRequest) {
   // İade kontrolü
   const isRefund = payment_type === 'refund'
   const paymentAmount = isRefund ? -Math.abs(amount) : Math.abs(amount)
+  const currentPaid = parseFloat(invoice.paid_amount) || 0
+  const invoiceTotal = parseFloat(invoice.total)
+
+  // İade limiti: mevcut ödenen tutardan fazla iade yapılamaz
+  if (isRefund && Math.abs(amount) > currentPaid + 0.01) {
+    return NextResponse.json(
+      { error: `İade tutarı mevcut ödenen tutardan (${currentPaid}₺) fazla olamaz` },
+      { status: 400 }
+    )
+  }
 
   // Ödeme kaydı oluştur
   const { data: payment, error: paymentError } = await supabase
@@ -69,12 +79,12 @@ export async function POST(req: NextRequest) {
 
   if (paymentError) return NextResponse.json({ error: paymentError.message }, { status: 500 })
 
-  // paid_amount güncelle
-  const newPaidAmount = Math.max(0, (parseFloat(invoice.paid_amount) || 0) + paymentAmount)
+  // paid_amount güncelle (2 ondalık yuvarlama — floating point hatalarını engeller)
+  const newPaidAmount = Math.max(0, Math.round((currentPaid + paymentAmount) * 100) / 100)
 
-  // Status otomatik belirle
+  // Status otomatik belirle (0.01₺ epsilon ile float precision koruması)
   let newStatus = invoice.status
-  if (newPaidAmount >= parseFloat(invoice.total)) {
+  if (newPaidAmount + 0.01 >= invoiceTotal) {
     newStatus = 'paid'
   } else if (newPaidAmount > 0) {
     newStatus = 'partial'
@@ -102,22 +112,22 @@ export async function POST(req: NextRequest) {
 
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 })
 
-  // Fatura tam ödendiyse stok düş
-  if (newStatus === 'paid' && invoice.status !== 'paid' && updatedInvoice?.items) {
+  // Fatura tam ödendiyse stok düş (POS'tan gelen faturalarda POS zaten düşürdüğü için atla)
+  if (newStatus === 'paid' && invoice.status !== 'paid' && !invoice.pos_transaction_id && updatedInvoice?.items) {
     const items = updatedInvoice.items as Array<{ product_id?: string; type?: string; quantity: number }>
     for (const item of items) {
       if (item.product_id && item.type === 'product') {
         const { data: product } = await supabase
           .from('products')
-          .select('stock_quantity')
+          .select('stock_count')
           .eq('id', item.product_id)
           .single()
 
         if (product) {
-          const newQty = Math.max(0, (product.stock_quantity || 0) - item.quantity)
+          const newQty = Math.max(0, (product.stock_count || 0) - item.quantity)
           await supabase
             .from('products')
-            .update({ stock_quantity: newQty, updated_at: new Date().toISOString() })
+            .update({ stock_count: newQty, updated_at: new Date().toISOString() })
             .eq('id', item.product_id)
 
           await supabase.from('stock_movements').insert({
@@ -126,6 +136,37 @@ export async function POST(req: NextRequest) {
             type: 'out',
             quantity: item.quantity,
             notes: `Fatura ${invoice.invoice_number} ile satış`,
+            created_by: user.id,
+          })
+        }
+      }
+    }
+  }
+
+  // İade durumunda stok geri yükle (daha önce düşürülmüşse)
+  if (isRefund && invoice.status === 'paid' && !invoice.pos_transaction_id && updatedInvoice?.items) {
+    const items = updatedInvoice.items as Array<{ product_id?: string; type?: string; quantity: number }>
+    for (const item of items) {
+      if (item.product_id && item.type === 'product') {
+        const { data: product } = await supabase
+          .from('products')
+          .select('stock_count')
+          .eq('id', item.product_id)
+          .single()
+
+        if (product) {
+          const newQty = (product.stock_count || 0) + item.quantity
+          await supabase
+            .from('products')
+            .update({ stock_count: newQty, updated_at: new Date().toISOString() })
+            .eq('id', item.product_id)
+
+          await supabase.from('stock_movements').insert({
+            business_id: invoice.business_id,
+            product_id: item.product_id,
+            type: 'in',
+            quantity: item.quantity,
+            notes: `Fatura ${invoice.invoice_number} iadesi`,
             created_by: user.id,
           })
         }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/api/with-permission'
 import { getAnthropicClient, AI_MODEL } from '@/lib/ai/client'
+import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
 
 export interface CampaignSuggestion {
   segment: string
@@ -15,6 +16,9 @@ export interface CampaignSuggestion {
 
 // POST: Müşteri segmentlerine göre kampanya önerisi
 export async function POST(req: NextRequest) {
+  const rl = checkRateLimit(req, RATE_LIMITS.ai)
+  if (rl.limited) return rl.response
+
   const auth = await requirePermission(req, 'analytics')
   if (!auth.ok) return auth.response
   const { businessId } = auth.ctx

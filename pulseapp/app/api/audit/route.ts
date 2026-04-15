@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { sanitizeOrFilter } from '@/lib/utils/validate'
 
 export async function GET(req: NextRequest) {
   const supabase = await createServerSupabaseClient()
@@ -40,7 +41,12 @@ export async function GET(req: NextRequest) {
   if (action) query = query.eq('action', action)
   if (fromDate) query = query.gte('created_at', `${fromDate}T00:00:00`)
   if (toDate) query = query.lte('created_at', `${toDate}T23:59:59`)
-  if (searchText) query = query.or(`staff_name.ilike.%${searchText}%,action.ilike.%${searchText}%,resource.ilike.%${searchText}%,details->>customer_name.ilike.%${searchText}%,details->>name.ilike.%${searchText}%,details->>email.ilike.%${searchText}%,details->>allergen.ilike.%${searchText}%,details->>referrer_name.ilike.%${searchText}%`)
+  if (searchText) {
+    const safeSearch = sanitizeOrFilter(searchText)
+    if (safeSearch) {
+      query = query.or(`staff_name.ilike.%${safeSearch}%,action.ilike.%${safeSearch}%,resource.ilike.%${safeSearch}%,details->>customer_name.ilike.%${safeSearch}%,details->>name.ilike.%${safeSearch}%,details->>email.ilike.%${safeSearch}%,details->>allergen.ilike.%${safeSearch}%,details->>referrer_name.ilike.%${safeSearch}%`)
+    }
+  }
 
   const { data, count, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -49,18 +55,38 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const admin = createAdminClient()
+  // Auth kontrolü — sadece giriş yapmış personel audit log oluşturabilir
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
+
+  const { data: staff } = await supabase
+    .from('staff_members')
+    .select('id, business_id, name')
+    .eq('user_id', user.id)
+    .eq('is_active', true)
+    .single()
+
+  if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
+
   const body = await req.json()
+
+  // business_id client'tan değil, server-side staff record'undan alınır — cross-tenant koruma
+  const businessId = staff.business_id
+  if (body.businessId && body.businessId !== businessId) {
+    return NextResponse.json({ error: 'Geçersiz işletme' }, { status: 403 })
+  }
 
   // IP adresini al
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
     || req.headers.get('x-real-ip')
     || null
 
+  const admin = createAdminClient()
   const { data, error } = await admin.from('audit_logs').insert({
-    business_id: body.businessId,
-    staff_id: body.staffId || null,
-    staff_name: body.staffName || null,
+    business_id: businessId,
+    staff_id: staff.id,
+    staff_name: staff.name || body.staffName || null,
     action: body.action,
     resource: body.resource,
     resource_id: body.resourceId || null,

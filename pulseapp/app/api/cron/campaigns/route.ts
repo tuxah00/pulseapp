@@ -1,18 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendCampaign } from '@/lib/campaigns/send'
+import { verifyCronAuth } from '@/lib/api/verify-cron'
 
 /**
  * Zamanlanmış kampanyaları işler.
  * Her saat çalışır. scheduled_at geçmiş olan kampanyaları başlatır.
  */
 export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get('authorization')
-  const cronSecret = process.env.CRON_SECRET
-
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
-  }
+  const cronErr = verifyCronAuth(request)
+  if (cronErr) return cronErr
 
   const admin = createAdminClient()
   const now = new Date()
