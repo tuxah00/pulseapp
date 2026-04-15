@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getEffectivePermissions, type StaffRole } from '@/types'
+import { getEffectivePermissions, getEffectiveWritePermissions, type StaffRole } from '@/types'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
 import { getOpenAIClient, ASSISTANT_MODEL, ASSISTANT_MAX_TOKENS } from '@/lib/ai/openai-client'
 import { buildAssistantSystemPrompt, buildOnboardingSystemPrompt, buildPageTutorialPrompt } from '@/lib/ai/assistant-prompts'
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
   const admin = createAdminClient()
   const { data: staff } = await admin
     .from('staff_members')
-    .select('id, business_id, role, permissions, name, is_active')
+    .select('id, business_id, role, permissions, write_permissions, name, is_active')
     .eq('user_id', user.id)
     .eq('is_active', true)
     .limit(1)
@@ -43,12 +43,14 @@ export async function POST(req: NextRequest) {
 
   const role = staff.role as StaffRole
   const permissions = getEffectivePermissions(role, staff.permissions)
+  const writePermissions = getEffectiveWritePermissions(role, (staff as any).write_permissions ?? null)
   const ctx: AuthContext = {
     userId: user.id,
     staffId: staff.id,
     businessId: staff.business_id,
     role,
     permissions,
+    writePermissions,
   }
 
   // 3. Parse request

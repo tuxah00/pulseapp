@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getEffectivePermissions, type StaffPermissions, type StaffRole } from '@/types'
+import {
+  getEffectivePermissions,
+  getEffectiveWritePermissions,
+  type StaffPermissions,
+  type StaffWritePermissions,
+  type StaffRole,
+} from '@/types'
 
 /**
  * API route permission middleware.
@@ -24,6 +30,7 @@ export interface AuthContext {
   businessId: string
   role: StaffRole
   permissions: StaffPermissions
+  writePermissions: StaffWritePermissions
 }
 
 type PermissionHandler = (
@@ -52,7 +59,7 @@ export function withPermission(
       const admin = createAdminClient()
       const { data: staff, error: staffError } = await admin
         .from('staff_members')
-        .select('id, business_id, role, permissions, is_active')
+        .select('id, business_id, role, permissions, write_permissions, is_active')
         .eq('user_id', user.id)
         .eq('is_active', true)
         .limit(1)
@@ -68,6 +75,7 @@ export function withPermission(
       // 3. Permission kontrolü
       const role = staff.role as StaffRole
       const effectivePerms = getEffectivePermissions(role, staff.permissions)
+      const effectiveWrite = getEffectiveWritePermissions(role, (staff as any).write_permissions ?? null)
 
       if (!effectivePerms[permission]) {
         return NextResponse.json(
@@ -83,6 +91,7 @@ export function withPermission(
         businessId: staff.business_id,
         role,
         permissions: effectivePerms,
+        writePermissions: effectiveWrite,
       }
 
       return handler(req, ctx)
@@ -92,6 +101,76 @@ export function withPermission(
         { error: 'Sunucu hatası' },
         { status: 500 }
       )
+    }
+  }
+}
+
+/**
+ * Yazma (POST/PUT/PATCH/DELETE) yetkisi kontrolü yapan middleware.
+ * View yetkisi VE write yetkisi birlikte kontrol edilir. Yoksa 403.
+ *
+ * Kullanım:
+ * ```ts
+ * export const POST = withWritePermission('invoices', async (req, ctx) => { ... })
+ * ```
+ */
+export function withWritePermission(
+  permission: keyof StaffPermissions,
+  handler: PermissionHandler
+) {
+  return async (req: NextRequest, routeContext?: any) => {
+    try {
+      const supabase = createServerSupabaseClient()
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+      if (authError || !user) {
+        return NextResponse.json({ error: 'Oturum bulunamadı.' }, { status: 401 })
+      }
+
+      const admin = createAdminClient()
+      const { data: staff } = await admin
+        .from('staff_members')
+        .select('id, business_id, role, permissions, write_permissions, is_active')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .limit(1)
+        .single()
+
+      if (!staff) {
+        return NextResponse.json({ error: 'Personel kaydı bulunamadı.' }, { status: 403 })
+      }
+
+      const role = staff.role as StaffRole
+      const effectivePerms = getEffectivePermissions(role, staff.permissions)
+      const effectiveWrite = getEffectiveWritePermissions(role, (staff as any).write_permissions ?? null)
+
+      if (!effectivePerms[permission]) {
+        return NextResponse.json(
+          { error: `Bu sayfayı görme yetkiniz yok: ${permission}` },
+          { status: 403 }
+        )
+      }
+
+      if (!effectiveWrite[permission]) {
+        return NextResponse.json(
+          { error: `Düzenleme yetkiniz yok: ${permission}` },
+          { status: 403 }
+        )
+      }
+
+      const ctx: AuthContext = {
+        userId: user.id,
+        staffId: staff.id,
+        businessId: staff.business_id,
+        role,
+        permissions: effectivePerms,
+        writePermissions: effectiveWrite,
+      }
+
+      return handler(req, ctx)
+    } catch (err: any) {
+      console.error('Write permission middleware hatası:', err)
+      return NextResponse.json({ error: 'Sunucu hatası' }, { status: 500 })
     }
   }
 }
@@ -128,7 +207,7 @@ export async function requirePermission(
     const admin = createAdminClient()
     const { data: staff } = await admin
       .from('staff_members')
-      .select('id, business_id, role, permissions, is_active')
+      .select('id, business_id, role, permissions, write_permissions, is_active')
       .eq('user_id', user.id)
       .eq('is_active', true)
       .limit(1)
@@ -143,6 +222,7 @@ export async function requirePermission(
 
     const role = staff.role as StaffRole
     const effectivePerms = getEffectivePermissions(role, staff.permissions)
+    const effectiveWrite = getEffectiveWritePermissions(role, (staff as any).write_permissions ?? null)
 
     if (!effectivePerms[permission]) {
       return {
@@ -162,6 +242,7 @@ export async function requirePermission(
         businessId: staff.business_id,
         role,
         permissions: effectivePerms,
+        writePermissions: effectiveWrite,
       },
     }
   } catch {
@@ -170,6 +251,37 @@ export async function requirePermission(
       response: NextResponse.json({ error: 'Sunucu hatası' }, { status: 500 }),
     }
   }
+}
+
+/**
+ * Inline kullanım için yazma yetkisi kontrolü.
+ *
+ * Kullanım:
+ * ```ts
+ * const auth = await requireWritePermission(req, 'invoices')
+ * if (!auth.ok) return auth.response
+ * const { businessId } = auth.ctx
+ * ```
+ */
+export async function requireWritePermission(
+  req: NextRequest,
+  permission: keyof StaffPermissions
+): Promise<
+  | { ok: true; ctx: AuthContext }
+  | { ok: false; response: NextResponse }
+> {
+  const base = await requirePermission(req, permission)
+  if (!base.ok) return base
+  if (!base.ctx.writePermissions[permission]) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { error: `Düzenleme yetkiniz yok: ${permission}` },
+        { status: 403 }
+      ),
+    }
+  }
+  return base
 }
 
 /**
@@ -192,7 +304,7 @@ export function withAuth(handler: PermissionHandler) {
       const admin = createAdminClient()
       const { data: staff } = await admin
         .from('staff_members')
-        .select('id, business_id, role, permissions, is_active')
+        .select('id, business_id, role, permissions, write_permissions, is_active')
         .eq('user_id', user.id)
         .eq('is_active', true)
         .limit(1)
@@ -212,6 +324,7 @@ export function withAuth(handler: PermissionHandler) {
         businessId: staff.business_id,
         role,
         permissions: getEffectivePermissions(role, staff.permissions),
+        writePermissions: getEffectiveWritePermissions(role, (staff as any).write_permissions ?? null),
       }
 
       return handler(req, ctx)
