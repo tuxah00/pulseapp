@@ -30,6 +30,8 @@ const ROUTE_LABELS: Record<string, string> = {
   notifications: 'Bildirimler',
   settings: 'Ayarlar',
   business: 'İşletme',
+  ai: 'AI Asistan',
+  billing: 'Faturalama',
   shifts: 'Vardiya',
   vardiye: 'Vardiya',
   services: 'Hizmetler',
