@@ -420,27 +420,31 @@ export default function BusinessSettingsPage() {
 
   return (
     <div>
-      {/* Floating Sticky Save Bar — settings sekmesinde değişiklik olunca çıkar */}
+      {/* Sticky Save Bar — alttan yükselen şerit, sidebar hariç content alanı */}
       {activeTab === 'settings' && isDirty && !saveBtnVisible && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 rounded-2xl bg-gray-900 dark:bg-gray-800 shadow-2xl border border-gray-700 px-5 py-3 sticky-save-bar">
-          <span className="text-sm text-gray-300 mr-1">Kaydedilmemiş değişiklikler var</span>
-          <button
-            type="button"
-            onClick={() => setSettings(savedSettings)}
-            className="flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700 transition-colors"
-          >
-            <X className="h-4 w-4" />
-            Geri Al
-          </button>
-          <button
-            type="button"
-            disabled={saving}
-            onClick={() => { handleSaveSettings({ preventDefault: () => {} } as React.FormEvent) }}
-            className="flex items-center gap-1.5 rounded-xl bg-pulse-900 hover:bg-pulse-800 px-4 py-2 text-sm font-medium text-white transition-colors"
-          >
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            Ayarları Kaydet
-          </button>
+        <div className="fixed bottom-0 left-0 lg:left-64 right-0 z-40 sticky-save-bar">
+          <div className="border-t border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm">
+            <div className="flex items-center justify-end gap-3 px-6 py-4">
+              <span className="text-sm text-gray-400 dark:text-gray-500 mr-2">Kaydedilmemiş değişiklikler var</span>
+              <button
+                type="button"
+                onClick={() => setSettings(savedSettings)}
+                className="btn-secondary"
+              >
+                <X className="mr-1.5 h-4 w-4" />
+                Değişiklikleri Geri Al
+              </button>
+              <button
+                type="button"
+                disabled={saving}
+                onClick={() => handleSaveSettings({ preventDefault: () => {} } as React.FormEvent)}
+                className="btn-primary"
+              >
+                {saving ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Save className="mr-1.5 h-4 w-4" />}
+                Ayarları Kaydet
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -1055,9 +1059,24 @@ export default function BusinessSettingsPage() {
               )}
             </div>
 
-            <div className="flex justify-end">
-              <button ref={saveBtnRef} type="submit" disabled={saving} className="btn-primary">
-                {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+            <div className="flex items-center justify-end gap-3 pt-2 border-t border-gray-100 dark:border-gray-800">
+              {isDirty && (
+                <button
+                  type="button"
+                  onClick={() => setSettings(savedSettings)}
+                  className="btn-secondary"
+                >
+                  <X className="mr-1.5 h-4 w-4" />
+                  Değişiklikleri Geri Al
+                </button>
+              )}
+              <button
+                ref={saveBtnRef}
+                type="submit"
+                disabled={saving || !isDirty}
+                className={cn('btn-primary', !isDirty && 'opacity-50 cursor-not-allowed')}
+              >
+                {saving ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Save className="mr-1.5 h-4 w-4" />}
                 Ayarları Kaydet
               </button>
             </div>

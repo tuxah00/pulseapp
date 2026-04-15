@@ -397,11 +397,11 @@
 
 /* ── Sticky Save Bar ── */
 @keyframes sticky-bar-in {
-  from { transform: translate(-50%, 20px); opacity: 0; }
-  to   { transform: translate(-50%, 0);    opacity: 1; }
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
 }
 .sticky-save-bar {
-  animation: sticky-bar-in 0.2s ease-out forwards;
+  animation: sticky-bar-in 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 /* ── Form zorunlu alan ── */
