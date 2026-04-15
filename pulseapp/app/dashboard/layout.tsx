@@ -5,7 +5,7 @@ import DashboardShell from '@/components/dashboard/dashboard-shell'
 import { BusinessProvider } from '@/lib/hooks/business-context-provider'
 import { ThemeProvider } from '@/components/theme-provider'
 import { ConfirmProvider } from '@/lib/hooks/use-confirm'
-import { getEffectivePermissions, type StaffRole, type SectorType, type PlanType } from '@/types'
+import { getEffectivePermissions, getEffectiveWritePermissions, type StaffRole, type SectorType, type PlanType } from '@/types'
 
 export default async function DashboardLayout({
   children,
@@ -49,6 +49,7 @@ export default async function DashboardLayout({
   const plan = (business?.subscription_plan || 'starter') as PlanType
   const staffRole = (staffMember.role || 'staff') as StaffRole
   const permissions = getEffectivePermissions(staffRole, staffMember.permissions)
+  const writePermissions = getEffectiveWritePermissions(staffRole, (staffMember as any).write_permissions ?? null)
 
   return (
     <ThemeProvider>
@@ -69,6 +70,7 @@ export default async function DashboardLayout({
           businessName,
           staffRole,
           permissions,
+          writePermissions,
         }}>
           <ConfirmProvider>
             {children}

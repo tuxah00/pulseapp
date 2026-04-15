@@ -48,6 +48,22 @@ export interface StaffPermissions {
   workflows?: boolean
 }
 
+// Granüler "Düzenle" yetkileri — her modül için yazma iznini ayrı yönetir
+export type StaffWritePermissions = Partial<Record<keyof StaffPermissions, boolean>>
+
+// "Düzenle" desteği olan modüller (UI'de edit toggle gösterilir)
+export const WRITABLE_PERMISSION_KEYS: ReadonlyArray<keyof StaffPermissions> = [
+  'appointments', 'customers', 'services', 'staff', 'shifts',
+  'messages', 'reservations', 'classes', 'memberships', 'packages',
+  'records', 'portfolio', 'inventory', 'orders', 'invoices', 'pos',
+  'protocols', 'rewards', 'campaigns', 'workflows', 'settings',
+] as const
+
+// Sadece görüntüleme modülleri (UI'de edit sütunu "—" gösterir)
+export const READ_ONLY_PERMISSION_KEYS: ReadonlyArray<keyof StaffPermissions> = [
+  'dashboard', 'analytics', 'reviews',
+] as const
+
 export const DEFAULT_PERMISSIONS: Record<StaffRole, StaffPermissions> = {
   owner: {
     dashboard: true, appointments: true, customers: true, analytics: true,
@@ -71,10 +87,55 @@ export const DEFAULT_PERMISSIONS: Record<StaffRole, StaffPermissions> = {
   },
 }
 
+export const DEFAULT_WRITE_PERMISSIONS: Record<StaffRole, StaffWritePermissions> = {
+  owner: Object.fromEntries(WRITABLE_PERMISSION_KEYS.map(k => [k, true])) as StaffWritePermissions,
+  manager: Object.fromEntries(
+    WRITABLE_PERMISSION_KEYS
+      .filter(k => k !== 'staff' && k !== 'settings')
+      .map(k => [k, true])
+  ) as StaffWritePermissions,
+  // Personel varsayılanı: sadece temel operasyon (randevu + müşteri). Diğer modüller view-only veya kapalı.
+  staff: { appointments: true, customers: true },
+}
+
 export function getEffectivePermissions(role: StaffRole, customPermissions?: StaffPermissions | null): StaffPermissions {
   if (role === 'owner') return DEFAULT_PERMISSIONS.owner
   if (customPermissions) return customPermissions
   return DEFAULT_PERMISSIONS[role]
+}
+
+export function getEffectiveWritePermissions(
+  role: StaffRole,
+  customWrite?: StaffWritePermissions | null
+): StaffWritePermissions {
+  if (role === 'owner') return DEFAULT_WRITE_PERMISSIONS.owner
+  if (customWrite) return customWrite
+  return DEFAULT_WRITE_PERMISSIONS[role]
+}
+
+// Helper: Sayfa görüntüleme kontrolü (null = yükleniyor, permissive)
+export function canView(
+  perms: StaffPermissions | null | undefined,
+  key: keyof StaffPermissions
+): boolean {
+  if (!perms) return true
+  return perms[key] !== false
+}
+
+// Helper: Sayfa içinde yazma kontrolü
+// - view yoksa edit olamaz
+// - READ_ONLY modüllerde edit her zaman false
+// - writePermissions NULL ise yeni modül için default KAPALI
+export function canEdit(
+  viewPerms: StaffPermissions | null | undefined,
+  writePerms: StaffWritePermissions | null | undefined,
+  key: keyof StaffPermissions
+): boolean {
+  if (!viewPerms) return true
+  if (viewPerms[key] === false) return false
+  if ((READ_ONLY_PERMISSION_KEYS as readonly string[]).includes(key)) return false
+  if (!writePerms) return false
+  return writePerms[key] === true
 }
 
 export type AppointmentStatus =
@@ -551,6 +612,7 @@ export interface StaffMember {
   avatar_url: string | null
   working_hours: WorkingHours | null
   permissions: StaffPermissions | null
+  write_permissions?: StaffWritePermissions | null
   tutorial_progress: TutorialProgress | null
   is_active: boolean
   created_at: string
