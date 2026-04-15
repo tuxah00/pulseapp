@@ -5,7 +5,6 @@ import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useDebounce } from '@/lib/hooks/use-debounce'
 import { useSidebar } from '@/lib/hooks/sidebar-context'
-import { motion } from 'framer-motion'
 import {
   MessageSquare, Search, Send, Loader2, Phone,
   Bot, User, ChevronLeft, Clock, ArrowDownCircle,
@@ -52,17 +51,6 @@ export default function MessagesPage() {
   const { businessId, loading: ctxLoading, permissions } = useBusinessContext()
   const { collapsed } = useSidebar()
   const supabase = createClient()
-  const [isDesktop, setIsDesktop] = useState(() =>
-    typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches
-  )
-
-  useEffect(() => {
-    const mq = window.matchMedia('(min-width: 1024px)')
-    setIsDesktop(mq.matches)
-    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches)
-    mq.addEventListener('change', handler)
-    return () => mq.removeEventListener('change', handler)
-  }, [])
 
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [messages, setMessages] = useState<Message[]>([])
@@ -338,11 +326,11 @@ export default function MessagesPage() {
   }
 
   return (
-    <motion.div
-      className="fixed inset-0 top-14 z-30 bg-white dark:!bg-gray-950"
-      initial={false}
-      animate={{ left: isDesktop ? (collapsed ? 72 : 256) : 0 }}
-      transition={{ type: 'spring', stiffness: 400, damping: 40 }}
+    <div
+      className={cn(
+        'fixed inset-0 top-14 z-30 bg-white dark:!bg-gray-950 transition-[left] duration-300 ease-out left-0',
+        collapsed ? 'lg:left-[72px]' : 'lg:left-64'
+      )}
     >
       <div className="flex h-full">
 
@@ -784,7 +772,7 @@ export default function MessagesPage() {
           )}
         </div>
       </div>
-    </motion.div>
+    </div>
   )
 }
 
