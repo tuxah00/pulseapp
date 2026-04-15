@@ -1450,7 +1450,8 @@ function RecordsPageInner() {
                     const today = new Date()
                     const minBday = new Date(today.getFullYear() - 120, today.getMonth(), today.getDate())
                       .toISOString().slice(0, 10)
-                    const maxBday = today.toISOString().slice(0, 10)
+                    const maxBday = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate())
+                      .toISOString().slice(0, 10)
                     return (
                       <input
                         type={f.type ?? 'text'}
