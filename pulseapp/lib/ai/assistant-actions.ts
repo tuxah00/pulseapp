@@ -2,8 +2,9 @@ import type { createAdminClient } from '@/lib/supabase/admin'
 import type { AuthContext } from '@/lib/api/with-permission'
 import { logAuditServer } from '@/lib/utils/audit'
 import { sendCampaign } from '@/lib/campaigns/send'
-import { generateInvoiceNumber } from '@/lib/invoices/numbering'
+import { generateInvoiceNumber, generateReceiptNumber } from '@/lib/invoices/numbering'
 import { deductStockFromItems } from '@/lib/invoices/stock'
+import { computeInvoiceTotals } from '@/lib/invoices/calc'
 import type { InvoiceItem } from '@/types'
 
 type SupabaseAdmin = ReturnType<typeof createAdminClient>
@@ -939,29 +940,49 @@ async function execUpdateBusinessSettings(
 
 // ─── Faz 8: Finans Executors ──────────────────────────────────────────
 
-async function execCreateInvoice(
+/** Shared invoice insert helper — totals hesaplar, kaydı atar, audit log yazar */
+async function insertInvoice(
   admin: SupabaseAdmin,
   ctx: ExecutorCtx,
-  p: Record<string, any>,
+  params: {
+    customer_id: string
+    items: InvoiceItem[]
+    tax_rate?: number
+    discount_amount?: number
+    discount_type?: 'percentage' | 'fixed' | null
+    due_date?: string | null
+    notes?: string | null
+    appointment_id?: string | null
+    auditDetails?: Record<string, string | number | boolean | null>
+  },
 ): Promise<ActionExecuteResult> {
+  const subtotal = params.items.reduce((s, it) => s + (Number(it.total) || 0), 0)
+  const totals = computeInvoiceTotals({
+    subtotal,
+    tax_rate: params.tax_rate,
+    discount_amount: params.discount_amount,
+    discount_type: params.discount_type,
+  })
+
   const invoiceNumber = await generateInvoiceNumber(admin, ctx.businessId)
   const { data, error } = await admin
     .from('invoices')
     .insert({
       business_id: ctx.businessId,
-      customer_id: p.customer_id,
+      customer_id: params.customer_id,
+      appointment_id: params.appointment_id || null,
       invoice_number: invoiceNumber,
-      items: p.items,
-      subtotal: p.subtotal,
-      tax_rate: p.tax_rate || 0,
-      tax_amount: p.tax_amount || 0,
-      total: p.total,
+      items: params.items,
+      subtotal: totals.subtotal,
+      tax_rate: params.tax_rate || 0,
+      tax_amount: totals.tax_amount,
+      total: totals.total,
       paid_amount: 0,
       status: 'pending',
-      discount_amount: p.discount_amount || 0,
-      discount_type: p.discount_type,
-      due_date: p.due_date,
-      notes: p.notes,
+      discount_amount: totals.discount_value,
+      discount_type: params.discount_type || null,
+      due_date: params.due_date || null,
+      notes: params.notes || null,
       staff_id: ctx.staffId,
       staff_name: ctx.staffName,
       payment_type: 'standard',
@@ -978,10 +999,31 @@ async function execCreateInvoice(
     action: 'create',
     resource: 'invoice',
     resourceId: data.id,
-    details: { via: 'ai_assistant', invoice_number: data.invoice_number, total: data.total },
+    details: {
+      via: 'ai_assistant',
+      invoice_number: data.invoice_number,
+      total: data.total,
+      ...(params.auditDetails || {}),
+    },
   })
 
   return { ok: true, message: `✓ Fatura ${data.invoice_number} oluşturuldu (${data.total}₺)`, data: { id: data.id } }
+}
+
+async function execCreateInvoice(
+  admin: SupabaseAdmin,
+  ctx: ExecutorCtx,
+  p: Record<string, any>,
+): Promise<ActionExecuteResult> {
+  return insertInvoice(admin, ctx, {
+    customer_id: p.customer_id,
+    items: p.items as InvoiceItem[],
+    tax_rate: p.tax_rate,
+    discount_amount: p.discount_amount,
+    discount_type: p.discount_type,
+    due_date: p.due_date,
+    notes: p.notes,
+  })
 }
 
 async function execRecordInvoicePayment(
@@ -1066,47 +1108,15 @@ async function execGenerateInvoiceFromAppointment(
   ctx: ExecutorCtx,
   p: Record<string, any>,
 ): Promise<ActionExecuteResult> {
-  const invoiceNumber = await generateInvoiceNumber(admin, ctx.businessId)
-  const { data, error } = await admin
-    .from('invoices')
-    .insert({
-      business_id: ctx.businessId,
-      customer_id: p.customer_id,
-      appointment_id: p.appointment_id,
-      invoice_number: invoiceNumber,
-      items: p.items,
-      subtotal: p.subtotal,
-      tax_rate: p.tax_rate || 0,
-      tax_amount: p.tax_amount || 0,
-      total: p.total,
-      paid_amount: 0,
-      status: 'pending',
-      staff_id: ctx.staffId,
-      staff_name: ctx.staffName,
-      payment_type: 'standard',
-    })
-    .select('id, invoice_number, total')
-    .single()
-
-  if (error || !data) return { ok: false, message: 'Fatura oluşturulamadı: ' + (error?.message || '') }
-
-  await logAuditServer({
-    businessId: ctx.businessId,
-    staffId: ctx.staffId,
-    staffName: ctx.staffName,
-    action: 'create',
-    resource: 'invoice',
-    resourceId: data.id,
-    details: {
-      via: 'ai_assistant',
-      source: 'appointment',
-      appointment_id: p.appointment_id,
-      invoice_number: data.invoice_number,
-      total: data.total,
-    },
+  const result = await insertInvoice(admin, ctx, {
+    customer_id: p.customer_id,
+    items: p.items as InvoiceItem[],
+    tax_rate: p.tax_rate,
+    appointment_id: p.appointment_id,
+    auditDetails: { source: 'appointment', appointment_id: p.appointment_id },
   })
-
-  return { ok: true, message: `✓ Randevudan fatura oluşturuldu (${data.invoice_number})`, data: { id: data.id } }
+  if (!result.ok) return result
+  return { ...result, message: result.message.replace('oluşturuldu', 'randevudan oluşturuldu') }
 }
 
 async function execCreatePosTransaction(
@@ -1114,12 +1124,7 @@ async function execCreatePosTransaction(
   ctx: ExecutorCtx,
   p: Record<string, any>,
 ): Promise<ActionExecuteResult> {
-  const year = new Date().getFullYear()
-  const { count } = await admin
-    .from('pos_transactions')
-    .select('*', { count: 'exact', head: true })
-    .eq('business_id', ctx.businessId)
-  const receipt_number = `RCP-${year}-${String((count || 0) + 1).padStart(4, '0')}`
+  const receipt_number = await generateReceiptNumber(admin, ctx.businessId)
 
   const payments = [{ method: p.payment_method, amount: p.total }]
 

@@ -5,6 +5,7 @@ import { validateBody, parsePaginationParams } from '@/lib/api/validate'
 import { invoiceCreateSchema, invoicePatchSchema } from '@/lib/schemas'
 import { deductStockFromItems } from '@/lib/invoices/stock'
 import { generateInvoiceNumber } from '@/lib/invoices/numbering'
+import { computeInvoiceTotals } from '@/lib/invoices/calc'
 import type { InvoiceItem } from '@/types'
 
 // GET: Fatura listesi (gelişmiş filtreler)
@@ -77,13 +78,12 @@ export async function POST(req: NextRequest) {
   } = result.data
   const business_id = businessId
 
-  const subtotal = items.reduce((sum, item) => sum + item.total, 0)
-  const discountValue = discount_type === 'percentage'
-    ? Math.round(subtotal * (discountInput || 0)) / 100
-    : (discountInput || 0)
-  const taxableAmount = subtotal - discountValue
-  const tax_amount = Math.round(taxableAmount * tax_rate) / 100
-  const total = taxableAmount + tax_amount
+  const { subtotal, discount_value: discountValue, tax_amount, total } = computeInvoiceTotals({
+    subtotal: items.reduce((sum, item) => sum + item.total, 0),
+    tax_rate,
+    discount_amount: discountInput,
+    discount_type,
+  })
 
   const supabase = createServerSupabaseClient()
   const invoiceNumber = await generateInvoiceNumber(supabase, business_id)

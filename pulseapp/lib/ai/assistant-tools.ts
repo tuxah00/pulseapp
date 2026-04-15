@@ -4,6 +4,7 @@ import type { AuthContext } from '@/lib/api/with-permission'
 import type { StaffPermissions, CampaignSegmentFilter } from '@/types'
 import { createPendingAction, cancelPendingAction } from '@/lib/ai/assistant-actions'
 import { matchesCampaignFilter } from '@/lib/utils/campaign-filters'
+import { computeInvoiceTotals } from '@/lib/invoices/calc'
 
 type SupabaseAdmin = ReturnType<typeof createAdminClient>
 type ToolCtx = AuthContext & { staffName: string; conversationId: string | null }
@@ -3466,19 +3467,21 @@ function normalizeInvoiceItems(rawItems: any[]): {
   items: Array<{ service_name: string; quantity: number; unit_price: number; total: number; type?: string; product_id?: string }>
   subtotal: number
 } {
-  const items = rawItems.map((it: any) => {
-    const quantity = Number(it.quantity) || 1
-    const unit_price = Number(it.unit_price) || 0
-    const total = round2(quantity * unit_price)
-    return {
-      service_name: String(it.service_name || ''),
-      quantity,
-      unit_price,
-      total,
-      ...(it.type ? { type: it.type } : {}),
-      ...(it.product_id ? { product_id: it.product_id } : {}),
-    }
-  })
+  const items = rawItems
+    .map((it: any) => {
+      const quantity = Number(it.quantity) || 1
+      const unit_price = Number(it.unit_price) || 0
+      const total = round2(quantity * unit_price)
+      return {
+        service_name: String(it.service_name || '').trim(),
+        quantity,
+        unit_price,
+        total,
+        ...(it.type ? { type: it.type } : {}),
+        ...(it.product_id ? { product_id: it.product_id } : {}),
+      }
+    })
+    .filter(it => it.service_name && it.total > 0)
   const subtotal = round2(items.reduce((s, it) => s + it.total, 0))
   return { items, subtotal }
 }
@@ -3500,35 +3503,39 @@ async function handleCreateInvoice(
   if (!cust) return { success: false, error: 'Müşteri bulunamadı' }
 
   const { items, subtotal } = normalizeInvoiceItems(args.items)
+  if (items.length === 0 || subtotal <= 0) {
+    return { success: false, error: 'Fatura kalemleri boş veya tutarsız' }
+  }
+
   const taxRate = Number(args.tax_rate) || 0
   const discountInput = Number(args.discount_amount) || 0
-  const discountValue = args.discount_type === 'percentage'
-    ? round2(subtotal * discountInput / 100)
-    : discountInput
-  const taxableAmount = subtotal - discountValue
-  const taxAmount = round2(taxableAmount * taxRate / 100)
-  const total = round2(taxableAmount + taxAmount)
+  if (args.discount_type === 'fixed' && discountInput > subtotal) {
+    return { success: false, error: `İndirim tutarı ara toplamdan (${subtotal}₺) büyük olamaz` }
+  }
+
+  const totals = computeInvoiceTotals({
+    subtotal, tax_rate: taxRate,
+    discount_amount: discountInput,
+    discount_type: args.discount_type,
+  })
 
   const itemsList = items.slice(0, 5).map(i => `• ${i.service_name} x${i.quantity} = ${i.total}₺`).join('\n')
   const more = items.length > 5 ? `\n… ve ${items.length - 5} kalem daha` : ''
-  const preview = `🧾 Fatura oluşturulacak — ${cust.name}\n${itemsList}${more}\nAra toplam: ${subtotal}₺${discountValue ? `\nİndirim: -${discountValue}₺` : ''}${taxAmount ? `\nKDV: ${taxAmount}₺` : ''}\n**Toplam: ${total}₺**`
+  const preview = `🧾 Fatura oluşturulacak — ${cust.name}\n${itemsList}${more}\nAra toplam: ${subtotal}₺${totals.discount_value ? `\nİndirim: -${totals.discount_value}₺` : ''}${totals.tax_amount ? `\nKDV: ${totals.tax_amount}₺` : ''}\n**Toplam: ${totals.total}₺**`
 
   return await createPendingAction(
     admin, ctx, 'create_invoice',
     {
       customer_id: args.customer_id,
       items,
-      subtotal,
       tax_rate: taxRate,
-      tax_amount: taxAmount,
-      discount_amount: discountValue,
+      discount_amount: discountInput,
       discount_type: args.discount_type || null,
-      total,
       due_date: args.due_date || null,
       notes: args.notes || null,
     },
     preview,
-    { customer: cust.name, total },
+    { customer: cust.name, total: totals.total },
   )
 }
 
