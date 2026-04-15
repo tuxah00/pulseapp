@@ -5,6 +5,8 @@ import type { StaffPermissions, CampaignSegmentFilter } from '@/types'
 import { createPendingAction, cancelPendingAction } from '@/lib/ai/assistant-actions'
 import { matchesCampaignFilter } from '@/lib/utils/campaign-filters'
 import { computeInvoiceTotals } from '@/lib/invoices/calc'
+import { computeStrategicRecommendations } from '@/lib/analytics/insights'
+import type { SectorType } from '@/types'
 
 type SupabaseAdmin = ReturnType<typeof createAdminClient>
 type ToolCtx = AuthContext & { staffName: string; conversationId: string | null }
@@ -531,6 +533,24 @@ export const ASSISTANT_TOOLS: ChatCompletionTool[] = [
       name: 'detect_anomalies',
       description: 'Son 7 güne göre anomali tespiti — geçen haftaya kıyasla gelir düşüşü, no-show artışı, yeni müşteri düşüşü, boş slot artışı gibi dikkat çekici değişimleri listeler.',
       parameters: { type: 'object', properties: {} },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'recommend_strategic_actions',
+      description: 'Stratejik iş önerileri üretir — sektör playbook\'u + canlı veri (marj, doluluk, elde tutma, mevsimsel trend, risk müşteri) birleştirilerek kâr odaklı somut aksiyon önerileri döner. Her öneri severity (critical/high/medium/info), rationale, evidence ve tıklanabilir suggested_action içerir. Kullanıcı "ne yapmalıyım", "öneri ver", "bu ay stratejim ne olmalı" dediğinde kullan.',
+      parameters: {
+        type: 'object',
+        properties: {
+          focus: {
+            type: 'string',
+            enum: ['profit', 'retention', 'occupancy', 'seasonal'],
+            description: 'Belirli bir odak (opsiyonel). Verilmezse tüm odakların en kritik önerileri döner.',
+          },
+          limit: { type: 'number', description: 'Maks öneri sayısı (varsayılan 5)' },
+        },
+      },
     },
   },
   // Grup 10: Zamanlanmış Eylemler (Faz 5)
@@ -1070,6 +1090,7 @@ export const TOOL_LABELS: Record<string, string> = {
   compare_periods: 'Dönemler karşılaştırılıyor...',
   detect_risk_customers: 'Risk altındaki müşteriler tespit ediliyor...',
   detect_anomalies: 'Anomali taraması yapılıyor...',
+  recommend_strategic_actions: 'Stratejik öneriler hesaplanıyor...',
   schedule_action: 'Eylem zamanlanıyor...',
   list_scheduled_actions: 'Planlı eylemler listeleniyor...',
   cancel_scheduled_action: 'Zamanlanmış eylem iptal ediliyor...',
@@ -1137,6 +1158,7 @@ const TOOL_PERMISSIONS: Record<string, keyof StaffPermissions> = {
   compare_periods: 'analytics',
   detect_risk_customers: 'customers',
   detect_anomalies: 'analytics',
+  recommend_strategic_actions: 'analytics',
   schedule_action: 'dashboard',
   list_scheduled_actions: 'dashboard',
   cancel_scheduled_action: 'dashboard',
@@ -1255,6 +1277,8 @@ export async function executeAssistantTool(
         return await handleDetectRiskCustomers(admin, businessId, args)
       case 'detect_anomalies':
         return await handleDetectAnomalies(admin, businessId)
+      case 'recommend_strategic_actions':
+        return await handleRecommendStrategicActions(admin, businessId, args)
       case 'schedule_action':
         return await handleScheduleAction(admin, ctx, args)
       case 'list_scheduled_actions':
@@ -2807,6 +2831,42 @@ export async function handleDetectAnomalies(admin: SupabaseAdmin, businessId: st
         new_customers: { current: curNew, previous: prevNew, change_pct: newChange },
       },
       anomalies,
+    },
+  }
+}
+
+async function handleRecommendStrategicActions(
+  admin: SupabaseAdmin,
+  businessId: string,
+  args: { focus?: 'profit' | 'retention' | 'occupancy' | 'seasonal'; limit?: number },
+) {
+  const { data: biz } = await admin
+    .from('businesses')
+    .select('sector')
+    .eq('id', businessId)
+    .single()
+
+  const sector = (biz?.sector as SectorType) || 'other'
+  const recommendations = await computeStrategicRecommendations(
+    admin,
+    businessId,
+    sector,
+    { focus: args.focus },
+  )
+
+  const limit = Math.min(Math.max(args.limit || 5, 1), 10)
+  const rankOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, info: 3 }
+  const sorted = [...recommendations].sort(
+    (a, b) => (rankOrder[a.severity] ?? 9) - (rankOrder[b.severity] ?? 9),
+  )
+
+  return {
+    success: true,
+    data: {
+      sector,
+      focus: args.focus || 'all',
+      count: recommendations.length,
+      recommendations: sorted.slice(0, limit),
     },
   }
 }
