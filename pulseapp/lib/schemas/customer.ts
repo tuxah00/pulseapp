@@ -43,9 +43,10 @@ export const customerCreateSchema = z.object({
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, 'Geçersiz tarih formatı')
     .refine((d) => {
-      const today = new Date().toISOString().slice(0, 10)
-      return d <= today
-    }, { message: 'Doğum tarihi gelecekte olamaz' })
+      const oneYearAgo = new Date()
+      oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1)
+      return d <= oneYearAgo.toISOString().slice(0, 10)
+    }, { message: 'Müşteri en az 1 yaşında olmalı' })
     .refine((d) => {
       const year = parseInt(d.slice(0, 4), 10)
       return year >= 1900 && year <= new Date().getFullYear()
