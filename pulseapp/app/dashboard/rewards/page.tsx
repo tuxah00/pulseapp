@@ -375,19 +375,21 @@ export default function RewardsPage() {
                 const Icon = sc.icon
                 return (
                   <AnimatedItem key={r.id} className="card p-4">
-                    <div className="grid grid-cols-[1fr_auto_1fr_minmax(160px,auto)_auto] items-center gap-4">
-                      <div className="min-w-0">
-                        <p className="text-xs text-gray-400 mb-0.5">Tavsiye Eden</p>
-                        <p className="font-medium text-gray-900 dark:text-white truncate">{referrer?.name || '—'}</p>
-                        {referrer?.phone && <p className="text-xs text-gray-500 flex items-center gap-1"><Phone className="h-3 w-3" /> {referrer.phone}</p>}
+                    <div className="flex items-center gap-4">
+                      <div className="flex-1 grid grid-cols-[1fr_auto_1fr] items-center gap-4 min-w-0">
+                        <div className="min-w-0">
+                          <p className="text-xs text-gray-400 mb-0.5">Tavsiye Eden</p>
+                          <p className="font-medium text-gray-900 dark:text-white truncate">{referrer?.name || '—'}</p>
+                          {referrer?.phone && <p className="text-xs text-gray-500 flex items-center gap-1"><Phone className="h-3 w-3" /> {referrer.phone}</p>}
+                        </div>
+                        <ArrowRight className="h-4 w-4 text-gray-300 flex-shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-xs text-gray-400 mb-0.5">Tavsiye Edilen</p>
+                          <p className="font-medium text-gray-900 dark:text-white truncate">{referred?.name || r.referred_name || '—'}</p>
+                          {(referred?.phone || r.referred_phone) && <p className="text-xs text-gray-500 flex items-center gap-1"><Phone className="h-3 w-3" /> {referred?.phone || r.referred_phone}</p>}
+                        </div>
                       </div>
-                      <ArrowRight className="h-4 w-4 text-gray-300" />
-                      <div className="min-w-0">
-                        <p className="text-xs text-gray-400 mb-0.5">Tavsiye Edilen</p>
-                        <p className="font-medium text-gray-900 dark:text-white truncate">{referred?.name || r.referred_name || '—'}</p>
-                        {(referred?.phone || r.referred_phone) && <p className="text-xs text-gray-500 flex items-center gap-1"><Phone className="h-3 w-3" /> {referred?.phone || r.referred_phone}</p>}
-                      </div>
-                      <div className="text-right">
+                      <div className="w-[180px] flex-shrink-0 text-right">
                         {r.reward_type ? (
                           <p className="text-xs text-purple-600 dark:text-purple-400 flex items-center gap-1 justify-end mb-0.5">
                             <Gift className="h-3 w-3" />
@@ -401,7 +403,7 @@ export default function RewardsPage() {
                         </span>
                         {r.status === 'rewarded' && <p className="text-[10px] text-green-500 mt-0.5">Ödül verildi</p>}
                       </div>
-                      <div className="flex gap-1 justify-end">
+                      <div className="w-[80px] flex-shrink-0 flex gap-1 justify-end">
                         {r.status === 'pending' && (
                           <button onClick={() => handleReward(r.id)} className="text-xs px-2 py-1 rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200 transition-colors">Ödül Ver</button>
                         )}

@@ -159,6 +159,7 @@ export async function POST(req: NextRequest) {
       staffName: staff.name,
       staffRole: role,
       permissions,
+      aiPermissions: biz?.settings?.ai_permissions ?? null,
       workingHours: biz?.working_hours,
       services,
       aiPreferences: biz?.settings?.ai_preferences,
@@ -199,9 +200,20 @@ export async function POST(req: NextRequest) {
       try {
         let currentMessages = [...messages]
         let continueLoop = true
+        // Tool-call loop guard: modelin aynı isteği defalarca denemesini önler
+        const MAX_TOOL_ITERATIONS = 6
+        let iterationCount = 0
 
         while (continueLoop) {
           continueLoop = false
+          iterationCount++
+          if (iterationCount > MAX_TOOL_ITERATIONS) {
+            send({
+              type: 'text',
+              content: '\n\n(Çok sayıda araç çağrısı yapıldı, yanıt burada sonlandırıldı. Lütfen isteğini daha net ifade eder misin?)',
+            })
+            break
+          }
 
           const response = await openai.chat.completions.create({
             model: ASSISTANT_MODEL,
