@@ -52,7 +52,9 @@ export default function MessagesPage() {
   const { businessId, loading: ctxLoading, permissions } = useBusinessContext()
   const { collapsed } = useSidebar()
   const supabase = createClient()
-  const [isDesktop, setIsDesktop] = useState(false)
+  const [isDesktop, setIsDesktop] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches
+  )
 
   useEffect(() => {
     const mq = window.matchMedia('(min-width: 1024px)')
@@ -338,6 +340,7 @@ export default function MessagesPage() {
   return (
     <motion.div
       className="fixed inset-0 top-14 z-30 bg-white dark:!bg-gray-950"
+      initial={false}
       animate={{ left: isDesktop ? (collapsed ? 72 : 256) : 0 }}
       transition={{ type: 'spring', stiffness: 400, damping: 40 }}
     >
