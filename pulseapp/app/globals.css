@@ -57,6 +57,10 @@
     --gradient-success: linear-gradient(135deg, #10b981 0%, #047857 100%);
     --gradient-warning: linear-gradient(135deg, #f59e0b 0%, #b45309 100%);
     --gradient-danger: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+
+    /* Heatmap */
+    --heatmap-empty: #e5e7eb;
+    --heatmap-fill: 59, 130, 246;
   }
 
   .dark {
@@ -96,6 +100,10 @@
 
     --glass-bg: rgba(17, 24, 39, 0.85);
     --glass-border: rgba(255, 255, 255, 0.06);
+
+    /* Heatmap */
+    --heatmap-empty: #2d3748;
+    --heatmap-fill: 96, 165, 250;
   }
 
   body {

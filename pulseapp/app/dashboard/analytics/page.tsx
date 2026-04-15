@@ -1285,9 +1285,8 @@ export default function AnalyticsPage() {
                                 className="flex-1 h-6 rounded-sm transition-colors"
                                 style={{
                                   backgroundColor: count === 0
-                                    ? undefined
-                                    : `rgba(25, 61, 143, ${0.1 + intensity * 0.9})`,
-                                  background: count === 0 ? 'var(--heatmap-empty, #f3f4f6)' : undefined,
+                                    ? 'var(--heatmap-empty)'
+                                    : `rgba(var(--heatmap-fill), ${0.15 + intensity * 0.85})`,
                                 }}
                               />
                             )
@@ -1298,8 +1297,8 @@ export default function AnalyticsPage() {
                     {/* Renk skalası */}
                     <div className="flex items-center gap-2 mt-2 text-xs text-gray-400">
                       <span>Az</span>
-                      {[0.1, 0.3, 0.5, 0.7, 0.9, 1.0].map((op, i) => (
-                        <div key={i} className="w-5 h-3 rounded-sm" style={{ backgroundColor: `rgba(25, 61, 143, ${op})` }} />
+                      {[0.15, 0.3, 0.45, 0.6, 0.75, 1.0].map((op, i) => (
+                        <div key={i} className="w-5 h-3 rounded-sm" style={{ backgroundColor: `rgba(var(--heatmap-fill), ${op})` }} />
                       ))}
                       <span>Çok</span>
                     </div>
