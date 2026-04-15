@@ -1,5 +1,6 @@
 import type { AIAssistantTone, AIPreferences, SectorType, StaffPermissions, StaffRole } from '@/types'
 import { SECTOR_CONTEXT } from '@/lib/ai/prompts'
+import type { TutorialTopic } from '@/lib/ai/tutorial-content'
 
 export const DEFAULT_TONE: AIAssistantTone = 'samimi'
 export const CUSTOM_INSTRUCTIONS_MAX = 1000
@@ -113,6 +114,46 @@ export interface AssistantPromptContext {
   workingHours: Record<string, any> | null
   services: Array<{ name: string; duration_minutes: number; price: number | null }>
   aiPreferences?: AIPreferences
+  origin?: string
+}
+
+const PATH_LABELS: Record<string, string> = {
+  '/dashboard': 'Genel Bakış',
+  '/dashboard/appointments': 'Randevular',
+  '/dashboard/customers': 'Müşteriler',
+  '/dashboard/services': 'Hizmetler',
+  '/dashboard/messages': 'Mesajlar',
+  '/dashboard/staff': 'Personeller',
+  '/dashboard/records': 'Dosyalar',
+  '/dashboard/protocols': 'Tedavi Protokolleri',
+  '/dashboard/analytics': 'Gelir-Gider',
+  '/dashboard/reviews': 'Yorumlar',
+  '/dashboard/invoices': 'Faturalar',
+  '/dashboard/pos': 'Kasa',
+  '/dashboard/memberships': 'Üyelikler',
+  '/dashboard/packages': 'Paket & Seans',
+  '/dashboard/inventory': 'Stok',
+  '/dashboard/reservations': 'Rezervasyonlar',
+  '/dashboard/orders': 'Siparişler',
+  '/dashboard/classes': 'Sınıflar',
+  '/dashboard/campaigns': 'Kampanyalar',
+  '/dashboard/referrals': 'Referanslar',
+  '/dashboard/waitlist': 'Bekleme Listesi',
+  '/dashboard/notifications': 'Bildirimler',
+  '/dashboard/audit': 'Denetim Kaydı',
+  '/dashboard/settings': 'Ayarlar',
+  '/dashboard/settings/business': 'Ayarlar / İşletme',
+  '/dashboard/settings/ai': 'Ayarlar / AI Asistan',
+  '/dashboard/settings/staff': 'Ayarlar / Personel Yetkileri',
+  '/dashboard/settings/billing': 'Ayarlar / Faturalama',
+  '/dashboard/settings/commissions': 'Ayarlar / Prim & Komisyon',
+  '/dashboard/settings/audit': 'Ayarlar / Denetim Kaydı',
+}
+
+function describeOrigin(origin?: string): string {
+  if (!origin) return ''
+  const label = PATH_LABELS[origin] ?? origin
+  return `\nKullanıcı şu an "${label}" sayfasında — yanıtlar bu bağlama öncelik versin.`
 }
 
 export function buildAssistantSystemPrompt(ctx: AssistantPromptContext): string {
@@ -135,7 +176,7 @@ export function buildAssistantSystemPrompt(ctx: AssistantPromptContext): string 
   return `Sen ${ctx.businessName} işletmesinin PulseApp AI asistanısın.
 Sektör: ${SECTOR_LABELS[ctx.sector]} — ${SECTOR_CONTEXT[ctx.sector]}
 Kullanan: ${ctx.staffName} (${ROLE_LABELS[ctx.staffRole]})
-Bugün: ${dateStr}, saat ${timeStr}
+Bugün: ${dateStr}, saat ${timeStr}${describeOrigin(ctx.origin)}
 
 ## Kurallar
 - ${toneLine}
@@ -224,3 +265,37 @@ Kullanıcıya adım adım rehberlik ederek işletmesini kurmasına yardımcı ol
 - Türkçe, samimi ve profesyonel ol
 - Emojileri ölçülü kullan`
 }
+
+export interface PageTutorialPromptContext {
+  topic: TutorialTopic
+  sector: SectorType
+  staffName: string
+  aiPreferences?: AIPreferences
+}
+
+/**
+ * Sayfa ipucu prompt'u — asistan tool ÇAĞIRMAZ, sadece kısa bir açıklama döner.
+ * İskelet elle yazılmış, AI sektöre/tona uyarlayarak 2-3 cümleye dönüştürür.
+ */
+export function buildPageTutorialPrompt(ctx: PageTutorialPromptContext): string {
+  const { toneLine } = formatAIPreferences(ctx.aiPreferences)
+
+  return `Sen PulseApp sisteminin yeni kullanıcılara sayfa tanıtımı yapan rehberisin.
+İşletme sektörü: ${SECTOR_LABELS[ctx.sector]} — ${SECTOR_CONTEXT[ctx.sector]}
+Kullanıcı: ${ctx.staffName}
+
+## Görev
+Kullanıcıya "${ctx.topic.title}" sayfasını tanıtıyorsun. Aşağıdaki iskeleti sektöre ve üsluba uyarlayarak 2-3 kısa cümle halinde sun. Sonunda tek cümleyle "Başka sorun varsa yazabilirsin." benzeri bir davet ekle.
+
+## Sayfa İskeleti
+${ctx.topic.skeleton}${ctx.topic.primaryAction ? `\n\nAnahtar eylem: ${ctx.topic.primaryAction}` : ''}
+
+## Kurallar
+- ${toneLine}
+- ASLA tool çağırma — bu sadece açıklayıcı bir yanıt
+- Maksimum 3-4 kısa cümle, madde işareti kullanma
+- İskeleti genişletme, sadece ton/sektör uyumu sağla
+- "Merhaba" gibi selamlama yok, doğrudan içerikle başla
+- Emoji kullanma`
+}
+

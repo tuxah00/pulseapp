@@ -40,7 +40,11 @@ export function useAIAssistant() {
   const [error, setError] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
 
-  const sendMessage = useCallback(async (text: string, isOnboarding = false) => {
+  const sendMessage = useCallback(async (
+    text: string,
+    isOnboarding = false,
+    opts?: { tutorialTopic?: string; origin?: string }
+  ) => {
     if (!text.trim() || isLoading) return
     setError(null)
 
@@ -68,6 +72,7 @@ export function useAIAssistant() {
       const controller = new AbortController()
       abortRef.current = controller
 
+      const origin = opts?.origin ?? (typeof window !== 'undefined' ? window.location.pathname : undefined)
       const res = await fetch('/api/ai/assistant', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -75,6 +80,8 @@ export function useAIAssistant() {
           conversationId,
           message: text,
           isOnboarding,
+          origin,
+          tutorialTopic: opts?.tutorialTopic,
         }),
         signal: controller.signal,
       })

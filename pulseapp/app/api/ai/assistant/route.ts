@@ -4,7 +4,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getEffectivePermissions, type StaffRole } from '@/types'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
 import { getOpenAIClient, ASSISTANT_MODEL, ASSISTANT_MAX_TOKENS } from '@/lib/ai/openai-client'
-import { buildAssistantSystemPrompt, buildOnboardingSystemPrompt } from '@/lib/ai/assistant-prompts'
+import { buildAssistantSystemPrompt, buildOnboardingSystemPrompt, buildPageTutorialPrompt } from '@/lib/ai/assistant-prompts'
+import { findTopicByKey } from '@/lib/ai/tutorial-content'
 import { ASSISTANT_TOOLS, TOOL_LABELS, executeAssistantTool } from '@/lib/ai/assistant-tools'
 import { deriveBlocksFromToolResult } from '@/lib/ai/assistant-blocks'
 import { AI_LIMITS } from '@/lib/ai/assistant-limits'
@@ -51,10 +52,12 @@ export async function POST(req: NextRequest) {
 
   // 3. Parse request
   const body = await req.json()
-  const { conversationId, message, isOnboarding } = body as {
+  const { conversationId, message, isOnboarding, origin, tutorialTopic } = body as {
     conversationId: string | null
     message: string
     isOnboarding?: boolean
+    origin?: string
+    tutorialTopic?: string
   }
 
   if (!message || typeof message !== 'string' || message.trim().length === 0) {
@@ -134,19 +137,31 @@ export async function POST(req: NextRequest) {
   // 7. Build system prompt
   const services = await getBusinessServices(admin, staff.business_id)
 
+  const sectorValue = biz?.sector || 'other'
+  const tutorialTopicObj = tutorialTopic ? findTopicByKey(tutorialTopic, sectorValue) : null
+  const isTutorialMode = !!tutorialTopicObj
+
   let systemPrompt: string
-  if (isOnboarding) {
-    systemPrompt = buildOnboardingSystemPrompt(biz?.name || '', biz?.sector || 'other', staff.name)
+  if (isTutorialMode && tutorialTopicObj) {
+    systemPrompt = buildPageTutorialPrompt({
+      topic: tutorialTopicObj,
+      sector: sectorValue,
+      staffName: staff.name,
+      aiPreferences: biz?.settings?.ai_preferences,
+    })
+  } else if (isOnboarding) {
+    systemPrompt = buildOnboardingSystemPrompt(biz?.name || '', sectorValue, staff.name)
   } else {
     systemPrompt = buildAssistantSystemPrompt({
       businessName: biz?.name || '',
-      sector: biz?.sector || 'other',
+      sector: sectorValue,
       staffName: staff.name,
       staffRole: role,
       permissions,
       workingHours: biz?.working_hours,
       services,
       aiPreferences: biz?.settings?.ai_preferences,
+      origin,
     })
   }
 
@@ -186,7 +201,8 @@ export async function POST(req: NextRequest) {
             model: ASSISTANT_MODEL,
             max_tokens: ASSISTANT_MAX_TOKENS,
             messages: currentMessages,
-            tools: ASSISTANT_TOOLS,
+            // Tutorial modunda tool çağrısı istenmez — kısa açıklama yanıtı beklenir
+            ...(isTutorialMode ? {} : { tools: ASSISTANT_TOOLS }),
             stream: true,
           })
 

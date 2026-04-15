@@ -8,9 +8,11 @@ import {
   MessageSquare, Settings, Sparkles,
 } from 'lucide-react'
 import { useAIAssistant } from '@/lib/hooks/use-ai-assistant'
+import { useTutorial } from '@/lib/hooks/use-tutorial'
 import AIMessageBubble from './ai-message-bubble'
 import AIToolIndicator from './ai-tool-indicator'
 import AIAssistantButton from './ai-assistant-button'
+import TutorialBubble from './tutorial-bubble'
 import type { SectorType, PlanType, StaffPermissions } from '@/types'
 
 interface Props {
@@ -50,6 +52,41 @@ export default function AIAssistantPanel({ businessName, sector, plan, permissio
     stopGeneration,
     decideConfirmation,
   } = useAIAssistant()
+
+  const {
+    currentTopic,
+    shouldShowBubble,
+    shouldRunSetup,
+    markSeen,
+    markSetupDone,
+  } = useTutorial()
+
+  const [setupTriggered, setSetupTriggered] = useState(false)
+
+  // Yeni personel için kurulum sihirbazını otomatik başlat (dashboard'da, ilk kez)
+  useEffect(() => {
+    if (shouldRunSetup && !setupTriggered && !isOpen) {
+      setSetupTriggered(true)
+      setIsOpen(true)
+      newConversation()
+      sendMessage('PulseApp kurulumuna yardım et', true)
+      markSetupDone()
+    }
+  }, [shouldRunSetup, setupTriggered, isOpen, newConversation, sendMessage, markSetupDone])
+
+  const handleOpenTutorial = useCallback(() => {
+    if (!currentTopic) return
+    setIsOpen(true)
+    setIsMinimized(false)
+    newConversation()
+    sendMessage(`"${currentTopic.title}" sayfasını tanıt`, false, { tutorialTopic: currentTopic.pageKey })
+    markSeen(currentTopic.pageKey)
+  }, [currentTopic, newConversation, sendMessage, markSeen])
+
+  const handleDismissBubble = useCallback(() => {
+    if (!currentTopic) return
+    markSeen(currentTopic.pageKey)
+  }, [currentTopic, markSeen])
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -100,7 +137,20 @@ export default function AIAssistantPanel({ businessName, sector, plan, permissio
   }
 
   if (!isOpen) {
-    return <AIAssistantButton onClick={() => setIsOpen(true)} />
+    return (
+      <>
+        <AIAssistantButton onClick={() => setIsOpen(true)} />
+        <AnimatePresence>
+          {shouldShowBubble && currentTopic && (
+            <TutorialBubble
+              topic={currentTopic}
+              onOpen={handleOpenTutorial}
+              onDismiss={handleDismissBubble}
+            />
+          )}
+        </AnimatePresence>
+      </>
+    )
   }
 
   return (

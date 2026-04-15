@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
-import { Loader2, Save, Sparkles } from 'lucide-react'
+import { useConfirm } from '@/lib/hooks/use-confirm'
+import { useTutorial } from '@/lib/hooks/use-tutorial'
+import { Loader2, RotateCcw, Save, Sparkles } from 'lucide-react'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { logAudit } from '@/lib/utils/audit'
 import { CUSTOM_INSTRUCTIONS_MAX, DEFAULT_TONE } from '@/lib/ai/assistant-prompts'
@@ -25,12 +27,15 @@ const DEFAULT_PREFS: AIPreferences = {
 
 export default function AISettingsPage() {
   const supabase = createClient()
+  const { confirm } = useConfirm()
   const { businessId, staffId, staffName, permissions, loading: ctxLoading } = useBusinessContext()
+  const tutorial = useTutorial()
   const [prefs, setPrefs] = useState<AIPreferences>(DEFAULT_PREFS)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [saveSuccess, setSaveSuccess] = useState(false)
+  const [tutorialBusy, setTutorialBusy] = useState(false)
 
   const fetchPrefs = useCallback(async () => {
     if (!businessId) return
@@ -214,6 +219,78 @@ export default function AISettingsPage() {
           />
           <div className="text-right text-[11px] text-gray-400 mt-1 tabular-nums">
             {charCount} / {CUSTOM_INSTRUCTIONS_MAX}
+          </div>
+        </section>
+
+        {/* Tutorial ipuçları */}
+        <section className="card p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Tutorial İpuçları</h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 max-w-md">
+                Yeni ziyaret ettiğin kritik sayfalarda kısa bir ipucu balonu görünür.
+                Kapattığında aynı sayfada bir daha çıkmaz.
+              </p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer shrink-0">
+              <input
+                type="checkbox"
+                checked={tutorial.progress?.enabled !== false}
+                disabled={tutorialBusy || tutorial.loading}
+                onChange={async (e) => {
+                  setTutorialBusy(true)
+                  try { await tutorial.setEnabled(e.target.checked) } finally { setTutorialBusy(false) }
+                }}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:ring-2 peer-focus:ring-pulse-900/30 rounded-full peer-checked:bg-pulse-900 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-disabled:opacity-50" />
+            </label>
+          </div>
+
+          {tutorial.seenTopics.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+              <p className="text-[11px] uppercase tracking-wider font-semibold text-gray-400 dark:text-gray-500 mb-2">
+                Gördüğün ipuçları
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {tutorial.seenTopics.map(t => (
+                  <span
+                    key={t.pageKey}
+                    className="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-800 px-2.5 py-1 text-[11px] text-gray-600 dark:text-gray-300"
+                  >
+                    {t.title}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="mt-4 flex items-center justify-between gap-3">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {tutorial.progress?.setup_completed_at
+                ? 'Kurulum sihirbazı tamamlandı.'
+                : 'Kurulum sihirbazı henüz tamamlanmadı.'}
+            </p>
+            <button
+              type="button"
+              disabled={tutorialBusy || tutorial.loading}
+              onClick={async () => {
+                const ok = await confirm({
+                  title: 'İpuçlarını sıfırla',
+                  message: 'Gördüğün tüm sayfa ipuçları ve kurulum durumu sıfırlanacak. Tekrar baştan başlamak ister misin?',
+                  confirmText: 'Sıfırla',
+                  cancelText: 'Vazgeç',
+                  variant: 'warning',
+                })
+                if (!ok) return
+                setTutorialBusy(true)
+                try { await tutorial.reset() } finally { setTutorialBusy(false) }
+              }}
+              className="inline-flex items-center gap-1.5 text-xs text-pulse-900 dark:text-pulse-300 hover:underline disabled:opacity-50"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              İpuçlarını sıfırla
+            </button>
           </div>
         </section>
 

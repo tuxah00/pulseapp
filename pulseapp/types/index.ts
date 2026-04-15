@@ -449,6 +449,13 @@ export interface Business {
   updated_at: string
 }
 
+export interface TutorialProgress {
+  enabled?: boolean
+  setup_completed_at?: string | null
+  seen_pages?: string[]
+  dismissed_at?: string | null
+}
+
 export interface StaffMember {
   id: string
   business_id: string
@@ -460,6 +467,7 @@ export interface StaffMember {
   avatar_url: string | null
   working_hours: WorkingHours | null
   permissions: StaffPermissions | null
+  tutorial_progress: TutorialProgress | null
   is_active: boolean
   created_at: string
   updated_at: string
