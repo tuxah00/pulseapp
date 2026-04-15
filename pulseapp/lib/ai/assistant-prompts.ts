@@ -9,6 +9,10 @@ import type {
 } from '@/types'
 import { AI_PERMISSION_TO_STAFF, DEFAULT_AI_PERMISSIONS } from '@/types'
 import { SECTOR_CONTEXT } from '@/lib/ai/prompts'
+import {
+  getSectorStrategyForPrompt,
+  getCurrentSeasonalContext,
+} from '@/lib/ai/strategic-context'
 import type { TutorialTopic } from '@/lib/ai/tutorial-content'
 
 export const DEFAULT_TONE: AIAssistantTone = 'samimi'
@@ -236,6 +240,13 @@ export function buildAssistantSystemPrompt(ctx: AssistantPromptContext): string 
   const { toneLine, customBlock } = formatAIPreferences(ctx.aiPreferences)
   const reminderHours = ctx.aiPreferences?.default_reminder_hours ?? 24
 
+  // Stratejik persona — kâr odaklı danışman katmanı
+  const sectorStrategy = getSectorStrategyForPrompt(ctx.sector)
+  const seasonalCtx = getCurrentSeasonalContext(ctx.sector, today)
+  const upcomingText = seasonalCtx.upcoming
+    .map(u => `${u.label} (${u.demand}): ${u.note}`)
+    .join(' | ')
+
   return `Sen ${ctx.businessName} işletmesinin PulseApp AI asistanısın.
 Sektör: ${SECTOR_LABELS[ctx.sector]} — ${SECTOR_CONTEXT[ctx.sector]}
 Kullanan: ${ctx.staffName} (${ROLE_LABELS[ctx.staffRole]})
@@ -303,7 +314,23 @@ ${formatAIPermissions(ctx.aiPermissions, ctx.permissions)}
 ${formatWorkingHours(ctx.workingHours)}
 
 ## Mevcut Hizmetler
-${serviceList}${customBlock}`
+${serviceList}
+
+## Stratejik Persona (kâr danışmanı katmanı)
+Sen yalnızca komut yürüten bir asistan değil, aynı zamanda kâr odaklı bir iş danışmanısın.
+Ana metriklerin: kâr marjı, doluluk, müşteri elde tutma, hizmet karması dengesi.
+Kullanıcı "ne yapmalıyım", "bu ay stratejim ne", "öneri ver", "mevsime göre ne planlamalıyım" gibi sorular sorarsa:
+  1) recommend_strategic_actions tool'unu çağır (gerekirse focus: profit | retention | occupancy | seasonal).
+  2) En yüksek severity 3 öneriyi 1-2 cümle rationale ile özetle; "Uygula" için aksiyon önerisini belirt.
+  3) Sayısal iddialar için mutlaka get_* tool'larını kullan; uydurma.
+Proaktiflik: Yaklaşan peak/high dönem varsa (aşağıdaki Mevsimsel bağlam) kullanıcı sormadan da kısaca hatırlat — "Mayıs peak, kapasiteyi şimdiden planlayın" gibi.
+
+### Sektörel Strateji
+${sectorStrategy}
+
+### Mevsimsel Bağlam
+Şu an: ${seasonalCtx.currentLabel} — talep **${seasonalCtx.currentDemand}**${seasonalCtx.currentNote ? ` (${seasonalCtx.currentNote})` : ''}
+${upcomingText ? `Yaklaşan: ${upcomingText}` : ''}${customBlock}`
 }
 
 export function buildOnboardingSystemPrompt(
