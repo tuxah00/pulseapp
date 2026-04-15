@@ -1445,17 +1445,26 @@ function RecordsPageInner() {
                       onChange={v => setFormData((prev) => ({ ...prev, [f.key]: v }))}
                       className="input"
                     />
-                  ) : (
-                    <input
-                      type={f.type ?? 'text'}
-                      value={formData[f.key] ?? ''}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, [f.key]: e.target.value }))}
-                      className="input"
-                      placeholder={f.placeholder}
-                      required={f.key === 'title' && !selectedCustomerId}
-                      autoFocus={f.key === 'title'}
-                    />
-                  )}
+                  ) : (() => {
+                    const isBirthday = f.type === 'date' && (f.key === 'dob' || f.key === 'birth_date')
+                    const today = new Date()
+                    const minBday = new Date(today.getFullYear() - 120, today.getMonth(), today.getDate())
+                      .toISOString().slice(0, 10)
+                    const maxBday = today.toISOString().slice(0, 10)
+                    return (
+                      <input
+                        type={f.type ?? 'text'}
+                        value={formData[f.key] ?? ''}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, [f.key]: e.target.value }))}
+                        className="input"
+                        placeholder={f.placeholder}
+                        required={f.key === 'title' && !selectedCustomerId}
+                        autoFocus={f.key === 'title'}
+                        min={isBirthday ? minBday : undefined}
+                        max={isBirthday ? maxBday : undefined}
+                      />
+                    )
+                  })()}
                 </div>
               ))}
 
