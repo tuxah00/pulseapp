@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
@@ -129,6 +129,15 @@ export default function BusinessSettingsPage() {
 
   // Ayarlar
   const [settings, setSettings] = useState<BusinessSettings>(DEFAULT_SETTINGS)
+  const [savedSettings, setSavedSettings] = useState<BusinessSettings>(DEFAULT_SETTINGS)
+
+  // Sticky save bar
+  const saveBtnRef = useRef<HTMLButtonElement>(null)
+  const [saveBtnVisible, setSaveBtnVisible] = useState(true)
+  const isDirty = useMemo(
+    () => JSON.stringify(settings) !== JSON.stringify(savedSettings),
+    [settings, savedSettings]
+  )
 
   const fetchBusiness = useCallback(async () => {
     if (!businessId) return
@@ -155,7 +164,9 @@ export default function BusinessSettingsPage() {
       setDistrict(data.district || '')
       setGoogleMapsUrl(data.google_maps_url || '')
       setWorkingHours(data.working_hours || DEFAULT_WORKING_HOURS)
-      setSettings({ ...DEFAULT_SETTINGS, ...(data.settings || {}) })
+      const loadedSettings = { ...DEFAULT_SETTINGS, ...(data.settings || {}) }
+      setSettings(loadedSettings)
+      setSavedSettings(loadedSettings)
     }
     setLoading(false)
   }, [businessId])
@@ -178,6 +189,18 @@ export default function BusinessSettingsPage() {
     }
     setRoomsLoading(false)
   }, [businessId])
+
+  // IntersectionObserver: orijinal kaydet butonu görünürse floating bar gizlenir
+  useEffect(() => {
+    const el = saveBtnRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      ([entry]) => setSaveBtnVisible(entry.isIntersecting),
+      { threshold: 0.5 }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [activeTab])
 
   useEffect(() => {
     if (businessId) fetchRooms()
@@ -302,7 +325,9 @@ export default function BusinessSettingsPage() {
 
   async function handleSaveSettings(e: React.FormEvent) {
     e.preventDefault()
-    await saveBusiness({ settings })
+    const snapshot = { ...settings }
+    const ok = await saveBusiness({ settings })
+    if (ok) setSavedSettings(snapshot)
   }
 
   async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -330,8 +355,8 @@ export default function BusinessSettingsPage() {
     window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Silindi' } }))
   }
 
-  async function saveBusiness(updates: Record<string, any>) {
-    if (!businessId) return
+  async function saveBusiness(updates: Record<string, any>): Promise<boolean> {
+    if (!businessId) return false
     setSaving(true)
     setError(null)
     setSaveSuccess(false)
@@ -344,6 +369,8 @@ export default function BusinessSettingsPage() {
     if (error) {
       setError('Kaydetme hatası: ' + error.message)
       window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: 'Kaydetme hatası: ' + error.message } }))
+      setSaving(false)
+      return false
     } else {
       setSaveSuccess(true)
       setTimeout(() => setSaveSuccess(false), 3000)
@@ -351,8 +378,9 @@ export default function BusinessSettingsPage() {
       router.refresh()
       window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Kaydedildi' } }))
       logAudit({ businessId: businessId!, staffId: currentStaffId, staffName: currentStaffName, action: 'update', resource: 'settings', resourceId: businessId!, details: { section: 'İşletme Bilgileri', fields: Object.keys(updates).join(', ') } })
+      setSaving(false)
+      return true
     }
-    setSaving(false)
   }
 
   if (permissions && !permissions.settings) {
@@ -392,6 +420,30 @@ export default function BusinessSettingsPage() {
 
   return (
     <div>
+      {/* Floating Sticky Save Bar — settings sekmesinde değişiklik olunca çıkar */}
+      {activeTab === 'settings' && isDirty && !saveBtnVisible && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 rounded-2xl bg-gray-900 dark:bg-gray-800 shadow-2xl border border-gray-700 px-5 py-3 sticky-save-bar">
+          <span className="text-sm text-gray-300 mr-1">Kaydedilmemiş değişiklikler var</span>
+          <button
+            type="button"
+            onClick={() => setSettings(savedSettings)}
+            className="flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700 transition-colors"
+          >
+            <X className="h-4 w-4" />
+            Geri Al
+          </button>
+          <button
+            type="button"
+            disabled={saving}
+            onClick={() => { handleSaveSettings({ preventDefault: () => {} } as React.FormEvent) }}
+            className="flex items-center gap-1.5 rounded-xl bg-pulse-900 hover:bg-pulse-800 px-4 py-2 text-sm font-medium text-white transition-colors"
+          >
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            Ayarları Kaydet
+          </button>
+        </div>
+      )}
+
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">İşletme Ayarları</h1>
         <p className="mt-1 text-sm text-gray-500">
@@ -1004,7 +1056,7 @@ export default function BusinessSettingsPage() {
             </div>
 
             <div className="flex justify-end">
-              <button type="submit" disabled={saving} className="btn-primary">
+              <button ref={saveBtnRef} type="submit" disabled={saving} className="btn-primary">
                 {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                 Ayarları Kaydet
               </button>
