@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requirePermission } from '@/lib/api/with-permission'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { addMonthsSafe } from '@/lib/utils/date-range'
 
 interface CommissionRule {
   id: string
@@ -44,14 +45,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ earnings: [] })
   }
 
-  // 2. Dönem için tamamlanmış randevuları çek
+  // 2. Dönem için tamamlanmış randevuları çek (YYYY-MM → ay aralığı)
+  const [yearStr, monthStr] = period.split('-')
+  const periodStart = new Date(parseInt(yearStr, 10), parseInt(monthStr, 10) - 1, 1)
+  const periodEnd = addMonthsSafe(periodStart, 1)
+  const periodStartStr = `${yearStr}-${monthStr}-01`
+  const periodEndStr = periodEnd.toISOString().slice(0, 10)
+
   const { data: appointments, error: aptError } = await admin
     .from('appointments')
     .select('id, staff_id, service_id, services(price)')
     .eq('business_id', businessId)
     .eq('status', 'completed')
     .is('deleted_at', null)
-    .like('appointment_date', `${period}%`)
+    .gte('appointment_date', periodStartStr)
+    .lt('appointment_date', periodEndStr)
 
   if (aptError) return NextResponse.json({ error: aptError.message }, { status: 500 })
 
