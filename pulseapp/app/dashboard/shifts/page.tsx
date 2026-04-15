@@ -110,6 +110,10 @@ export default function VardiyePage() {
   // Reset table
   const [resetConfirm, setResetConfirm] = useState(false)
   const [isClosingResetConfirm, setIsClosingResetConfirm] = useState(false)
+
+  // Vardiya notu detay popup
+  const [noteDetail, setNoteDetail] = useState<{ staffName: string; date: string; note: string } | null>(null)
+  const [isClosingNoteDetail, setIsClosingNoteDetail] = useState(false)
   const closeResetConfirm = () => setIsClosingResetConfirm(true)
   const [resetting, setResetting] = useState(false)
 
@@ -697,14 +701,14 @@ export default function VardiyePage() {
                       <td key={di} className="py-2 px-2 text-center">
                         {shift ? (
                           <div className={cn(
-                            'relative group rounded-lg px-2 py-1.5 text-xs cursor-pointer',
+                            'relative group rounded-lg px-2 py-1.5 text-xs cursor-pointer min-h-[72px] flex flex-col',
                             shift.shift_type === 'off'
                               ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
                               : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                           )}>
                             <button
                               onClick={() => openModal(member.id, dateStr)}
-                              className="w-full text-center"
+                              className="w-full text-center flex-1 flex flex-col justify-center"
                             >
                               {shift.shift_type === 'off' ? (
                                 'İzin'
@@ -712,14 +716,26 @@ export default function VardiyePage() {
                                 <>
                                   <div className="font-medium">{shift.start_time?.slice(0, 5)}</div>
                                   <div className="opacity-70">{shift.end_time?.slice(0, 5)}</div>
-                                  {shift.notes && !shift.notes.startsWith('Otomatik') && (
-                                    <div className="text-[9px] text-gray-500 dark:text-gray-400 mt-0.5 truncate max-w-[80px]">
-                                      {shift.notes.replace('Yarı zamanlı · ', '')}
-                                    </div>
-                                  )}
                                 </>
                               )}
                             </button>
+                            {shift.shift_type !== 'off' && shift.notes && !shift.notes.startsWith('Otomatik') && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setNoteDetail({
+                                    staffName: member.name,
+                                    date: dateStr,
+                                    note: shift.notes!.replace('Yarı zamanlı · ', ''),
+                                  })
+                                }}
+                                title={shift.notes.replace('Yarı zamanlı · ', '')}
+                                className="text-[9px] text-gray-600 dark:text-gray-300 mt-0.5 line-clamp-2 leading-tight px-1 text-center hover:underline"
+                              >
+                                {shift.notes.replace('Yarı zamanlı · ', '')}
+                              </button>
+                            )}
                             <button
                               onClick={() => deleteShift(shift.id)}
                               className="absolute -top-1.5 -right-1.5 hidden group-hover:flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white"
@@ -730,7 +746,7 @@ export default function VardiyePage() {
                         ) : (
                           <button
                             onClick={() => openModal(member.id, dateStr)}
-                            className="h-10 w-full rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-600 text-gray-300 hover:border-blue-300 hover:text-blue-400 transition-colors flex items-center justify-center"
+                            className="min-h-[72px] w-full rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-600 text-gray-300 hover:border-blue-300 hover:text-blue-400 transition-colors flex items-center justify-center"
                           >
                             <Plus className="h-3.5 w-3.5" />
                           </button>
@@ -743,6 +759,40 @@ export default function VardiyePage() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {/* Vardiya Notu Detay Modal */}
+      {(noteDetail || isClosingNoteDetail) && noteDetail && (
+        <Portal>
+        <div
+          className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 ${isClosingNoteDetail ? 'closing' : ''}`}
+          onAnimationEnd={() => { if (isClosingNoteDetail) { setNoteDetail(null); setIsClosingNoteDetail(false) } }}
+          onClick={() => setIsClosingNoteDetail(true)}
+        >
+          <div
+            className={`modal-content bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-3 ${isClosingNoteDetail ? 'closing' : ''}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="font-semibold text-gray-900 dark:text-gray-100">Vardiya Notu</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  {noteDetail.staffName} · {new Date(noteDetail.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                </p>
+              </div>
+              <button
+                onClick={() => setIsClosingNoteDetail(true)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-700 dark:text-gray-200 whitespace-pre-wrap break-words">
+              {noteDetail.note}
+            </p>
+          </div>
+        </div>
+        </Portal>
       )}
 
       {/* Reset Confirmation Modal */}

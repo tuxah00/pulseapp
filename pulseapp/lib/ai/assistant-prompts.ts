@@ -1,4 +1,13 @@
-import type { AIAssistantTone, AIPreferences, SectorType, StaffPermissions, StaffRole } from '@/types'
+import type {
+  AIAssistantTone,
+  AIPermissionCategory,
+  AIPermissions,
+  AIPreferences,
+  SectorType,
+  StaffPermissions,
+  StaffRole,
+} from '@/types'
+import { AI_PERMISSION_TO_STAFF, DEFAULT_AI_PERMISSIONS } from '@/types'
 import { SECTOR_CONTEXT } from '@/lib/ai/prompts'
 import type { TutorialTopic } from '@/lib/ai/tutorial-content'
 
@@ -111,10 +120,64 @@ export interface AssistantPromptContext {
   staffName: string
   staffRole: StaffRole
   permissions: StaffPermissions
+  aiPermissions?: AIPermissions | null
   workingHours: Record<string, any> | null
   services: Array<{ name: string; duration_minutes: number; price: number | null }>
   aiPreferences?: AIPreferences
   origin?: string
+}
+
+const AI_CATEGORY_LABELS: Record<AIPermissionCategory, string> = {
+  appointments_read: 'Randevuları okuma',
+  appointments_write: 'Randevu oluşturma/düzenleme/iptal',
+  customers_read: 'Müşteri okuma',
+  customers_write: 'Müşteri ekleme/güncelleme/silme',
+  services_read: 'Hizmet okuma',
+  services_write: 'Hizmet ekleme/güncelleme',
+  staff_read: 'Personel okuma',
+  staff_write: 'Personel daveti/yetki değişikliği',
+  shifts_read: 'Vardiya okuma',
+  shifts_write: 'Vardiya oluşturma/tanım',
+  messages_read: 'Mesaj okuma',
+  messages_write: 'Mesaj gönderme',
+  campaigns_read: 'Kampanya okuma',
+  campaigns_write: 'Kampanya oluşturma/gönderme',
+  workflows_read: 'Mesaj akışı okuma',
+  workflows_write: 'Mesaj akışı oluşturma/aç-kapat',
+  analytics_read: 'Analitik & raporlar',
+  invoices_read: 'Fatura okuma',
+  invoices_write: 'Fatura oluşturma/ödeme kaydı',
+  pos_write: 'Kasa işlemi',
+  expenses_write: 'Manuel gelir/gider kaydı',
+  settings_read: 'İşletme ayarları okuma',
+  settings_write: 'İşletme ayarları güncelleme',
+  audit_read: 'Denetim kayıtları',
+}
+
+/**
+ * AI'a verilen granular yetkileri prompt'a yazılabilir bir listeye çevirir.
+ * Kesişim: AI kategorisi AND onaylayan kullanıcının staff izni.
+ * Kullanıcı izni yoksa kategori "erişilemez" olarak işaretlenir (çünkü onay veremez).
+ */
+function formatAIPermissions(
+  aiPerms: AIPermissions | null | undefined,
+  staffPerms: StaffPermissions,
+): string {
+  const merged: AIPermissions = { ...DEFAULT_AI_PERMISSIONS, ...(aiPerms ?? {}) }
+  const allowed: string[] = []
+  const denied: string[] = []
+  for (const [cat, label] of Object.entries(AI_CATEGORY_LABELS) as [AIPermissionCategory, string][]) {
+    const aiOn = merged[cat] === true
+    const staffKey = AI_PERMISSION_TO_STAFF[cat]
+    const staffOn = staffPerms[staffKey] === true
+    if (aiOn && staffOn) allowed.push(label)
+    else denied.push(label)
+  }
+  let text = `✅ Yapabileceğin işlemler: ${allowed.length > 0 ? allowed.join(', ') : '(hiç yazma/okuma tool\'una yetkin yok)'}`
+  if (denied.length > 0) {
+    text += `\n❌ Yetkin OLMAYAN işlemler: ${denied.join(', ')}`
+  }
+  return text
 }
 
 const PATH_LABELS: Record<string, string> = {
@@ -222,6 +285,8 @@ Bugün: ${dateStr}, saat ${timeStr}${describeOrigin(ctx.origin)}
   - Finansal işlemlerde tutar ve müşteri/kategori zorunlu, emin değilsen sor. Ödeme yöntemi: cash/card/transfer/online.
 - Hassas bilgileri (diğer işletme verileri, API anahtarları vb.) asla paylaşma
 - Asla tıbbi, hukuki veya finansal tavsiye verme
+- **YETKİ KONTROLÜ (ÇOK ÖNEMLİ):** Aşağıda "AI Asistan Yetkileri" başlığı altında hangi işlemlere izinli olduğun açıkça yazar. Kullanıcı yetkin OLMAYAN bir işlem isterse (örn. müşteri ekleme izni yokken yeni müşteri oluşturma) **hiçbir tool çağırma**. Alternatif tool ile etrafından dolaşmaya çalışma (hizmet ekleme yerine müşteriyi hizmet olarak kaydetme gibi). Yerine kullanıcıya şöyle yanıt ver: "Bu işlem için yetkim yok. Ayarlar → AI Asistan → Yetkiler bölümünden açabilirsiniz." Aynı isteği farklı tool'larla tekrar tekrar denemek KESİNLİKLE yasaktır.
+- Bir tool çağrısı "yetki yok" / "permission_denied" hatası dönerse **o isteği bırak**, aynı işlemi başka bir tool ile yeniden deneme. Kullanıcıya durumu açıkla.
 - Kullanıcının yetkisi olmayan işlemleri yapma — kibarca reddet
 - Emin olmadığında kullanıcıya sor
 - Yanıtlarında markdown formatı kullanabilirsin (kalın, liste, vb.)
@@ -230,6 +295,9 @@ Bugün: ${dateStr}, saat ${timeStr}${describeOrigin(ctx.origin)}
 
 ## Kullanıcı Yetkileri
 ${formatPermissions(ctx.permissions)}
+
+## AI Asistan Yetkileri (işletme × kullanıcı kesişimi)
+${formatAIPermissions(ctx.aiPermissions, ctx.permissions)}
 
 ## İşletme Çalışma Saatleri
 ${formatWorkingHours(ctx.workingHours)}

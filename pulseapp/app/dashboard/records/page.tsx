@@ -1412,6 +1412,8 @@ function RecordsPageInner() {
                     onChange={setSelectedCustomerId}
                     businessId={businessId!}
                     placeholder="— Danışan seçin —"
+                    preferWaitlist
+                    allowWaitlistToggle
                     onCustomerSelect={(c) => {
                       if (c) {
                         setSelectedCustomerName(c.name)

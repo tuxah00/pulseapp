@@ -5,12 +5,13 @@ import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { useTutorial } from '@/lib/hooks/use-tutorial'
-import { Loader2, RotateCcw, Save, Sparkles, X } from 'lucide-react'
+import { Loader2, RotateCcw, Save, ShieldCheck, Sparkles, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { logAudit } from '@/lib/utils/audit'
 import { CUSTOM_INSTRUCTIONS_MAX, DEFAULT_TONE } from '@/lib/ai/assistant-prompts'
-import type { AIAssistantTone, AIPreferences, BusinessSettings } from '@/types'
+import type { AIAssistantTone, AIPermissionCategory, AIPermissions, AIPreferences, BusinessSettings } from '@/types'
+import { DEFAULT_AI_PERMISSIONS } from '@/types'
 
 const TONE_OPTIONS: { value: AIAssistantTone; label: string; description: string }[] = [
   { value: 'samimi', label: 'Samimi', description: 'Doğal, sıcak, profesyonel (varsayılan)' },
@@ -26,6 +27,29 @@ const DEFAULT_PREFS: AIPreferences = {
   custom_instructions: '',
 }
 
+/** Kullanıcıya gösterilecek yetki grupları. Her grupta okuma + yazma toggle'ları. */
+const PERMISSION_GROUPS: {
+  label: string
+  description: string
+  read?: AIPermissionCategory
+  write?: AIPermissionCategory
+}[] = [
+  { label: 'Randevular', description: 'Randevu listesi, slot, istatistik / oluşturma, iptal, taşıma', read: 'appointments_read', write: 'appointments_write' },
+  { label: 'Müşteriler', description: 'Müşteri arama ve profil / müşteri ekleme, güncelleme, silme', read: 'customers_read', write: 'customers_write' },
+  { label: 'Hizmetler', description: 'Hizmet listesi ve paketler / hizmet ekleme ve güncelleme', read: 'services_read', write: 'services_write' },
+  { label: 'Personel', description: 'Personel listesi ve performans / personel daveti, yetki değişikliği', read: 'staff_read', write: 'staff_write' },
+  { label: 'Vardiya', description: 'Vardiya okuma / vardiya oluşturma ve tanım', read: 'shifts_read', write: 'shifts_write' },
+  { label: 'Mesajlar', description: 'Bekleyen ve geçmiş mesajlar / asistan üzerinden mesaj gönderme', read: 'messages_read', write: 'messages_write' },
+  { label: 'Kampanyalar', description: 'Kampanya listesi ve kitle tahmini / kampanya oluşturma ve gönderme', read: 'campaigns_read', write: 'campaigns_write' },
+  { label: 'Mesaj akışları', description: 'Workflow listeleme / oluşturma ve aktif/pasif yapma', read: 'workflows_read', write: 'workflows_write' },
+  { label: 'Analitik', description: 'Gelir, gider, doluluk, performans, karşılaştırma raporları', read: 'analytics_read' },
+  { label: 'Faturalar', description: 'Ödenmemiş faturaları listele / fatura oluşturma, ödeme alma', read: 'invoices_read', write: 'invoices_write' },
+  { label: 'Kasa (POS)', description: 'Kasa işlemi oluşturma', write: 'pos_write' },
+  { label: 'Gelir & Gider', description: 'Manuel gelir/gider kaydı', write: 'expenses_write' },
+  { label: 'Ayarlar', description: 'İşletme bilgileri ve çalışma saatleri okuma / güncelleme', read: 'settings_read', write: 'settings_write' },
+  { label: 'Denetim kaydı', description: 'Denetim kayıtlarını okuma', read: 'audit_read' },
+]
+
 export default function AISettingsPage() {
   const supabase = createClient()
   const { confirm } = useConfirm()
@@ -33,6 +57,8 @@ export default function AISettingsPage() {
   const tutorial = useTutorial(sector)
   const [prefs, setPrefs] = useState<AIPreferences>(DEFAULT_PREFS)
   const [savedPrefs, setSavedPrefs] = useState<AIPreferences>(DEFAULT_PREFS)
+  const [aiPermissions, setAiPermissions] = useState<AIPermissions>(DEFAULT_AI_PERMISSIONS)
+  const [savedAiPermissions, setSavedAiPermissions] = useState<AIPermissions>(DEFAULT_AI_PERMISSIONS)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -43,8 +69,10 @@ export default function AISettingsPage() {
   const saveBtnRef = useRef<HTMLButtonElement>(null)
   const [saveBtnVisible, setSaveBtnVisible] = useState(true)
   const isDirty = useMemo(
-    () => JSON.stringify(prefs) !== JSON.stringify(savedPrefs),
-    [prefs, savedPrefs]
+    () =>
+      JSON.stringify(prefs) !== JSON.stringify(savedPrefs) ||
+      JSON.stringify(aiPermissions) !== JSON.stringify(savedAiPermissions),
+    [prefs, savedPrefs, aiPermissions, savedAiPermissions]
   )
 
   const fetchPrefs = useCallback(async () => {
@@ -63,6 +91,9 @@ export default function AISettingsPage() {
       const loaded = { ...DEFAULT_PREFS, ...(settings.ai_preferences || {}) }
       setPrefs(loaded)
       setSavedPrefs(loaded)
+      const loadedPerms = { ...DEFAULT_AI_PERMISSIONS, ...(settings.ai_permissions || {}) }
+      setAiPermissions(loadedPerms)
+      setSavedAiPermissions(loadedPerms)
     }
     setLoading(false)
   }, [businessId, supabase])
@@ -86,6 +117,7 @@ export default function AISettingsPage() {
     e.preventDefault()
     if (!businessId) return
     const snapshot = { ...prefs }
+    const permsSnapshot = { ...aiPermissions }
     setSaving(true)
     setError(null)
     setSaveSuccess(false)
@@ -101,6 +133,7 @@ export default function AISettingsPage() {
     const mergedSettings: BusinessSettings = {
       ...current,
       ai_preferences: { ...(current.ai_preferences || {}), ...prefs },
+      ai_permissions: { ...(current.ai_permissions || {}), ...aiPermissions },
     }
 
     const { error: upErr } = await supabase
@@ -114,6 +147,7 @@ export default function AISettingsPage() {
     } else {
       setSaveSuccess(true)
       setSavedPrefs(snapshot)
+      setSavedAiPermissions(permsSnapshot)
       setTimeout(() => setSaveSuccess(false), 3000)
       window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'AI tercihleri kaydedildi' } }))
       logAudit({
@@ -156,7 +190,7 @@ export default function AISettingsPage() {
               <span className="text-sm text-gray-400 dark:text-gray-500 mr-2">Kaydedilmemiş değişiklikler var</span>
               <button
                 type="button"
-                onClick={() => setPrefs(savedPrefs)}
+                onClick={() => { setPrefs(savedPrefs); setAiPermissions(savedAiPermissions) }}
                 className="btn-secondary"
               >
                 <X className="mr-1.5 h-4 w-4" />
@@ -346,6 +380,73 @@ export default function AISettingsPage() {
           </div>
         </section>
 
+        {/* AI Asistan Yetkileri */}
+        <section className="card p-5">
+          <div className="flex items-start gap-3 mb-3">
+            <div className="w-8 h-8 rounded-lg bg-pulse-900/10 dark:bg-pulse-300/20 flex items-center justify-center text-pulse-900 dark:text-pulse-300 flex-shrink-0">
+              <ShieldCheck className="w-4 h-4" />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">AI Asistan Yetkileri</h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Asistan sadece işaretli yetkilere sahip araçları kullanabilir. Ek olarak onay veren kullanıcının kendi yetkileri de kontrol edilir &mdash; ikisi birden açık değilse işlem yapılmaz.
+              </p>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto -mx-2">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-100 dark:border-gray-700">
+                  <th className="text-left py-2 px-2 font-medium text-gray-500 dark:text-gray-400 text-xs">Kategori</th>
+                  <th className="text-center py-2 px-2 font-medium text-gray-500 dark:text-gray-400 text-xs w-20">Okuma</th>
+                  <th className="text-center py-2 px-2 font-medium text-gray-500 dark:text-gray-400 text-xs w-20">Yazma</th>
+                </tr>
+              </thead>
+              <tbody>
+                {PERMISSION_GROUPS.map((g) => (
+                  <tr key={g.label} className="border-b border-gray-50 dark:border-gray-800 last:border-0">
+                    <td className="py-2 px-2">
+                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{g.label}</div>
+                      <div className="text-[11px] text-gray-500 dark:text-gray-400">{g.description}</div>
+                    </td>
+                    <td className="py-2 px-2 text-center">
+                      {g.read ? (
+                        <label className="inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={!!aiPermissions[g.read]}
+                            onChange={(e) => setAiPermissions((p) => ({ ...p, [g.read as AIPermissionCategory]: e.target.checked }))}
+                            className="sr-only peer"
+                          />
+                          <div className="w-9 h-5 bg-gray-200 dark:bg-gray-700 peer-focus:ring-2 peer-focus:ring-pulse-900/30 rounded-full peer-checked:bg-pulse-900 peer-checked:after:translate-x-full after:content-[''] relative after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all" />
+                        </label>
+                      ) : (
+                        <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>
+                      )}
+                    </td>
+                    <td className="py-2 px-2 text-center">
+                      {g.write ? (
+                        <label className="inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={!!aiPermissions[g.write]}
+                            onChange={(e) => setAiPermissions((p) => ({ ...p, [g.write as AIPermissionCategory]: e.target.checked }))}
+                            className="sr-only peer"
+                          />
+                          <div className="w-9 h-5 bg-gray-200 dark:bg-gray-700 peer-focus:ring-2 peer-focus:ring-pulse-900/30 rounded-full peer-checked:bg-pulse-900 peer-checked:after:translate-x-full after:content-[''] relative after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all" />
+                        </label>
+                      ) : (
+                        <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
         {error && (
           <div className="rounded-xl border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 p-3 text-sm text-red-700 dark:text-red-300">
             {error}
@@ -359,7 +460,7 @@ export default function AISettingsPage() {
           {isDirty && (
             <button
               type="button"
-              onClick={() => setPrefs(savedPrefs)}
+              onClick={() => { setPrefs(savedPrefs); setAiPermissions(savedAiPermissions) }}
               className="btn-secondary"
             >
               <X className="mr-1.5 h-4 w-4" />

@@ -68,7 +68,7 @@ export default function RewardsPage() {
   const { businessId, sector, loading: ctxLoading, permissions } = useBusinessContext()
   const customerLabel = getCustomerLabelSingular(sector ?? undefined)
 
-  const [activeTab, setActiveTab] = useState<TabType>('referrals')
+  const [activeTab, setActiveTab] = useState<TabType>('rewards')
 
   // ── Referrals State ──
   const [referrals, setReferrals] = useState<Referral[]>([])
@@ -271,7 +271,7 @@ export default function RewardsPage() {
   }
 
   // ── Permission Check ──
-  if (permissions && !permissions.referrals) {
+  if (permissions && !permissions.rewards) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <div className="text-center space-y-3">
@@ -316,8 +316,8 @@ export default function RewardsPage() {
       {/* Tabs */}
       <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 w-fit">
         {([
-          { key: 'referrals' as TabType, label: 'Referanslar', icon: UserCheck },
           { key: 'rewards' as TabType, label: 'Ödüller', icon: Gift },
+          { key: 'referrals' as TabType, label: 'Referanslar', icon: UserCheck },
         ]).map(tab => {
           const TabIcon = tab.icon
           return (
@@ -376,30 +376,34 @@ export default function RewardsPage() {
                 return (
                   <AnimatedItem key={r.id} className="card p-4">
                     <div className="flex items-center gap-4">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-gray-400 mb-0.5">Tavsiye Eden</p>
-                        <p className="font-medium text-gray-900 dark:text-white truncate">{referrer?.name || '—'}</p>
-                        {referrer?.phone && <p className="text-xs text-gray-500 flex items-center gap-1"><Phone className="h-3 w-3" /> {referrer.phone}</p>}
+                      <div className="flex-1 grid grid-cols-[1fr_auto_1fr] items-center gap-4 min-w-0">
+                        <div className="min-w-0">
+                          <p className="text-xs text-gray-400 mb-0.5">Tavsiye Eden</p>
+                          <p className="font-medium text-gray-900 dark:text-white truncate">{referrer?.name || '—'}</p>
+                          {referrer?.phone && <p className="text-xs text-gray-500 flex items-center gap-1"><Phone className="h-3 w-3" /> {referrer.phone}</p>}
+                        </div>
+                        <ArrowRight className="h-4 w-4 text-gray-300 flex-shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-xs text-gray-400 mb-0.5">Tavsiye Edilen</p>
+                          <p className="font-medium text-gray-900 dark:text-white truncate">{referred?.name || r.referred_name || '—'}</p>
+                          {(referred?.phone || r.referred_phone) && <p className="text-xs text-gray-500 flex items-center gap-1"><Phone className="h-3 w-3" /> {referred?.phone || r.referred_phone}</p>}
+                        </div>
                       </div>
-                      <ArrowRight className="h-4 w-4 text-gray-300 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-gray-400 mb-0.5">Tavsiye Edilen</p>
-                        <p className="font-medium text-gray-900 dark:text-white truncate">{referred?.name || r.referred_name || '—'}</p>
-                        {(referred?.phone || r.referred_phone) && <p className="text-xs text-gray-500 flex items-center gap-1"><Phone className="h-3 w-3" /> {referred?.phone || r.referred_phone}</p>}
-                      </div>
-                      <div className="flex-shrink-0 text-right">
-                        {r.reward_type && (
+                      <div className="w-[180px] flex-shrink-0 text-right">
+                        {r.reward_type ? (
                           <p className="text-xs text-purple-600 dark:text-purple-400 flex items-center gap-1 justify-end mb-0.5">
                             <Gift className="h-3 w-3" />
                             {r.reward_value}{r.reward_type === 'discount_percent' ? '%' : r.reward_type === 'discount_amount' ? '₺' : ''} {REWARD_TYPE_LABELS[r.reward_type]}
                           </p>
+                        ) : (
+                          <p className="text-xs text-gray-300 dark:text-gray-600 mb-0.5">—</p>
                         )}
                         <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${sc.bg} ${sc.text}`}>
                           <Icon className="h-3 w-3" /> {REFERRAL_STATUS_LABELS[r.status]}
                         </span>
                         {r.status === 'rewarded' && <p className="text-[10px] text-green-500 mt-0.5">Ödül verildi</p>}
                       </div>
-                      <div className="flex-shrink-0 flex gap-1">
+                      <div className="w-[80px] flex-shrink-0 flex gap-1 justify-end">
                         {r.status === 'pending' && (
                           <button onClick={() => handleReward(r.id)} className="text-xs px-2 py-1 rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200 transition-colors">Ödül Ver</button>
                         )}

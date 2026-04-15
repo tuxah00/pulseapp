@@ -472,7 +472,14 @@ export default function AuditPage() {
                         {new Date(log.created_at).toLocaleString('tr-TR')}
                       </td>
                       <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
-                        {log.staff_name ?? 'Sistem'}
+                        <div className="flex items-center gap-2">
+                          <span>{log.staff_name ?? 'Sistem'}</span>
+                          {log.details?.via === 'ai_assistant' && (
+                            <span className="rounded-full bg-pulse-900/10 text-pulse-900 dark:bg-pulse-300/20 dark:text-pulse-300 px-2 py-0.5 text-[10px] font-medium whitespace-nowrap">
+                              PulseApp Asistan
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3">
                         <span className={cn('badge text-xs', ACTION_COLORS[log.action] ?? 'bg-gray-100 text-gray-700')}>
