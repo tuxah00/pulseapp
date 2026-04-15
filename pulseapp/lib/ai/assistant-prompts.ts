@@ -129,6 +129,8 @@ export interface AssistantPromptContext {
   services: Array<{ name: string; duration_minutes: number; price: number | null }>
   aiPreferences?: AIPreferences
   origin?: string
+  /** Kur + haftalık sektör brief'i tek stringde — macroContextForPrompt çıktısı */
+  macroSummary?: string
 }
 
 const AI_CATEGORY_LABELS: Record<AIPermissionCategory, string> = {
@@ -330,7 +332,8 @@ ${sectorStrategy}
 
 ### Mevsimsel Bağlam
 Şu an: ${seasonalCtx.currentLabel} — talep **${seasonalCtx.currentDemand}**${seasonalCtx.currentNote ? ` (${seasonalCtx.currentNote})` : ''}
-${upcomingText ? `Yaklaşan: ${upcomingText}` : ''}${customBlock}`
+${upcomingText ? `Yaklaşan: ${upcomingText}` : ''}
+${ctx.macroSummary ? `\n### Makro Bağlam (kur + haftalık sektör gündemi)\n${ctx.macroSummary}\nBu bilgiyi yalnızca kullanıcı ekonomi/kur/gündem bağlamında soru sorduğunda ya da öneri üretirken destekleyici argüman olarak kullan — başlangıçta spontane duyurma.` : ''}${customBlock}`
 }
 
 export function buildOnboardingSystemPrompt(

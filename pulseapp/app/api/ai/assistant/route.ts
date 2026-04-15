@@ -10,6 +10,7 @@ import { ASSISTANT_TOOLS, TOOL_LABELS, executeAssistantTool } from '@/lib/ai/ass
 import { filterAssistantTools } from '@/lib/ai/tool-categories'
 import { deriveBlocksFromToolResult } from '@/lib/ai/assistant-blocks'
 import { AI_LIMITS } from '@/lib/ai/assistant-limits'
+import { fetchMacroContext, macroContextForPrompt } from '@/lib/analytics/macro-context'
 import type { AuthContext } from '@/lib/api/with-permission'
 import type { PlanType } from '@/types'
 
@@ -155,6 +156,13 @@ export async function POST(req: NextRequest) {
   } else if (isOnboarding) {
     systemPrompt = buildOnboardingSystemPrompt(biz?.name || '', sectorValue, staff.name)
   } else {
+    // Makro bağlam (kur + haftalık sektör brief'i) — best effort, hata durumunda boş
+    const macroCtx = await fetchMacroContext(admin, sectorValue).catch(err => {
+      console.error('[assistant] macro context fetch failed:', err)
+      return { snapshot: null, brief: null }
+    })
+    const macroSummary = macroContextForPrompt(macroCtx) || undefined
+
     systemPrompt = buildAssistantSystemPrompt({
       businessName: biz?.name || '',
       sector: sectorValue,
@@ -166,6 +174,7 @@ export async function POST(req: NextRequest) {
       services,
       aiPreferences: biz?.settings?.ai_preferences,
       origin,
+      macroSummary,
     })
   }
 
