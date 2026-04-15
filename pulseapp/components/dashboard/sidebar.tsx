@@ -61,7 +61,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
 }
 
 const bottomNav = [
-  { name: 'Ayarlar', href: '/dashboard/settings/business', icon: Settings },
+  { name: 'Ayarlar', href: '/dashboard/settings', icon: Settings },
 ]
 
 const PERMISSION_MAP: Record<string, keyof StaffPermissions> = {
@@ -256,7 +256,7 @@ export default function Sidebar({ businessName, userName, sector, plan, permissi
       {/* ── Bottom ── */}
       <div className="border-t border-gray-200/60 dark:border-white/10 px-3 py-3 space-y-0.5">
         {bottomNav.filter((item) => {
-          if (item.href === '/dashboard/settings/business') return permissions.settings !== false
+          if (item.href === '/dashboard/settings') return permissions.settings !== false
           return true
         }).map((item) => {
           const active = isActive(item.href)

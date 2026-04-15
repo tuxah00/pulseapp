@@ -921,11 +921,11 @@ async function execUpdateBusinessSettings(
   const incoming = (p.settings || {}) as Record<string, unknown>
   const merged: Record<string, unknown> = { ...current, ...incoming }
 
-  // Nested-merge: ai_preferences, ai_memory — kullanıcı sadece tek alan değişse bile
-  // tüm alt anahtarları silmesin
+  // Nested objeler için partial update: tek alan gelse bile kardeş alanları korur
   for (const key of ['ai_preferences', 'ai_memory'] as const) {
     if (incoming[key] && typeof incoming[key] === 'object') {
-      merged[key] = { ...(current[key] as Record<string, unknown> || {}), ...(incoming[key] as Record<string, unknown>) }
+      const currentNested = (current[key] as Record<string, unknown>) || {}
+      merged[key] = { ...currentNested, ...(incoming[key] as Record<string, unknown>) }
     }
   }
 

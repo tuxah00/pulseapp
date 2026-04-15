@@ -1,5 +1,8 @@
-import type { AIPreferences, SectorType, StaffPermissions, StaffRole } from '@/types'
+import type { AIAssistantTone, AIPreferences, SectorType, StaffPermissions, StaffRole } from '@/types'
 import { SECTOR_CONTEXT } from '@/lib/ai/prompts'
+
+export const DEFAULT_TONE: AIAssistantTone = 'samimi'
+export const CUSTOM_INSTRUCTIONS_MAX = 1000
 
 const TONE_INSTRUCTIONS: Record<NonNullable<AIPreferences['tone']>, string> = {
   samimi: 'Türkçe, samimi ama profesyonel bir dille konuş.',
@@ -7,11 +10,9 @@ const TONE_INSTRUCTIONS: Record<NonNullable<AIPreferences['tone']>, string> = {
   kisa: 'Türkçe ve çok kısa yanıt ver. Gereksiz açıklama yapma, doğrudan sonuca git.',
 }
 
-const CUSTOM_INSTRUCTIONS_MAX = 1000
-
 function formatAIPreferences(prefs?: AIPreferences): { toneLine: string; customBlock: string } {
-  const tone = prefs?.tone || 'samimi'
-  const toneLine = TONE_INSTRUCTIONS[tone] || TONE_INSTRUCTIONS.samimi
+  const tone = prefs?.tone || DEFAULT_TONE
+  const toneLine = TONE_INSTRUCTIONS[tone] || TONE_INSTRUCTIONS[DEFAULT_TONE]
 
   const raw = prefs?.custom_instructions?.trim() || ''
   if (!raw) return { toneLine, customBlock: '' }
