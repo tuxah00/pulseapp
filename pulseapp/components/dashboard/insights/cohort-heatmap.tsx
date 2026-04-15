@@ -6,12 +6,11 @@ interface Props {
   cohort: CohortCell[]
 }
 
-function rateColor(rate: number): string {
-  // rate 0..1 aralığında — yeşil tonu: yüksek = koyu yeşil, düşük = soluk
-  if (rate >= 0.5) return 'bg-emerald-500 text-white'
-  if (rate >= 0.3) return 'bg-emerald-300 text-emerald-900'
-  if (rate >= 0.15) return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200'
-  if (rate > 0) return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
+function rateColor(ratePct: number): string {
+  if (ratePct >= 50) return 'bg-emerald-500 text-white'
+  if (ratePct >= 30) return 'bg-emerald-300 text-emerald-900'
+  if (ratePct >= 15) return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200'
+  if (ratePct > 0) return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
   return 'bg-gray-50 text-gray-400 dark:bg-gray-900 dark:text-gray-600'
 }
 
@@ -73,7 +72,7 @@ export default function CohortHeatmap({ cohort }: Props) {
                         className={`h-7 rounded flex items-center justify-center font-medium ${rateColor(cell.rate)}`}
                         title={`${cell.returning}/${c.cohort_size} müşteri geri döndü`}
                       >
-                        {(cell.rate * 100).toFixed(0)}%
+                        {cell.rate.toFixed(0)}%
                       </div>
                     </td>
                   )

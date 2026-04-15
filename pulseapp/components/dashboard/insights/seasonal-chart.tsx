@@ -1,6 +1,5 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import {
   CartesianGrid, Line, LineChart, ReferenceArea, ResponsiveContainer,
   Tooltip, XAxis, YAxis,
@@ -12,21 +11,30 @@ interface Props {
   data: MonthlyRevenuePoint[]
 }
 
-const DEMAND_COLORS: Record<string, string> = {
-  peak: 'rgba(239,68,68,0.08)',   // kırmızı - zirve
-  high: 'rgba(245,158,11,0.08)',  // sarı - yüksek
+const DEMAND_COLORS: Record<MonthlyRevenuePoint['demand'], string> = {
+  peak: 'rgba(239,68,68,0.12)',
+  high: 'rgba(245,158,11,0.12)',
   normal: 'transparent',
-  low: 'rgba(59,130,246,0.05)',   // mavi - düşük
+  low: 'rgba(59,130,246,0.08)',
+}
+
+type DemandBand = { demand: MonthlyRevenuePoint['demand']; startLabel: string; endLabel: string }
+
+function buildDemandBands(data: MonthlyRevenuePoint[]): DemandBand[] {
+  const bands: DemandBand[] = []
+  for (const point of data) {
+    if (point.demand === 'normal') continue
+    const last = bands[bands.length - 1]
+    if (last && last.demand === point.demand) {
+      last.endLabel = point.label
+    } else {
+      bands.push({ demand: point.demand, startLabel: point.label, endLabel: point.label })
+    }
+  }
+  return bands
 }
 
 export default function SeasonalChart({ data }: Props) {
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => setMounted(true), [])
-
-  if (!mounted) {
-    return <div className="h-64 bg-gray-50 dark:bg-gray-800 rounded-lg animate-pulse" />
-  }
-
   if (!data || data.length === 0) {
     return (
       <div className="h-64 flex items-center justify-center text-sm text-gray-500">
@@ -34,6 +42,8 @@ export default function SeasonalChart({ data }: Props) {
       </div>
     )
   }
+
+  const bands = buildDemandBands(data)
 
   return (
     <div className="h-64 w-full">
@@ -64,21 +74,16 @@ export default function SeasonalChart({ data }: Props) {
             contentStyle={{ fontSize: 12, borderRadius: 8 }}
           />
 
-          {/* Mevsimsel bölgeler: aynı demand'li ardışık ayları ReferenceArea ile boyar */}
-          {data.map((d, i) => {
-            if (d.demand === 'normal') return null
-            const color = DEMAND_COLORS[d.demand] || 'transparent'
-            return (
-              <ReferenceArea
-                key={`${d.month}-${i}`}
-                x1={d.label}
-                x2={d.label}
-                fill={color}
-                fillOpacity={1}
-                strokeOpacity={0}
-              />
-            )
-          })}
+          {bands.map((b, i) => (
+            <ReferenceArea
+              key={`${b.demand}-${i}`}
+              x1={b.startLabel}
+              x2={b.endLabel}
+              fill={DEMAND_COLORS[b.demand]}
+              fillOpacity={1}
+              strokeOpacity={0}
+            />
+          ))}
 
           <Line
             type="monotone"

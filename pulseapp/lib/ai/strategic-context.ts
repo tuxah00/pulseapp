@@ -613,7 +613,7 @@ const MONTH_LABELS_TR = [
   'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık',
 ]
 
-const DEMAND_LABELS_TR: Record<SeasonalDemand, string> = {
+export const DEMAND_LABELS_TR: Record<SeasonalDemand, string> = {
   low: 'düşük',
   normal: 'normal',
   high: 'yüksek',
