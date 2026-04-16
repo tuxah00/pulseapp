@@ -53,6 +53,22 @@ export function formatCurrency(amount: number): string {
   }).format(amount)
 }
 
+// ── Tahmini süre formatlama (dakika → insan okunur) ──
+
+export function formatEstimatedDuration(minutes: number): string {
+  const m = Math.max(0, Math.round(minutes))
+  if (m === 0) return '0 dk'
+  if (m < 60) return `~${m} dk`
+  const hours = Math.floor(m / 60)
+  const mins = m % 60
+  if (hours < 24) {
+    return mins === 0 ? `~${hours} sa` : `~${hours} sa ${mins} dk`
+  }
+  const days = Math.floor(hours / 24)
+  const remHours = hours % 24
+  return remHours === 0 ? `~${days} gün` : `~${days} gün ${remHours} sa`
+}
+
 // ── Telefon formatlama ──
 
 export function formatPhone(phone: string): string {
