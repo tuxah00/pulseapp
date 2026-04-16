@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isValidUUID } from '@/lib/utils/validate'
+import { setPortalSessionCookies } from '@/lib/portal/auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,17 +14,19 @@ export const dynamic = 'force-dynamic'
  * - Belirtilen customerId varsa o müşteriyi kullanır; yoksa işletmenin en aktif müşterisi
  *   (total_visits DESC) seçilir
  * - Portal cookie'lerini set eder ve /portal/<businessId>/dashboard'a yönlendirir
+ *
+ * Tarayıcı navigasyonu için hata durumlarında JSON yerine redirect kullanılır.
  */
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const businessId = searchParams.get('businessId')
   const customerIdParam = searchParams.get('customerId')
 
+  // Geçersiz businessId'de ana sayfaya düş
   if (!businessId || !isValidUUID(businessId)) {
-    return NextResponse.json({ error: 'Geçersiz businessId' }, { status: 400 })
+    return NextResponse.redirect(new URL('/', request.url))
   }
 
-  // 1) Supabase dashboard oturumu zorunlu
   const supabase = createServerSupabaseClient()
   const {
     data: { user },
@@ -37,34 +40,30 @@ export async function GET(request: NextRequest) {
 
   const admin = createAdminClient()
 
-  // 2) Personel/sahip yetkisi kontrolü
-  const { data: staff } = await admin
-    .from('staff_members')
-    .select('id, business_id, is_active')
-    .eq('user_id', user.id)
-    .eq('business_id', businessId)
-    .eq('is_active', true)
-    .maybeSingle()
+  const [staffResult, businessResult] = await Promise.all([
+    admin
+      .from('staff_members')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('business_id', businessId)
+      .eq('is_active', true)
+      .maybeSingle(),
+    admin
+      .from('businesses')
+      .select('is_active')
+      .eq('id', businessId)
+      .single(),
+  ])
 
-  if (!staff) {
-    return NextResponse.json(
-      { error: 'Bu işletmeye erişim yetkiniz yok' },
-      { status: 403 }
-    )
-  }
-
-  // 3) İşletme hâlâ aktif mi?
-  const { data: business } = await admin
-    .from('businesses')
-    .select('id, is_active')
-    .eq('id', businessId)
-    .single()
-
+  const business = businessResult.data
   if (!business || business.is_active === false) {
-    return NextResponse.json({ error: 'İşletme bulunamadı' }, { status: 404 })
+    return NextResponse.redirect(new URL('/dashboard?preview_error=business_inactive', request.url))
   }
 
-  // 4) Önizlenecek müşteriyi seç
+  if (!staffResult.data) {
+    return NextResponse.redirect(new URL('/dashboard?preview_error=forbidden', request.url))
+  }
+
   let targetCustomerId: string | null = null
 
   if (customerIdParam && isValidUUID(customerIdParam)) {
@@ -91,33 +90,14 @@ export async function GET(request: NextRequest) {
     targetCustomerId = fallback?.id ?? null
   }
 
-  // Müşteri yoksa login sayfasına bir uyarı ile yönlendir
   if (!targetCustomerId) {
     const fallbackUrl = new URL(`/portal/${businessId}`, request.url)
     fallbackUrl.searchParams.set('no_customer', '1')
     return NextResponse.redirect(fallbackUrl)
   }
 
-  // 5) Portal cookie'lerini kur ve dashboard'a yönlendir
   const response = NextResponse.redirect(
     new URL(`/portal/${businessId}/dashboard`, request.url)
   )
-
-  response.cookies.set('portal_customer_id', targetCustomerId, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 7 * 24 * 60 * 60,
-    path: '/',
-  })
-
-  response.cookies.set('portal_business_id', businessId, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 7 * 24 * 60 * 60,
-    path: '/',
-  })
-
-  return response
+  return setPortalSessionCookies(response, { customerId: targetCustomerId, businessId })
 }
