@@ -53,30 +53,30 @@ export default async function DashboardLayout({
 
   return (
     <ThemeProvider>
-      <DashboardShell
-        businessName={businessName}
-        userName={userName}
-        sector={sector}
-        plan={plan}
-        permissions={permissions}
-      >
-        <BusinessProvider value={{
-          businessId: staffMember.business_id,
-          userId: user.id,
-          staffId: staffMember.id,
-          staffName: staffMember.name || userName,
-          sector,
-          plan,
-          businessName,
-          staffRole,
-          permissions,
-          writePermissions,
-        }}>
+      <BusinessProvider value={{
+        businessId: staffMember.business_id,
+        userId: user.id,
+        staffId: staffMember.id,
+        staffName: staffMember.name || userName,
+        sector,
+        plan,
+        businessName,
+        staffRole,
+        permissions,
+        writePermissions,
+      }}>
+        <DashboardShell
+          businessName={businessName}
+          userName={userName}
+          sector={sector}
+          plan={plan}
+          permissions={permissions}
+        >
           <ConfirmProvider>
             {children}
           </ConfirmProvider>
-        </BusinessProvider>
-      </DashboardShell>
+        </DashboardShell>
+      </BusinessProvider>
     </ThemeProvider>
   )
 }
