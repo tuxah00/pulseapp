@@ -81,10 +81,16 @@ export default function AIAssistantPanel({ businessName, sector, plan, permissio
       }
 
       recorder.onstop = async () => {
-        // Stop all tracks
         stream.getTracks().forEach(t => t.stop())
 
         const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
+
+        // Blob boşsa (çok kısa kayıt) direkt iptal
+        if (blob.size < 1000) {
+          setRecorderState('idle')
+          return
+        }
+
         setRecorderState('transcribing')
 
         try {
@@ -94,15 +100,17 @@ export default function AIAssistantPanel({ businessName, sector, plan, permissio
           const data = await res.json()
           if (data.text) {
             setInput(prev => prev ? `${prev} ${data.text}`.trim() : data.text.trim())
+          } else if (data.error) {
+            console.error('[Transcribe]', data.error)
           }
-        } catch {
-          // silently fail — user sees no text
+        } catch (err) {
+          console.error('[Transcribe] fetch hatası:', err)
         } finally {
           setRecorderState('idle')
         }
       }
 
-      recorder.start()
+      recorder.start(250) // her 250ms'de ondataavailable tetikle — kısa kayıtta bile dolu blob
       mediaRecorderRef.current = recorder
       setRecorderState('recording')
     } catch {
