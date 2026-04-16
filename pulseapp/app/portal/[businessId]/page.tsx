@@ -15,12 +15,6 @@ export default async function PortalLoginPage({ params }: PageProps) {
   const { businessId } = params
   if (!isValidUUID(businessId)) notFound()
 
-  // Zaten oturum açıksa dashboard'a yönlendir
-  const session = getPortalSession()
-  if (session && session.businessId === businessId) {
-    redirect(`/portal/${businessId}/dashboard`)
-  }
-
   const admin = createAdminClient()
   const { data: business } = await admin
     .from('businesses')
@@ -29,6 +23,24 @@ export default async function PortalLoginPage({ params }: PageProps) {
     .single()
 
   if (!business || business.is_active === false) notFound()
+
+  // Oturum varsa DB'de doğrula; geçerliyse dashboard'a yönlendir, değilse çerezi temizleyerek burada kal
+  const session = getPortalSession()
+  if (session && session.businessId === businessId) {
+    const { data: customer } = await admin
+      .from('customers')
+      .select('id')
+      .eq('id', session.customerId)
+      .eq('business_id', businessId)
+      .eq('is_active', true)
+      .maybeSingle()
+
+    if (customer) {
+      redirect(`/portal/${businessId}/dashboard`)
+    }
+    // Çerez geçersiz — logout route'u çerezleri temizleyip bu sayfaya geri döner (döngü kırılır)
+    redirect(`/api/portal/logout?businessId=${businessId}`)
+  }
 
   const useOtp = shouldUseOtp()
 

@@ -19,7 +19,7 @@ export default async function PortalDashboardLayout({ params, children }: Layout
 
   const session = getPortalSession()
   if (!session || session.businessId !== businessId) {
-    redirect(`/portal/${businessId}`)
+    redirect(`/api/portal/logout?businessId=${businessId}`)
   }
 
   const admin = createAdminClient()
@@ -40,8 +40,7 @@ export default async function PortalDashboardLayout({ params, children }: Layout
   ])
 
   if (!customerRes.data || !businessRes.data || businessRes.data.is_active === false) {
-    // Oturum geçersiz — çıkışa yönlendir
-    redirect(`/portal/${businessId}`)
+    redirect(`/api/portal/logout?businessId=${businessId}`)
   }
 
   const customer = customerRes.data
