@@ -90,12 +90,11 @@ export default function TopBar({ businessName, userName, onOpenCommand }: TopBar
         .select('id', { count: 'exact', head: true })
         .eq('business_id', businessId)
         .eq('is_read', false)
-      setUnreadCount(count ?? 0)
+      setUnreadCount(prev => { const next = count ?? 0; return prev === next ? prev : next })
     }
 
     fetchUnread()
 
-    // Realtime: DB'ye yeni bildirim yazılınca anında güncelle
     const channel = supabase
       .channel('notifications-bell')
       .on('postgres_changes', {
@@ -113,7 +112,6 @@ export default function TopBar({ businessName, userName, onOpenCommand }: TopBar
       })
       .subscribe()
 
-    // Fallback: sekme yeniden aktif olunca + her 60sn'de bir say
     const onVisible = () => { if (document.visibilityState === 'visible') fetchUnread() }
     const interval = setInterval(fetchUnread, 60_000)
     document.addEventListener('visibilitychange', onVisible)
@@ -292,6 +290,7 @@ export default function TopBar({ businessName, userName, onOpenCommand }: TopBar
             {unreadCount > 0 && (
               <>
                 {/* Ping animasyonu badge'ın ARKASINDA olmalı */}
+                {/* animate-ping DOM'da önce — count badge üstüne binmez */}
                 <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-red-400 opacity-75 animate-ping" />
                 <motion.span
                   initial={{ scale: 0 }}
