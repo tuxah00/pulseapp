@@ -7,7 +7,6 @@ export const runtime = 'nodejs'
 /**
  * GET /api/ai/actions?status=pending|scheduled|open|history|all&limit=50&countOnly=1
  * Kullanıcının kendi staff kaydına bağlı bekleyen/planlı AI aksiyonlarını listeler.
- * Hem asistan konuşmasından hem de İş Zekası "Uygula" butonundan gelen aksiyonlar tek yerde.
  * countOnly=1 → sadece pending_count döner (top-bar sayacı için hafif yol).
  */
 export async function GET(req: NextRequest) {
@@ -35,19 +34,34 @@ export async function GET(req: NextRequest) {
   const limit = Math.min(Number(searchParams.get('limit') || 50), 200)
   const countOnly = searchParams.get('countOnly') === '1'
 
-  // expires_at null olanları (kalıcı) + geleceğe dönük olanları say
   const nowIso = new Date().toISOString()
-  const pendingCountQuery = admin
-    .from('ai_pending_actions')
-    .select('id', { count: 'exact', head: true })
-    .eq('staff_id', staff.id)
-    .eq('status', 'pending')
-    .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
+
+  // Aktif pending sayısını hesapla:
+  // Tüm pending kayıtlardan süresi dolmuş olanları (expires_at < now) çıkar.
+  // NOT NULL + lt yerine OR kullanmıyoruz — ISO timestamp'li .or() Supabase'de
+  // güvenilir şekilde çalışmadığından iki ayrı sorguyla çözdük.
+  async function countActivePending() {
+    const [allResult, expiredResult] = await Promise.all([
+      admin
+        .from('ai_pending_actions')
+        .select('id', { count: 'exact', head: true })
+        .eq('staff_id', staff!.id)
+        .eq('status', 'pending'),
+      admin
+        .from('ai_pending_actions')
+        .select('id', { count: 'exact', head: true })
+        .eq('staff_id', staff!.id)
+        .eq('status', 'pending')
+        .not('expires_at', 'is', null)
+        .lt('expires_at', nowIso),
+    ])
+    return (allResult.count || 0) - (expiredResult.count || 0)
+  }
 
   // Hızlı yol: sadece sayaç
   if (countOnly) {
-    const { count } = await pendingCountQuery
-    return NextResponse.json({ pending_count: count || 0 })
+    const pendingCount = await countActivePending()
+    return NextResponse.json({ pending_count: pendingCount })
   }
 
   let listQuery = admin
@@ -63,14 +77,16 @@ export async function GET(req: NextRequest) {
   else if (statusParam === 'history') listQuery = listQuery.in('status', ['executed', 'cancelled', 'expired'])
   // 'all' → filtre yok
 
-  // Liste + sayaç paralel (bağımsız sorgular)
-  const [listResult, countResult] = await Promise.all([listQuery, pendingCountQuery])
+  const [listResult, pendingCount] = await Promise.all([
+    listQuery,
+    countActivePending(),
+  ])
 
   if (listResult.error) {
     return NextResponse.json({ error: listResult.error.message }, { status: 500 })
   }
 
-  // Süresi dolmuş pending'leri UI'da "expired" olarak etiketle (history/open sekmelerinde)
+  // Süresi dolmuş pending'leri UI'da "expired" olarak etiketle
   const wantsExpiredMapping = statusParam === 'pending' || statusParam === 'open' || statusParam === 'all'
   const now = Date.now()
   const actions = (listResult.data || []).map(a => {
@@ -80,5 +96,5 @@ export async function GET(req: NextRequest) {
     return a
   })
 
-  return NextResponse.json({ actions, pending_count: countResult.count || 0 })
+  return NextResponse.json({ actions, pending_count: pendingCount })
 }
