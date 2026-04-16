@@ -18,11 +18,13 @@ export default async function PortalLoginPage({ params }: PageProps) {
   const admin = createAdminClient()
   const { data: business } = await admin
     .from('businesses')
-    .select('id, name, logo_url, sector, is_active')
+    .select('id, name, sector, is_active, settings')
     .eq('id', businessId)
     .single()
 
   if (!business || business.is_active === false) notFound()
+
+  const logoUrl = (business.settings as { logo_url?: string | null } | null)?.logo_url ?? null
 
   // Oturum varsa DB'de doğrula; geçerliyse dashboard'a yönlendir, değilse çerezi temizleyerek burada kal
   const session = getPortalSession()
@@ -56,11 +58,11 @@ export default async function PortalLoginPage({ params }: PageProps) {
       <div className="relative w-full max-w-sm">
         {/* Hero — işletme logo + adı */}
         <div className="text-center mb-7">
-          {business.logo_url ? (
+          {logoUrl ? (
             <div className="relative inline-block">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={business.logo_url}
+                src={logoUrl}
                 alt={business.name}
                 className="h-20 w-20 rounded-3xl object-cover mx-auto shadow-2xl ring-4 ring-white/20"
               />

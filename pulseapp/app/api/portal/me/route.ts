@@ -25,12 +25,21 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Müşteri bulunamadı' }, { status: 404 })
   }
 
-  // İşletme bilgilerini çek
-  const { data: business } = await admin
+  // İşletme bilgilerini çek (logo_url settings JSONB içinde)
+  const { data: businessRow } = await admin
     .from('businesses')
-    .select('id, name, logo_url, sector')
+    .select('id, name, sector, settings')
     .eq('id', businessId)
     .single()
+
+  const business = businessRow
+    ? {
+        id: businessRow.id,
+        name: businessRow.name,
+        sector: businessRow.sector,
+        logo_url: (businessRow.settings as { logo_url?: string | null } | null)?.logo_url ?? null,
+      }
+    : null
 
   // Yaklaşan randevular (sonraki 3)
   const today = new Date().toISOString().split('T')[0]
