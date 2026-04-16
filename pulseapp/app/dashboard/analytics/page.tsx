@@ -7,7 +7,7 @@ import { logAudit } from '@/lib/utils/audit'
 import {
   Loader2, TrendingUp, TrendingDown, Users, Calendar,
   DollarSign, AlertTriangle, Clock, Star, UserCheck, Minus,
-  BarChart3, PieChart, Activity, Plus, X, Wallet, Download, Layers, Sparkles,
+  BarChart3, PieChart, Activity, Plus, X, Wallet, Download, Layers, Sparkles, Gem,
 } from 'lucide-react'
 import { formatCurrency, cn } from '@/lib/utils'
 import { useConfirm } from '@/lib/hooks/use-confirm'
@@ -26,8 +26,9 @@ import type {
 import { CustomSelect } from '@/components/ui/custom-select'
 import { getCustomerLabelSingular, getCustomerLabel } from '@/lib/config/sector-modules'
 import { addMonthsSafe } from '@/lib/utils/date-range'
+import { PulseValuePanel } from '@/components/dashboard/analytics/pulse-value/pulse-value-panel'
 
-type AnalyticsTab = 'overview' | 'staff' | 'customers' | 'sources' | 'services' | 'expenses' | 'forecast'
+type AnalyticsTab = 'overview' | 'staff' | 'customers' | 'sources' | 'services' | 'expenses' | 'forecast' | 'pulse_value'
 
 type AnalyticsAppointment = AppointmentRow & {
   services: { name: string; price: number } | null
@@ -89,7 +90,7 @@ export default function AnalyticsPage() {
   const [staffMembers, setStaffMembers] = useState<StaffSummary[]>([])
   const [paidInvoices, setPaidInvoices] = useState<AnalyticsInvoice[]>([])
 
-  // Forecast / İş Zekası state
+  // Forecast / Tahmin state
   const [forecastData, setForecastData] = useState<{
     historical: { month: string; label: string; revenue: number }[]
     forecast: { month: string; label: string; revenue: number }[]
@@ -501,8 +502,11 @@ export default function AnalyticsPage() {
           ['sources', 'Kaynak', <PieChart key="sr" className="h-3.5 w-3.5" />],
           ['services', 'Hizmet', <Layers key="sv" className="h-3.5 w-3.5" />],
           ['expenses', 'Gelir-Gider', <Wallet key="e" className="h-3.5 w-3.5" />],
-          ['forecast', 'İş Zekası', <Sparkles key="f" className="h-3.5 w-3.5" />],
-        ] as const).map(([key, label, icon]) => (
+          ['forecast', 'Tahmin', <Sparkles key="f" className="h-3.5 w-3.5" />],
+          ['pulse_value', 'PulseApp Kazandırdıkları', <Gem key="pv" className="h-3.5 w-3.5" />],
+        ] as const).map(([key, label, icon]) => {
+          const isPulseValue = key === 'pulse_value'
+          return (
           <button key={key} onClick={() => {
             setActiveTab(key as AnalyticsTab)
             if (key === 'forecast' && !forecastData && !forecastLoading) {
@@ -517,11 +521,13 @@ export default function AnalyticsPage() {
             className={cn('flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors',
               activeTab === key
                 ? 'border-pulse-900 text-pulse-900 dark:text-pulse-400'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+                : isPulseValue
+                  ? 'border-transparent text-pulse-900/75 dark:text-pulse-400/80 hover:text-pulse-900 dark:hover:text-pulse-300'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
             )}>
             {icon}{label}
           </button>
-        ))}
+        )})}
       </div>
 
       {/* Genel Bakış Sekmesi */}
@@ -1158,7 +1164,7 @@ export default function AnalyticsPage() {
         </div>
       )}
 
-      {/* İş Zekası Sekmesi */}
+      {/* Tahmin Sekmesi */}
       {activeTab === 'forecast' && (
         <div className="space-y-6">
           {forecastLoading && (
@@ -1308,6 +1314,11 @@ export default function AnalyticsPage() {
             </>
           )}
         </div>
+      )}
+
+      {/* PulseApp Kazandırdıkları Sekmesi */}
+      {activeTab === 'pulse_value' && (
+        <PulseValuePanel from={periodStart} to={periodEnd} />
       )}
     </div>
   )
