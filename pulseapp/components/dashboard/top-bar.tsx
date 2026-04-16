@@ -95,6 +95,7 @@ export default function TopBar({ businessName, userName, onOpenCommand }: TopBar
 
     fetchUnread()
 
+    // Realtime: DB'ye yeni bildirim yazılınca anında güncelle
     const channel = supabase
       .channel('notifications-bell')
       .on('postgres_changes', {
@@ -112,7 +113,16 @@ export default function TopBar({ businessName, userName, onOpenCommand }: TopBar
       })
       .subscribe()
 
-    return () => { supabase.removeChannel(channel) }
+    // Fallback: sekme yeniden aktif olunca + her 60sn'de bir say
+    const onVisible = () => { if (document.visibilityState === 'visible') fetchUnread() }
+    const interval = setInterval(fetchUnread, 60_000)
+    document.addEventListener('visibilitychange', onVisible)
+
+    return () => {
+      supabase.removeChannel(channel)
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
   }, [businessId])
 
   // Bekleyen AI aksiyon sayacı — analytics yetkisi olanlarda göster
