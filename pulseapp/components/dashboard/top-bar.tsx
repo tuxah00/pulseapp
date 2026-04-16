@@ -137,12 +137,15 @@ export default function TopBar({ businessName, userName, onOpenCommand }: TopBar
     fetchPending()
     const interval = setInterval(fetchPending, 60_000)
     const onVisible = () => { if (document.visibilityState === 'visible') fetchPending() }
+    const onChanged = () => fetchPending()
     document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('pulse-pending-actions-changed', onChanged)
 
     return () => {
       cancelled = true
       clearInterval(interval)
       document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('pulse-pending-actions-changed', onChanged)
     }
   }, [businessId, permissions?.analytics])
 

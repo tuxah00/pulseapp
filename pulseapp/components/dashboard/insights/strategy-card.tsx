@@ -66,6 +66,8 @@ export default function StrategyCard({ rec, compact = false }: Props) {
         window.dispatchEvent(new CustomEvent('pulse-toast', {
           detail: { type: 'system', title: 'Kuyruğa eklendi', body: 'Aksiyon onay bekliyor.' },
         }))
+        // Top bar badge'ini anında güncelle
+        window.dispatchEvent(new CustomEvent('pulse-pending-actions-changed'))
       }
     } catch (err: any) {
       setError(err?.message || 'Hata oluştu')
