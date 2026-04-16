@@ -16,26 +16,13 @@ export default async function PortalLoginPage({ params }: PageProps) {
   if (!isValidUUID(businessId)) notFound()
 
   const admin = createAdminClient()
-  const { data: business, error: businessError } = await admin
+  const { data: business } = await admin
     .from('businesses')
     .select('id, name, sector, is_active, settings')
     .eq('id', businessId)
     .single()
 
-  if (businessError) {
-    console.error('[PortalLoginPage] business query failed', { businessId, error: businessError })
-  }
-
-  if (!business || business.is_active === false) {
-    return (
-      <div style={{ padding: 32, fontFamily: 'monospace', fontSize: 14 }}>
-        <h1>Portal Debug</h1>
-        <p>businessId: {businessId}</p>
-        <p>business: {JSON.stringify(business)}</p>
-        <p>error: {JSON.stringify(businessError)}</p>
-      </div>
-    )
-  }
+  if (!business || business.is_active === false) notFound()
 
   const logoUrl = (business.settings as { logo_url?: string | null } | null)?.logo_url ?? null
 
