@@ -9,6 +9,7 @@ import {
   ChevronLeft,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { ConfirmProvider } from '@/lib/hooks/use-confirm'
 
 interface PortalShellProps {
   businessId: string
@@ -89,6 +90,7 @@ export function PortalShell({ businessId, business, customer, showTreatments, ch
   const gradient = SEGMENT_GRADIENT[segment] || SEGMENT_GRADIENT.regular
 
   return (
+    <ConfirmProvider>
     <div className="portal-page min-h-screen bg-gray-50 flex">
       {/* Mobil overlay */}
       {mobileOpen && (
@@ -235,5 +237,6 @@ export function PortalShell({ businessId, business, customer, showTreatments, ch
         })}
       </nav>
     </div>
+    </ConfirmProvider>
   )
 }
