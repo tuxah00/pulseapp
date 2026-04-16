@@ -59,6 +59,7 @@ export default function AIAssistantPanel({ businessName, sector, plan, permissio
   const [recorderState, setRecorderState] = useState<'idle' | 'recording' | 'transcribing'>('idle')
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
+  const abortCtrlRef = useRef<AbortController | null>(null)
 
   // Saate göre yeniden hesaplanır; panel yeniden açıldığında güncellenir.
   const smartPrompts = useMemo(() => getSmartPrompts({ sector }), [sector, isOpen])
@@ -68,7 +69,7 @@ export default function AIAssistantPanel({ businessName, sector, plan, permissio
       mediaRecorderRef.current?.stop()
       return
     }
-    if (recorderState !== 'idle') return
+    if (recorderState === 'transcribing') return
 
     let stream: MediaStream
     try {
@@ -90,8 +91,9 @@ export default function AIAssistantPanel({ businessName, sector, plan, permissio
       setRecorderState('transcribing')
       const form = new FormData()
       form.append('audio', blob, 'audio.webm')
+      abortCtrlRef.current = new AbortController()
       try {
-        const res = await fetch('/api/ai/transcribe', { method: 'POST', body: form })
+        const res = await fetch('/api/ai/transcribe', { method: 'POST', body: form, signal: abortCtrlRef.current.signal })
         const data = await res.json()
         if (data.text?.trim()) {
           setInput(prev => prev ? `${prev} ${data.text.trim()}` : data.text.trim())
@@ -110,10 +112,15 @@ export default function AIAssistantPanel({ businessName, sector, plan, permissio
     setRecorderState('recording')
   }, [recorderState])
 
-  // Panel kapanınca aktif kaydı durdur
+  // Panel kapanınca aktif kayıt/transkripsiyon'ı kes — bayat metin eklenmesini önler
   useEffect(() => {
-    if (!isOpen && recorderState === 'recording') {
+    if (isOpen) return
+    if (recorderState === 'recording') {
       try { mediaRecorderRef.current?.stop() } catch {}
+    }
+    if (recorderState === 'transcribing') {
+      abortCtrlRef.current?.abort()
+      setRecorderState('idle')
     }
   }, [isOpen, recorderState])
 
@@ -373,7 +380,7 @@ export default function AIAssistantPanel({ businessName, sector, plan, permissio
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder={recorderState === 'recording' ? 'Kaydediliyor...' : recorderState === 'transcribing' ? 'Çevriliyor...' : 'Mesajınızı yazın...'}
+                  placeholder={{ idle: 'Mesajınızı yazın...', recording: 'Kaydediliyor...', transcribing: 'Çevriliyor...' }[recorderState]}
                   rows={1}
                   className="flex-1 resize-none rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder:text-gray-400 dark:placeholder:text-gray-500 max-h-[100px]"
                   style={{ minHeight: 40 }}
