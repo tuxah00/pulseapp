@@ -280,21 +280,22 @@ export default function TopBar({ businessName, userName, onOpenCommand }: TopBar
           <Bell className="h-4.5 w-4.5" />
           <AnimatePresence>
             {unreadCount > 0 && (
-              <motion.span
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                exit={{ scale: 0 }}
-                className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center
-                           rounded-full bg-red-500 text-[10px] text-white font-bold leading-none
-                           ring-2 ring-white dark:ring-gray-950"
-              >
-                {unreadCount > 9 ? '9+' : unreadCount}
-              </motion.span>
+              <>
+                {/* Ping animasyonu badge'ın ARKASINDA olmalı */}
+                <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-red-400 opacity-75 animate-ping" />
+                <motion.span
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  exit={{ scale: 0 }}
+                  className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 px-1 items-center justify-center
+                             rounded-full bg-red-500 text-[10px] text-white font-bold leading-none
+                             ring-2 ring-white dark:ring-gray-950"
+                >
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </motion.span>
+              </>
             )}
           </AnimatePresence>
-          {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-red-400 opacity-75 animate-ping" />
-          )}
         </Link>
 
         {/* User */}
