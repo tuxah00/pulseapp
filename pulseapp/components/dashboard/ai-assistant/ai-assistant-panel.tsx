@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import {
   Bot, X, Minimize2, Send, Plus, ChevronDown, Trash2, StopCircle,
-  MessageSquare, Settings, Sparkles, Mic, MicOff,
+  MessageSquare, Settings, Sparkles, Mic, Loader2,
 } from 'lucide-react'
 import { useAIAssistant } from '@/lib/hooks/use-ai-assistant'
 import { useTutorial } from '@/lib/hooks/use-tutorial'
@@ -56,93 +56,60 @@ export default function AIAssistantPanel({ businessName, sector, plan, permissio
   } = useTutorial(sector)
 
   const [setupTriggered, setSetupTriggered] = useState(false)
-  const [isListening, setIsListening] = useState(false)
-  const [dictationSupported, setDictationSupported] = useState(false)
-  const isListeningRef = useRef(false)
-  const recognitionRef = useRef<any>(null)
-  const dictationBaseRef = useRef<string>('')
+  const [recorderState, setRecorderState] = useState<'idle' | 'recording' | 'transcribing'>('idle')
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const chunksRef = useRef<Blob[]>([])
 
   // Saate göre yeniden hesaplanır; panel yeniden açıldığında güncellenir.
   const smartPrompts = useMemo(() => getSmartPrompts({ sector }), [sector, isOpen])
 
-  // Web Speech API desteği kontrolü
-  useEffect(() => {
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-    if (SR) setDictationSupported(true)
-  }, [])
-
-  // onend'de taze örnek başlatmak için ref (circular dep sorununu önler)
-  const startNewSessionRef = useRef<() => void>(() => {})
-
-  const startDictationSession = useCallback(() => {
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-    if (!SR || !isListeningRef.current) return
-
-    const rec = new SR()
-    rec.lang = 'tr-TR'
-    rec.continuous = false   // false = utterance başına onresult, daha geniş tarayıcı desteği
-    rec.interimResults = true
-
-    rec.onresult = (event: any) => {
-      let transcript = ''
-      for (let i = 0; i < event.results.length; i++) {
-        transcript += event.results[i][0].transcript
-      }
-      const base = dictationBaseRef.current
-      setInput(base ? `${base} ${transcript}`.trim() : transcript.trim())
-      // Final result geldiğinde base'i güncelle — üst üste ekleme için
-      if (event.results[event.results.length - 1]?.isFinal) {
-        const fullText = base
-          ? `${base} ${transcript}`.trim()
-          : transcript.trim()
-        dictationBaseRef.current = fullText
-      }
+  const toggleDictation = useCallback(async () => {
+    if (recorderState === 'recording') {
+      // Stop recording → triggers ondataavailable + onstop
+      mediaRecorderRef.current?.stop()
+      return
     }
+    if (recorderState !== 'idle') return
 
-    rec.onend = () => {
-      // Hâlâ dinleme modundaysak yeni oturum başlat (100ms bekle — tarayıcı serbest bıraksın)
-      if (isListeningRef.current) {
-        setTimeout(() => startNewSessionRef.current(), 100)
-      } else {
-        setIsListening(false)
-      }
-    }
-
-    rec.onerror = (e: any) => {
-      // 'aborted' → kendi abort'umuz; 'no-speech' → sessizlik beklenen
-      if (e.error === 'aborted' || e.error === 'no-speech') return
-      // Gerçek hata: not-allowed, audio-capture, network vb.
-      isListeningRef.current = false
-      setIsListening(false)
-    }
-
-    recognitionRef.current = rec
     try {
-      rec.start()
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const recorder = new MediaRecorder(stream)
+      chunksRef.current = []
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data)
+      }
+
+      recorder.onstop = async () => {
+        // Stop all tracks
+        stream.getTracks().forEach(t => t.stop())
+
+        const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
+        setRecorderState('transcribing')
+
+        try {
+          const form = new FormData()
+          form.append('audio', blob, 'recording.webm')
+          const res = await fetch('/api/ai/transcribe', { method: 'POST', body: form })
+          const data = await res.json()
+          if (data.text) {
+            setInput(prev => prev ? `${prev} ${data.text}`.trim() : data.text.trim())
+          }
+        } catch {
+          // silently fail — user sees no text
+        } finally {
+          setRecorderState('idle')
+        }
+      }
+
+      recorder.start()
+      mediaRecorderRef.current = recorder
+      setRecorderState('recording')
     } catch {
-      // Başlatılamadı (ör. başka oturum açık) — kısa bekle, tekrar dene
-      setTimeout(() => { if (isListeningRef.current) startNewSessionRef.current() }, 300)
+      // Mic permission denied or not available
+      setRecorderState('idle')
     }
-  }, [])
-
-  // ref'i güncel tut
-  useEffect(() => {
-    startNewSessionRef.current = startDictationSession
-  }, [startDictationSession])
-
-  const toggleDictation = useCallback(() => {
-    if (isListeningRef.current) {
-      isListeningRef.current = false
-      setIsListening(false)
-      try { recognitionRef.current?.abort() } catch {}
-      recognitionRef.current = null
-    } else {
-      dictationBaseRef.current = input.trim()
-      isListeningRef.current = true
-      setIsListening(true)
-      startNewSessionRef.current()
-    }
-  }, [input])
+  }, [recorderState])
 
   // Yeni personel için kurulum sihirbazını otomatik başlat (dashboard'da, ilk kez)
   useEffect(() => {
@@ -400,7 +367,7 @@ export default function AIAssistantPanel({ businessName, sector, plan, permissio
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder={isListening ? 'Dinleniyor...' : 'Mesajınızı yazın...'}
+                  placeholder={recorderState === 'recording' ? 'Kaydediliyor...' : recorderState === 'transcribing' ? 'Çevriliyor...' : 'Mesajınızı yazın...'}
                   rows={1}
                   className="flex-1 resize-none rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder:text-gray-400 dark:placeholder:text-gray-500 max-h-[100px]"
                   style={{ minHeight: 40 }}
@@ -411,17 +378,23 @@ export default function AIAssistantPanel({ businessName, sector, plan, permissio
                   }}
                   disabled={isLoading}
                 />
-                {dictationSupported && !isLoading && (
+                {!isLoading && (
                   <button
                     onClick={toggleDictation}
+                    disabled={recorderState === 'transcribing'}
                     className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
-                      isListening
+                      recorderState === 'recording'
                         ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse'
+                        : recorderState === 'transcribing'
+                        ? 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
                         : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                     }`}
-                    title={isListening ? 'Dikteyi durdur' : 'Sesli yaz (dikte)'}
+                    title={recorderState === 'recording' ? 'Kaydı durdur' : recorderState === 'transcribing' ? 'Çevriliyor...' : 'Sesli yaz (dikte)'}
                   >
-                    {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                    {recorderState === 'transcribing'
+                      ? <Loader2 className="w-4 h-4 animate-spin" />
+                      : <Mic className="w-4 h-4" />
+                    }
                   </button>
                 )}
                 {isLoading ? (
