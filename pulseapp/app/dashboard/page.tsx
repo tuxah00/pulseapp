@@ -191,6 +191,9 @@ export default async function DashboardPage() {
 
   const bookingUrl = `${process.env.NEXT_PUBLIC_APP_URL}/book/${businessId}`
   const portalUrl = `${process.env.NEXT_PUBLIC_APP_URL}/portal/${businessId}`
+  // İşletme sahibi/personeli için önizleme linki — OTP/telefon girişi atlanır,
+  // aktif bir müşteri olarak portala doğrudan girilir.
+  const portalPreviewUrl = `/api/portal/owner-preview?businessId=${businessId}`
   const firstName = staff.name?.split(' ')[0] || 'Hoş geldiniz'
 
   return (
@@ -291,9 +294,12 @@ export default async function DashboardPage() {
               Müşteri Self-Servis Portal
             </p>
             <p className="text-sm text-white/90 truncate font-mono">{portalUrl}</p>
+            <p className="text-[11px] text-white/60 mt-0.5">
+              Aç butonu — portalı mevcut bir müşteri olarak önizler.
+            </p>
           </div>
           <a
-            href={portalUrl}
+            href={portalPreviewUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="flex-shrink-0 flex items-center gap-1.5 rounded-xl bg-white/20 hover:bg-white/30 px-3 py-2 text-xs font-semibold text-white transition-colors backdrop-blur-sm"
