@@ -101,6 +101,8 @@ export default function AiActionsPage() {
         } else {
           await load()
         }
+        // Top bar badge'ini anında güncelle
+        window.dispatchEvent(new CustomEvent('pulse-pending-actions-changed'))
       }
     } catch (err: any) {
       window.dispatchEvent(new CustomEvent('pulse-toast', {
