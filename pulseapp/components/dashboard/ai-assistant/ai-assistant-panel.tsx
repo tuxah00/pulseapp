@@ -58,20 +58,25 @@ export default function AIAssistantPanel({ businessName, sector, plan, permissio
   const [setupTriggered, setSetupTriggered] = useState(false)
   const [isListening, setIsListening] = useState(false)
   const [dictationSupported, setDictationSupported] = useState(false)
+  const isListeningRef = useRef(false)   // onend callback'inde stale state'ten kaçınmak için
   const recognitionRef = useRef<any>(null)
-  const dictationBaseRef = useRef<string>('') // dikte başlamadan önceki input metni
+  const dictationBaseRef = useRef<string>('')
 
   // Saate göre yeniden hesaplanır; panel yeniden açıldığında güncellenir.
   const smartPrompts = useMemo(() => getSmartPrompts({ sector }), [sector, isOpen])
 
-  // Web Speech API desteği ve konfigürasyon
+  // Web Speech API desteği kontrolü (sadece destek var mı diye)
   useEffect(() => {
-    if (typeof window === 'undefined') return
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-    if (!SpeechRecognition) return
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (SR) setDictationSupported(true)
+  }, [])
 
-    setDictationSupported(true)
-    const rec = new SpeechRecognition()
+  // Her tıklamada taze örnek oluştur — böylece onend/onerror durumu sıfırlanır
+  const buildRecognition = useCallback(() => {
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (!SR) return null
+
+    const rec = new SR()
     rec.lang = 'tr-TR'
     rec.continuous = true
     rec.interimResults = true
@@ -85,31 +90,49 @@ export default function AIAssistantPanel({ businessName, sector, plan, permissio
       setInput(base ? `${base} ${transcript}`.trim() : transcript.trim())
     }
 
-    rec.onend = () => setIsListening(false)
-    rec.onerror = () => setIsListening(false)
-
-    recognitionRef.current = rec
-    return () => {
-      try { rec.abort() } catch {}
-    }
-  }, [])
-
-  const toggleDictation = useCallback(() => {
-    const rec = recognitionRef.current
-    if (!rec) return
-    if (isListening) {
-      try { rec.stop() } catch {}
-      setIsListening(false)
-    } else {
-      try {
-        dictationBaseRef.current = input.trim()
-        rec.start()
-        setIsListening(true)
-      } catch {
+    // Sessizlik / tarayıcı timeout'u — hâlâ dinleme modundaysak yeniden başlat
+    rec.onend = () => {
+      if (isListeningRef.current) {
+        try { rec.start() } catch { /* başlatılamazsa dur */ }
+      } else {
         setIsListening(false)
       }
     }
-  }, [isListening, input])
+
+    rec.onerror = (e: any) => {
+      // 'aborted' kendi durdurmamızdır — diğerleri gerçek hata
+      if (e.error !== 'aborted') {
+        isListeningRef.current = false
+        setIsListening(false)
+      }
+    }
+
+    return rec
+  }, [])
+
+  const toggleDictation = useCallback(() => {
+    if (isListeningRef.current) {
+      // Durdur
+      isListeningRef.current = false
+      setIsListening(false)
+      try { recognitionRef.current?.abort() } catch {}
+      recognitionRef.current = null
+    } else {
+      // Başlat
+      const rec = buildRecognition()
+      if (!rec) return
+      dictationBaseRef.current = input.trim()
+      recognitionRef.current = rec
+      try {
+        rec.start()
+        isListeningRef.current = true
+        setIsListening(true)
+      } catch {
+        isListeningRef.current = false
+        recognitionRef.current = null
+      }
+    }
+  }, [input, buildRecognition])
 
   // Yeni personel için kurulum sihirbazını otomatik başlat (dashboard'da, ilk kez)
   useEffect(() => {
