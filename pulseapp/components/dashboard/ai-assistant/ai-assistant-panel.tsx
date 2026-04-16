@@ -58,27 +58,29 @@ export default function AIAssistantPanel({ businessName, sector, plan, permissio
   const [setupTriggered, setSetupTriggered] = useState(false)
   const [isListening, setIsListening] = useState(false)
   const [dictationSupported, setDictationSupported] = useState(false)
-  const isListeningRef = useRef(false)   // onend callback'inde stale state'ten kaçınmak için
+  const isListeningRef = useRef(false)
   const recognitionRef = useRef<any>(null)
   const dictationBaseRef = useRef<string>('')
 
   // Saate göre yeniden hesaplanır; panel yeniden açıldığında güncellenir.
   const smartPrompts = useMemo(() => getSmartPrompts({ sector }), [sector, isOpen])
 
-  // Web Speech API desteği kontrolü (sadece destek var mı diye)
+  // Web Speech API desteği kontrolü
   useEffect(() => {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     if (SR) setDictationSupported(true)
   }, [])
 
-  // Her tıklamada taze örnek oluştur — böylece onend/onerror durumu sıfırlanır
-  const buildRecognition = useCallback(() => {
+  // onend'de taze örnek başlatmak için ref (circular dep sorununu önler)
+  const startNewSessionRef = useRef<() => void>(() => {})
+
+  const startDictationSession = useCallback(() => {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-    if (!SR) return null
+    if (!SR || !isListeningRef.current) return
 
     const rec = new SR()
     rec.lang = 'tr-TR'
-    rec.continuous = true
+    rec.continuous = false   // false = utterance başına onresult, daha geniş tarayıcı desteği
     rec.interimResults = true
 
     rec.onresult = (event: any) => {
@@ -88,51 +90,59 @@ export default function AIAssistantPanel({ businessName, sector, plan, permissio
       }
       const base = dictationBaseRef.current
       setInput(base ? `${base} ${transcript}`.trim() : transcript.trim())
+      // Final result geldiğinde base'i güncelle — üst üste ekleme için
+      if (event.results[event.results.length - 1]?.isFinal) {
+        const fullText = base
+          ? `${base} ${transcript}`.trim()
+          : transcript.trim()
+        dictationBaseRef.current = fullText
+      }
     }
 
-    // Sessizlik / tarayıcı timeout'u — hâlâ dinleme modundaysak yeniden başlat
     rec.onend = () => {
+      // Hâlâ dinleme modundaysak yeni oturum başlat (100ms bekle — tarayıcı serbest bıraksın)
       if (isListeningRef.current) {
-        try { rec.start() } catch { /* başlatılamazsa dur */ }
+        setTimeout(() => startNewSessionRef.current(), 100)
       } else {
         setIsListening(false)
       }
     }
 
     rec.onerror = (e: any) => {
-      // 'aborted' kendi durdurmamızdır — diğerleri gerçek hata
-      if (e.error !== 'aborted') {
-        isListeningRef.current = false
-        setIsListening(false)
-      }
+      // 'aborted' → kendi abort'umuz; 'no-speech' → sessizlik beklenen
+      if (e.error === 'aborted' || e.error === 'no-speech') return
+      // Gerçek hata: not-allowed, audio-capture, network vb.
+      isListeningRef.current = false
+      setIsListening(false)
     }
 
-    return rec
+    recognitionRef.current = rec
+    try {
+      rec.start()
+    } catch {
+      // Başlatılamadı (ör. başka oturum açık) — kısa bekle, tekrar dene
+      setTimeout(() => { if (isListeningRef.current) startNewSessionRef.current() }, 300)
+    }
   }, [])
+
+  // ref'i güncel tut
+  useEffect(() => {
+    startNewSessionRef.current = startDictationSession
+  }, [startDictationSession])
 
   const toggleDictation = useCallback(() => {
     if (isListeningRef.current) {
-      // Durdur
       isListeningRef.current = false
       setIsListening(false)
       try { recognitionRef.current?.abort() } catch {}
       recognitionRef.current = null
     } else {
-      // Başlat
-      const rec = buildRecognition()
-      if (!rec) return
       dictationBaseRef.current = input.trim()
-      recognitionRef.current = rec
-      try {
-        rec.start()
-        isListeningRef.current = true
-        setIsListening(true)
-      } catch {
-        isListeningRef.current = false
-        recognitionRef.current = null
-      }
+      isListeningRef.current = true
+      setIsListening(true)
+      startNewSessionRef.current()
     }
-  }, [input, buildRecognition])
+  }, [input])
 
   // Yeni personel için kurulum sihirbazını otomatik başlat (dashboard'da, ilk kez)
   useEffect(() => {
