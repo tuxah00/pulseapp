@@ -1,14 +1,15 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import {
   Bot, X, Minimize2, Send, Plus, ChevronDown, Trash2, StopCircle,
-  MessageSquare, Settings, Sparkles,
+  MessageSquare, Settings, Sparkles, Mic, MicOff,
 } from 'lucide-react'
 import { useAIAssistant } from '@/lib/hooks/use-ai-assistant'
 import { useTutorial } from '@/lib/hooks/use-tutorial'
+import { getSmartPrompts } from '@/lib/ai/quick-prompts'
 import AIMessageBubble from './ai-message-bubble'
 import AIToolIndicator from './ai-tool-indicator'
 import AIAssistantButton from './ai-assistant-button'
@@ -21,13 +22,6 @@ interface Props {
   plan: PlanType
   permissions: StaffPermissions
 }
-
-const QUICK_PROMPTS = [
-  'Bugünkü randevularım neler?',
-  'Bu hafta kaç randevum var?',
-  'Hizmetlerimi listele',
-  'Müşteri istatistiklerimi göster',
-]
 
 export default function AIAssistantPanel({ businessName, sector, plan, permissions }: Props) {
   const [isOpen, setIsOpen] = useState(false)
@@ -62,6 +56,60 @@ export default function AIAssistantPanel({ businessName, sector, plan, permissio
   } = useTutorial(sector)
 
   const [setupTriggered, setSetupTriggered] = useState(false)
+  const [isListening, setIsListening] = useState(false)
+  const [dictationSupported, setDictationSupported] = useState(false)
+  const recognitionRef = useRef<any>(null)
+  const dictationBaseRef = useRef<string>('') // dikte başlamadan önceki input metni
+
+  // Saate göre yeniden hesaplanır; panel yeniden açıldığında güncellenir.
+  const smartPrompts = useMemo(() => getSmartPrompts({ sector }), [sector, isOpen])
+
+  // Web Speech API desteği ve konfigürasyon
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (!SpeechRecognition) return
+
+    setDictationSupported(true)
+    const rec = new SpeechRecognition()
+    rec.lang = 'tr-TR'
+    rec.continuous = true
+    rec.interimResults = true
+
+    rec.onresult = (event: any) => {
+      let transcript = ''
+      for (let i = 0; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript
+      }
+      const base = dictationBaseRef.current
+      setInput(base ? `${base} ${transcript}`.trim() : transcript.trim())
+    }
+
+    rec.onend = () => setIsListening(false)
+    rec.onerror = () => setIsListening(false)
+
+    recognitionRef.current = rec
+    return () => {
+      try { rec.abort() } catch {}
+    }
+  }, [])
+
+  const toggleDictation = useCallback(() => {
+    const rec = recognitionRef.current
+    if (!rec) return
+    if (isListening) {
+      try { rec.stop() } catch {}
+      setIsListening(false)
+    } else {
+      try {
+        dictationBaseRef.current = input.trim()
+        rec.start()
+        setIsListening(true)
+      } catch {
+        setIsListening(false)
+      }
+    }
+  }, [isListening, input])
 
   // Yeni personel için kurulum sihirbazını otomatik başlat (dashboard'da, ilk kez)
   useEffect(() => {
@@ -281,7 +329,7 @@ export default function AIAssistantPanel({ businessName, sector, plan, permissio
                     Randevularınız, müşterileriniz, hizmetleriniz ve daha fazlası hakkında bana soru sorabilirsiniz.
                   </p>
                   <div className="grid grid-cols-1 gap-2 w-full">
-                    {QUICK_PROMPTS.map((prompt) => (
+                    {smartPrompts.map((prompt) => (
                       <button
                         key={prompt}
                         onClick={() => handleQuickPrompt(prompt)}
@@ -319,7 +367,7 @@ export default function AIAssistantPanel({ businessName, sector, plan, permissio
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Mesajınızı yazın..."
+                  placeholder={isListening ? 'Dinleniyor...' : 'Mesajınızı yazın...'}
                   rows={1}
                   className="flex-1 resize-none rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder:text-gray-400 dark:placeholder:text-gray-500 max-h-[100px]"
                   style={{ minHeight: 40 }}
@@ -330,6 +378,19 @@ export default function AIAssistantPanel({ businessName, sector, plan, permissio
                   }}
                   disabled={isLoading}
                 />
+                {dictationSupported && !isLoading && (
+                  <button
+                    onClick={toggleDictation}
+                    className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
+                      isListening
+                        ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse'
+                        : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                    }`}
+                    title={isListening ? 'Dikteyi durdur' : 'Sesli yaz (dikte)'}
+                  >
+                    {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                  </button>
+                )}
                 {isLoading ? (
                   <button
                     onClick={stopGeneration}

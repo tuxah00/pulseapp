@@ -5,7 +5,14 @@ import type { StaffPermissions, CampaignSegmentFilter } from '@/types'
 import { createPendingAction, cancelPendingAction } from '@/lib/ai/assistant-actions'
 import { matchesCampaignFilter } from '@/lib/utils/campaign-filters'
 import { computeInvoiceTotals } from '@/lib/invoices/calc'
-import { computeStrategicRecommendations } from '@/lib/analytics/insights'
+import {
+  computeStrategicRecommendations,
+  computeInsightsSummary,
+  computeKpi,
+  computeMarginAnalysis,
+  computeSeasonalTrend,
+  computeCohortRetention,
+} from '@/lib/analytics/insights'
 import type { SectorType } from '@/types'
 
 type SupabaseAdmin = ReturnType<typeof createAdminClient>
@@ -553,6 +560,27 @@ export const ASSISTANT_TOOLS: ChatCompletionTool[] = [
       },
     },
   },
+  {
+    type: 'function',
+    function: {
+      name: 'get_business_insights',
+      description: 'İş zekası panelinin tamamını (KPI özeti, hizmet marj/çeyrek analizi, mevsimsel trend, kohort retention ve stratejik öneriler) tek çağrıda döner. "İşletmemi analiz et", "genel durumum nasıl", "iş zekası panelinde neler var", "SWOT çıkar" gibi geniş analiz istekleri için kullan. Belirli bir bölüm isteniyorsa (ör. sadece marj) `section` parametresiyle kısalt.',
+      parameters: {
+        type: 'object',
+        properties: {
+          period_days: {
+            type: 'number',
+            description: 'Analiz penceresi (gün). Varsayılan 30. KPI ve marj bu aralıkta hesaplanır; mevsimsel/kohort sabit 12 ay/6 kohort kullanır.',
+          },
+          section: {
+            type: 'string',
+            enum: ['all', 'kpi', 'margin', 'seasonal', 'cohort', 'recommendations'],
+            description: 'Sadece belirli bir bölüm istenirse belirt (varsayılan all). Yanıt boyutunu küçültür.',
+          },
+        },
+      },
+    },
+  },
   // Grup 10: Zamanlanmış Eylemler (Faz 5)
   {
     type: 'function',
@@ -1091,6 +1119,7 @@ export const TOOL_LABELS: Record<string, string> = {
   detect_risk_customers: 'Risk altındaki müşteriler tespit ediliyor...',
   detect_anomalies: 'Anomali taraması yapılıyor...',
   recommend_strategic_actions: 'Stratejik öneriler hesaplanıyor...',
+  get_business_insights: 'İş zekası analizi hazırlanıyor...',
   schedule_action: 'Eylem zamanlanıyor...',
   list_scheduled_actions: 'Planlı eylemler listeleniyor...',
   cancel_scheduled_action: 'Zamanlanmış eylem iptal ediliyor...',
@@ -1159,6 +1188,7 @@ const TOOL_PERMISSIONS: Record<string, keyof StaffPermissions> = {
   detect_risk_customers: 'customers',
   detect_anomalies: 'analytics',
   recommend_strategic_actions: 'analytics',
+  get_business_insights: 'analytics',
   schedule_action: 'dashboard',
   list_scheduled_actions: 'dashboard',
   cancel_scheduled_action: 'dashboard',
@@ -1279,6 +1309,8 @@ export async function executeAssistantTool(
         return await handleDetectAnomalies(admin, businessId)
       case 'recommend_strategic_actions':
         return await handleRecommendStrategicActions(admin, businessId, args)
+      case 'get_business_insights':
+        return await handleGetBusinessInsights(admin, businessId, args)
       case 'schedule_action':
         return await handleScheduleAction(admin, ctx, args)
       case 'list_scheduled_actions':
@@ -2868,6 +2900,52 @@ async function handleRecommendStrategicActions(
       count: recommendations.length,
       recommendations: sorted.slice(0, limit),
     },
+  }
+}
+
+async function handleGetBusinessInsights(
+  admin: SupabaseAdmin,
+  businessId: string,
+  args: { period_days?: number; section?: 'all' | 'kpi' | 'margin' | 'seasonal' | 'cohort' | 'recommendations' },
+) {
+  const { data: biz } = await admin
+    .from('businesses')
+    .select('sector')
+    .eq('id', businessId)
+    .single()
+
+  const sector = (biz?.sector as SectorType) || 'other'
+  const days = Math.min(Math.max(args.period_days || 30, 7), 365)
+  const to = new Date()
+  const from = new Date(to.getTime() - (days - 1) * 24 * 60 * 60 * 1000)
+  const period = {
+    from: from.toISOString().slice(0, 10),
+    to: to.toISOString().slice(0, 10),
+  }
+
+  const section = args.section || 'all'
+  const base = { sector, period }
+
+  // Tek bölüm isteklerini ayrı hesaplayıp gereksiz sorgulardan kaçın
+  switch (section) {
+    case 'kpi':
+      return { success: true, data: { ...base, kpi: await computeKpi(admin, businessId, period, sector) } }
+    case 'margin': {
+      const [kpi, margin] = await Promise.all([
+        computeKpi(admin, businessId, period, sector),
+        computeMarginAnalysis(admin, businessId, period),
+      ])
+      return { success: true, data: { ...base, kpi, margin } }
+    }
+    case 'seasonal':
+      return { success: true, data: { ...base, seasonal: await computeSeasonalTrend(admin, businessId, sector) } }
+    case 'cohort':
+      return { success: true, data: { ...base, cohort: await computeCohortRetention(admin, businessId, { cohortMonths: 6 }) } }
+    case 'recommendations':
+      return { success: true, data: { ...base, recommendations: await computeStrategicRecommendations(admin, businessId, sector) } }
+    case 'all':
+    default:
+      return { success: true, data: await computeInsightsSummary(admin, businessId, sector, period) }
   }
 }
 

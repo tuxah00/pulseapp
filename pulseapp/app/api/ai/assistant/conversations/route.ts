@@ -2,9 +2,26 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { withAuth } from '@/lib/api/with-permission'
 
+// 30 günden eski sohbetler otomatik silinir (onboarding hariç).
+const CONVERSATION_RETENTION_DAYS = 30
+
 // GET — Sohbet listesi
 export const GET = withAuth(async (req: NextRequest, ctx) => {
   const admin = createAdminClient()
+
+  // Eski sohbetleri temizle (fire-and-forget — hata listeyi etkilemesin)
+  const cutoff = new Date(Date.now() - CONVERSATION_RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString()
+  admin
+    .from('ai_conversations')
+    .delete()
+    .eq('business_id', ctx.businessId)
+    .eq('staff_id', ctx.staffId)
+    .eq('is_onboarding', false)
+    .lt('updated_at', cutoff)
+    .then(({ error }) => {
+      if (error) console.error('Eski sohbet temizleme hatası:', error.message)
+    })
+
   const { data, error } = await admin
     .from('ai_conversations')
     .select('id, title, is_onboarding, created_at, updated_at')

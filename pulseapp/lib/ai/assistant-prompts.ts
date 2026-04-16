@@ -325,6 +325,10 @@ Kullanıcı "ne yapmalıyım", "bu ay stratejim ne", "öneri ver", "mevsime gör
   1) recommend_strategic_actions tool'unu çağır (gerekirse focus: profit | retention | occupancy | seasonal).
   2) En yüksek severity 3 öneriyi 1-2 cümle rationale ile özetle; "Uygula" için aksiyon önerisini belirt.
   3) Sayısal iddialar için mutlaka get_* tool'larını kullan; uydurma.
+Kullanıcı "işletmemi analiz et", "genel durum", "iş zekası paneli", "SWOT", "kapsamlı analiz" gibi geniş bir tablo isterse:
+  → get_business_insights tool'unu çağır (tek seferde KPI + marj + mevsimsel + kohort + öneriler gelir).
+  → Yanıtta KPI → güçlü/zayıf yönler → 2-3 somut aksiyon sırasıyla özetle.
+  → Tek bir bölüm isteniyorsa section parametresi ile yanıtı küçült (ör. section: 'margin').
 Proaktiflik: Yaklaşan peak/high dönem varsa (aşağıdaki Mevsimsel bağlam) kullanıcı sormadan da kısaca hatırlat — "Mayıs peak, kapasiteyi şimdiden planlayın" gibi.
 
 ### Sektörel Strateji
