@@ -56,59 +56,19 @@ export default function AIAssistantPanel({ businessName, sector, plan, permissio
   } = useTutorial(sector)
 
   const [setupTriggered, setSetupTriggered] = useState(false)
-  const [isRecording, setIsRecording] = useState(false)
-  const isRecordingRef = useRef(false)
+  const [recorderState, setRecorderState] = useState<'idle' | 'recording' | 'transcribing'>('idle')
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
-  const streamRef = useRef<MediaStream | null>(null)
-  const allChunksRef = useRef<Blob[]>([])   // oturum başından beri tüm ses
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const baseInputRef = useRef<string>('')    // dikte öncesi input metni
-  const isFetchingRef = useRef(false)        // eş zamanlı fetch önle
+  const chunksRef = useRef<Blob[]>([])
 
   // Saate göre yeniden hesaplanır; panel yeniden açıldığında güncellenir.
   const smartPrompts = useMemo(() => getSmartPrompts({ sector }), [sector, isOpen])
 
-  // Tüm birikmiş sesi Whisper'a gönder → input'u yenile (replace, append değil)
-  const flushAudio = useCallback(async () => {
-    if (isFetchingRef.current || allChunksRef.current.length === 0) return
-    const blob = new Blob(allChunksRef.current, { type: 'audio/webm' })
-    if (blob.size < 2000) return   // çok kısa, henüz konuşulmamış
-
-    isFetchingRef.current = true
-    const form = new FormData()
-    form.append('audio', blob, 'audio.webm')
-    try {
-      const res = await fetch('/api/ai/transcribe', { method: 'POST', body: form })
-      const data = await res.json()
-      if (data.text?.trim()) {
-        const base = baseInputRef.current
-        setInput(base ? `${base} ${data.text.trim()}` : data.text.trim())
-      } else if (data.error) {
-        console.error('[Transcribe]', data.error)
-      }
-    } catch (err) {
-      console.error('[Transcribe] fetch hatası:', err)
-    } finally {
-      isFetchingRef.current = false
-    }
-  }, [])
-
-  const stopDictation = useCallback(() => {
-    isRecordingRef.current = false
-    if (intervalRef.current) clearInterval(intervalRef.current)
-    try { mediaRecorderRef.current?.stop() } catch {}
-    streamRef.current?.getTracks().forEach(t => t.stop())
-    streamRef.current = null
-    mediaRecorderRef.current = null
-    allChunksRef.current = []
-    setIsRecording(false)
-  }, [])
-
   const toggleDictation = useCallback(async () => {
-    if (isRecordingRef.current) {
-      stopDictation()
+    if (recorderState === 'recording') {
+      mediaRecorderRef.current?.stop()
       return
     }
+    if (recorderState !== 'idle') return
 
     let stream: MediaStream
     try {
@@ -118,26 +78,44 @@ export default function AIAssistantPanel({ businessName, sector, plan, permissio
     }
 
     const recorder = new MediaRecorder(stream)
-    allChunksRef.current = []
-    baseInputRef.current = input.trim()
+    chunksRef.current = []
 
-    // 250ms'de bir veri topla — küçük parçalar birikiyor, tam oturumu temsil eder
-    recorder.ondataavailable = (e) => { if (e.data.size > 0) allChunksRef.current.push(e.data) }
+    recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data) }
+
+    recorder.onstop = async () => {
+      stream.getTracks().forEach(t => t.stop())
+      const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
+      if (blob.size < 1000) { setRecorderState('idle'); return }
+
+      setRecorderState('transcribing')
+      const form = new FormData()
+      form.append('audio', blob, 'audio.webm')
+      try {
+        const res = await fetch('/api/ai/transcribe', { method: 'POST', body: form })
+        const data = await res.json()
+        if (data.text?.trim()) {
+          setInput(prev => prev ? `${prev} ${data.text.trim()}` : data.text.trim())
+        } else if (data.error) {
+          console.error('[Transcribe]', data.error)
+        }
+      } catch (err) {
+        console.error('[Transcribe] fetch hatası:', err)
+      } finally {
+        setRecorderState('idle')
+      }
+    }
+
     recorder.start(250)
-
-    streamRef.current = stream
     mediaRecorderRef.current = recorder
-    isRecordingRef.current = true
-    setIsRecording(true)
+    setRecorderState('recording')
+  }, [recorderState])
 
-    // Her 2 saniyede birikmiş sesi gönder → büyüyen metin hissi
-    intervalRef.current = setInterval(flushAudio, 2000)
-  }, [input, flushAudio, stopDictation])
-
-  // Panel kapanınca temizle
+  // Panel kapanınca aktif kaydı durdur
   useEffect(() => {
-    if (!isOpen && isRecordingRef.current) stopDictation()
-  }, [isOpen, stopDictation])
+    if (!isOpen && recorderState === 'recording') {
+      try { mediaRecorderRef.current?.stop() } catch {}
+    }
+  }, [isOpen, recorderState])
 
   // Yeni personel için kurulum sihirbazını otomatik başlat (dashboard'da, ilk kez)
   useEffect(() => {
@@ -395,7 +373,7 @@ export default function AIAssistantPanel({ businessName, sector, plan, permissio
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder={isRecording ? 'Dinleniyor... (her 5sn metne çevrilir)' : 'Mesajınızı yazın...'}
+                  placeholder={recorderState === 'recording' ? 'Kaydediliyor...' : recorderState === 'transcribing' ? 'Çevriliyor...' : 'Mesajınızı yazın...'}
                   rows={1}
                   className="flex-1 resize-none rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder:text-gray-400 dark:placeholder:text-gray-500 max-h-[100px]"
                   style={{ minHeight: 40 }}
@@ -409,12 +387,15 @@ export default function AIAssistantPanel({ businessName, sector, plan, permissio
                 {!isLoading && (
                   <button
                     onClick={toggleDictation}
+                    disabled={recorderState === 'transcribing'}
                     className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
-                      isRecording
+                      recorderState === 'recording'
                         ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse'
+                        : recorderState === 'transcribing'
+                        ? 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
                         : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                     }`}
-                    title={isRecording ? 'Dikteyi durdur' : 'Sesli yaz (dikte)'}
+                    title={recorderState === 'recording' ? 'Kaydı durdur ve çevir' : recorderState === 'transcribing' ? 'Çevriliyor...' : 'Sesli yaz (dikte)'}
                   >
                     <Mic className="w-4 h-4" />
                   </button>
