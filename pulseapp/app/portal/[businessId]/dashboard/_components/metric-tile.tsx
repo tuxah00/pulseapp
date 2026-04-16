@@ -27,7 +27,7 @@ export function MetricTile({ icon: Icon, label, value, subtitle, accent = 'pulse
       <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mt-3">
         {label}
       </p>
-      <p className="font-serif text-2xl font-bold text-gray-900 dark:text-gray-100 mt-0.5">
+      <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-0.5">
         {value}
       </p>
       {subtitle && (

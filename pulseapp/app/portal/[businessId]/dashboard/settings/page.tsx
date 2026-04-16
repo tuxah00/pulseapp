@@ -167,7 +167,7 @@ export default function PortalSettingsPage() {
   return (
     <div className="max-w-3xl mx-auto space-y-8">
       <div>
-        <h1 className="text-2xl font-serif font-bold text-gray-900 dark:text-gray-100">Ayarlar</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Ayarlar</h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
           Profilin, iletişim tercihlerin ve verilerin — tek yerden yönet.
         </p>

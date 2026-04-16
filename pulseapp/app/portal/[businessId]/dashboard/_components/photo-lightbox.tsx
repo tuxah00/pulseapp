@@ -41,7 +41,7 @@ export function PhotoLightbox({ photo, onClose }: PhotoLightboxProps) {
 
   return (
     <div
-      className="fixed inset-0 z-[70] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4"
+      className="fixed inset-0 z-[110] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4"
       onClick={onClose}
     >
       <button

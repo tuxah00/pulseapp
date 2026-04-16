@@ -60,7 +60,7 @@ export function TreatmentProgressCard({ protocol }: TreatmentProgressCardProps) 
       <div className="p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <h3 className="font-serif text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">
               {protocol.name}
             </h3>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-gray-500 dark:text-gray-400">

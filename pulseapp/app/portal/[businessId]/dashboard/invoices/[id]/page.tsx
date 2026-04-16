@@ -196,7 +196,7 @@ export default function PortalInvoiceDetailPage() {
               <Receipt className="h-6 w-6 text-pulse-900/70 dark:text-pulse-300" />
             </div>
             <div>
-              <h1 className="text-xl font-serif font-bold text-gray-900 dark:text-gray-100">{invoice.invoice_number}</h1>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">{invoice.invoice_number}</h1>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{formatDate(invoice.created_at)}</p>
             </div>
           </div>

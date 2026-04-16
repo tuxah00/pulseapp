@@ -66,7 +66,7 @@ export function BeforeAfterGallery({ photos }: BeforeAfterGalleryProps) {
               className="aspect-square rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 hover:ring-2 hover:ring-pulse-900 transition-all"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={p.photo_url} alt="" className="w-full h-full object-cover" />
+              <img src={p.photo_url} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
             </button>
           ))}
         </div>
@@ -97,7 +97,7 @@ function PairCell({ label, photo, onClick }: PairCellProps) {
   return (
     <button onClick={() => onClick(photo)} className="relative aspect-square group">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={photo.photo_url} alt={label} className="w-full h-full object-cover group-hover:opacity-90 transition-opacity" />
+      <img src={photo.photo_url} alt={label} loading="lazy" decoding="async" className="w-full h-full object-cover group-hover:opacity-90 transition-opacity" />
       <span className="absolute top-2 left-2 text-[10px] font-medium px-1.5 py-0.5 rounded bg-black/60 text-white">
         {label}
       </span>

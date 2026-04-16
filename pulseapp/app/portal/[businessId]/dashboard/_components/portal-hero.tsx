@@ -35,7 +35,7 @@ export function PortalHero({ firstName, segment, lastVisitDays, isBirthday }: Po
             {segmentLabel}
           </div>
         )}
-        <h1 className="mt-2 font-serif text-3xl lg:text-4xl font-bold">
+        <h1 className="mt-2 text-3xl lg:text-4xl font-bold">
           {greeting}{firstName ? `, ${firstName}` : ''}
           {isBirthday ? ' 🎂' : ''}
         </h1>

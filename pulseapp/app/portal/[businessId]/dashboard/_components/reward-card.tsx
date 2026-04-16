@@ -127,7 +127,7 @@ export function RewardCard({ reward, onBook }: RewardCardProps) {
           {r?.name || 'Ödül'}
         </p>
         <p className={cn(
-          'font-serif text-3xl font-bold mt-1',
+          'text-3xl font-bold mt-1',
           isActive ? 'text-pulse-900 dark:text-pulse-300' : 'text-gray-500 dark:text-gray-500'
         )}>
           {r ? formatValue(r.type, r.value) : '—'}

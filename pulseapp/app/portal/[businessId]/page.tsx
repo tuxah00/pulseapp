@@ -76,7 +76,7 @@ export default async function PortalLoginPage({ params, searchParams }: PageProp
               </span>
             </div>
           )}
-          <h1 className="mt-4 text-2xl font-serif font-bold text-white tracking-tight">
+          <h1 className="mt-4 text-2xl font-bold text-white tracking-tight">
             {business.name}
           </h1>
           <div className="inline-flex items-center gap-1.5 mt-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-sm ring-1 ring-white/20">

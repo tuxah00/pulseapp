@@ -75,7 +75,7 @@ export function DataDeletionModal({ open, onClose, onSubmitted }: DataDeletionMo
 
   return (
     <div
-      className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center p-4 modal-overlay"
+      className="fixed inset-0 z-[100] bg-black/60 dark:bg-black/70 flex items-center justify-center p-4 modal-overlay"
       onClick={onClose}
     >
       <div
@@ -94,7 +94,7 @@ export function DataDeletionModal({ open, onClose, onSubmitted }: DataDeletionMo
               </button>
             )}
             <div>
-              <h3 className="text-lg font-serif font-semibold text-gray-900 dark:text-gray-100">Hesap Silme</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Hesap Silme</h3>
               <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">Adım {step}/3</p>
             </div>
           </div>

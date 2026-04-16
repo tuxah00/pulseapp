@@ -90,7 +90,7 @@ export default function PortalReviewsPage() {
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       <div>
-        <h1 className="text-2xl font-serif font-bold text-gray-900 dark:text-gray-100">Yorumlarım</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Yorumlarım</h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
           Deneyimini paylaş — hem bize hem de diğer müşterilere yol gösterir.
         </p>
@@ -121,7 +121,7 @@ export default function PortalReviewsPage() {
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
-                          <h3 className="font-serif text-base font-semibold text-gray-900 dark:text-gray-100 truncate">
+                          <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">
                             {service?.name || 'Hizmet'}
                           </h3>
                           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">

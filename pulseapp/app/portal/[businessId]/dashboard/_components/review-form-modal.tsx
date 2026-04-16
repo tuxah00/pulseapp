@@ -88,7 +88,7 @@ export function ReviewFormModal({ open, appointment, onClose, onSubmitted }: Rev
 
   return (
     <div
-      className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center p-4 modal-overlay"
+      className="fixed inset-0 z-[100] bg-black/60 dark:bg-black/70 flex items-center justify-center p-4 modal-overlay"
       onClick={onClose}
     >
       <div
@@ -97,7 +97,7 @@ export function ReviewFormModal({ open, appointment, onClose, onSubmitted }: Rev
       >
         <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-serif font-semibold text-gray-900 dark:text-gray-100">Yorum Yaz</h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Yorum Yaz</h3>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
               Deneyimini bizimle paylaş, geri bildirim bizim için çok değerli.
             </p>

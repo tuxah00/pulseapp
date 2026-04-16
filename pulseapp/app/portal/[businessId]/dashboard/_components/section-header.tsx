@@ -15,7 +15,7 @@ export function SectionHeader({ title, subtitle, action, icon: Icon }: SectionHe
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           {Icon ? <Icon className="h-5 w-5 text-pulse-900 dark:text-pulse-300 flex-shrink-0" /> : null}
-          <h2 className="text-lg font-serif font-semibold text-gray-900 dark:text-gray-100 truncate">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">
             {title}
           </h2>
         </div>

@@ -95,7 +95,7 @@ export default function PortalTreatmentsPage() {
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       <div>
-        <h1 className="text-2xl font-serif font-bold text-gray-900 dark:text-gray-100">{title}</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{title}</h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
           Tedavi protokollerin ve paketlerin — ilerlemen bir bakışta.
         </p>
@@ -200,7 +200,7 @@ function PackageCard({ pkg }: { pkg: CustomerPackage }) {
     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <h3 className="font-serif text-base font-semibold text-gray-900 dark:text-gray-100 truncate">
+          <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">
             {pkg.package_name}
           </h3>
           {service?.name && (
@@ -217,7 +217,7 @@ function PackageCard({ pkg }: { pkg: CustomerPackage }) {
 
       {isActive ? (
         <div className="mt-4 text-center bg-gradient-to-br from-pulse-900/5 to-indigo-500/5 dark:from-pulse-900/20 dark:to-indigo-500/20 rounded-xl py-3">
-          <p className="text-3xl font-serif font-bold text-pulse-900 dark:text-pulse-300">{remaining}</p>
+          <p className="text-3xl font-bold text-pulse-900 dark:text-pulse-300">{remaining}</p>
           <p className="text-[11px] text-gray-500 dark:text-gray-400 uppercase tracking-wide">kalan seans</p>
         </div>
       ) : (

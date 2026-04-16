@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'next/navigation'
-import { FolderHeart, Image as ImageIcon, Loader2, X } from 'lucide-react'
+import { Folder, Image as ImageIcon, Loader2, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { FileCard, FileDetailModal, type PortalRecord } from '../_components/file-card'
 import { PhotoLightbox, type LightboxPhoto } from '../_components/photo-lightbox'
@@ -84,7 +84,7 @@ export default function PortalFilesPage() {
   return (
     <div className="max-w-4xl mx-auto space-y-5">
       <div>
-        <h1 className="text-2xl font-serif font-bold text-gray-900 dark:text-gray-100">{title}</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{title}</h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{subtitle}</p>
       </div>
 
@@ -99,7 +99,7 @@ export default function PortalFilesPage() {
               : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
           )}
         >
-          <FolderHeart className="h-4 w-4" />
+          <Folder className="h-4 w-4" />
           Kayıtlar
           {records.length > 0 && (
             <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-pulse-900/10 dark:bg-pulse-900/30 text-pulse-900 dark:text-pulse-300">
@@ -132,7 +132,7 @@ export default function PortalFilesPage() {
         </div>
       ) : tab === 'records' ? (
         records.length === 0 ? (
-          <EmptyCard icon={FolderHeart} title="Henüz kayıt yok" description="İşletme senin için dosya eklediğinde burada görünecek." />
+          <EmptyCard icon={Folder} title="Henüz kayıt yok" description="İşletme senin için dosya eklediğinde burada görünecek." />
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">
             {records.map((r) => (
@@ -178,7 +178,7 @@ export default function PortalFilesPage() {
                   className="relative aspect-square rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 hover:ring-2 hover:ring-pulse-900 transition-all group"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={p.photo_url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                  <img src={p.photo_url} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                   <span className="absolute bottom-2 left-2 text-[10px] font-medium px-2 py-0.5 rounded-full bg-black/60 text-white capitalize">
                     {PHOTO_FILTERS.find((f) => f.key === p.photo_type)?.label || p.photo_type}
                   </span>

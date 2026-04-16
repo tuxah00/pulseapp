@@ -23,7 +23,7 @@ export function MilestoneBanner({ milestones }: MilestoneBannerProps) {
           <div className="absolute -right-4 -top-4 text-6xl opacity-20 animate-pulse pointer-events-none">
             {m.kind === 'birthday' ? '🎂' : '🎉'}
           </div>
-          <h3 className="relative font-serif text-lg font-bold text-amber-900 dark:text-amber-200">
+          <h3 className="relative text-lg font-bold text-amber-900 dark:text-amber-200">
             {m.title}
           </h3>
           <p className="relative text-sm text-amber-800/80 dark:text-amber-200/80 mt-1">

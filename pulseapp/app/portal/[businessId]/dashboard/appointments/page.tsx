@@ -105,7 +105,7 @@ export default function PortalAppointmentsPage() {
   return (
     <div className="max-w-4xl mx-auto space-y-5">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-serif font-bold text-gray-900 dark:text-gray-100">Randevularım</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Randevularım</h1>
         <Link
           href={`/book/${businessId}`}
           className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-pulse-900 text-white text-sm font-medium hover:bg-pulse-800 transition-colors"
@@ -275,8 +275,8 @@ function EditModal({ appointment, onClose, onSaved }: {
   const minDate = new Date().toISOString().split('T')[0]
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 modal-overlay">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-overlay">
+      <div className="absolute inset-0 bg-black/60 dark:bg-black/70" onClick={onClose} />
       <div className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md modal-content">
         <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800">
           <h3 className="font-semibold text-gray-900 dark:text-gray-100">Randevuyu Düzenle</h3>

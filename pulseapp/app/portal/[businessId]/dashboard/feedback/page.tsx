@@ -85,7 +85,7 @@ export default function PortalFeedbackPage() {
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       <div>
-        <h1 className="text-2xl font-serif font-bold text-gray-900 dark:text-gray-100">Geri Bildirim</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Geri Bildirim</h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
           Seni dinliyoruz — her öneri, şikayet ve teşekkür bizim için değerli.
         </p>
@@ -148,7 +148,7 @@ export default function PortalFeedbackPage() {
                           </span>
                         </div>
                         {item.subject && (
-                          <h3 className="font-serif text-base font-semibold text-gray-900 dark:text-gray-100 mt-0.5">
+                          <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mt-0.5">
                             {item.subject}
                           </h3>
                         )}

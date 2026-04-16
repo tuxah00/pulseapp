@@ -128,9 +128,6 @@ export default function PortalOverviewPage() {
         if (rewRes.ok) {
           const data = await rewRes.json()
           setLoyaltyTier(data.loyalty?.tier ?? null)
-          if (data.loyalty?.points_balance !== undefined) {
-            setLoyaltyPoints(data.loyalty.points_balance)
-          }
         }
         if (campRes.ok) {
           const data = await campRes.json()
@@ -194,13 +191,13 @@ export default function PortalOverviewPage() {
           <div className="bg-white dark:bg-gray-900 rounded-2xl border border-pulse-100 dark:border-pulse-900/40 p-5 shadow-sm">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <h3 className="font-serif text-xl font-bold text-gray-900 dark:text-gray-100 truncate">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 truncate">
                   {nextService?.name || 'Randevu'}
                 </h3>
                 <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
                   {formatDate(nextAppt.appointment_date)}
                 </p>
-                <p className="text-2xl font-serif font-bold text-pulse-900 dark:text-pulse-300 mt-1">
+                <p className="text-2xl font-bold text-pulse-900 dark:text-pulse-300 mt-1">
                   {formatTime(nextAppt.start_time)}
                   {nextAppt.end_time ? <span className="text-sm text-gray-500 dark:text-gray-400 font-normal"> — {formatTime(nextAppt.end_time)}</span> : null}
                 </p>
@@ -231,7 +228,7 @@ export default function PortalOverviewPage() {
               <Plus className="h-5 w-5" />
             </div>
             <div>
-              <p className="font-serif text-base font-semibold text-gray-900 dark:text-gray-100">Yeni Randevu Al</p>
+              <p className="text-base font-semibold text-gray-900 dark:text-gray-100">Yeni Randevu Al</p>
               <p className="text-xs text-gray-500 dark:text-gray-400">Sana uygun bir zamanı seç</p>
             </div>
           </div>

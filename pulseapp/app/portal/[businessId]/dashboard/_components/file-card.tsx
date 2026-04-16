@@ -1,6 +1,6 @@
 'use client'
 
-import { FileText, Image as ImageIcon, FolderHeart, ChevronRight } from 'lucide-react'
+import { FileText, Image as ImageIcon, Folder, ChevronRight } from 'lucide-react'
 
 export interface PortalRecord {
   id: string
@@ -20,12 +20,12 @@ const TYPE_LABELS: Record<string, string> = {
   student: 'Öğrenci Dosyası',
 }
 
-const TYPE_ICONS: Record<string, typeof FolderHeart> = {
-  patient_file: FolderHeart,
-  client_file: FolderHeart,
+const TYPE_ICONS: Record<string, typeof Folder> = {
+  patient_file: Folder,
+  client_file: Folder,
   case_file: FileText,
-  pet: FolderHeart,
-  vehicle: FolderHeart,
+  pet: Folder,
+  vehicle: Folder,
   diet_plan: FileText,
   student: FileText,
 }
@@ -48,7 +48,7 @@ interface FileCardProps {
 }
 
 export function FileCard({ record, onClick }: FileCardProps) {
-  const Icon = TYPE_ICONS[record.type] || FolderHeart
+  const Icon = TYPE_ICONS[record.type] || Folder
   const label = TYPE_LABELS[record.type] || 'Dosya'
   const files: string[] = Array.isArray(record.data?.file_urls) ? record.data.file_urls : []
   const thumbnails = files.filter(isImageUrl).slice(0, 3)
@@ -86,6 +86,8 @@ export function FileCard({ record, onClick }: FileCardProps) {
               key={i}
               src={url}
               alt=""
+              loading="lazy"
+              decoding="async"
               className="aspect-square w-full rounded-lg object-cover bg-gray-100 dark:bg-gray-800"
             />
           ))}
@@ -112,7 +114,7 @@ export function FileDetailModal({ record, onClose, onImageClick }: FileDetailMod
 
   return (
     <div
-      className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center p-4 modal-overlay"
+      className="fixed inset-0 z-[100] bg-black/60 dark:bg-black/70 flex items-center justify-center p-4 modal-overlay"
       onClick={onClose}
     >
       <div
@@ -124,7 +126,7 @@ export function FileDetailModal({ record, onClose, onImageClick }: FileDetailMod
             <p className="text-[11px] font-medium text-pulse-900 dark:text-pulse-300 uppercase tracking-wide">
               {TYPE_LABELS[record.type] || 'Dosya'}
             </p>
-            <h3 className="text-lg font-serif font-semibold text-gray-900 dark:text-gray-100 mt-0.5">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mt-0.5">
               {record.title}
             </h3>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{formatDate(record.created_at)}</p>
