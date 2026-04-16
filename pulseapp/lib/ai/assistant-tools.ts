@@ -1149,6 +1149,38 @@ export const TOOL_LABELS: Record<string, string> = {
   record_manual_income: 'Gelir önizlemesi hazırlanıyor...',
 }
 
+// Pending aksiyon tipleri için kısa isim etiketi (Bekleyen Aksiyonlar sayfası ve asistan kuyruğunda)
+export const ACTION_TYPE_LABELS: Record<string, string> = {
+  create_campaign: 'Kampanya oluştur',
+  send_campaign: 'Kampanya gönder',
+  send_message: 'Mesaj gönder',
+  create_workflow: 'Mesaj akışı oluştur',
+  toggle_workflow: 'İş akışı aç/kapat',
+  update_service: 'Hizmet güncelle',
+  create_service: 'Hizmet ekle',
+  create_blocked_slot: 'Saat bloku ekle',
+  delete_blocked_slot: 'Saat bloku kaldır',
+  create_appointment: 'Randevu oluştur',
+  cancel_appointment: 'Randevu iptal',
+  update_appointment_status: 'Randevu durumu',
+  reschedule_appointment: 'Randevu erteleme',
+  create_customer: 'Müşteri ekle',
+  update_customer: 'Müşteri güncelle',
+  delete_customer: 'Müşteri sil',
+  update_working_hours: 'Çalışma saatleri',
+  assign_shift: 'Vardiya ata',
+  create_shift_definition: 'Mesai tanımı',
+  invite_staff: 'Personel davet',
+  update_staff_permissions: 'Yetki güncelle',
+  update_business_settings: 'İşletme ayarları',
+  create_invoice: 'Fatura oluştur',
+  record_invoice_payment: 'Fatura ödemesi',
+  generate_invoice_from_appointment: 'Randevudan fatura',
+  create_pos_transaction: 'Kasa işlemi',
+  record_expense: 'Gider kaydı',
+  record_manual_income: 'Gelir kaydı',
+}
+
 // ── Permission Map ──
 
 const TOOL_PERMISSIONS: Record<string, keyof StaffPermissions> = {

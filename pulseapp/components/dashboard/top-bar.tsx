@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ChevronRight, Home, Bell, Sun, Moon, Command } from 'lucide-react'
+import { ChevronRight, Home, Bell, Sun, Moon, Command, Inbox } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
@@ -50,6 +50,7 @@ const ROUTE_LABELS: Record<string, string> = {
   'follow-ups': 'Takipler',
   waitlist: 'Bekleme Listesi',
   campaigns: 'Kampanyalar',
+  'ai-actions': 'Asistan Aksiyonları',
   new: 'Yeni',
 }
 
@@ -74,9 +75,10 @@ interface TopBarProps {
 
 export default function TopBar({ businessName, userName, onOpenCommand }: TopBarProps) {
   const pathname = usePathname()
-  const { businessId, sector } = useBusinessContext()
+  const { businessId, sector, permissions } = useBusinessContext()
   const { theme, toggleTheme } = useTheme()
   const [unreadCount, setUnreadCount] = useState(0)
+  const [pendingActionCount, setPendingActionCount] = useState(0)
 
   useEffect(() => {
     if (!businessId) return
@@ -112,6 +114,37 @@ export default function TopBar({ businessName, userName, onOpenCommand }: TopBar
 
     return () => { supabase.removeChannel(channel) }
   }, [businessId])
+
+  // Bekleyen AI aksiyon sayacı — analytics yetkisi olanlarda göster
+  useEffect(() => {
+    if (!businessId || permissions?.analytics === false) {
+      setPendingActionCount(0)
+      return
+    }
+
+    let cancelled = false
+    const fetchPending = async () => {
+      try {
+        const res = await fetch('/api/ai/actions?countOnly=1')
+        if (!res.ok) return
+        const json = await res.json()
+        if (!cancelled) setPendingActionCount(json.pending_count ?? 0)
+      } catch {
+        // sessizce yut — sayacı eski haliyle bırak
+      }
+    }
+
+    fetchPending()
+    const interval = setInterval(fetchPending, 60_000)
+    const onVisible = () => { if (document.visibilityState === 'visible') fetchPending() }
+    document.addEventListener('visibilitychange', onVisible)
+
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [businessId, permissions?.analytics])
 
   const segments = pathname.split('/').filter(Boolean)
   const crumbs = segments.map((seg, i) => {
@@ -205,6 +238,33 @@ export default function TopBar({ businessName, userName, onOpenCommand }: TopBar
             )}
           </AnimatePresence>
         </button>
+
+        {/* Pending AI actions */}
+        {permissions?.analytics !== false && (
+          <Link
+            href="/dashboard/ai-actions"
+            className="relative h-9 w-9 flex items-center justify-center rounded-lg
+                       text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10
+                       hover:text-gray-700 dark:hover:text-gray-200 transition-all duration-150"
+            title="Bekleyen asistan aksiyonları"
+          >
+            <Inbox className="h-4.5 w-4.5" />
+            <AnimatePresence>
+              {pendingActionCount > 0 && (
+                <motion.span
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  exit={{ scale: 0 }}
+                  className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 px-1 items-center justify-center
+                             rounded-full bg-amber-500 text-[10px] text-white font-bold leading-none
+                             ring-2 ring-white dark:ring-gray-950"
+                >
+                  {pendingActionCount > 9 ? '9+' : pendingActionCount}
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </Link>
+        )}
 
         {/* Notification bell */}
         <Link
