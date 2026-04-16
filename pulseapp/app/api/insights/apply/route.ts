@@ -3,14 +3,16 @@ import { requirePermission } from '@/lib/api/with-permission'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createPendingAction } from '@/lib/ai/assistant-actions'
 import type { PendingActionType } from '@/lib/ai/assistant-actions'
+import type { StaffPermissions } from '@/types'
 
-const VALID_TYPES: PendingActionType[] = [
-  'create_campaign',
-  'send_message',
-  'create_workflow',
-  'update_service',
-  'create_blocked_slot',
-]
+// İş Zekası "Uygula" akışının izin verdiği aksiyon tipleri → gerekli alt yetki
+const INSIGHTS_ALLOWED: Partial<Record<PendingActionType, keyof StaffPermissions>> = {
+  create_campaign: 'campaigns',
+  send_message: 'messages',
+  create_workflow: 'messages',
+  update_service: 'services',
+  create_blocked_slot: 'appointments',
+}
 
 // POST: İş Zekası önerisini pending action kuyruğuna düşürür
 // Body: { recommendationId, title, type, payload }
@@ -23,14 +25,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'type ve payload zorunlu' }, { status: 400 })
   }
 
-  if (!VALID_TYPES.includes(body.type)) {
+  const type = body.type as PendingActionType
+  if (!(type in INSIGHTS_ALLOWED)) {
     return NextResponse.json(
       { error: `Desteklenmeyen aksiyon tipi: ${body.type}` },
       { status: 400 },
     )
   }
 
-  const requiredPerm = PERM_BY_TYPE[body.type as PendingActionType]
+  const requiredPerm = INSIGHTS_ALLOWED[type]
   if (requiredPerm && !auth.ctx.permissions[requiredPerm]) {
     return NextResponse.json(
       { error: `Bu aksiyon için ${requiredPerm} yetkisi gerekli` },
@@ -44,10 +47,12 @@ export async function POST(request: NextRequest) {
   const result = await createPendingAction(
     admin,
     { ...auth.ctx, conversationId: null },
-    body.type as PendingActionType,
+    type,
     body.payload,
     preview,
     { source: 'insights', recommendation_id: body.recommendationId || null },
+    // İş Zekası'ndan gelen aksiyonlar 7 gün boyunca geçerli (asistan kuyruğuyla aynı tablo)
+    { expiresInMinutes: 7 * 24 * 60 },
   )
 
   if ('success' in result && result.success === false) {
@@ -55,12 +60,4 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json({ success: true, action: result })
-}
-
-const PERM_BY_TYPE: Partial<Record<PendingActionType, keyof import('@/types').StaffPermissions>> = {
-  create_campaign: 'campaigns',
-  send_message: 'messages',
-  create_workflow: 'messages',
-  update_service: 'services',
-  create_blocked_slot: 'appointments',
 }

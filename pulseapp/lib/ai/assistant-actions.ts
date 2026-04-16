@@ -57,21 +57,25 @@ export async function createPendingAction(
   payload: Record<string, any>,
   preview: string,
   details: Record<string, any> = {},
-  options: { scheduledFor?: string | null } = {},
+  options: { scheduledFor?: string | null; expiresInMinutes?: number } = {},
 ): Promise<ConfirmationRequired | { success: false; error: string }> {
   const scheduledFor = options.scheduledFor || null
+  const insertBody: Record<string, any> = {
+    business_id: ctx.businessId,
+    staff_id: ctx.staffId,
+    conversation_id: ctx.conversationId || null,
+    action_type: actionType,
+    payload,
+    preview,
+    scheduled_for: scheduledFor,
+    status: scheduledFor ? 'scheduled' : 'pending',
+  }
+  if (options.expiresInMinutes && options.expiresInMinutes > 0) {
+    insertBody.expires_at = new Date(Date.now() + options.expiresInMinutes * 60 * 1000).toISOString()
+  }
   const { data, error } = await admin
     .from('ai_pending_actions')
-    .insert({
-      business_id: ctx.businessId,
-      staff_id: ctx.staffId,
-      conversation_id: ctx.conversationId || null,
-      action_type: actionType,
-      payload,
-      preview,
-      scheduled_for: scheduledFor,
-      status: scheduledFor ? 'scheduled' : 'pending',
-    })
+    .insert(insertBody)
     .select('id')
     .single()
 

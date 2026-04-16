@@ -46,6 +46,7 @@ import {
   BadgePercent,
   GitBranch,
   TrendingUp,
+  Inbox,
   type LucideIcon,
 } from 'lucide-react'
 import type { SectorType, PlanType, StaffPermissions } from '@/types'
@@ -58,7 +59,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Settings, LogOut, ListChecks, Package, FolderOpen,
   Briefcase, Car, PawPrint, ClipboardList, CreditCard,
   CalendarDays, CalendarClock, CheckSquare, BookOpen, Image,
-  Receipt, Layers, Banknote, Lock, Clock, Stethoscope, Gift, Zap, X, Megaphone, BadgePercent, GitBranch, TrendingUp,
+  Receipt, Layers, Banknote, Lock, Clock, Stethoscope, Gift, Zap, X, Megaphone, BadgePercent, GitBranch, TrendingUp, Inbox,
 }
 
 const bottomNav = [
@@ -70,6 +71,7 @@ const PERMISSION_MAP: Record<string, keyof StaffPermissions> = {
   '/dashboard/customers': 'customers',
   '/dashboard/analytics': 'analytics',
   '/dashboard/insights': 'analytics',
+  '/dashboard/ai-actions': 'analytics',
   '/dashboard/messages': 'messages',
   '/dashboard/reviews': 'reviews',
   '/dashboard/services': 'services',
