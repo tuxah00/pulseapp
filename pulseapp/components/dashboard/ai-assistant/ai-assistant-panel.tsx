@@ -59,88 +59,85 @@ export default function AIAssistantPanel({ businessName, sector, plan, permissio
   const [isRecording, setIsRecording] = useState(false)
   const isRecordingRef = useRef(false)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
-  const chunkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const streamRef = useRef<MediaStream | null>(null)
+  const allChunksRef = useRef<Blob[]>([])   // oturum başından beri tüm ses
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const baseInputRef = useRef<string>('')    // dikte öncesi input metni
+  const isFetchingRef = useRef(false)        // eş zamanlı fetch önle
 
   // Saate göre yeniden hesaplanır; panel yeniden açıldığında güncellenir.
   const smartPrompts = useMemo(() => getSmartPrompts({ sector }), [sector, isOpen])
 
-  // Chunk'ı Whisper'a gönder — arka planda, bir sonraki kaydı bloklama
-  const transcribeBlob = useCallback((blob: Blob) => {
-    if (blob.size < 1000) return
+  // Tüm birikmiş sesi Whisper'a gönder → input'u yenile (replace, append değil)
+  const flushAudio = useCallback(async () => {
+    if (isFetchingRef.current || allChunksRef.current.length === 0) return
+    const blob = new Blob(allChunksRef.current, { type: 'audio/webm' })
+    if (blob.size < 2000) return   // çok kısa, henüz konuşulmamış
+
+    isFetchingRef.current = true
     const form = new FormData()
-    form.append('audio', blob, 'chunk.webm')
-    fetch('/api/ai/transcribe', { method: 'POST', body: form })
-      .then(r => r.json())
-      .then(data => {
-        if (data.text?.trim()) {
-          setInput(prev => prev ? `${prev} ${data.text.trim()}` : data.text.trim())
-        } else if (data.error) {
-          console.error('[Transcribe]', data.error)
-        }
-      })
-      .catch(err => console.error('[Transcribe] fetch hatası:', err))
+    form.append('audio', blob, 'audio.webm')
+    try {
+      const res = await fetch('/api/ai/transcribe', { method: 'POST', body: form })
+      const data = await res.json()
+      if (data.text?.trim()) {
+        const base = baseInputRef.current
+        setInput(base ? `${base} ${data.text.trim()}` : data.text.trim())
+      } else if (data.error) {
+        console.error('[Transcribe]', data.error)
+      }
+    } catch (err) {
+      console.error('[Transcribe] fetch hatası:', err)
+    } finally {
+      isFetchingRef.current = false
+    }
   }, [])
 
-  // Her 5 saniyelik chunk için yeni MediaRecorder aç — ref ile kendi kendini çağırır
-  const recordChunkRef = useRef<() => void>(() => {})
-  const recordChunk = useCallback(async () => {
-    if (!isRecordingRef.current) return
+  const stopDictation = useCallback(() => {
+    isRecordingRef.current = false
+    if (intervalRef.current) clearInterval(intervalRef.current)
+    try { mediaRecorderRef.current?.stop() } catch {}
+    streamRef.current?.getTracks().forEach(t => t.stop())
+    streamRef.current = null
+    mediaRecorderRef.current = null
+    allChunksRef.current = []
+    setIsRecording(false)
+  }, [])
+
+  const toggleDictation = useCallback(async () => {
+    if (isRecordingRef.current) {
+      stopDictation()
+      return
+    }
 
     let stream: MediaStream
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true })
     } catch {
-      isRecordingRef.current = false
-      setIsRecording(false)
       return
     }
 
     const recorder = new MediaRecorder(stream)
-    const chunks: Blob[] = []
+    allChunksRef.current = []
+    baseInputRef.current = input.trim()
 
-    recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data) }
-
-    recorder.onstop = () => {
-      stream.getTracks().forEach(t => t.stop())
-      transcribeBlob(new Blob(chunks, { type: 'audio/webm' }))
-      // Hâlâ kayıt modundaysak sonraki chunk'ı hemen başlat
-      if (isRecordingRef.current) recordChunkRef.current()
-      else setIsRecording(false)
-    }
-
+    // 250ms'de bir veri topla — küçük parçalar birikiyor, tam oturumu temsil eder
+    recorder.ondataavailable = (e) => { if (e.data.size > 0) allChunksRef.current.push(e.data) }
     recorder.start(250)
+
+    streamRef.current = stream
     mediaRecorderRef.current = recorder
+    isRecordingRef.current = true
+    setIsRecording(true)
 
-    // 5 saniye sonra bu chunk'ı kapat → onstop → yeni chunk
-    chunkTimerRef.current = setTimeout(() => {
-      if (recorder.state === 'recording') recorder.stop()
-    }, 5000)
-  }, [transcribeBlob])
+    // Her 2 saniyede birikmiş sesi gönder → büyüyen metin hissi
+    intervalRef.current = setInterval(flushAudio, 2000)
+  }, [input, flushAudio, stopDictation])
 
-  useEffect(() => { recordChunkRef.current = recordChunk }, [recordChunk])
-
-  const toggleDictation = useCallback(() => {
-    if (isRecordingRef.current) {
-      isRecordingRef.current = false
-      if (chunkTimerRef.current) clearTimeout(chunkTimerRef.current)
-      try { mediaRecorderRef.current?.stop() } catch {}
-      setIsRecording(false)
-    } else {
-      isRecordingRef.current = true
-      setIsRecording(true)
-      recordChunkRef.current()
-    }
-  }, [])
-
-  // Panel kapanınca aktif kaydı temizle
+  // Panel kapanınca temizle
   useEffect(() => {
-    if (!isOpen && isRecordingRef.current) {
-      isRecordingRef.current = false
-      if (chunkTimerRef.current) clearTimeout(chunkTimerRef.current)
-      try { mediaRecorderRef.current?.stop() } catch {}
-      setIsRecording(false)
-    }
-  }, [isOpen])
+    if (!isOpen && isRecordingRef.current) stopDictation()
+  }, [isOpen, stopDictation])
 
   // Yeni personel için kurulum sihirbazını otomatik başlat (dashboard'da, ilk kez)
   useEffect(() => {
