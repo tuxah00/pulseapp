@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState, useRef, useMemo } from 'react'
+import React, { useCallback, useEffect, useState, useRef, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useConfirm } from '@/lib/hooks/use-confirm'
@@ -27,27 +27,60 @@ const DEFAULT_PREFS: AIPreferences = {
   custom_instructions: '',
 }
 
-/** Kullanıcıya gösterilecek yetki grupları. Her grupta okuma + yazma toggle'ları. */
-const PERMISSION_GROUPS: {
+/** Her satırda okuma + yazma yetkisi bulunur. */
+type PermissionGroup = {
   label: string
   description: string
   read?: AIPermissionCategory
   write?: AIPermissionCategory
-}[] = [
-  { label: 'Randevular', description: 'Randevu listesi, slot, istatistik / oluşturma, iptal, taşıma', read: 'appointments_read', write: 'appointments_write' },
-  { label: 'Müşteriler', description: 'Müşteri arama ve profil / müşteri ekleme, güncelleme, silme', read: 'customers_read', write: 'customers_write' },
-  { label: 'Hizmetler', description: 'Hizmet listesi ve paketler / hizmet ekleme ve güncelleme', read: 'services_read', write: 'services_write' },
-  { label: 'Personel', description: 'Personel listesi ve performans / personel daveti, yetki değişikliği', read: 'staff_read', write: 'staff_write' },
-  { label: 'Vardiya', description: 'Vardiya okuma / vardiya oluşturma ve tanım', read: 'shifts_read', write: 'shifts_write' },
-  { label: 'Mesajlar', description: 'Bekleyen ve geçmiş mesajlar / asistan üzerinden mesaj gönderme', read: 'messages_read', write: 'messages_write' },
-  { label: 'Kampanyalar', description: 'Kampanya listesi ve kitle tahmini / kampanya oluşturma ve gönderme', read: 'campaigns_read', write: 'campaigns_write' },
-  { label: 'Mesaj akışları', description: 'Workflow listeleme / oluşturma ve aktif/pasif yapma', read: 'workflows_read', write: 'workflows_write' },
-  { label: 'Analitik', description: 'Gelir, gider, doluluk, performans, karşılaştırma raporları', read: 'analytics_read' },
-  { label: 'Faturalar', description: 'Ödenmemiş faturaları listele / fatura oluşturma, ödeme alma', read: 'invoices_read', write: 'invoices_write' },
-  { label: 'Kasa (POS)', description: 'Kasa işlemi oluşturma', write: 'pos_write' },
-  { label: 'Gelir & Gider', description: 'Manuel gelir/gider kaydı', write: 'expenses_write' },
-  { label: 'Ayarlar', description: 'İşletme bilgileri ve çalışma saatleri okuma / güncelleme', read: 'settings_read', write: 'settings_write' },
-  { label: 'Denetim kaydı', description: 'Denetim kayıtlarını okuma', read: 'audit_read' },
+}
+
+/** Kullanıcıya gösterilecek yetki kategorileri — 5 tematik grup. */
+const PERMISSION_CATEGORIES: { category: string; subtitle: string; groups: PermissionGroup[] }[] = [
+  {
+    category: 'Müşteri & Randevu',
+    subtitle: 'Randevu, müşteri bilgisi ve hizmet listesi',
+    groups: [
+      { label: 'Randevular', description: 'Randevu listesi, slot, istatistik / oluşturma, iptal, taşıma', read: 'appointments_read', write: 'appointments_write' },
+      { label: 'Müşteriler', description: 'Müşteri arama ve profil / müşteri ekleme, güncelleme, silme', read: 'customers_read', write: 'customers_write' },
+      { label: 'Hizmetler', description: 'Hizmet listesi ve paketler / hizmet ekleme ve güncelleme', read: 'services_read', write: 'services_write' },
+    ],
+  },
+  {
+    category: 'Mesajlaşma & Kampanya',
+    subtitle: 'Gelen mesajlar, toplu kampanya ve otomatik mesaj akışları',
+    groups: [
+      { label: 'Mesajlar', description: 'Bekleyen ve geçmiş mesajlar / asistan üzerinden mesaj gönderme', read: 'messages_read', write: 'messages_write' },
+      { label: 'Kampanyalar', description: 'Kampanya listesi ve kitle tahmini / kampanya oluşturma ve gönderme', read: 'campaigns_read', write: 'campaigns_write' },
+      { label: 'Otomatik Mesajlar', description: 'Akış listeleme / oluşturma ve aktif/pasif yapma', read: 'workflows_read', write: 'workflows_write' },
+    ],
+  },
+  {
+    category: 'Personel & Operasyon',
+    subtitle: 'Personel, vardiya ve işletme ayarları',
+    groups: [
+      { label: 'Personel', description: 'Personel listesi ve performans / personel daveti, yetki değişikliği', read: 'staff_read', write: 'staff_write' },
+      { label: 'Vardiya', description: 'Vardiya okuma / vardiya oluşturma ve tanım', read: 'shifts_read', write: 'shifts_write' },
+      { label: 'Ayarlar', description: 'İşletme bilgileri ve çalışma saatleri okuma / güncelleme', read: 'settings_read', write: 'settings_write' },
+    ],
+  },
+  {
+    category: 'Finans',
+    subtitle: 'Fatura, kasa ve gelir-gider',
+    groups: [
+      { label: 'Faturalar', description: 'Ödenmemiş faturaları listele / fatura oluşturma, ödeme alma', read: 'invoices_read', write: 'invoices_write' },
+      { label: 'Kasa', description: 'Kasa işlemi oluşturma', write: 'pos_write' },
+      { label: 'Gelir & Gider', description: 'Manuel gelir/gider kaydı', write: 'expenses_write' },
+    ],
+  },
+  {
+    category: 'Rapor & Güvenlik',
+    subtitle: 'Analitik raporlar ve denetim kaydı',
+    groups: [
+      { label: 'Analitik', description: 'Gelir, gider, doluluk, performans, karşılaştırma raporları', read: 'analytics_read' },
+      { label: 'Denetim Kaydı', description: 'Denetim kayıtlarını okuma', read: 'audit_read' },
+    ],
+  },
 ]
 
 export default function AISettingsPage() {
@@ -419,43 +452,53 @@ export default function AISettingsPage() {
                 </tr>
               </thead>
               <tbody>
-                {PERMISSION_GROUPS.map((g) => (
-                  <tr key={g.label} className="border-b border-gray-50 dark:border-gray-800 last:border-0">
-                    <td className="py-2 px-2">
-                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{g.label}</div>
-                      <div className="text-[11px] text-gray-500 dark:text-gray-400">{g.description}</div>
-                    </td>
-                    <td className="py-2 px-2 text-center">
-                      {g.read ? (
-                        <label className="inline-flex items-center cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={!!aiPermissions[g.read]}
-                            onChange={(e) => setAiPermissions((p) => ({ ...p, [g.read as AIPermissionCategory]: e.target.checked }))}
-                            className="sr-only peer"
-                          />
-                          <div className="w-9 h-5 bg-gray-200 dark:bg-gray-700 peer-focus:ring-2 peer-focus:ring-pulse-900/30 rounded-full peer-checked:bg-pulse-900 peer-checked:after:translate-x-full after:content-[''] relative after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all" />
-                        </label>
-                      ) : (
-                        <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>
-                      )}
-                    </td>
-                    <td className="py-2 px-2 text-center">
-                      {g.write ? (
-                        <label className="inline-flex items-center cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={!!aiPermissions[g.write]}
-                            onChange={(e) => setAiPermissions((p) => ({ ...p, [g.write as AIPermissionCategory]: e.target.checked }))}
-                            className="sr-only peer"
-                          />
-                          <div className="w-9 h-5 bg-gray-200 dark:bg-gray-700 peer-focus:ring-2 peer-focus:ring-pulse-900/30 rounded-full peer-checked:bg-pulse-900 peer-checked:after:translate-x-full after:content-[''] relative after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all" />
-                        </label>
-                      ) : (
-                        <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>
-                      )}
-                    </td>
-                  </tr>
+                {PERMISSION_CATEGORIES.map((cat) => (
+                  <React.Fragment key={cat.category}>
+                    <tr className="bg-gray-50 dark:bg-gray-800/40">
+                      <td colSpan={3} className="py-2 px-2">
+                        <div className="text-xs font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wider">{cat.category}</div>
+                        <div className="text-[11px] text-gray-500 dark:text-gray-400">{cat.subtitle}</div>
+                      </td>
+                    </tr>
+                    {cat.groups.map((g) => (
+                      <tr key={g.label} className="border-b border-gray-50 dark:border-gray-800 last:border-0">
+                        <td className="py-2 px-2 pl-4">
+                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{g.label}</div>
+                          <div className="text-[11px] text-gray-500 dark:text-gray-400">{g.description}</div>
+                        </td>
+                        <td className="py-2 px-2 text-center">
+                          {g.read ? (
+                            <label className="inline-flex items-center cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={!!aiPermissions[g.read]}
+                                onChange={(e) => setAiPermissions((p) => ({ ...p, [g.read as AIPermissionCategory]: e.target.checked }))}
+                                className="sr-only peer"
+                              />
+                              <div className="w-9 h-5 bg-gray-200 dark:bg-gray-700 peer-focus:ring-2 peer-focus:ring-pulse-900/30 rounded-full peer-checked:bg-pulse-900 peer-checked:after:translate-x-full after:content-[''] relative after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all" />
+                            </label>
+                          ) : (
+                            <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>
+                          )}
+                        </td>
+                        <td className="py-2 px-2 text-center">
+                          {g.write ? (
+                            <label className="inline-flex items-center cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={!!aiPermissions[g.write]}
+                                onChange={(e) => setAiPermissions((p) => ({ ...p, [g.write as AIPermissionCategory]: e.target.checked }))}
+                                className="sr-only peer"
+                              />
+                              <div className="w-9 h-5 bg-gray-200 dark:bg-gray-700 peer-focus:ring-2 peer-focus:ring-pulse-900/30 rounded-full peer-checked:bg-pulse-900 peer-checked:after:translate-x-full after:content-[''] relative after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all" />
+                            </label>
+                          ) : (
+                            <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>

@@ -61,10 +61,50 @@ const PERMISSION_LABELS: Record<keyof StaffPermissions, string> = {
   workflows: 'Otomatik Mesajlar',
 }
 
+const PERMISSION_DESCRIPTIONS: Record<keyof StaffPermissions, string> = {
+  dashboard: 'Günlük özet ve performans ekranı',
+  appointments: 'Randevu oluşturma, düzenleme, iptal',
+  customers: 'Müşteri kartları ve geçmişi',
+  analytics: 'Gelir/gider, personel ve müşteri raporları',
+  messages: 'SMS/WhatsApp konuşmaları',
+  reviews: 'Müşteri yorum ve puanları',
+  services: 'Sunulan hizmetler ve fiyatları',
+  staff: 'Personel listesi ve yetki yönetimi',
+  shifts: 'Vardiya planı ve mesai saatleri',
+  settings: 'İşletme, AI ve sistem ayarları',
+  reservations: 'Rezervasyon listesi ve onayı',
+  classes: 'Grup dersi ve seans yönetimi',
+  memberships: 'Üyelik planları ve aboneler',
+  packages: 'Paket ve seans satışları',
+  records: 'Müşteri dosyaları ve notları',
+  portfolio: 'Çekilen çalışma fotoğrafları',
+  inventory: 'Stok takibi ve ürünler',
+  orders: 'Sipariş yönetimi',
+  invoices: 'Fatura oluşturma ve takibi',
+  pos: 'Kasa ve ödeme alma',
+  protocols: 'Tedavi planları / protokolleri',
+  rewards: 'Ödül ve referans kampanyaları',
+  campaigns: 'Toplu SMS/WhatsApp kampanyaları',
+  workflows: 'Olay tabanlı otomatik mesajlar',
+}
+
 const PERMISSION_CATEGORIES: { label: string; keys: (keyof StaffPermissions)[] }[] = [
-  { label: 'Ana', keys: ['dashboard', 'appointments', 'customers'] },
-  { label: 'İçerik', keys: ['records', 'portfolio', 'classes', 'memberships', 'packages', 'reservations', 'orders'] },
-  { label: 'Yönetim', keys: ['services', 'staff', 'shifts', 'messages', 'analytics', 'reviews', 'inventory', 'invoices', 'campaigns', 'settings'] },
+  {
+    label: 'Randevu & Müşteri',
+    keys: ['dashboard', 'appointments', 'customers', 'reservations', 'classes', 'records', 'portfolio'],
+  },
+  {
+    label: 'Finans',
+    keys: ['invoices', 'pos', 'orders', 'inventory', 'analytics', 'memberships', 'packages'],
+  },
+  {
+    label: 'AI & Otomasyon',
+    keys: ['messages', 'workflows', 'campaigns', 'reviews', 'rewards'],
+  },
+  {
+    label: 'Sistem',
+    keys: ['services', 'staff', 'shifts', 'protocols', 'settings'],
+  },
 ]
 
 function canEditMember(myRole: StaffRole, targetRole: StaffRole): boolean {
@@ -570,9 +610,12 @@ export default function StaffPage() {
                         {cat.keys.map((key) => {
                           const checked = localPerms[key] === true
                           return (
-                            <label key={key} className="flex items-center justify-between py-1.5 cursor-pointer group">
-                              <span className="text-sm text-gray-700 dark:text-gray-300">{permissionLabels[key]}</span>
-                              <div className="relative">
+                            <label key={key} className="flex items-start justify-between gap-3 py-1.5 cursor-pointer group">
+                              <div className="flex-1 min-w-0">
+                                <span className="text-sm text-gray-700 dark:text-gray-300 block">{permissionLabels[key]}</span>
+                                <span className="text-[11px] text-gray-400 dark:text-gray-500 block mt-0.5">{PERMISSION_DESCRIPTIONS[key]}</span>
+                              </div>
+                              <div className="relative flex-shrink-0 mt-0.5">
                                 <input
                                   type="checkbox"
                                   checked={checked}
@@ -697,9 +740,12 @@ export default function StaffPage() {
                       const perms = getEffectivePermissions(permPopupStaff.role, permPopupStaff.permissions)
                       const checked = perms[key] ?? false
                       return (
-                        <label key={key} className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors">
-                          <span className="text-sm text-gray-700 dark:text-gray-300">{permissionLabels[key]}</span>
-                          <div className="relative">
+                        <label key={key} className="flex items-start justify-between gap-3 py-2 px-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors">
+                          <div className="flex-1 min-w-0">
+                            <span className="text-sm text-gray-700 dark:text-gray-300 block">{permissionLabels[key]}</span>
+                            <span className="text-[11px] text-gray-400 dark:text-gray-500 block mt-0.5">{PERMISSION_DESCRIPTIONS[key]}</span>
+                          </div>
+                          <div className="relative flex-shrink-0 mt-0.5">
                             <input
                               type="checkbox"
                               checked={checked}
