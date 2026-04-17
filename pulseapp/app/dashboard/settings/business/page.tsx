@@ -672,6 +672,23 @@ export default function BusinessSettingsPage() {
       {activeTab === 'settings' && (
         <form onSubmit={handleSaveSettings}>
           <div className="space-y-6">
+            {/* Özellikler — Modül aç/kapat */}
+            <div className="card">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Özellikler</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                İşletmenizde aktif olmasını istediğiniz modülleri seçin. Kapatılan modüller sol menüden kaldırılır.
+              </p>
+
+              <div className="space-y-4">
+                <ToggleSetting
+                  label="Ödüller Sistemi"
+                  description="Müşterilere ödül (indirim, hediye, ücretsiz hizmet) tanımlama ve atama modülü. Kapatılırsa Ödüller sayfası ve müşteri portalındaki ödül sekmesi gizlenir."
+                  checked={settings.rewards_enabled !== false}
+                  onChange={(v) => setSettings(prev => ({ ...prev, rewards_enabled: v }))}
+                />
+              </div>
+            </div>
+
             <div className="card">
               <h2 className="text-lg font-semibold text-gray-900 mb-1">Hatırlatma Bildirimleri</h2>
               <p className="text-sm text-gray-500 mb-6">

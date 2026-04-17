@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import {
   Plus, ClipboardCheck, Search, X, Calendar, User, Activity,
   ChevronRight, Loader2, Pause, Play, CheckCircle, XCircle, SkipForward,
-  Camera, FileText, Clock, Sparkles, Upload, MessageSquare, Pencil, Save,
+  Camera, FileText, Clock, Upload, MessageSquare, Pencil, Save,
 } from 'lucide-react'
 import type {
   TreatmentProtocol, ProtocolSession, Service, ProtocolStatus, SessionStatus
@@ -470,9 +470,6 @@ function DetailPanel({
   onDelete: (id: string) => void
   onRefresh: (protocolId: string) => void
 }) {
-  const [aiLoading, setAiLoading] = useState(false)
-  const [aiSuggestion, setAiSuggestion] = useState<string | null>(null)
-  const [showAi, setShowAi] = useState(false)
   const [uploadingPhoto, setUploadingPhoto] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const pendingUpload = useRef<{ sessionId: string; type: 'before' | 'after' } | null>(null)
@@ -487,30 +484,6 @@ function DetailPanel({
   const sessions = (protocol.sessions || []).sort((a, b) => a.session_number - b.session_number)
   const progress = protocol.total_sessions > 0 ? (protocol.completed_sessions / protocol.total_sessions) * 100 : 0
   const sc = STATUS_CONFIG[protocol.status]
-
-  async function handleAiSuggestion() {
-    if (!protocol.customer_id) return
-    setAiLoading(true)
-    setShowAi(true)
-    setAiSuggestion(null)
-    try {
-      const res = await fetch('/api/ai/treatment-suggestion', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          businessId,
-          customerId: protocol.customer_id,
-          complaint: protocol.notes || undefined,
-        }),
-      })
-      const json = await res.json()
-      setAiSuggestion(res.ok ? json.suggestion : (json.error || 'AI yanıtı alınamadı'))
-    } catch {
-      setAiSuggestion('Beklenmeyen bir hata oluştu')
-    } finally {
-      setAiLoading(false)
-    }
-  }
 
   function triggerPhotoUpload(sessionId: string, type: 'before' | 'after') {
     pendingUpload.current = { sessionId, type }
@@ -598,18 +571,6 @@ function DetailPanel({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={handleAiSuggestion}
-            disabled={aiLoading || !protocol.customer_id}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium
-                       bg-pulse-900/10 text-pulse-900 dark:text-pulse-300 dark:bg-pulse-900/15
-                       hover:bg-pulse-900/20 dark:hover:bg-pulse-900/25 transition-colors
-                       disabled:opacity-50"
-            title="AI Tedavi Önerisi"
-          >
-            {aiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-            AI Öneri
-          </button>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
             <X className="h-5 w-5" />
           </button>
@@ -817,33 +778,6 @@ function DetailPanel({
           })}
         </div>
       </div>
-
-      {/* AI Suggestion */}
-      {showAi && (
-        <div className="border border-pulse-200 dark:border-pulse-800 rounded-xl overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-2.5 bg-pulse-900/5 dark:bg-pulse-900/10 border-b border-pulse-200 dark:border-pulse-800">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-pulse-900 dark:text-pulse-400" />
-              <h3 className="font-semibold text-sm text-gray-900 dark:text-white">AI Tedavi Önerisi</h3>
-            </div>
-            <button onClick={() => setShowAi(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-          <div className="p-4">
-            {aiLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-pulse-900" />
-                <span className="ml-2 text-sm text-gray-500">AI analiz yapıyor...</span>
-              </div>
-            ) : (
-              <div className="prose prose-sm dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                {aiSuggestion}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Notes */}
       {protocol.notes && (

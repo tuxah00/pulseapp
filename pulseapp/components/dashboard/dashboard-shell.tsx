@@ -17,7 +17,7 @@ const AIAssistantPanel = dynamic(() => import('./ai-assistant/ai-assistant-panel
   ssr: false,
   loading: () => null,
 })
-import type { SectorType, PlanType, StaffPermissions } from '@/types'
+import type { SectorType, PlanType, StaffPermissions, BusinessSettings } from '@/types'
 
 interface DashboardShellProps {
   children: React.ReactNode
@@ -26,6 +26,7 @@ interface DashboardShellProps {
   sector: SectorType
   plan: PlanType
   permissions: StaffPermissions
+  settings?: BusinessSettings | null
 }
 
 const SIDEBAR_SPRING = { type: 'spring' as const, stiffness: 400, damping: 40 }
@@ -45,6 +46,7 @@ function DashboardShellInner({
   sector,
   plan,
   permissions,
+  settings,
 }: DashboardShellProps) {
   const { collapsed } = useSidebar()
   const [commandOpen, setCommandOpen] = useState(false)
@@ -109,6 +111,7 @@ function DashboardShellInner({
         sector={sector}
         plan={plan}
         permissions={permissions}
+        settings={settings}
       />
 
       <motion.main

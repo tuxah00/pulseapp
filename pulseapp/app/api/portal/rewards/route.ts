@@ -9,6 +9,22 @@ export async function GET(request: NextRequest) {
 
   const admin = createAdminClient()
 
+  // Feature flag: rewards_enabled=false → boş response (UI tarafı zaten gizler)
+  const { data: bizRow } = await admin
+    .from('businesses')
+    .select('settings')
+    .eq('id', businessId)
+    .maybeSingle()
+  const rewardsEnabled = (bizRow?.settings as any)?.rewards_enabled !== false
+  if (!rewardsEnabled) {
+    return NextResponse.json({
+      rewards: [],
+      loyalty: { points_balance: 0, tier: 'bronze', total_earned: 0, total_spent: 0 },
+      transactions: [],
+      feature_disabled: true,
+    })
+  }
+
   const [rewardsRes, loyaltyRes, txRes] = await Promise.all([
     admin
       .from('customer_rewards')

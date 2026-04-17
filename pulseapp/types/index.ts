@@ -168,7 +168,8 @@ export interface InvoiceItem {
   unit_price: number
   total: number
   product_id?: string
-  type?: 'service' | 'product'
+  package_id?: string
+  type?: 'service' | 'product' | 'package'
 }
 
 // ── Fatura Ödeme Tipleri ──
@@ -246,12 +247,14 @@ export interface POSPayment {
 export interface POSItem {
   id: string
   name: string
-  type: 'service' | 'product'
+  type: 'service' | 'product' | 'package'
   quantity: number
   unit_price: number
   total: number
   product_id?: string
   service_id?: string
+  package_id?: string
+  sessions_total?: number
 }
 
 export interface POSTransaction {
@@ -467,6 +470,8 @@ export interface BusinessSettings {
   visit_bonus_points?: number
   auto_reward_threshold?: number
   redemption_rate?: number  // kaç puan = 1₺ indirim (varsayılan: 10)
+  // Ödüller sistemi aç/kapat (varsayılan: true)
+  rewards_enabled?: boolean
   // AI asistan tercihleri (Faz 10)
   ai_preferences?: AIPreferences
   ai_memory?: AIMemory
@@ -725,6 +730,7 @@ export interface Review {
   actual_response: string | null
   status: ReviewStatus
   google_review_link_sent: boolean
+  is_anonymous?: boolean
   created_at: string
   updated_at: string
   // JOIN

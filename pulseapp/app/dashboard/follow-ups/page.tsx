@@ -245,8 +245,8 @@ export default function FollowUpsPage() {
                   </div>
 
                   {/* Scheduled date */}
-                  <div className="flex-shrink-0 text-right">
-                    <p className="text-sm text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                  <div className="flex-shrink-0 text-right flex flex-col justify-center leading-tight">
+                    <p className="text-sm text-gray-700 dark:text-gray-300 flex items-center gap-1 justify-end">
                       <Calendar className="h-3.5 w-3.5 text-gray-400" />
                       {new Date(f.scheduled_for).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: 'numeric' })}
                     </p>

@@ -5,7 +5,7 @@ import DashboardShell from '@/components/dashboard/dashboard-shell'
 import { BusinessProvider } from '@/lib/hooks/business-context-provider'
 import { ThemeProvider } from '@/components/theme-provider'
 import { ConfirmProvider } from '@/lib/hooks/use-confirm'
-import { getEffectivePermissions, getEffectiveWritePermissions, type StaffRole, type SectorType, type PlanType } from '@/types'
+import { getEffectivePermissions, getEffectiveWritePermissions, type StaffRole, type SectorType, type PlanType, type BusinessSettings } from '@/types'
 
 export default async function DashboardLayout({
   children,
@@ -42,7 +42,7 @@ export default async function DashboardLayout({
     )
   }
 
-  const business = (staffMember as unknown as { businesses: { name?: string; sector?: string; subscription_plan?: string } }).businesses
+  const business = (staffMember as unknown as { businesses: { name?: string; sector?: string; subscription_plan?: string; settings?: BusinessSettings | null } }).businesses
   const userName = staffMember.name || user.user_metadata?.full_name || user.email || 'Kullanıcı'
   const businessName = business?.name || 'İşletme'
   const sector = (business?.sector || 'other') as SectorType
@@ -50,6 +50,7 @@ export default async function DashboardLayout({
   const staffRole = (staffMember.role || 'staff') as StaffRole
   const permissions = getEffectivePermissions(staffRole, staffMember.permissions)
   const writePermissions = getEffectiveWritePermissions(staffRole, (staffMember as any).write_permissions ?? null)
+  const settings: BusinessSettings | null = business?.settings ?? null
 
   return (
     <ThemeProvider>
@@ -64,6 +65,7 @@ export default async function DashboardLayout({
         staffRole,
         permissions,
         writePermissions,
+        settings,
       }}>
         <DashboardShell
           businessName={businessName}
@@ -71,6 +73,7 @@ export default async function DashboardLayout({
           sector={sector}
           plan={plan}
           permissions={permissions}
+          settings={settings}
         >
           <ConfirmProvider>
             {children}

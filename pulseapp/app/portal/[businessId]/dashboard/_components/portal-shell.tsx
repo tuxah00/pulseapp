@@ -15,6 +15,7 @@ interface PortalShellProps {
   business: { id: string; name: string; logo_url?: string | null; sector?: string | null }
   customer: { id: string; name: string; phone: string; segment?: string | null }
   showTreatments: boolean
+  rewardsEnabled?: boolean
   children: React.ReactNode
 }
 
@@ -46,7 +47,7 @@ function initials(name: string): string {
   return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
 }
 
-function buildNav(businessId: string, showTreatments: boolean): NavItem[] {
+function buildNav(businessId: string, showTreatments: boolean, rewardsEnabled: boolean): NavItem[] {
   const base = `/portal/${businessId}/dashboard`
   return [
     { key: 'overview', label: 'Özet', href: base, icon: LayoutDashboard, mobileTab: true },
@@ -56,20 +57,22 @@ function buildNav(businessId: string, showTreatments: boolean): NavItem[] {
       : []),
     { key: 'invoices', label: 'Faturalarım', href: `${base}/invoices`, icon: Receipt },
     { key: 'files', label: 'Dosyalarım', href: `${base}/files`, icon: Folder, mobileTab: true },
-    { key: 'rewards', label: 'Ödüllerim', href: `${base}/rewards`, icon: Gift, mobileTab: true },
+    ...(rewardsEnabled
+      ? [{ key: 'rewards', label: 'Ödüllerim', href: `${base}/rewards`, icon: Gift, mobileTab: true }]
+      : []),
     { key: 'reviews', label: 'Yorumlarım', href: `${base}/reviews`, icon: Star },
     { key: 'feedback', label: 'Geri Bildirim', href: `${base}/feedback`, icon: MessageSquarePlus },
     { key: 'settings', label: 'Ayarlar', href: `${base}/settings`, icon: Settings, mobileTab: true },
   ]
 }
 
-export function PortalShell({ businessId, business, customer, showTreatments, children }: PortalShellProps) {
+export function PortalShell({ businessId, business, customer, showTreatments, rewardsEnabled = true, children }: PortalShellProps) {
   const pathname = usePathname()
   const router = useRouter()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
 
-  const nav = buildNav(businessId, showTreatments)
+  const nav = buildNav(businessId, showTreatments, rewardsEnabled)
   const mobileTabs = nav.filter(n => n.mobileTab)
 
   const isActive = (href: string) => {

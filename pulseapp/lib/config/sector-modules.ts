@@ -1,4 +1,4 @@
-import type { SectorType, PlanType } from '@/types'
+import type { SectorType, PlanType, BusinessSettings } from '@/types'
 
 export interface SidebarItem {
   key: string
@@ -187,8 +187,18 @@ export function getCustomerLabelSingular(sector?: string): string {
   return CUSTOMER_LABELS_SINGULAR[sector || ''] || 'Müşteri'
 }
 
-export function getSidebarSections(sector: SectorType, _plan: PlanType): SidebarSection[] {
-  const sectorItems = SECTOR_ITEMS[sector] ?? []
+export function getSidebarSections(
+  sector: SectorType,
+  _plan: PlanType,
+  settings?: BusinessSettings | null
+): SidebarSection[] {
+  const rawSectorItems = SECTOR_ITEMS[sector] ?? []
+
+  // Feature-flag: rewards_enabled=false → "Ödüller" sidebar itemını gizle
+  const rewardsEnabled = settings?.rewards_enabled !== false
+  const sectorItems = rewardsEnabled
+    ? rawSectorItems
+    : rawSectorItems.filter(item => item.key !== 'rewards')
 
   // Sectors that replace appointments with reservations
   const excludeAppointments: SectorType[] = ['restaurant', 'cafe']

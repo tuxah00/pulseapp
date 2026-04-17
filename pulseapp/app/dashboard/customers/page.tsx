@@ -38,7 +38,7 @@ import { exportToCSV } from '@/lib/utils/export'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { Portal } from '@/components/ui/portal'
 
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { getCustomerLabel, getCustomerLabelSingular } from '@/lib/config/sector-modules'
 import dynamic from 'next/dynamic'
 const ToothChart = dynamic(() => import('@/components/dashboard/tooth-chart'), {
@@ -48,16 +48,22 @@ const ToothChart = dynamic(() => import('@/components/dashboard/tooth-chart'), {
 import { isBirthdayToday } from '@/lib/utils/birthday'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 
+const VALID_SEGMENTS: CustomerSegment[] = ['new', 'regular', 'vip', 'risk', 'lost']
+
 export default function CustomersPage() {
   const { businessId, staffId, staffName, loading: ctxLoading, sector } = useBusinessContext()
   const { confirm } = useConfirm()
+  const searchParams = useSearchParams()
   const customerLabel = sector ? getCustomerLabel(sector) : 'Müşteriler'
   const singularLabel = getCustomerLabelSingular(sector ?? undefined)
   const [customers, setCustomers] = useState<Customer[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounce(search, 300)
-  const [filterSegment, setFilterSegment] = useState<CustomerSegment | 'all'>('all')
+  const [filterSegment, setFilterSegment] = useState<CustomerSegment | 'all'>(() => {
+    const q = searchParams?.get('segment')
+    return q && (VALID_SEGMENTS as string[]).includes(q) ? (q as CustomerSegment) : 'all'
+  })
   const [showModal, setShowModal] = useState(false)
   const [isClosingModal, setIsClosingModal] = useState(false)
   const closeModal = () => setIsClosingModal(true)
@@ -131,6 +137,14 @@ export default function CustomersPage() {
   const router = useRouter()
 
   const supabase = createClient()
+
+  // URL ?segment= değişikliklerinde filtreyi güncelle (Analytics'ten gelen link gibi)
+  useEffect(() => {
+    const q = searchParams?.get('segment')
+    if (q && (VALID_SEGMENTS as string[]).includes(q)) {
+      setFilterSegment(q as CustomerSegment)
+    }
+  }, [searchParams])
 
   const fetchCustomers = useCallback(async () => {
     if (!businessId) return

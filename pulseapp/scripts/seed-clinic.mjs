@@ -116,16 +116,16 @@ const PATIENT_NAMES = [
 ]
 
 const RECORD_TEMPLATES = [
-  { diagnosis: 'Nazolabial dolgu planlaması',  treatment: '1 ml hyalüronik asit dolgu, sağ-sol simetri', priority: 'medium', category: 'Estetik Konsültasyon' },
-  { diagnosis: 'Koltuk altı lazer epilasyon',  treatment: 'Diode lazer 8 seanslık paket — 30 gün ara', priority: 'low', category: 'Lazer' },
-  { diagnosis: 'Alın botoks kontrolü',         treatment: '20 ünite, 3 nokta — 4 ay sonra tekrar', priority: 'medium', category: 'Botox' },
-  { diagnosis: 'PRP — saç dökülmesi',          treatment: '4 seanslık PRP, ayda bir uygulama', priority: 'high', category: 'PRP' },
-  { diagnosis: 'Cilt yenileme — Hydrafacial',  treatment: 'Aylık hydrafacial + ev bakım önerileri', priority: 'low', category: 'Cilt Bakımı' },
-  { diagnosis: 'Akne sonrası leke',            treatment: 'Kimyasal peeling 6 seans', priority: 'medium', category: 'Peeling' },
-  { diagnosis: 'Yüz oval kaybı',               treatment: 'RF yüz germe 4 seans + ev bakımı', priority: 'medium', category: 'RF' },
-  { diagnosis: 'Dudak dolgusu kontrolü',       treatment: '0.5 ml top-up, 6 ay sonra revizyon', priority: 'low', category: 'Dolgu' },
-  { diagnosis: 'Bacak lazer epilasyon',        treatment: '6 seanslık paket, anti-aknet bakım', priority: 'low', category: 'Lazer' },
-  { diagnosis: 'PRP cilt — gözaltı',           treatment: 'Mezo + PRP kombine 3 seans', priority: 'medium', category: 'PRP' },
+  { diagnosis: 'Nazolabial dolgu planlaması',  treatment: '1 ml hyalüronik asit dolgu, sağ-sol simetri', priority: 'Normal', category: 'Estetik Konsültasyon' },
+  { diagnosis: 'Koltuk altı lazer epilasyon',  treatment: 'Diode lazer 8 seanslık paket — 30 gün ara', priority: 'Düşük', category: 'Lazer' },
+  { diagnosis: 'Alın botoks kontrolü',         treatment: '20 ünite, 3 nokta — 4 ay sonra tekrar', priority: 'Normal', category: 'Botox' },
+  { diagnosis: 'PRP — saç dökülmesi',          treatment: '4 seanslık PRP, ayda bir uygulama', priority: 'Yüksek', category: 'PRP' },
+  { diagnosis: 'Cilt yenileme — Hydrafacial',  treatment: 'Aylık hydrafacial + ev bakım önerileri', priority: 'Düşük', category: 'Cilt Bakımı' },
+  { diagnosis: 'Akne sonrası leke',            treatment: 'Kimyasal peeling 6 seans', priority: 'Normal', category: 'Peeling' },
+  { diagnosis: 'Yüz oval kaybı',               treatment: 'RF yüz germe 4 seans + ev bakımı', priority: 'Normal', category: 'RF' },
+  { diagnosis: 'Dudak dolgusu kontrolü',       treatment: '0.5 ml top-up, 6 ay sonra revizyon', priority: 'Düşük', category: 'Dolgu' },
+  { diagnosis: 'Bacak lazer epilasyon',        treatment: '6 seanslık paket, anti-aknet bakım', priority: 'Düşük', category: 'Lazer' },
+  { diagnosis: 'PRP cilt — gözaltı',           treatment: 'Mezo + PRP kombine 3 seans', priority: 'Normal', category: 'PRP' },
 ]
 
 const ALLERGENS = [

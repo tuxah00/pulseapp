@@ -65,8 +65,9 @@ interface CustomerReward {
 type TabType = 'referrals' | 'rewards'
 
 export default function RewardsPage() {
-  const { businessId, sector, loading: ctxLoading, permissions } = useBusinessContext()
+  const { businessId, sector, settings, loading: ctxLoading, permissions } = useBusinessContext()
   const customerLabel = getCustomerLabelSingular(sector ?? undefined)
+  const rewardsEnabled = settings?.rewards_enabled !== false
 
   const [activeTab, setActiveTab] = useState<TabType>('rewards')
 
@@ -268,6 +269,22 @@ export default function RewardsPage() {
     } else {
       toast.error('Silinemedi')
     }
+  }
+
+  // ── Feature Flag Check ──
+  if (!ctxLoading && !rewardsEnabled) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="text-center space-y-3 max-w-md">
+          <Gift className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto" />
+          <p className="text-lg font-medium text-gray-500 dark:text-gray-400">Ödüller sistemi bu işletme için kapalı.</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500">Ayarlar &rarr; İşletme &rarr; Bildirim & AI sekmesindeki &ldquo;Özellikler&rdquo; bölümünden aktifleştirebilirsiniz.</p>
+          <a href="/dashboard/settings/business" className="btn-secondary inline-flex items-center gap-2 mt-2">
+            Ayarlara Git
+          </a>
+        </div>
+      </div>
+    )
   }
 
   // ── Permission Check ──
