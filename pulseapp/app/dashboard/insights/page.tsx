@@ -13,6 +13,7 @@ import QuadrantTable from '@/components/dashboard/insights/quadrant-table'
 import CohortHeatmap from '@/components/dashboard/insights/cohort-heatmap'
 import PulseCards from '@/components/dashboard/insights/pulse-cards'
 import MacroPanel from '@/components/dashboard/insights/macro-panel'
+import { DetailToggle } from '@/components/dashboard/_components/detail-toggle'
 
 interface SummaryWithMacro extends InsightsSummary {
   macro: MacroContext | null
@@ -244,86 +245,6 @@ export default function InsightsPage() {
         <PulseCards pulse={data.pulse} />
       </section>
 
-      {/* Dış Dünya — Makro bağlam */}
-      <MacroPanel macro={data.macro} />
-
-      {/* Mevsimsel Trend */}
-      <section className="card p-4 cursor-default space-y-3">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-pulse-900 dark:text-pulse-300" />
-            <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-              Yıllık Gelir Trendi ve Mevsim
-            </h2>
-          </div>
-          <span className="text-[11px] text-gray-500 dark:text-gray-400">
-            Şu an: <strong>{ctx.current_label}</strong> — talep <strong>{ctx.current_demand}</strong>
-          </span>
-        </div>
-        <SeasonalChart data={data.seasonal.monthly} />
-        {ctx.current_note && (
-          <p className="text-xs text-gray-600 dark:text-gray-400 italic">
-            {ctx.current_note}
-          </p>
-        )}
-        {ctx.upcoming && ctx.upcoming.length > 0 && (
-          <div className="text-xs text-gray-600 dark:text-gray-400 space-y-0.5">
-            <div className="font-medium text-gray-700 dark:text-gray-300">Yaklaşan dönem:</div>
-            {ctx.upcoming.map((u, i) => (
-              <div key={i}>
-                • <strong>{u.label}</strong> ({u.demand}) — {u.note}
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* Hizmet Karışımı */}
-      <section className="space-y-2">
-        <div className="flex items-center gap-2">
-          <Layers className="w-4 h-4 text-pulse-900 dark:text-pulse-300" />
-          <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-            Hizmet Karışımı
-          </h2>
-          <span className="text-[11px] text-gray-500 dark:text-gray-400">
-            · Hangi hizmet ne kadar kazandırıyor
-          </span>
-        </div>
-        <QuadrantTable rows={data.margin} />
-      </section>
-
-      {/* Kohort Heatmap */}
-      <section className="card p-4 cursor-default space-y-2">
-        <div className="flex items-center gap-2">
-          <Users className="w-4 h-4 text-pulse-900 dark:text-pulse-300" />
-          <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-            Müşteriler Ne Kadar Geri Dönüyor?
-          </h2>
-        </div>
-        <p className="text-xs text-gray-500 dark:text-gray-400">
-          Her ay yeni kazanılan müşterilerin sonraki aylarda tekrar randevu alma oranı.
-          Yeşil = dönüş güçlü, gri = dönüş zayıf.
-        </p>
-        <CohortHeatmap cohort={data.cohort} />
-      </section>
-
-      {/* Tüm Öneriler */}
-      {data.recommendations.length > 3 && (
-        <section className="space-y-2">
-          <div className="flex items-center gap-2">
-            <Lightbulb className="w-4 h-4 text-pulse-900 dark:text-pulse-300" />
-            <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-              Tüm Öneriler ({data.recommendations.length})
-            </h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {restRecs.map(rec => (
-              <StrategyCard key={rec.id} rec={rec} compact />
-            ))}
-          </div>
-        </section>
-      )}
-
       {data.recommendations.length === 0 && (
         <div className="card p-6 text-center cursor-default">
           <Sparkles className="w-8 h-8 mx-auto text-gray-300 dark:text-gray-600 mb-2" />
@@ -332,6 +253,89 @@ export default function InsightsPage() {
           </div>
         </div>
       )}
+
+      {/* Detaylar (opsiyonel) */}
+      <DetailToggle storageKey="insights-details">
+        {/* Dış Dünya — Makro bağlam */}
+        <MacroPanel macro={data.macro} />
+
+        {/* Mevsimsel Trend */}
+        <section className="card p-4 cursor-default space-y-3">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-pulse-900 dark:text-pulse-300" />
+              <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                Yıllık Gelir Trendi ve Mevsim
+              </h2>
+            </div>
+            <span className="text-[11px] text-gray-500 dark:text-gray-400">
+              Şu an: <strong>{ctx.current_label}</strong> — talep <strong>{ctx.current_demand}</strong>
+            </span>
+          </div>
+          <SeasonalChart data={data.seasonal.monthly} />
+          {ctx.current_note && (
+            <p className="text-xs text-gray-600 dark:text-gray-400 italic">
+              {ctx.current_note}
+            </p>
+          )}
+          {ctx.upcoming && ctx.upcoming.length > 0 && (
+            <div className="text-xs text-gray-600 dark:text-gray-400 space-y-0.5">
+              <div className="font-medium text-gray-700 dark:text-gray-300">Yaklaşan dönem:</div>
+              {ctx.upcoming.map((u, i) => (
+                <div key={i}>
+                  • <strong>{u.label}</strong> ({u.demand}) — {u.note}
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* Hizmet Karışımı */}
+        <section className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Layers className="w-4 h-4 text-pulse-900 dark:text-pulse-300" />
+            <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+              Hizmet Karışımı
+            </h2>
+            <span className="text-[11px] text-gray-500 dark:text-gray-400">
+              · Hangi hizmet ne kadar kazandırıyor
+            </span>
+          </div>
+          <QuadrantTable rows={data.margin} />
+        </section>
+
+        {/* Kohort Heatmap */}
+        <section className="card p-4 cursor-default space-y-2">
+          <div className="flex items-center gap-2">
+            <Users className="w-4 h-4 text-pulse-900 dark:text-pulse-300" />
+            <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+              Müşteriler Ne Kadar Geri Dönüyor?
+            </h2>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Her ay yeni kazanılan müşterilerin sonraki aylarda tekrar randevu alma oranı.
+            Yeşil = dönüş güçlü, gri = dönüş zayıf.
+          </p>
+          <CohortHeatmap cohort={data.cohort} />
+        </section>
+
+        {/* Tüm Öneriler */}
+        {data.recommendations.length > 3 && (
+          <section className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Lightbulb className="w-4 h-4 text-pulse-900 dark:text-pulse-300" />
+              <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                Tüm Öneriler ({data.recommendations.length})
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {restRecs.map(rec => (
+                <StrategyCard key={rec.id} rec={rec} compact />
+              ))}
+            </div>
+          </section>
+        )}
+      </DetailToggle>
     </div>
   )
 }
