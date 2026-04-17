@@ -6,7 +6,6 @@ import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, CalendarDays, Stethoscope, Receipt, Folder,
   Gift, Star, MessageSquarePlus, Settings, LogOut, Menu, X,
-  ChevronLeft,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ConfirmProvider } from '@/lib/hooks/use-confirm'
@@ -193,13 +192,6 @@ export function PortalShell({ businessId, business, customer, showTreatments, ch
             >
               <Menu className="h-5 w-5" />
             </button>
-            <a
-              href={`/book/${businessId}`}
-              className="hidden lg:inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-pulse-900 transition-colors"
-            >
-              <ChevronLeft className="h-4 w-4" />
-              Randevu Sayfasına Dön
-            </a>
             <div className="flex-1" />
           </div>
         </header>

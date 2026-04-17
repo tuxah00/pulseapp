@@ -413,6 +413,8 @@ export interface Campaign {
   message_template: string
   channel: CampaignChannel
   scheduled_at: string | null
+  expires_at: string | null
+  max_recipients: number | null
   status: CampaignStatus
   stats: CampaignStats
   created_by_staff_id: string | null

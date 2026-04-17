@@ -10,7 +10,7 @@ import {
   Plus, Package, Loader2, X, Pencil, Trash2, Search,
   ChevronRight, Clock, CheckCircle, XCircle, AlertTriangle,
   Users, Tag, Minus, LayoutList, LayoutGrid, CalendarPlus,
-  Filter, ArrowUpDown, ShieldX,
+  Filter, ArrowUpDown, ShieldX, BellRing,
 } from 'lucide-react'
 import { formatCurrency, formatDate, cn, formatDateISO } from '@/lib/utils'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
@@ -23,6 +23,7 @@ import type { ServicePackage, CustomerPackage, Service, PackageStatus, Customer,
 import { CustomSelect } from '@/components/ui/custom-select'
 import { CustomerSearchSelect } from '@/components/ui/customer-search-select'
 import { Portal } from '@/components/ui/portal'
+import { FollowUpQuickModal } from '@/components/dashboard/follow-up-quick-modal'
 
 type PageTab = 'templates' | 'customer'
 type StatusFilter = PackageStatus | 'all'
@@ -41,6 +42,8 @@ export default function PaketlerPage() {
   const [viewMode, setViewMode] = useViewMode('packages', 'list')
 
   const [pageTab, setPageTab] = useState<PageTab>('templates')
+  // Follow-up modal
+  const [followUpTarget, setFollowUpTarget] = useState<{ customerId: string; customerName: string; packageId?: string } | null>(null)
 
   // ── Templates state ──
   const [templates, setTemplates] = useState<ServicePackage[]>([])
@@ -305,6 +308,12 @@ export default function PaketlerPage() {
     await logAudit({ businessId: businessId!, staffId, staffName, action: 'create', resource: 'customer_packages', details: { customer_name: payload.customer_name, package_name: payload.package_name } })
     setSavingSell(false); closeSellModal(); setPageTab('customer'); fetchCustomerPackages()
     window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Paket satıldı' } }))
+
+    // Paket satışı sonrası takip başlatma teklifi — müşteri ID'si varsa (kayıtlı müşteri)
+    const soldCustomerId = sCustomerId || null
+    if (soldCustomerId && sCustomerName.trim()) {
+      setFollowUpTarget({ customerId: soldCustomerId, customerName: sCustomerName.trim() })
+    }
   }
 
   // ── Use session ──
@@ -1578,6 +1587,19 @@ export default function PaketlerPage() {
           </div>
         </div>
         </Portal>
+      )}
+
+      {/* Paket satışı sonrası follow-up teklif modal'ı */}
+      {followUpTarget && businessId && (
+        <FollowUpQuickModal
+          open={!!followUpTarget}
+          onClose={() => setFollowUpTarget(null)}
+          businessId={businessId}
+          customerId={followUpTarget.customerId}
+          customerName={followUpTarget.customerName}
+          defaultType="package_sold"
+          defaultDaysOffset={1}
+        />
       )}
     </div>
   )

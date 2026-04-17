@@ -23,12 +23,15 @@ export async function GET(request: NextRequest) {
 
   const customerSegment: string = customer?.segment || 'regular'
 
-  // Aktif kampanyaları getir
+  const now = new Date().toISOString()
+
+  // Aktif kampanyaları getir (süresi dolmamış olanlar)
   const { data: campaigns } = await admin
     .from('campaigns')
-    .select('id, name, description, segment_filter, message_template, status, scheduled_at, created_at')
+    .select('id, name, description, segment_filter, message_template, status, scheduled_at, expires_at, max_recipients, created_at')
     .eq('business_id', businessId)
     .in('status', ['scheduled', 'sending', 'completed'])
+    .or(`expires_at.is.null,expires_at.gt.${now}`)
     .order('created_at', { ascending: false })
     .limit(20)
 

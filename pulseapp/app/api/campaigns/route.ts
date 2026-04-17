@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
   if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
 
   const body = await request.json()
-  const { name, description, segmentFilter, messageTemplate, channel, scheduledAt, sendNow } = body
+  const { name, description, segmentFilter, messageTemplate, channel, scheduledAt, expiresAt, maxRecipients, sendNow } = body
 
   if (!name || !messageTemplate) {
     return NextResponse.json({ error: 'Ad ve mesaj şablonu zorunludur' }, { status: 400 })
@@ -56,6 +56,8 @@ export async function POST(request: NextRequest) {
       message_template: messageTemplate,
       channel: channel || 'auto',
       scheduled_at: scheduledAt || null,
+      expires_at: expiresAt || null,
+      max_recipients: maxRecipients ? Number(maxRecipients) : null,
       status,
       created_by_staff_id: staff.id,
     })
@@ -90,7 +92,7 @@ export async function PATCH(request: NextRequest) {
   if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
 
   const body = await request.json()
-  const { id, name, description, segmentFilter, messageTemplate, channel, scheduledAt, status } = body
+  const { id, name, description, segmentFilter, messageTemplate, channel, scheduledAt, expiresAt, maxRecipients, status } = body
 
   if (!id) return NextResponse.json({ error: 'ID gerekli' }, { status: 400 })
 
@@ -101,6 +103,8 @@ export async function PATCH(request: NextRequest) {
   if (messageTemplate !== undefined) allowed.message_template = messageTemplate
   if (channel !== undefined) allowed.channel = channel
   if (scheduledAt !== undefined) allowed.scheduled_at = scheduledAt
+  if (expiresAt !== undefined) allowed.expires_at = expiresAt || null
+  if (maxRecipients !== undefined) allowed.max_recipients = maxRecipients ? Number(maxRecipients) : null
   if (status !== undefined) allowed.status = status
 
   const { error } = await supabase

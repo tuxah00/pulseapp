@@ -51,13 +51,15 @@ interface FormState {
   birthdayMonth: string
   minTotalVisits: string
   scheduledAt: string
+  expiresAt: string
+  maxRecipients: string
   sendNow: boolean
 }
 
 const INITIAL_FORM: FormState = {
   name: '', description: '', messageTemplate: '', channel: 'auto',
   segments: [], lastVisitDaysMin: '', lastVisitDaysMax: '',
-  birthdayMonth: '', minTotalVisits: '', scheduledAt: '', sendNow: false,
+  birthdayMonth: '', minTotalVisits: '', scheduledAt: '', expiresAt: '', maxRecipients: '', sendNow: false,
 }
 
 export default function CampaignsPage() {
@@ -124,6 +126,8 @@ export default function CampaignsPage() {
       birthdayMonth: f.birthdayMonth ? String(f.birthdayMonth) : '',
       minTotalVisits: f.minTotalVisits ? String(f.minTotalVisits) : '',
       scheduledAt: c.scheduled_at ? c.scheduled_at.slice(0, 16) : '',
+      expiresAt: c.expires_at ? c.expires_at.slice(0, 10) : '',
+      maxRecipients: c.max_recipients ? String(c.max_recipients) : '',
       sendNow: false,
     })
     setEditingId(c.id)
@@ -176,6 +180,8 @@ export default function CampaignsPage() {
             messageTemplate: form.messageTemplate,
             channel: form.channel,
             scheduledAt: form.scheduledAt ? new Date(form.scheduledAt).toISOString() : null,
+            expiresAt: form.expiresAt ? new Date(form.expiresAt + 'T23:59:59').toISOString() : null,
+            maxRecipients: form.maxRecipients ? Number(form.maxRecipients) : null,
           }),
         })
         if (!res.ok) { const j = await res.json(); toast.error(j.error || 'Güncellenemedi'); return }
@@ -191,6 +197,8 @@ export default function CampaignsPage() {
             messageTemplate: form.messageTemplate,
             channel: form.channel,
             scheduledAt: form.scheduledAt ? new Date(form.scheduledAt).toISOString() : null,
+            expiresAt: form.expiresAt ? new Date(form.expiresAt + 'T23:59:59').toISOString() : null,
+            maxRecipients: form.maxRecipients ? Number(form.maxRecipients) : null,
             sendNow: form.sendNow,
           }),
         })
@@ -338,6 +346,20 @@ export default function CampaignsPage() {
                           {new Date(c.scheduled_at).toLocaleString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                         </p>
                       )}
+                      <div className="flex flex-wrap gap-3 mt-1">
+                        {c.expires_at && (
+                          <p className="text-xs text-orange-500 dark:text-orange-400 flex items-center gap-1">
+                            <CalendarClock className="h-3 w-3" />
+                            Bitiş: {new Date(c.expires_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </p>
+                        )}
+                        {c.max_recipients && (
+                          <p className="text-xs text-purple-500 dark:text-purple-400 flex items-center gap-1">
+                            <Users className="h-3 w-3" />
+                            Maks. {c.max_recipients} kişi
+                          </p>
+                        )}
+                      </div>
 
                       {c.status === 'completed' && (
                         <div className="flex items-center gap-3 mt-1.5">
@@ -552,6 +574,33 @@ export default function CampaignsPage() {
                   )}
                 </div>
               )}
+
+              {/* Süre ve Sınır */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label text-xs">Bitiş Tarihi <span className="font-normal text-gray-400">(opsiyonel)</span></label>
+                  <input
+                    type="date"
+                    className="input w-full"
+                    value={form.expiresAt}
+                    min={new Date().toISOString().slice(0, 10)}
+                    onChange={e => setField('expiresAt', e.target.value)}
+                  />
+                  <p className="text-[11px] text-gray-400 mt-0.5">Portalde gösterilecek son tarih</p>
+                </div>
+                <div>
+                  <label className="label text-xs">Maks. Alıcı <span className="font-normal text-gray-400">(opsiyonel)</span></label>
+                  <input
+                    type="number"
+                    className="input w-full"
+                    placeholder="ör. 50"
+                    min="1"
+                    value={form.maxRecipients}
+                    onChange={e => setField('maxRecipients', e.target.value)}
+                  />
+                  <p className="text-[11px] text-gray-400 mt-0.5">Sınırlı sayıda müşteriye</p>
+                </div>
+              </div>
 
               {/* Zamanlama */}
               {!editingId && (

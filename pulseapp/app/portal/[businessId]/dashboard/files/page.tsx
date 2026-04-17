@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 import { Folder, Image as ImageIcon, Loader2, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { FileCard, FileDetailModal, type PortalRecord } from '../_components/file-card'
@@ -25,7 +25,9 @@ const PHOTO_FILTERS: Array<{ key: string; label: string; match: (t: string) => b
 
 export default function PortalFilesPage() {
   const params = useParams()
+  const searchParams = useSearchParams()
   const businessId = params.businessId as string
+  const openRecordId = searchParams.get('open')
 
   const [tab, setTab] = useState<'records' | 'photos'>('records')
   const [records, setRecords] = useState<PortalRecord[]>([])
@@ -51,7 +53,13 @@ export default function PortalFilesPage() {
         }
         if (recRes.ok) {
           const data = await recRes.json()
-          setRecords(data.records || [])
+          const recs: PortalRecord[] = data.records || []
+          setRecords(recs)
+          // Derin bağlantı: ?open=<id> ile belirtilen kaydı otomatik aç
+          if (openRecordId) {
+            const target = recs.find((r) => r.id === openRecordId)
+            if (target) setActiveRecord(target)
+          }
         }
         if (phRes.ok) {
           const data = await phRes.json()
@@ -61,6 +69,7 @@ export default function PortalFilesPage() {
         setLoading(false)
       }
     })()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const title = getFilesPageTitle(sector)

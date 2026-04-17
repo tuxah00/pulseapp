@@ -31,6 +31,7 @@ import {
 import { formatTime, formatDate, getStatusColor, formatCurrency, cn, formatDateISO } from '@/lib/utils'
 import { STATUS_LABELS, type AppointmentStatus, type Service, type StaffMember, type WorkingHours, type BlockedSlot } from '@/types'
 import type { AppointmentRow } from '@/types/db'
+import { FollowUpQuickModal } from '@/components/dashboard/follow-up-quick-modal'
 
 type AppointmentView = AppointmentRow & {
   customers: { name: string; phone: string | null } | null
@@ -86,6 +87,8 @@ export default function AppointmentsPage() {
   const [serviceIdFilter, setServiceIdFilter] = useState('')
   const [sortField, setSortField] = useState<string | null>(null)
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+  // Follow-up modal state
+  const [followUpTarget, setFollowUpTarget] = useState<{ appointmentId: string; customerId: string; customerName: string } | null>(null)
 
   const [services, setServices] = useState<Service[]>([])
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>([])
@@ -1009,6 +1012,15 @@ export default function AppointmentsPage() {
     fetchAppointments()
     const statusLabels: Record<string, string> = { completed: 'Tamamlandı', cancelled: 'İptal edildi', no_show: 'Gelmedi olarak işaretlendi', confirmed: 'Onaylandı', pending: 'Beklemede' }
     window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: statusLabels[newStatus] || 'Durum güncellendi' } }))
+
+    // Tamamlandı → takip teklif modal'ını aç
+    if (newStatus === 'completed' && statusApt?.customer_id && statusApt?.customers?.name) {
+      setFollowUpTarget({
+        appointmentId,
+        customerId: statusApt.customer_id,
+        customerName: statusApt.customers.name,
+      })
+    }
   }
 
   function getDayKeyFromDate(dateStr: string): keyof WorkingHours {
@@ -2549,12 +2561,26 @@ export default function AppointmentsPage() {
                   </>
                 )}
                 {selectedAppointment.status === 'completed' && (
-                  <button
-                    onClick={() => { window.location.href = `/dashboard/pos?appointmentId=${selectedAppointment.id}` }}
-                    className="w-full flex items-center gap-2 rounded-lg border border-pulse-200 dark:border-pulse-800 bg-pulse-50 dark:bg-pulse-900/20 px-4 py-2.5 text-sm font-medium text-pulse-900 dark:text-pulse-300 hover:bg-pulse-100 dark:hover:bg-pulse-800/30 transition-colors"
-                  >
-                    <CheckCircle className="h-4 w-4" /> Tahsilat Al
-                  </button>
+                  <>
+                    <button
+                      onClick={() => { window.location.href = `/dashboard/pos?appointmentId=${selectedAppointment.id}` }}
+                      className="w-full flex items-center gap-2 rounded-lg border border-pulse-200 dark:border-pulse-800 bg-pulse-50 dark:bg-pulse-900/20 px-4 py-2.5 text-sm font-medium text-pulse-900 dark:text-pulse-300 hover:bg-pulse-100 dark:hover:bg-pulse-800/30 transition-colors"
+                    >
+                      <CheckCircle className="h-4 w-4" /> Tahsilat Al
+                    </button>
+                    {selectedAppointment.customer_id && selectedAppointment.customers?.name && (
+                      <button
+                        onClick={() => setFollowUpTarget({
+                          appointmentId: selectedAppointment.id,
+                          customerId: selectedAppointment.customer_id!,
+                          customerName: selectedAppointment.customers!.name,
+                        })}
+                        className="w-full flex items-center gap-2 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-4 py-2.5 text-sm font-medium text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-800/30 transition-colors"
+                      >
+                        <BellRing className="h-4 w-4" /> Takip Başlat
+                      </button>
+                    )}
+                  </>
                 )}
                 {selectedAppointment.status === 'confirmed' && (
                   <>
@@ -2867,6 +2893,20 @@ export default function AppointmentsPage() {
           </div>
         </div>
         </Portal>
+      )}
+
+      {/* Follow-up quick modal — randevu tamamlandığında otomatik açılır, ya da manuel tetiklenir */}
+      {followUpTarget && businessId && (
+        <FollowUpQuickModal
+          open={!!followUpTarget}
+          onClose={() => setFollowUpTarget(null)}
+          businessId={businessId}
+          customerId={followUpTarget.customerId}
+          customerName={followUpTarget.customerName}
+          appointmentId={followUpTarget.appointmentId}
+          defaultType="post_session"
+          defaultDaysOffset={3}
+        />
       )}
     </div>
   )

@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import {
   CalendarCheck, Gift, Loader2, Plus, ChevronRight, Sparkles,
-  Users, Trophy, TrendingUp, AlertCircle, Megaphone,
+  Users, Trophy, TrendingUp, AlertCircle, Clock, Tag, Folder,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { PortalHero } from './_components/portal-hero'
@@ -42,6 +42,8 @@ interface Campaign {
   id: string
   name: string
   description: string | null
+  expires_at: string | null
+  max_recipients: number | null
 }
 
 interface UnpaidInvoice {
@@ -98,6 +100,7 @@ export default function PortalOverviewPage() {
   const [suggestions, setSuggestions] = useState<PortalSuggestion[]>([])
   const [milestones, setMilestones] = useState<Array<{ kind: string; title: string; subtitle: string }>>([])
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
+  const [recentFiles, setRecentFiles] = useState<Array<{ id: string; title: string; type: string; created_at: string }>>([])
   const [unpaidInvoices, setUnpaidInvoices] = useState<UnpaidInvoice[]>([])
   const [activeProtocolProgress, setActiveProtocolProgress] = useState<{ name: string; percent: number } | null>(null)
   const [loading, setLoading] = useState(true)
@@ -105,13 +108,14 @@ export default function PortalOverviewPage() {
   useEffect(() => {
     (async () => {
       try {
-        const [meRes, sugRes, rewRes, campRes, invRes, trtRes] = await Promise.all([
+        const [meRes, sugRes, rewRes, campRes, invRes, trtRes, recRes] = await Promise.all([
           fetch('/api/portal/me'),
           fetch('/api/portal/suggestions'),
           fetch('/api/portal/rewards'),
           fetch('/api/portal/campaigns'),
           fetch('/api/portal/invoices'),
           fetch('/api/portal/treatments'),
+          fetch('/api/portal/records'),
         ])
 
         if (meRes.ok) {
@@ -148,6 +152,15 @@ export default function PortalOverviewPage() {
             setActiveProtocolProgress({ name: activeP.name, percent: pct })
           }
         }
+        if (recRes.ok) {
+          const data = await recRes.json()
+          setRecentFiles((data.records || []).slice(0, 3).map((r: any) => ({
+            id: r.id,
+            title: r.title || r.type || 'Dosya',
+            type: r.type || 'file',
+            created_at: r.created_at,
+          })))
+        }
       } finally {
         setLoading(false)
       }
@@ -183,6 +196,71 @@ export default function PortalOverviewPage() {
 
       {/* Milestone — özel gün kutlamaları */}
       {milestones.length > 0 && <MilestoneBanner milestones={milestones} />}
+
+      {/* Kampanya Bannerları — hero'nun hemen altında, dikkat çekici ama abartısız */}
+      {campaigns.length > 0 && (
+        <section className="space-y-3">
+          {campaigns.map((c) => {
+            const daysLeft = c.expires_at
+              ? Math.ceil((new Date(c.expires_at).getTime() - Date.now()) / 86400000)
+              : null
+            const expiring = daysLeft !== null && daysLeft <= 7
+            return (
+              <div
+                key={c.id}
+                className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-pulse-900 via-pulse-800 to-indigo-700 p-5 shadow-lg shadow-pulse-900/15"
+              >
+                {/* Arka plan deseni */}
+                <div className="pointer-events-none absolute inset-0 opacity-[0.06]"
+                  style={{ backgroundImage: 'radial-gradient(circle at 80% 20%, white 1px, transparent 1px)', backgroundSize: '28px 28px' }}
+                />
+                <div className="relative flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    {/* Etiket */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-white/20 text-white rounded-full px-2.5 py-0.5">
+                        <Tag className="h-3 w-3" /> Sana Özel
+                      </span>
+                      {expiring && daysLeft !== null && (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-amber-400/30 text-amber-200 rounded-full px-2.5 py-0.5">
+                          <Clock className="h-3 w-3" /> {daysLeft === 0 ? 'Son gün!' : `${daysLeft} gün kaldı`}
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="text-base font-bold text-white leading-tight">{c.name}</h3>
+                    {c.description && (
+                      <p className="text-sm text-white/75 mt-1 line-clamp-2">{c.description}</p>
+                    )}
+                    {/* Meta bilgiler */}
+                    <div className="flex flex-wrap items-center gap-3 mt-2.5">
+                      {c.expires_at && (
+                        <span className="text-xs text-white/60 flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {new Date(c.expires_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })} tarihine kadar
+                        </span>
+                      )}
+                      {c.max_recipients && (
+                        <span className="text-xs text-white/60 flex items-center gap-1">
+                          <Users className="h-3 w-3" />
+                          Sınırlı {c.max_recipients} kişiyle
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {/* CTA */}
+                  <a
+                    href={`/book/${businessId}`}
+                    className="flex-shrink-0 mt-1 inline-flex items-center gap-1.5 bg-white text-pulse-900 text-xs font-semibold px-3.5 py-2 rounded-xl hover:bg-white/90 transition-colors shadow-sm"
+                  >
+                    Randevu Al
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  </a>
+                </div>
+              </div>
+            )
+          })}
+        </section>
+      )}
 
       {/* Sıradaki Randevu / CTA */}
       {nextAppt ? (
@@ -275,6 +353,44 @@ export default function PortalOverviewPage() {
         </Link>
       )}
 
+      {/* Son Dosyalarım */}
+      {recentFiles.length > 0 && (
+        <section>
+          <SectionHeader
+            title="Son Dosyalarım"
+            icon={Folder}
+            action={
+              <Link
+                href={`/portal/${businessId}/dashboard/files`}
+                className="text-xs font-medium text-pulse-900 dark:text-pulse-300 hover:underline"
+              >
+                Tümü
+              </Link>
+            }
+          />
+          <div className="space-y-2">
+            {recentFiles.map((f) => (
+              <Link
+                key={f.id}
+                href={`/portal/${businessId}/dashboard/files?open=${f.id}`}
+                className="flex items-center gap-3 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-3.5 hover:border-pulse-200 dark:hover:border-pulse-800 hover:shadow-sm transition-all"
+              >
+                <div className="h-9 w-9 rounded-xl bg-pulse-50 dark:bg-pulse-900/20 flex items-center justify-center flex-shrink-0">
+                  <Folder className="h-4 w-4 text-pulse-700 dark:text-pulse-300" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{f.title}</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">
+                    {new Date(f.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </p>
+                </div>
+                <ChevronRight className="h-4 w-4 text-gray-300 dark:text-gray-600 flex-shrink-0" />
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Metrik Tile'lar */}
       <section>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -311,41 +427,6 @@ export default function PortalOverviewPage() {
         </div>
       </section>
 
-      {/* Kampanyalar */}
-      {campaigns.length > 0 && (
-        <section>
-          <SectionHeader
-            title="Sana Özel Kampanyalar"
-            subtitle={campaigns.length === 1 ? 'Bir kampanyan var' : `${campaigns.length} aktif kampanya`}
-            icon={Megaphone}
-            action={
-              <Link
-                href={`/portal/${businessId}/dashboard/rewards`}
-                className="text-xs font-medium text-pulse-900 dark:text-pulse-300 hover:underline"
-              >
-                Tümü
-              </Link>
-            }
-          />
-          <div className="space-y-2">
-            {campaigns.map((c) => (
-              <div key={c.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-4">
-                <div className="flex items-start gap-3">
-                  <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-pulse-900 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-sm">
-                    <Megaphone className="h-4 w-4 text-white" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{c.name}</h3>
-                    {c.description && (
-                      <p className="text-xs text-gray-600 dark:text-gray-300 mt-0.5 line-clamp-2">{c.description}</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
     </div>
   )
 }
