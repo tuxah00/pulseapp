@@ -19,7 +19,7 @@ import {
   LayoutGrid,
   ArrowUpDown,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, formatDateISO } from '@/lib/utils'
 import { Portal } from '@/components/ui/portal'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
 import { ToolbarPopover, SortPopoverContent } from '@/components/ui/toolbar-popover'
@@ -74,7 +74,7 @@ export default function ReservationsPage() {
   const { businessId, sector, loading: ctxLoading, permissions } = useBusinessContext()
   const [reservations, setReservations] = useState<TableReservation[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
+  const [selectedDate, setSelectedDate] = useState(formatDateISO(new Date()))
   const [showModal, setShowModal] = useState(false)
   const [isClosingModal, setIsClosingModal] = useState(false)
   const closeModal = () => setIsClosingModal(true)
@@ -122,11 +122,11 @@ export default function ReservationsPage() {
   function changeDate(days: number) {
     const d = new Date(selectedDate)
     d.setDate(d.getDate() + days)
-    setSelectedDate(d.toISOString().split('T')[0])
+    setSelectedDate(formatDateISO(d))
   }
 
   function goToday() {
-    setSelectedDate(new Date().toISOString().split('T')[0])
+    setSelectedDate(formatDateISO(new Date()))
   }
 
   function openNewModal() {
@@ -236,7 +236,7 @@ export default function ReservationsPage() {
   const seated = reservations.filter(r => r.status === 'seated').length
   const noShow = reservations.filter(r => r.status === 'no_show').length
 
-  const isToday = selectedDate === new Date().toISOString().split('T')[0]
+  const isToday = selectedDate === formatDateISO(new Date())
 
   const SORT_OPTIONS = [
     { value: 'reservation_time', label: 'Saat' },

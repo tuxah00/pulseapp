@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { User, Mail, Cake, MessageCircle, Download, Trash2, Loader2, CheckCircle2, AlertCircle, LogOut } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, formatDateISO } from '@/lib/utils'
 import { SectionHeader } from '../_components/section-header'
 import { DataDeletionModal } from '../_components/data-deletion-modal'
 
@@ -126,7 +126,7 @@ export default function PortalSettingsPage() {
       // Content-Disposition'dan dosya adını al
       const cd = res.headers.get('content-disposition') || ''
       const match = cd.match(/filename="([^"]+)"/)
-      a.download = match?.[1] || `pulseapp-veri-${new Date().toISOString().split('T')[0]}.json`
+      a.download = match?.[1] || `pulseapp-veri-${formatDateISO(new Date())}.json`
       document.body.appendChild(a)
       a.click()
       a.remove()

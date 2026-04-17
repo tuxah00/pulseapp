@@ -6,7 +6,7 @@ import Link from 'next/link'
 import {
   CalendarCheck, Clock, Loader2, X, Pencil, Ban, Plus, CalendarX2,
 } from 'lucide-react'
-import { cn, formatTime } from '@/lib/utils'
+import { cn, formatTime, formatDateISO } from '@/lib/utils'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 
 interface ServiceJoin {
@@ -272,7 +272,7 @@ function EditModal({ appointment, onClose, onSaved }: {
     }
   }
 
-  const minDate = new Date().toISOString().split('T')[0]
+  const minDate = formatDateISO(new Date())
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-overlay">

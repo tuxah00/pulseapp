@@ -12,7 +12,7 @@ import {
   History, Truck, Download, TrendingDown, TrendingUp,
   ChevronRight, Filter, ArrowUpDown,
 } from 'lucide-react'
-import { formatCurrency, cn } from '@/lib/utils'
+import { formatCurrency, cn, formatDateISO } from '@/lib/utils'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
 import { logAudit } from '@/lib/utils/audit'
 import CompactBoxCard from '@/components/ui/compact-box-card'
@@ -225,7 +225,7 @@ export default function StoklarPage() {
             category: 'Stok',
             description: `Stok alımı: ${name}`,
             amount: parseFloat(expenseCost),
-            expense_date: new Date().toISOString().split('T')[0],
+            expense_date: formatDateISO(new Date()),
             is_recurring: false,
           }),
         })

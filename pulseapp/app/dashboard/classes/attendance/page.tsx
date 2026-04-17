@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { Users, Plus, Trash2, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
 import { CustomSelect } from '@/components/ui/custom-select'
+import { formatDateISO } from '@/lib/utils'
 
 interface ClassItem {
   id: string
@@ -44,7 +45,7 @@ function AttendancePage() {
   const searchParams = useSearchParams()
 
   const [selectedDate, setSelectedDate] = useState(() => {
-    return searchParams.get('date') || new Date().toISOString().split('T')[0]
+    return searchParams.get('date') || formatDateISO(new Date())
   })
   const [classes, setClasses] = useState<ClassItem[]>([])
   const [selectedClassId, setSelectedClassId] = useState<string>(searchParams.get('classId') || '')

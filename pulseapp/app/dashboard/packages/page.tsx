@@ -12,7 +12,7 @@ import {
   Users, Tag, Minus, LayoutList, LayoutGrid, CalendarPlus,
   Filter, ArrowUpDown, ShieldX,
 } from 'lucide-react'
-import { formatCurrency, formatDate, cn } from '@/lib/utils'
+import { formatCurrency, formatDate, cn, formatDateISO } from '@/lib/utils'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import { ToolbarPopover, SortPopoverContent } from '@/components/ui/toolbar-popover'
 import { logAudit } from '@/lib/utils/audit'
@@ -87,7 +87,7 @@ export default function PaketlerPage() {
   const [sCustomerPhone, setSCustomerPhone] = useState('')
   const [sPricePaid, setSPricePaid] = useState('')
   const [sNotes, setSNotes] = useState('')
-  const [sPurchaseDate, setSPurchaseDate] = useState(new Date().toISOString().split('T')[0])
+  const [sPurchaseDate, setSPurchaseDate] = useState(formatDateISO(new Date()))
   const [sExpiryDate, setSExpiryDate] = useState('')
   const [savingSell, setSavingSell] = useState(false)
   const [sellError, setSellError] = useState<string | null>(null)
@@ -245,7 +245,7 @@ export default function PaketlerPage() {
   async function openSellModal(templateId?: string) {
     setSTemplateId(templateId ?? templates[0]?.id ?? '')
     setSCustomerName(''); setSCustomerPhone(''); setSPricePaid('')
-    setSNotes(''); setSPurchaseDate(new Date().toISOString().split('T')[0]); setSExpiryDate('')
+    setSNotes(''); setSPurchaseDate(formatDateISO(new Date())); setSExpiryDate('')
     setSellError(null); setSCustomerId(''); setSCreateCustomer(true)
     setShowSellModal(true)
   }
@@ -258,7 +258,7 @@ export default function PaketlerPage() {
       if (tmpl.validity_days) {
         const d = new Date()
         d.setDate(d.getDate() + tmpl.validity_days)
-        setSExpiryDate(d.toISOString().split('T')[0])
+        setSExpiryDate(formatDateISO(d))
       } else {
         setSExpiryDate('')
       }
@@ -426,7 +426,7 @@ export default function PaketlerPage() {
   }, [selectedCp, isMobile, viewMode])
 
   async function openAptModal(cp: CustomerPackage) {
-    setAptDate(new Date().toISOString().split('T')[0])
+    setAptDate(formatDateISO(new Date()))
     setAptTime('09:00'); setAptNotes(''); setAptError(null); setAptTemplateName('')
     setAptPreview(null)
     setAptBulkCreate(true)
@@ -442,7 +442,7 @@ export default function PaketlerPage() {
   }
 
   async function openAptModalFromTemplate(t: ServicePackage) {
-    setAptDate(new Date().toISOString().split('T')[0])
+    setAptDate(formatDateISO(new Date()))
     setAptTime('09:00'); setAptNotes(''); setAptError(null)
     setAptTemplateName(t.name)
     setAptPreview(null)

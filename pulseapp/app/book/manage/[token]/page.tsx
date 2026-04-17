@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { STATUS_LABELS } from '@/types'
 import type { AppointmentStatus } from '@/types'
+import { formatDateISO } from '@/lib/utils'
 
 interface AppointmentData {
   id: string
@@ -229,7 +230,7 @@ export default function ManageAppointmentPage() {
               <div>
                 <label className="text-xs text-gray-500 dark:text-gray-400">Tarih</label>
                 <input type="date" className="w-full mt-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                  value={editDate} onChange={e => setEditDate(e.target.value)} min={new Date().toISOString().split('T')[0]} />
+                  value={editDate} onChange={e => setEditDate(e.target.value)} min={formatDateISO(new Date())} />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>

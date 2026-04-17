@@ -62,7 +62,11 @@ function formatDate(date: Date): string {
 }
 
 function formatDateISO(date: Date): string {
-  return date.toISOString().split('T')[0]
+  // Yerel tarih — toISOString UTC'ye çevirdiği için UTC+3'te önceki güne kayıyor
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
 }
 
 export default function ClassesPage() {

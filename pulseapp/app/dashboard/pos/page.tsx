@@ -8,7 +8,7 @@ import { getCustomerLabelSingular } from '@/lib/config/sector-modules'
 import { useDebounce } from '@/lib/hooks/use-debounce'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { logAudit } from '@/lib/utils/audit'
-import { formatCurrency, formatDateTime, cn } from '@/lib/utils'
+import { formatCurrency, formatDateTime, cn, formatDateISO } from '@/lib/utils'
 import type { Service, POSItem, POSPayment, POSTransaction, POSSession, PaymentMethod, Referral, RewardType } from '@/types'
 import { REWARD_TYPE_LABELS } from '@/types'
 import { CustomSelect } from '@/components/ui/custom-select'
@@ -106,7 +106,7 @@ export default function KasaPage() {
     const [svcRes, prodRes, txRes, sessRes] = await Promise.all([
       supabase.from('services').select('*').eq('business_id', businessId).eq('is_active', true).order('sort_order'),
       supabase.from('products').select('id, name, price, stock_count, category, is_active').eq('business_id', businessId).eq('is_active', true).order('name'),
-      fetch(`/api/pos?businessId=${businessId}&from=${new Date().toISOString().split('T')[0]}`).then(r => r.json()),
+      fetch(`/api/pos?businessId=${businessId}&from=${formatDateISO(new Date())}`).then(r => r.json()),
       fetch(`/api/pos/sessions?businessId=${businessId}`).then(r => r.json()),
     ])
 

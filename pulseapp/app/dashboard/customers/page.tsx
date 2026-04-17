@@ -11,7 +11,7 @@ import {
   Clock, Star, MessageSquare, CheckCircle, XCircle, AlertTriangle, Info, Download,
   Gift, FileText, ChevronRight,
 } from 'lucide-react'
-import { formatPhone, formatDate, formatTime, formatCurrency, getSegmentColor, cn, getInitials } from '@/lib/utils'
+import { formatPhone, formatDate, formatTime, formatCurrency, getSegmentColor, cn, getInitials, formatDateISO } from '@/lib/utils'
 import { SEGMENT_LABELS, STATUS_LABELS, REFERRAL_STATUS_LABELS, REWARD_TYPE_LABELS, type Customer, type CustomerSegment, type Referral, type RewardType, type LoyaltyPoints } from '@/types'
 import type { AppointmentRow, MessageRow, ReviewRow } from '@/types/db'
 import { useForm } from 'react-hook-form'
@@ -1268,8 +1268,8 @@ export default function CustomersPage() {
                   type="date"
                   {...register('birthday')}
                   className="input"
-                  min={(() => { const d = new Date(); d.setFullYear(d.getFullYear() - 120); return d.toISOString().split('T')[0] })()}
-                  max={(() => { const d = new Date(); d.setFullYear(d.getFullYear() - 1); return d.toISOString().split('T')[0] })()}
+                  min={(() => { const d = new Date(); d.setFullYear(d.getFullYear() - 120); return formatDateISO(d) })()}
+                  max={(() => { const d = new Date(); d.setFullYear(d.getFullYear() - 1); return formatDateISO(d) })()}
                 />
 
                 {errors.birthday && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.birthday.message}</p>}

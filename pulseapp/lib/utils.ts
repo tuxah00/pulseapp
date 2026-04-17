@@ -25,6 +25,18 @@ export function formatTime(time: string): string {
   return time.slice(0, 5)
 }
 
+/**
+ * Yerel tarihi "YYYY-MM-DD" formatında döndürür.
+ * `toISOString()` UTC'ye çevirdiği için Türkiye'de (UTC+3) saat 00:00-03:00
+ * arasında önceki güne kayma oluşuyordu — bu helper yerel getter'ları kullanır.
+ */
+export function formatDateISO(date: Date): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
 export function formatDateTime(date: string | Date): string {
   const d = typeof date === 'string' ? parseISO(date) : date
   return format(d, 'd MMM yyyy HH:mm', { locale: tr })
