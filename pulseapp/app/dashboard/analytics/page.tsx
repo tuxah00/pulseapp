@@ -27,6 +27,9 @@ import { CustomSelect } from '@/components/ui/custom-select'
 import { getCustomerLabelSingular, getCustomerLabel } from '@/lib/config/sector-modules'
 import { addMonthsSafe } from '@/lib/utils/date-range'
 import { PulseValuePanel } from '@/components/dashboard/analytics/pulse-value/pulse-value-panel'
+import {
+  Area, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip as RTooltip, XAxis, YAxis,
+} from 'recharts'
 
 type AnalyticsTab = 'overview' | 'staff' | 'customers' | 'sources' | 'services' | 'expenses' | 'forecast' | 'pulse_value'
 
@@ -92,9 +95,9 @@ export default function AnalyticsPage() {
 
   // Forecast / Tahmin state
   const [forecastData, setForecastData] = useState<{
-    historical: { month: string; label: string; revenue: number }[]
-    forecast: { month: string; label: string; revenue: number }[]
-    insights: { busiestDay: string; busiestHourLabel: string; topServices: { name: string; revenue: number; count: number }[]; nextMonthForecast: number }
+    historical: { month: string; label: string; revenue: number; demand?: 'peak'|'high'|'normal'|'low'; demand_note?: string | null; yoy_delta?: number | null }[]
+    forecast: { month: string; label: string; revenue: number; lower?: number; upper?: number; demand?: 'peak'|'high'|'normal'|'low' }[]
+    insights: { busiestDay: string; busiestHourLabel: string; topServices: { name: string; revenue: number; count: number }[]; nextMonthForecast: number; nextMonthLower?: number | null; nextMonthUpper?: number | null; confidencePct?: number | null; historicalMonths?: number }
     heatmap: { day: string; dayIndex: number; hour: number; count: number }[]
     maxHeatmapCount: number
   } | null>(null)
@@ -834,18 +837,20 @@ export default function AnalyticsPage() {
                   <label htmlFor="isRecurring" className="text-sm text-gray-700 dark:text-gray-300">Tekrarlayan gider</label>
                   {expIsRecurring && (
                     <div className="flex items-center gap-2 ml-2">
-                      <CustomSelect
-                        value={expRecurringPeriod}
-                        onChange={v => setExpRecurringPeriod(v)}
-                        options={[
-                          { value: 'weekly', label: 'Haftalık' },
-                          { value: 'biweekly', label: '2 Haftada Bir' },
-                          { value: 'monthly', label: 'Aylık' },
-                          { value: 'quarterly', label: '3 Ayda Bir' },
-                          { value: 'yearly', label: 'Yıllık' },
-                          { value: 'custom', label: 'Özel' },
-                        ]}
-                      />
+                      <div className="w-40">
+                        <CustomSelect
+                          value={expRecurringPeriod}
+                          onChange={v => setExpRecurringPeriod(v)}
+                          options={[
+                            { value: 'weekly', label: 'Haftalık' },
+                            { value: 'biweekly', label: '2 Haftada Bir' },
+                            { value: 'monthly', label: 'Aylık' },
+                            { value: 'quarterly', label: '3 Ayda Bir' },
+                            { value: 'yearly', label: 'Yıllık' },
+                            { value: 'custom', label: 'Özel' },
+                          ]}
+                        />
+                      </div>
                       {expRecurringPeriod === 'custom' && (
                         <div className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400">
                           <span>Her</span>
@@ -908,18 +913,20 @@ export default function AnalyticsPage() {
                   <label htmlFor="incIsRecurring" className="text-sm text-gray-700 dark:text-gray-300">Tekrarlayan gelir</label>
                   {incIsRecurring && (
                     <div className="flex items-center gap-2 ml-2">
-                      <CustomSelect
-                        value={incRecurringPeriod}
-                        onChange={v => setIncRecurringPeriod(v)}
-                        options={[
-                          { value: 'weekly', label: 'Haftalık' },
-                          { value: 'biweekly', label: '2 Haftada Bir' },
-                          { value: 'monthly', label: 'Aylık' },
-                          { value: 'quarterly', label: '3 Ayda Bir' },
-                          { value: 'yearly', label: 'Yıllık' },
-                          { value: 'custom', label: 'Özel' },
-                        ]}
-                      />
+                      <div className="w-40">
+                        <CustomSelect
+                          value={incRecurringPeriod}
+                          onChange={v => setIncRecurringPeriod(v)}
+                          options={[
+                            { value: 'weekly', label: 'Haftalık' },
+                            { value: 'biweekly', label: '2 Haftada Bir' },
+                            { value: 'monthly', label: 'Aylık' },
+                            { value: 'quarterly', label: '3 Ayda Bir' },
+                            { value: 'yearly', label: 'Yıllık' },
+                            { value: 'custom', label: 'Özel' },
+                          ]}
+                        />
+                      </div>
                       {incRecurringPeriod === 'custom' && (
                         <div className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400">
                           <span>Her</span>
@@ -1198,42 +1205,134 @@ export default function AnalyticsPage() {
                 </div>
                 <div className="card p-4 text-center">
                   <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Geçmiş Veri</p>
-                  <p className="text-xl font-bold text-gray-900 dark:text-gray-100">6 Ay</p>
+                  <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{forecastData.insights.historicalMonths ?? 6} Ay</p>
+                  {forecastData.insights.confidencePct != null && (
+                    <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">±%{forecastData.insights.confidencePct} belirsizlik</p>
+                  )}
                 </div>
               </div>
 
-              {/* Gelir Tahmini Grafik (CSS-only bar chart) */}
+              {/* Gelir Trendi & Tahmin — İş Zekası verisine dayalı, belirsizlik bantlı */}
               <div className="card p-5">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">Gelir Trendi & Tahmin</h3>
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Gelir Trendi & Tahmin</h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">İş Zekası sezonsal verisi + trend bileşimi</p>
+                  </div>
+                  {forecastData.insights.nextMonthLower != null && forecastData.insights.nextMonthUpper != null && (
+                    <div className="text-right">
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400">Sonraki ay aralığı</p>
+                      <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                        {formatCurrency(forecastData.insights.nextMonthLower)} – {formatCurrency(forecastData.insights.nextMonthUpper)}
+                      </p>
+                    </div>
+                  )}
+                </div>
                 {(() => {
-                  const allData = [
-                    ...forecastData.historical.map(h => ({ ...h, isForecast: false })),
-                    ...forecastData.forecast.map(f => ({ ...f, isForecast: true })),
+                  const chartData = [
+                    ...forecastData.historical.map(h => ({
+                      label: h.label,
+                      actual: h.revenue,
+                      forecast: null as number | null,
+                      lower: null as number | null,
+                      upperDelta: null as number | null,
+                      demand: h.demand ?? 'normal',
+                      demand_note: h.demand_note ?? null,
+                      yoy_delta: h.yoy_delta ?? null,
+                    })),
+                    ...forecastData.forecast.map(f => ({
+                      label: f.label,
+                      actual: null as number | null,
+                      forecast: f.revenue,
+                      lower: f.lower ?? f.revenue,
+                      upperDelta: Math.max(0, (f.upper ?? f.revenue) - (f.lower ?? f.revenue)),
+                      demand: f.demand ?? 'normal',
+                      demand_note: null,
+                      yoy_delta: null,
+                    })),
                   ]
-                  const maxRevenue = Math.max(...allData.map(d => d.revenue), 1)
+                  // Son gerçek ile ilk tahmin arasında süreklilik — son historical'a forecast değerini ekle
+                  const lastHistIdx = forecastData.historical.length - 1
+                  if (lastHistIdx >= 0 && chartData[lastHistIdx]) {
+                    chartData[lastHistIdx].forecast = chartData[lastHistIdx].actual
+                  }
                   return (
-                    <div className="flex items-end gap-2 h-48">
-                      {allData.map((item, i) => (
-                        <div key={i} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
-                          <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">{formatCurrency(item.revenue)}</span>
-                          <div
-                            className={cn(
-                              'w-full rounded-t-sm transition-all',
-                              item.isForecast
-                                ? 'bg-pulse-300 dark:bg-pulse-700 opacity-70 border-2 border-dashed border-pulse-600 dark:border-pulse-400'
-                                : 'bg-pulse-900 dark:bg-pulse-400'
-                            )}
-                            style={{ height: `${Math.max((item.revenue / maxRevenue) * 100, 2)}%` }}
+                    <div className="h-64 w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <ComposedChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-gray-700" />
+                          <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                          <YAxis
+                            tick={{ fontSize: 11 }}
+                            tickFormatter={(v) => {
+                              if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`
+                              if (v >= 1_000) return `${(v / 1_000).toFixed(0)}K`
+                              return String(v)
+                            }}
                           />
-                          <span className="text-xs text-gray-400 text-center leading-tight">{item.label}</span>
-                        </div>
-                      ))}
+                          <RTooltip
+                            content={({ active, payload, label }) => {
+                              if (!active || !payload || !payload.length) return null
+                              const row: any = payload[0].payload
+                              const isForecast = row.actual == null
+                              const demandLabel: Record<string, string> = { peak: 'Zirve', high: 'Yoğun', normal: 'Normal', low: 'Düşük' }
+                              return (
+                                <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-lg px-3 py-2 text-xs">
+                                  <div className="font-medium text-gray-900 dark:text-gray-100">{label}</div>
+                                  {isForecast ? (
+                                    <>
+                                      <div className="mt-0.5 text-gray-700 dark:text-gray-300">
+                                        Tahmin: <span className="font-semibold text-pulse-900 dark:text-pulse-400">{formatCurrency(row.forecast)}</span>
+                                      </div>
+                                      {row.lower != null && (
+                                        <div className="text-gray-500 dark:text-gray-400">
+                                          Aralık: {formatCurrency(row.lower)} – {formatCurrency(row.lower + row.upperDelta)}
+                                        </div>
+                                      )}
+                                    </>
+                                  ) : (
+                                    <div className="mt-0.5 text-gray-700 dark:text-gray-300">
+                                      Gerçek: <span className="font-semibold text-pulse-900 dark:text-pulse-400">{formatCurrency(row.actual)}</span>
+                                      {row.yoy_delta != null && (
+                                        <span className={`ml-1 ${row.yoy_delta > 0 ? 'text-emerald-600 dark:text-emerald-400' : row.yoy_delta < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-500'}`}>
+                                          (YoY {row.yoy_delta > 0 ? '+' : ''}{row.yoy_delta.toFixed(1)}%)
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+                                  {row.demand && row.demand !== 'normal' && (
+                                    <div className="mt-0.5 text-gray-500 dark:text-gray-400">Sezon: {demandLabel[row.demand]}</div>
+                                  )}
+                                  {row.demand_note && (
+                                    <div className="mt-0.5 text-gray-500 dark:text-gray-400">{row.demand_note}</div>
+                                  )}
+                                </div>
+                              )
+                            }}
+                          />
+                          {/* Belirsizlik bandı (stacked: lower + delta) */}
+                          <Area type="monotone" dataKey="lower" stackId="band" stroke="none" fill="transparent" legendType="none" />
+                          <Area type="monotone" dataKey="upperDelta" stackId="band" stroke="none" fill="#193d8f" fillOpacity={0.12} name="Belirsizlik aralığı" />
+                          {/* Gerçek gelir çizgisi */}
+                          <Line type="monotone" dataKey="actual" stroke="#193d8f" strokeWidth={2.5} dot={{ r: 3, fill: '#193d8f' }} name="Gerçek Gelir" connectNulls={false} />
+                          {/* Tahmin çizgisi (kesikli) */}
+                          <Line type="monotone" dataKey="forecast" stroke="#193d8f" strokeWidth={2.5} strokeDasharray="5 4" dot={{ r: 3, fill: '#fff', stroke: '#193d8f', strokeWidth: 2 }} name="Tahmin" connectNulls={false} />
+                        </ComposedChart>
+                      </ResponsiveContainer>
                     </div>
                   )
                 })()}
-                <div className="flex gap-4 mt-3 text-xs text-gray-500">
-                  <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-pulse-900 dark:bg-pulse-400 inline-block" />Gerçek Gelir</span>
-                  <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-pulse-300 dark:bg-pulse-700 border border-dashed border-pulse-600 inline-block" />Tahmin</span>
+                <div className="flex flex-wrap gap-4 mt-3 text-xs text-gray-500 dark:text-gray-400">
+                  <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-pulse-900 dark:bg-pulse-400 inline-block" />Gerçek Gelir</span>
+                  <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 border-t-2 border-dashed border-pulse-900 dark:border-pulse-400 inline-block" />Tahmin</span>
+                  <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm inline-block" style={{ background: 'rgba(25,61,143,0.2)' }} />Belirsizlik bandı</span>
+                </div>
+                <div className="mt-3 flex items-start gap-2 text-[11px] text-gray-500 dark:text-gray-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">
+                  <Sparkles className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                  <span>
+                    <span className="font-medium text-amber-900 dark:text-amber-200">Tahminler yaklaşıktır.</span>{' '}
+                    Geçmiş gelir trendi ve sektörel sezonsallığa dayanır; kampanya, tatil, beklenmedik olaylar sonucu sapabilir. Gölgeli alan olası aralığı gösterir.
+                  </span>
                 </div>
               </div>
 
