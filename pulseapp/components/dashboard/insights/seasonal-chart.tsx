@@ -60,18 +60,31 @@ export default function SeasonalChart({ data }: Props) {
             }}
           />
           <Tooltip
-            formatter={(value, name) => {
-              if (name === 'revenue') return [formatCurrency(Number(value)), 'Gelir']
-              return [value as any, String(name)]
-            }}
-            labelFormatter={(label, payload) => {
-              const row: any = payload?.[0]?.payload
+            content={({ active, payload, label }) => {
+              if (!active || !payload || !payload.length) return null
+              const row: any = payload[0].payload
               const yoy = row?.yoy_delta
               const note = row?.demand_note
-              const yoyTxt = yoy != null ? ` (YoY ${yoy > 0 ? '+' : ''}${yoy.toFixed(1)}%)` : ''
-              return `${label}${yoyTxt}${note ? ' — ' + note : ''}`
+              const value = payload[0].value
+              return (
+                <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-lg px-3 py-2 text-xs">
+                  <div className="font-medium text-gray-900 dark:text-gray-100">
+                    {label}
+                    {yoy != null && (
+                      <span className={`ml-1 ${yoy > 0 ? 'text-emerald-600 dark:text-emerald-400' : yoy < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                        (YoY {yoy > 0 ? '+' : ''}{yoy.toFixed(1)}%)
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-0.5 text-gray-700 dark:text-gray-300">
+                    Gelir: <span className="font-semibold text-pulse-900 dark:text-pulse-400">{formatCurrency(Number(value))}</span>
+                  </div>
+                  {note && (
+                    <div className="mt-0.5 text-gray-500 dark:text-gray-400">{note}</div>
+                  )}
+                </div>
+              )
             }}
-            contentStyle={{ fontSize: 12, borderRadius: 8 }}
           />
 
           {bands.map((b, i) => (

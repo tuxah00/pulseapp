@@ -9,7 +9,6 @@
 /**
  * Tahmini iş süresi & attribution sabitleri.
  * API ve UI bu tek kaynaktan okur; değiştirilince her iki taraf senkron kalır.
- * İleride business.settings altına taşınabilir.
  */
 export const PULSE_VALUE_ASSUMPTIONS = {
   minutes_per_reminder: 2,        // SMS/WA hatırlatma başına
@@ -75,210 +74,214 @@ export const VALUE_METHOD_DESCRIPTIONS: Record<string, ValueMethodDescription> =
   // ═══ Özet kartları ═══
   saved_time: {
     title: 'Kazandırılan Zaman',
-    summary: 'Otomasyonun sizin yerinize yaptığı işler için tahmini süre.',
+    summary: 'PulseApp’in sizin yerinize yaptığı işler için harcamanız gerekecek tahmini süre.',
     steps: [
-      'Gönderilen hatırlatmalar × ~2 dk',
-      'Müşteri self-onayları × ~3 dk',
-      'AI asistanın yürüttüğü eylemler × ~5 dk',
-      'Otomatik sistem mesajları × ~1 dk',
-      'Takip kuyruğu gönderimleri × ~3 dk',
+      'Gönderilen her hatırlatma için ~2 dakika (numara bulma, mesaj yazma, gönderme)',
+      'Müşterinin kendi onayladığı her randevu için ~3 dakika (telefonla aramak yerine)',
+      'AI asistanın tamamladığı her eylem için ~5 dakika',
+      'Otomatik sistem mesajları için ~1 dakika',
+      'Takip mesajları için ~3 dakika',
     ],
-    assumption: 'Manuel yapılsa her biri için işletme sahibi/personelin harcayacağı ortalama süre.',
+    assumption: 'Bu süreler sizin ya da personelinizin ortalama olarak harcayacağı zamandır. İşletmenize göre az çok değişebilir.',
   },
   saved_money: {
     title: 'Zaman → Para',
-    summary: 'Kazanılan süre ₺ cinsine çevrilir.',
+    summary: 'Kazanılan sürenin işletmeniz için ne kadar para değerinde olduğunun kaba tahmini.',
     steps: [
-      'Toplam kazanılan dakika / 60 = saat',
-      'Saat × 30 ₺/saat = zaman maliyeti (₺)',
+      'Toplam kazanılan dakika 60’a bölünür → saat',
+      'Her saat için yaklaşık 30 ₺ iş maliyeti hesaplanır',
     ],
-    assumption: 'Standart iş zamanı maliyeti 30 ₺/saat. Sektöre göre farklılık gösterebilir.',
+    assumption: 'Saatlik iş maliyeti 30 ₺ olarak varsayılmıştır (sektör ortalaması). İşletmenize göre değişebilir.',
   },
   digital_revenue: {
     title: 'Dijital Kanal Geliri',
-    summary: 'Platform olmasa oluşmayacak veya çok zor oluşacak randevu gelirlerinin toplamı.',
+    summary: 'PulseApp olmasa büyük ihtimalle hiç oluşmayacak ya da çok geç oluşacak randevu gelirleri.',
     steps: [
-      'Online link üzerinden gelen randevu geliri',
-      'AI asistanın oluşturduğu randevu geliri',
-      'Gap-fill (boş slot doldurma) bildirimi sonrası gelen gelir',
-      'Kampanya alıcısının 30 gün içinde aldığı randevu geliri (attribution)',
+      'Web üzerinden (randevu linki) alınan randevuların geliri',
+      'AI asistanın WhatsApp/SMS konuşmasından oluşturduğu randevuların geliri',
+      'Boş slotlara gönderilen bildirim sonrası dolan randevuların geliri',
+      'Gönderdiğiniz kampanya mesajını alan müşterilerin 30 gün içinde aldığı randevuların geliri',
     ],
-    assumption: 'Manuel telefon akışı bu kanallara alternatif değildir.',
+    assumption: 'Sadece platform olmadan oluşması zor olan gelir sayılır; mevcut müşterinin zaten gelecek randevusu buraya yazılmaz.',
   },
   new_returning: {
     title: 'Yeni / Geri Dönen Müşteri',
-    summary: 'PulseApp özelliklerinin getirdiği müşteri sayısı.',
+    summary: 'PulseApp özellikleri sayesinde işletmenize gelen ya da geri dönen müşteri sayısı.',
     steps: [
-      'Referans sistemi üzerinden dönüşen müşteriler',
-      'Winback kampanyası ile geri kazanılan müşteriler',
+      'Referans (tavsiye) sistemi üzerinden gelen yeni müşteriler',
+      'Winback kampanyası ile ulaşılan, geri dönen müşteriler',
     ],
-    assumption: 'Bu müşteriler platformun ilgili özellikleri olmadan büyük ihtimalle gelmezdi.',
+    assumption: 'Bu müşteriler platformun ilgili özellikleri olmadan çok büyük ihtimalle işletmenize ulaşmayacaktı.',
   },
 
   // ═══ Grup 1: Otomasyon Kazanımları ═══
   reminders_24h: {
     title: '24 Saat Öncesi Hatırlatma',
-    summary: 'Randevudan 24 saat önce otomatik gönderilen SMS/WhatsApp hatırlatmaları.',
+    summary: 'Randevudan 1 gün önce müşterilere otomatik gönderilen hatırlatma mesajları.',
     steps: [
-      'appointments.reminder_24h_sent = true olan randevular sayılır',
-      'Her hatırlatma manuel yapılsaydı ~2 dk sürerdi (numara bul, mesaj yaz, gönder, teyit et)',
+      'Otomatik gönderilen 24 saat hatırlatmaları sayılır',
+      'Her birini manuel göndermek ortalama 2 dakika sürerdi',
     ],
-    assumption: 'Hatırlatma başına 2 dakika',
+    assumption: 'Hatırlatma başına 2 dakika (numara bul, mesaj yaz, gönder).',
   },
   reminders_2h: {
     title: '2 Saat Öncesi Hatırlatma',
-    summary: 'Randevudan 2 saat önce otomatik gönderilen son dakika hatırlatmaları.',
+    summary: 'Randevudan kısa süre önce gönderilen son dakika hatırlatmaları — no-show’u azaltır.',
     steps: [
-      'appointments.reminder_2h_sent = true olan randevular sayılır',
-      'Her hatırlatma manuel yapılsaydı ~2 dk sürerdi',
+      'Otomatik gönderilen 2 saat hatırlatmaları sayılır',
+      'Her birini manuel göndermek ortalama 2 dakika sürerdi',
     ],
-    assumption: 'Hatırlatma başına 2 dakika',
+    assumption: 'Hatırlatma başına 2 dakika.',
   },
   self_confirmations: {
     title: 'Müşteri Self-Onayı',
-    summary: 'Müşterinin kendi onayladığı randevular — telefonla arama gerekmiyor.',
+    summary: 'Müşterinin kendi onayladığı randevular — telefonla arama ihtiyacı kalmaz.',
     steps: [
-      'appointments.confirmation_status = "confirmed_by_customer" sayılır',
-      'Manuel onay için müşteriyi arama ~3 dk alırdı',
+      'Müşterinin kendi linkten onayladığı randevular sayılır',
+      'Her onayı telefonla almak ortalama 3 dakika sürerdi',
     ],
-    assumption: 'Onay araması başına 3 dakika',
+    assumption: 'Onay araması başına 3 dakika.',
   },
   ai_actions: {
     title: 'AI Asistan Eylemleri',
-    summary: 'AI asistanın sizin yerinize tamamladığı işler (randevu oluşturma, yanıt verme, analiz).',
+    summary: 'AI asistanın sizin yerinize tamamladığı işler: randevu oluşturma, yanıt verme, analiz.',
     steps: [
-      'ai_pending_actions.status = "executed" olanlar sayılır',
-      'Her eylem manuel yapılsa ~5 dk sürerdi',
+      'AI asistanın başarıyla tamamladığı eylemler sayılır',
+      'Her eylemi manuel yapmak ortalama 5 dakika sürerdi',
     ],
-    assumption: 'AI eylemi başına 5 dakika',
+    assumption: 'AI eylemi başına 5 dakika.',
   },
   system_messages: {
     title: 'Otomatik Sistem Mesajları',
-    summary: 'Randevu onay, teşekkür, bildirim gibi otomatik sistem mesajları.',
+    summary: 'Randevu onay, teşekkür, bildirim gibi durumlarda otomatik gönderilen mesajlar.',
     steps: [
-      'messages.message_type = "system" AND direction = "outbound" sayılır',
-      'Her mesaj manuel yazılsa ~1 dk sürerdi',
+      'Sistem tarafından gönderilen otomatik mesajlar sayılır',
+      'Her mesajı manuel yazmak ortalama 1 dakika sürerdi',
     ],
-    assumption: 'Sistem mesajı başına 1 dakika',
+    assumption: 'Mesaj başına 1 dakika.',
   },
   follow_ups: {
     title: 'Takip Kuyruğu Gönderimleri',
-    summary: 'Seans sonrası otomatik takip mesajları.',
+    summary: 'Randevu/seans sonrası müşteriye otomatik gönderilen takip mesajları.',
     steps: [
-      'follow_up_queue.status = "sent" olanlar sayılır',
-      'Manuel takip araması/mesajı ~3 dk alırdı',
+      'Takip kuyruğundan gönderilen mesajlar sayılır',
+      'Her takibi manuel yapmak ortalama 3 dakika alırdı',
     ],
-    assumption: 'Takip başına 3 dakika',
+    assumption: 'Takip başına 3 dakika.',
   },
 
   // ═══ Grup 2: Dijital Kanal Geliri ═══
   web_appointments: {
     title: 'Online Randevu (Link)',
-    summary: 'Müşterinin kendi aldığı, telefon gerektirmeyen online randevular.',
+    summary: 'Müşterinin randevu linki üzerinden kendi kendine aldığı randevular.',
     steps: [
-      'appointments.source = "web" olanlar sayılır',
-      'Bağlı hizmet fiyatlarının toplamı gösterilir',
+      'Online link üzerinden alınan randevular sayılır',
+      'Bu randevuların hizmet fiyatları toplanır',
     ],
-    assumption: 'Bu müşterilerin çoğu telefon edemese randevu alamazdı.',
+    assumption: 'Bu müşterilerin önemli bir kısmı telefon etmek zorunda kalsa randevu almayabilir ya da rakibe gidebilirdi.',
   },
   ai_appointments: {
     title: 'AI Asistan Randevuları',
-    summary: 'AI asistan tarafından WhatsApp/SMS üzerinden oluşturulan randevular.',
+    summary: 'AI asistanın WhatsApp/SMS üzerinden konuşarak oluşturduğu randevular.',
     steps: [
-      'appointments.source = "ai_assistant" olanlar sayılır',
-      'Bağlı hizmet fiyatlarının toplamı gösterilir',
+      'AI asistanın oluşturduğu randevular sayılır',
+      'Bu randevuların hizmet fiyatları toplanır',
     ],
-    assumption: 'AI olmasa bu konuşmaların manuel dönüşü zaman alırdı.',
+    assumption: 'AI asistan olmasa bu konuşmalara manuel yanıt verme süresi yüzünden bir kısım kaybedilecekti.',
   },
   gap_fill: {
     title: 'Gap-Fill (Boş Slot Doldurma)',
-    summary: 'Boş kalabilecek slotlara gönderilen bildirim sonrası oluşan randevular.',
+    summary: 'Müsait kalan slota bildirim gönderilerek doldurulan randevular.',
     steps: [
-      'gap_fill_notifications → appointment_id olanlar',
-      'Bağlı randevunun hizmet fiyatı sayılır',
+      'Bildirim gönderilip randevuya dönüşen slotlar sayılır',
+      'Dolan randevuların hizmet fiyatları toplanır',
     ],
-    assumption: 'Bu slotlar bildirim olmasa muhtemelen boş kalırdı.',
+    assumption: 'Bu slotlar bildirim gitmese büyük ihtimalle boş kalırdı.',
   },
   campaign_sourced: {
     title: 'Kampanya Kaynaklı Randevu',
-    summary: 'Kampanya (winback/promosyon) alıcısının 30 gün içinde aldığı randevular.',
+    summary: 'Kampanya mesajını alan müşterinin 30 gün içinde aldığı randevular.',
     steps: [
-      'campaign_recipients.status = "sent" olanlar',
-      'Alıcının sent_at sonrası 30 gün içinde aldığı randevular attribute edilir',
+      'Kampanya mesajı gönderilen müşteriler bulunur',
+      'Bu müşterilerin mesajdan sonraki 30 gün içindeki randevuları sayılır',
+      'Hizmet fiyatları toplanır',
     ],
-    assumption: 'Indirect attribution — 30 günlük pencere içinde sayılır.',
+    assumption: 'Dolaylı ilişki — 30 gün penceresi kullanılır. Bazı randevular yine de alınırdı, hepsi kampanyaya bağlı değildir.',
   },
 
   // ═══ Grup 3: Müşteri Büyüme & Geri Dönüş ═══
   referrals_converted: {
     title: 'Referans Dönüşümü',
-    summary: 'Mevcut müşterinin tavsiyesiyle gelen yeni müşteriler.',
+    summary: 'Mevcut müşterinin tavsiyesiyle işletmenize gelen yeni müşteriler.',
     steps: [
-      'referrals.status IN ("converted", "rewarded") olanlar',
-      'Reward_value toplamı gösterilir',
+      'Referans sisteminde tavsiye eden kişiden gelip randevu alan müşteriler sayılır',
+      'Verilen ödül değeri toplanır',
     ],
-    assumption: 'Referans özelliği olmasa bu müşteriler gelmeyebilirdi.',
+    assumption: 'Referans özelliği olmasa bu müşterilerin bir kısmı işletmenizi duymayabilirdi.',
   },
   winback_recovered: {
     title: 'Winback ile Geri Dönüş',
-    summary: 'Winback kampanyası sonrası iletişime geçilen müşteri sayısı.',
+    summary: 'Uzun süredir gelmeyen müşterilere gönderilen winback kampanyasıyla ulaşılan kişiler.',
     steps: [
-      'campaigns.type = "winback" sent_count toplamı',
+      'Winback tipindeki kampanyaların ulaştığı müşteri sayısı toplanır',
     ],
-    assumption: 'Lost/risk segmentine düşen müşterilere ulaşma otomatik.',
+    assumption: 'Kayıp/risk segmentindeki müşterilere otomatik ulaşma işi yapılır.',
   },
   rewards_used: {
     title: 'Ödül Kullanımı',
-    summary: 'Verilen ödüllerin kullanım sayısı — müşteriyi tekrar getirdi.',
+    summary: 'Verilen ödüllerin müşteriler tarafından kullanılma sayısı — tekrar getirdi.',
     steps: [
-      'customer_rewards.status = "used" olanlar sayılır',
+      'Kullanılmış ödüller sayılır',
     ],
+    assumption: 'Ödül kullanan her müşteri işletmenize ekstra ziyaret yaptı demektir.',
   },
   birthday_driven: {
     title: 'Doğum Günü Mesajları',
-    summary: 'Otomatik gönderilen doğum günü kampanyası mesajları.',
+    summary: 'Müşterinin doğum gününde otomatik gönderilen kutlama/kampanya mesajları.',
     steps: [
-      'messages.message_type = "birthday" sayılır',
+      'Gönderilen doğum günü mesajları sayılır',
     ],
-    assumption: 'Manuel doğum günü takibi işletme için büyük yük.',
+    assumption: 'Manuel takibi çok zor olan bir iş — otomatik yapılmasa unutulurdu.',
   },
 
   // ═══ Grup 4: Müşteri Deneyimi & Dijitalleşme ═══
   review_requests: {
     title: 'Otomatik Yorum Talepleri',
-    summary: 'Randevu sonrası otomatik gönderilen yorum isteme mesajları.',
+    summary: 'Randevu sonrası müşteriden yorum isteyen otomatik mesajlar.',
     steps: [
-      'appointments.review_requested = true sayılır',
+      'Yorum talebi gönderilen randevular sayılır',
     ],
+    assumption: 'Manuel gönderilmesi zor olduğundan yorum sayısı sınırlı kalırdı.',
   },
   reviews_received: {
     title: 'Alınan Yorumlar',
-    summary: 'Bu dönemde müşteri yorumları ve ortalama puanı.',
+    summary: 'Bu dönemde gelen müşteri yorumları ve ortalama puanınız.',
     steps: [
-      'reviews tablosu dönem filtresiyle sayılır',
-      'Ortalama rating hesaplanır',
+      'Bu dönemdeki müşteri yorumları sayılır',
+      'Ortalama yıldız puanı hesaplanır',
     ],
   },
   pos_transactions: {
-    title: 'Kasa Dijital İşlemleri',
-    summary: 'POS modülü üzerinden yapılan dijital kasa işlemleri.',
+    title: 'Kasa (POS) İşlemleri',
+    summary: 'POS modülü üzerinden kaydedilen dijital kasa işlemleri.',
     steps: [
-      'pos_transactions count + total sum',
+      'Kasa işlem sayısı ve toplam tutar gösterilir',
     ],
-    assumption: 'Manuel defter tutmanın yerini alır.',
+    assumption: 'Defter tutma / hesaplama zamanınızı kısaltır; gelir kayıtlarınız otomatik takip edilir.',
   },
   periodic_reminders: {
     title: 'Periyodik Kontrol Hatırlatmaları',
-    summary: 'Müşteriye düzenli kontrol için otomatik gönderilen hatırlatmalar.',
+    summary: 'Düzenli tekrar eden hizmetler için müşterilere otomatik gönderilen kontrol hatırlatmaları.',
     steps: [
-      'periodic_reminders_sent tablosu dönem filtresiyle sayılır',
+      'Otomatik gönderilen periyodik hatırlatmalar sayılır',
     ],
+    assumption: 'Özellikle sağlık/bakım işletmeleri için — müşterinin gelme sıklığını artırır.',
   },
   workflow_runs: {
     title: 'Workflow Tamamlanmaları',
-    summary: 'Tanımlı iş akışlarının otomatik tamamlanma sayısı.',
+    summary: 'Tanımladığınız otomasyon akışlarının başarıyla tamamlanma sayısı.',
     steps: [
-      'workflow_runs.status = "completed" sayılır',
+      'Başarıyla tamamlanan iş akışları sayılır',
     ],
   },
 }
