@@ -313,20 +313,26 @@ export default function WaitlistPage() {
                   value={formCustomerId}
                   onChange={v => {
                     setFormCustomerId(v)
-                    // Müşteri seçilince ad/telefon otomatik doldurulsun — fetch edip set etmek yerine basit bırakıyoruz
+                    if (!v) { setFormName(''); setFormPhone('') }
+                  }}
+                  onCustomerSelect={(c) => {
+                    if (c) { setFormName(c.name); setFormPhone(c.phone) }
                   }}
                   businessId={businessId!}
                   placeholder={`${customerLabel} ara...`}
                 />
+                <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">
+                  Mevcut {customerLabel.toLowerCase()} seçerseniz ad ve telefon otomatik doldurulur.
+                </p>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="label label-required">Ad Soyad</label>
-                  <input className="input w-full" placeholder="İsim" value={formName} onChange={e => setFormName(e.target.value)} />
+                  <input className="input w-full" placeholder="İsim" value={formName} onChange={e => setFormName(e.target.value)} disabled={!!formCustomerId} />
                 </div>
                 <div>
                   <label className="label label-required">Telefon</label>
-                  <input className="input w-full" placeholder="05XX XXX XXXX" value={formPhone} onChange={e => setFormPhone(e.target.value)} />
+                  <input className="input w-full" placeholder="05XX XXX XXXX" value={formPhone} onChange={e => setFormPhone(e.target.value)} disabled={!!formCustomerId} />
                 </div>
               </div>
               <div>

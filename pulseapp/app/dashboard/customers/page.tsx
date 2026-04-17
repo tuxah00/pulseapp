@@ -710,10 +710,16 @@ export default function CustomersPage() {
             <div className="p-3 w-56 space-y-3">
               <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Gelişmiş Filtreler</p>
               <div className="space-y-2">
-                <label className="text-xs text-gray-500 dark:text-gray-400">Kayıt tarihi</label>
+                <label className="text-xs text-gray-500 dark:text-gray-400">Kayıt tarihi aralığı</label>
                 <div className="space-y-1.5">
-                  <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="input py-1 text-xs w-full" placeholder="Başlangıç" />
-                  <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="input py-1 text-xs w-full" placeholder="Bitiş" />
+                  <div className="space-y-0.5">
+                    <span className="text-[10px] text-gray-400 dark:text-gray-500">Başlangıç</span>
+                    <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="input py-1 text-xs w-full" />
+                  </div>
+                  <div className="space-y-0.5">
+                    <span className="text-[10px] text-gray-400 dark:text-gray-500">Bitiş</span>
+                    <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="input py-1 text-xs w-full" />
+                  </div>
                 </div>
               </div>
               <div className="space-y-1">
