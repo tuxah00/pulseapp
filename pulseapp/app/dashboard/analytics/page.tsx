@@ -583,15 +583,17 @@ export default function AnalyticsPage() {
                       const expPct = (expense / maxRevenue) * 100
                       return (
                         <div key={i} className={cn('flex-1 min-w-[18px] flex flex-col items-center h-full group relative', period === 'week' && 'max-w-[40px]')}>
-                          {/* Hover tooltip */}
-                          {(revenue > 0 || expense > 0) && (
-                            <div className="absolute -top-8 left-1/2 -translate-x-1/2 hidden group-hover:block bg-gray-900 text-white text-[10px] px-2 py-1 rounded shadow-lg whitespace-nowrap z-10">
-                              {revenue > 0 && <span className="text-emerald-300">{formatCurrency(revenue)}</span>}
-                              {revenue > 0 && expense > 0 && ' / '}
-                              {expense > 0 && <span className="text-red-300">{formatCurrency(expense)}</span>}
-                            </div>
-                          )}
-                          <div className="flex-1 w-full flex items-end gap-px">
+                          <div className="flex-1 w-full flex items-end gap-px relative">
+                            {(revenue > 0 || expense > 0) && (
+                              <div
+                                className="absolute left-1/2 -translate-x-1/2 hidden group-hover:block bg-gray-900 text-white text-[10px] px-2 py-1 rounded shadow-lg whitespace-nowrap z-10 pointer-events-none"
+                                style={{ bottom: `calc(${Math.max(revPct, expPct)}% + 6px)` }}
+                              >
+                                {revenue > 0 && <span className="text-emerald-300">{formatCurrency(revenue)}</span>}
+                                {revenue > 0 && expense > 0 && ' / '}
+                                {expense > 0 && <span className="text-red-300">{formatCurrency(expense)}</span>}
+                              </div>
+                            )}
                             <div className="flex-1 bg-emerald-400 dark:bg-emerald-600 rounded-t-sm transition-all"
                               style={{ height: `${revPct}%`, minHeight: revenue > 0 ? '4px' : '0' }} />
                             <div className="flex-1 bg-red-300 dark:bg-red-500 rounded-t-sm transition-all"
