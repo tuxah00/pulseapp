@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requirePermission } from '@/lib/api/with-permission'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { computeSeasonalTrend } from '@/lib/analytics/insights'
+import type { SectorType } from '@/types'
 
 // GET — Gelir tahmini ve iş zekası
 // Params: ?months=3 (kaç ay tahmin)
@@ -13,6 +15,17 @@ export async function GET(request: NextRequest) {
   const forecastMonths = Math.min(parseInt(searchParams.get('months') || '3'), 6)
 
   const admin = createAdminClient()
+
+  // İşletme sektörünü al — sezonsal analiz için gerekli
+  const { data: bizRow } = await admin
+    .from('businesses')
+    .select('sector')
+    .eq('id', businessId)
+    .maybeSingle()
+  const sector = ((bizRow?.sector as SectorType) || 'other') as SectorType
+
+  // İş Zekası seasonal datasını paralel çek (12 ay + YoY + demand)
+  const seasonalPromise = computeSeasonalTrend(admin, businessId, sector).catch(() => [])
 
   // Son 6 ay tarih aralıkları
   const months: { key: string; label: string; year: number; month: number }[] = []
@@ -82,14 +95,34 @@ export async function GET(request: NextRequest) {
     hourRevenue[hour] += revenue
   }
 
-  // Historical data (son 6 ay)
-  const historical = months.map(m => ({
-    month: m.key,
-    label: m.label,
-    revenue: monthlyRevenue.get(m.key) || 0,
-  }))
+  // İş Zekası seasonal datasını bekle — 12 ay gelir + YoY + demand
+  const seasonal = await seasonalPromise
+  const seasonalMap = new Map(seasonal.map(s => [s.month, s]))
 
-  // Doğrusal trend ile tahmin
+  // Historical data — İş Zekası verisiyle birleştir (12 ay varsa onu, yoksa 6 aylık randevu fallback)
+  const useSeasonal = seasonal.length >= 6 && seasonal.some(s => s.revenue > 0)
+  const historical = useSeasonal
+    ? seasonal.map(s => ({
+        month: s.month,
+        label: s.label,
+        revenue: s.revenue,
+        demand: s.demand,
+        demand_note: s.demand_note,
+        yoy_delta: s.yoy_delta,
+      }))
+    : months.map(m => {
+        const s = seasonalMap.get(m.key)
+        return {
+          month: m.key,
+          label: m.label,
+          revenue: monthlyRevenue.get(m.key) || 0,
+          demand: s?.demand ?? 'normal',
+          demand_note: s?.demand_note ?? null,
+          yoy_delta: s?.yoy_delta ?? null,
+        }
+      })
+
+  // Doğrusal trend regresyonu
   const revenueValues = historical.map(h => h.revenue)
   const n = revenueValues.length
   const xMean = (n - 1) / 2
@@ -104,19 +137,88 @@ export async function GET(request: NextRequest) {
   const slope = denominator !== 0 ? numerator / denominator : 0
   const intercept = yMean - slope * xMean
 
-  const forecast = []
+  // Residual (artık) standart sapması — belirsizlik bandı için
+  let sumSq = 0
+  for (let i = 0; i < n; i++) {
+    const fitted = intercept + slope * i
+    sumSq += (revenueValues[i] - fitted) ** 2
+  }
+  const residualStdev = n > 1 ? Math.sqrt(sumSq / n) : yMean * 0.2
+  // Alt sınır: aylık ortalamanın %10'u (çok küçük veriyle sıfır bant oluşmasın)
+  const baseBand = Math.max(residualStdev, yMean * 0.1, 1)
+
+  // Sezonsal demand çarpanı: peak +10%, high +5%, low -10%, normal 0
+  const demandMultiplier = (demand: 'peak' | 'high' | 'normal' | 'low'): number => {
+    if (demand === 'peak') return 1.1
+    if (demand === 'high') return 1.05
+    if (demand === 'low') return 0.9
+    return 1
+  }
+
+  // Aynı ay geçen yıl gerçekleşen gelir → anchor (varsa karışım uygulanır)
+  const yearAgoRevenueFor = (year: number, month: number): number | null => {
+    const key = `${year - 1}-${String(month).padStart(2, '0')}`
+    const s = seasonalMap.get(key)
+    return s && s.revenue > 0 ? s.revenue : null
+  }
+
+  const forecast: any[] = []
   for (let i = 0; i < forecastMonths; i++) {
     const xVal = n + i
-    const forecastRevenue = Math.max(0, Math.round(intercept + slope * xVal))
+    const trendValue = intercept + slope * xVal
 
     const d = new Date()
     d.setDate(1)
     d.setMonth(d.getMonth() + i + 1)
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    const year = d.getFullYear()
+    const month = d.getMonth() + 1
+    const key = `${year}-${String(month).padStart(2, '0')}`
     const label = d.toLocaleDateString('tr-TR', { month: 'short', year: 'numeric' })
 
-    forecast.push({ month: key, label, revenue: forecastRevenue })
+    // Sezonsal bilgi (strategy.seasonal yoluyla — seasonal dataset bitti, sektör stratejisinden hesapla)
+    // Eğer mevcut seasonalMap'te key yoksa, önce 12 ay önceki kaydı bulamayabiliriz.
+    // Demand tahminini computeSeasonalTrend yapısındaki gibi strateji üzerinden çıkaralım:
+    // En güvenli yol: aynı ay geçen yıl tahmini yap + trend çarpanı. Eğer YoY yoksa demand tag'ı uygula.
+    const yearAgo = yearAgoRevenueFor(year, month)
+    let forecastRevenue: number
+
+    // Hafif karma model: %60 trend + %40 geçen yıl (varsa)
+    if (yearAgo !== null) {
+      // Yıllık büyüme oranı: son 3 ay YoY ortalaması (varsa)
+      const recentYoY = seasonal.slice(-3).map(s => s.yoy_delta).filter(v => v != null) as number[]
+      const avgYoY = recentYoY.length > 0
+        ? recentYoY.reduce((a, b) => a + b, 0) / recentYoY.length / 100
+        : 0
+      const yoyProjection = yearAgo * (1 + avgYoY)
+      forecastRevenue = 0.6 * trendValue + 0.4 * yoyProjection
+    } else {
+      forecastRevenue = trendValue
+    }
+
+    // Sezonsal demand çarpanı uygula (strateji tablosundan — aynı takvim ayı referans alınır)
+    // seasonalMap'te bir yıl önceki ayın demand etiketi var
+    const priorKey = `${year - 1}-${String(month).padStart(2, '0')}`
+    const priorDemand = seasonalMap.get(priorKey)?.demand ?? 'normal'
+    forecastRevenue *= demandMultiplier(priorDemand)
+
+    // Belirsizlik bandı: uzak aylar için band genişler (√(i+1))
+    const band = baseBand * Math.sqrt(i + 1)
+    const lower = Math.max(0, Math.round(forecastRevenue - band))
+    const upper = Math.max(0, Math.round(forecastRevenue + band))
+    const revenue = Math.max(0, Math.round(forecastRevenue))
+
+    forecast.push({
+      month: key,
+      label,
+      revenue,
+      lower,
+      upper,
+      demand: priorDemand,
+    })
   }
+
+  // Güven aralığı yüzdesi — kullanıcıya "±%X hata payı" gösterebilmek için
+  const confidencePct = yMean > 0 ? Math.round((baseBand / yMean) * 100) : null
 
   // En yoğun gün
   const dayNames = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi']
@@ -154,6 +256,10 @@ export async function GET(request: NextRequest) {
       busiestHourLabel,
       topServices,
       nextMonthForecast: forecast[0]?.revenue || 0,
+      nextMonthLower: forecast[0]?.lower ?? null,
+      nextMonthUpper: forecast[0]?.upper ?? null,
+      confidencePct,
+      historicalMonths: historical.length,
     },
     heatmap: heatmapData,
     maxHeatmapCount,
