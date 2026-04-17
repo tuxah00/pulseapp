@@ -38,7 +38,7 @@ export default function PaketlerPage() {
   const { businessId, staffId, staffName, sector, loading: ctxLoading, permissions } = useBusinessContext()
   const { confirm } = useConfirm()
   const supabase = createClient()
-  const [viewMode, setViewMode] = useViewMode('paketler', 'list')
+  const [viewMode, setViewMode] = useViewMode('packages', 'list')
 
   const [pageTab, setPageTab] = useState<PageTab>('templates')
 

@@ -60,7 +60,7 @@ export default function StoklarPage() {
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounce(search, 300)
-  const [viewMode, setViewMode] = useViewMode('stoklar', 'list')
+  const [viewMode, setViewMode] = useViewMode('inventory', 'list')
   const { confirm } = useConfirm()
   const [pageTab, setPageTab] = useState<PageTab>('products')
   const [detailTab, setDetailTab] = useState<DetailTab>('info')
