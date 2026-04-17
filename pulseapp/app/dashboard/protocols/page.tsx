@@ -19,6 +19,7 @@ import { CustomSelect } from '@/components/ui/custom-select'
 import { CustomerSearchSelect } from '@/components/ui/customer-search-select'
 import { Portal } from '@/components/ui/portal'
 import { Pagination } from '@/components/ui/pagination'
+import { FollowUpQuickModal } from '@/components/dashboard/follow-up-quick-modal'
 
 const STATUS_CONFIG: Record<ProtocolStatus, { bg: string; text: string }> = {
   active: { bg: 'bg-blue-50 dark:bg-blue-900/20', text: 'text-blue-600 dark:text-blue-400' },
@@ -47,6 +48,8 @@ export default function ProtocolsPage() {
   const [selectedProtocol, setSelectedProtocol] = useState<TreatmentProtocol | null>(null)
   const [isClosingDetail, setIsClosingDetail] = useState(false)
   const closeDetail = () => setIsClosingDetail(true)
+  // Follow-up modal
+  const [followUpTarget, setFollowUpTarget] = useState<{ protocolId: string; customerId: string; customerName: string } | null>(null)
 
   // Create modal
   const [page, setPage] = useState(0)
@@ -159,6 +162,15 @@ export default function ProtocolsPage() {
         setSelectedProtocol(prev => prev ? { ...prev, status } : null)
       }
       window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Kaydedildi' } }))
+
+      // Protokol tamamlandığında takip teklif modal'ı
+      if (status === 'completed') {
+        const proto = protocols.find(p => p.id === protocolId) || selectedProtocol
+        const customer = proto ? (Array.isArray(proto.customer) ? proto.customer[0] : proto.customer) : null
+        if (customer?.id && customer?.name) {
+          setFollowUpTarget({ protocolId, customerId: customer.id, customerName: customer.name })
+        }
+      }
     } catch {
       window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Bağlantı hatası' } }))
     }
@@ -427,6 +439,20 @@ export default function ProtocolsPage() {
           </div>
           </div>
         </Portal>
+      )}
+
+      {/* Protokol tamamlandığında follow-up teklif modal'ı */}
+      {followUpTarget && businessId && (
+        <FollowUpQuickModal
+          open={!!followUpTarget}
+          onClose={() => setFollowUpTarget(null)}
+          businessId={businessId}
+          customerId={followUpTarget.customerId}
+          customerName={followUpTarget.customerName}
+          protocolId={followUpTarget.protocolId}
+          defaultType="protocol_completion"
+          defaultDaysOffset={7}
+        />
       )}
     </div>
   )

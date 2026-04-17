@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
   const staff = await getStaffInfo(supabase, user.id, businessId)
   if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
 
-  const { data, count, error } = await supabase
+  let query = supabase
     .from('follow_up_queue')
     .select(`
       *,
@@ -39,10 +39,14 @@ export async function GET(request: NextRequest) {
       )
     `, { count: 'exact' })
     .eq('business_id', businessId)
-    .eq('status', status)
     .order('scheduled_for', { ascending: true })
     .range(from, to)
 
+  if (status !== 'all') {
+    query = query.eq('status', status)
+  }
+
+  const { data, count, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ followUps: data, total: count || 0 })
 }
@@ -54,10 +58,11 @@ export async function POST(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
 
   const body = await request.json()
-  const { businessId, appointmentId, customerId, protocolId, type, scheduledFor, message } = body
+  const { businessId, appointmentId, customerId, customerPackageId, protocolId, type, scheduledFor, message } = body
 
-  if (!businessId || !appointmentId || !customerId || !type || !scheduledFor) {
-    return NextResponse.json({ error: 'Eksik alanlar' }, { status: 400 })
+  // appointmentId artık opsiyonel — paket satışı veya manuel takip için gerekmiyor
+  if (!businessId || !customerId || !type || !scheduledFor) {
+    return NextResponse.json({ error: 'businessId, customerId, type, scheduledFor zorunlu' }, { status: 400 })
   }
 
   const staff = await getStaffInfo(supabase, user.id, businessId)
@@ -67,8 +72,9 @@ export async function POST(request: NextRequest) {
     .from('follow_up_queue')
     .insert({
       business_id: businessId,
-      appointment_id: appointmentId,
+      appointment_id: appointmentId || null,
       customer_id: customerId,
+      customer_package_id: customerPackageId || null,
       protocol_id: protocolId || null,
       type,
       scheduled_for: scheduledFor,
@@ -86,7 +92,7 @@ export async function POST(request: NextRequest) {
     action: 'create',
     resource: 'follow_up',
     resourceId: data.id,
-    details: { type, scheduled_for: scheduledFor },
+    details: { type, scheduled_for: scheduledFor, appointment_id: appointmentId || null },
   })
 
   return NextResponse.json({ followUp: data }, { status: 201 })
