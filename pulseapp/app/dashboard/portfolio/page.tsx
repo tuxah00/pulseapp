@@ -269,7 +269,7 @@ export default function PortfolioPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Portfolyo Galerisi</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Çalışma Galerisi</h1>
           <p className="text-sm text-gray-500 mt-1">Çalışmalarınızı sergileyin</p>
         </div>
         <button

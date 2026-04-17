@@ -58,7 +58,7 @@ const PERMISSION_LABELS: Record<keyof StaffPermissions, string> = {
   memberships: 'Üyelikler',
   packages: 'Paket & Seans',
   records: 'Dosyalar',
-  portfolio: 'Portfolyo',
+  portfolio: 'Çalışma Galerisi',
   inventory: 'Stoklar',
   orders: 'Siparişler',
   invoices: 'Faturalar',
@@ -66,7 +66,7 @@ const PERMISSION_LABELS: Record<keyof StaffPermissions, string> = {
   protocols: 'Tedavi Protokolleri',
   rewards: 'Ödüller',
   campaigns: 'Kampanyalar',
-  workflows: 'Mesaj Akışları',
+  workflows: 'Otomatik Mesajlar',
 }
 
 const PERMISSION_CATEGORIES: { label: string; keys: (keyof StaffPermissions)[] }[] = [

@@ -28,11 +28,11 @@ const MANAGEMENT_ITEMS: SidebarItem[] = [
   { key: 'staff', name: 'Personeller', href: '/dashboard/staff', iconName: 'UserCog' },
   { key: 'messages', name: 'Mesajlar', href: '/dashboard/messages', iconName: 'MessageSquare' },
   { key: 'insights', name: 'İş Zekası', href: '/dashboard/insights', iconName: 'TrendingUp' },
-  { key: 'ai-actions', name: 'Asistan Aksiyonları', href: '/dashboard/ai-actions', iconName: 'Inbox' },
+  { key: 'ai-actions', name: 'AI Önerileri', href: '/dashboard/ai-actions', iconName: 'Inbox' },
   { key: 'analytics', name: 'Gelir-Gider', href: '/dashboard/analytics', iconName: 'BarChart3' },
   { key: 'invoices', name: 'Faturalar', href: '/dashboard/invoices', iconName: 'Receipt' },
   { key: 'shifts', name: 'Vardiya', href: '/dashboard/shifts', iconName: 'CalendarDays' },
-  { key: 'workflows', name: 'Mesaj Akışları', href: '/dashboard/workflows', iconName: 'GitBranch' },
+  { key: 'workflows', name: 'Otomatik Mesajlar', href: '/dashboard/workflows', iconName: 'GitBranch' },
   { key: 'commissions', name: 'Prim & Komisyon', href: '/dashboard/commissions', iconName: 'BadgePercent' },
   { key: 'audit', name: 'Denetim', href: '/dashboard/audit', iconName: 'ShieldCheck' },
   { key: 'kvkk', name: 'KVKK', href: '/dashboard/kvkk', iconName: 'Lock' },
@@ -130,12 +130,12 @@ const SECTOR_ITEMS: Partial<Record<SectorType, SidebarItem[]>> = {
   ],
   photo_studio: [
     { key: 'packages', name: 'Paket & Seans', href: '/dashboard/packages', iconName: 'Layers' },
-    { key: 'portfolio', name: 'Portfolyo', href: '/dashboard/portfolio', iconName: 'Image' },
+    { key: 'portfolio', name: 'Çalışma Galerisi', href: '/dashboard/portfolio', iconName: 'Image' },
     { key: 'reviews', name: 'Yorumlar', href: '/dashboard/reviews', iconName: 'Star' },
   ],
   tattoo_piercing: [
     { key: 'packages', name: 'Paket & Seans', href: '/dashboard/packages', iconName: 'Layers' },
-    { key: 'portfolio', name: 'Portfolyo', href: '/dashboard/portfolio', iconName: 'Image' },
+    { key: 'portfolio', name: 'Çalışma Galerisi', href: '/dashboard/portfolio', iconName: 'Image' },
     { key: 'reviews', name: 'Yorumlar', href: '/dashboard/reviews', iconName: 'Star' },
   ],
   restaurant: [

@@ -107,9 +107,9 @@ export const CORE_TUTORIAL_TOPICS: TutorialTopic[] = [
   {
     pageKey: 'workflows',
     path: '/dashboard/workflows',
-    title: 'Mesaj Akışları',
+    title: 'Otomatik Mesajlar',
     skeleton:
-      'Belirli tetikleyicilere (yeni müşteri, randevu sonrası vb.) otomatik mesaj akışları kur. Akışı aç/kapa, adımlarını düzenle.',
+      'Belirli olaylar (yeni müşteri, randevu sonrası vb.) gerçekleşince otomatik SMS gönder. Aç/kapa ve içeriği düzenle.',
   },
   {
     pageKey: 'notifications',
@@ -677,9 +677,9 @@ export const SECTOR_TUTORIAL_TOPICS: Partial<Record<SectorType, TutorialTopic[]>
     {
       pageKey: 'portfolio',
       path: '/dashboard/portfolio',
-      title: 'Portfolyo',
+      title: 'Çalışma Galerisi',
       skeleton:
-        'Çekim örneklerini kategoriler halinde yükle. Müşteri booking sayfasında portfolyo otomatik gösterilir.',
+        'Çekim örneklerini kategoriler halinde yükle. Müşteri booking sayfasında galeri otomatik gösterilir.',
     },
     {
       pageKey: 'reviews',
@@ -700,9 +700,9 @@ export const SECTOR_TUTORIAL_TOPICS: Partial<Record<SectorType, TutorialTopic[]>
     {
       pageKey: 'portfolio',
       path: '/dashboard/portfolio',
-      title: 'Portfolyo',
+      title: 'Çalışma Galerisi',
       skeleton:
-        'Yapılan dövme/piercing örneklerini yükle. Müşteri booking sayfasında sanatçı başına portfolyo gösterilir.',
+        'Yapılan dövme/piercing örneklerini yükle. Müşteri booking sayfasında sanatçı başına galeri gösterilir.',
     },
     {
       pageKey: 'reviews',

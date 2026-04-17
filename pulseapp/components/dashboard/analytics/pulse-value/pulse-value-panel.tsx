@@ -194,7 +194,7 @@ export function PulseValuePanel({ from, to }: PulseValuePanelProps) {
             icon={<Sparkles className="h-3.5 w-3.5" />}
           />
           <MetricRow
-            label="Gap-fill ile dolan slot"
+            label="Boş slot doldurma"
             count={data.digital_revenue.gap_fill.count}
             secondary={formatCurrency(data.digital_revenue.gap_fill.revenue)}
             methodKey="gap_fill"
@@ -223,7 +223,7 @@ export function PulseValuePanel({ from, to }: PulseValuePanelProps) {
             icon={<Users className="h-3.5 w-3.5" />}
           />
           <MetricRow
-            label="Winback ile geri dönüş"
+            label="Geri Kazanım ile geri dönüş"
             count={data.growth.winback_recovered.count}
             methodKey="winback_recovered"
             icon={<RotateCcw className="h-3.5 w-3.5" />}
