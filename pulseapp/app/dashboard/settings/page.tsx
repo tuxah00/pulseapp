@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import {
   Building2, Sparkles, BadgePercent, UserCog,
-  CreditCard, ShieldCheck, ChevronRight, Loader2,
+  CreditCard, ShieldCheck, ChevronRight, Loader2, ToggleRight,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -30,6 +30,13 @@ const SETTINGS_CARDS: SettingsCard[] = [
     description: 'Asistanın tonu, varsayılan hatırlatma süresi ve işletmene özel talimatlar.',
     icon: Sparkles,
     iconBg: 'from-purple-500 to-indigo-600',
+  },
+  {
+    href: '/dashboard/settings/features',
+    title: 'Özellikler',
+    description: 'Ödüller sistemi gibi opsiyonel modülleri aç/kapat.',
+    icon: ToggleRight,
+    iconBg: 'from-cyan-500 to-sky-600',
   },
   {
     href: '/dashboard/settings/staff',

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Star, Loader2, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Portal } from '@/components/ui/portal'
 
 export interface PendingAppointmentForReview {
   id: string
@@ -90,6 +91,7 @@ export function ReviewFormModal({ open, appointment, onClose, onSubmitted }: Rev
   const displayRating = hoverRating || rating
 
   return (
+    <Portal>
     <div
       className="fixed inset-0 z-[100] bg-black/60 dark:bg-black/70 flex items-center justify-center p-4 modal-overlay"
       onClick={onClose}
@@ -216,5 +218,6 @@ export function ReviewFormModal({ open, appointment, onClose, onSubmitted }: Rev
         </div>
       </div>
     </div>
+    </Portal>
   )
 }

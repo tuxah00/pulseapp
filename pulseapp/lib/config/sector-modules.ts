@@ -194,8 +194,8 @@ export function getSidebarSections(
 ): SidebarSection[] {
   const rawSectorItems = SECTOR_ITEMS[sector] ?? []
 
-  // Feature-flag: rewards_enabled=false → "Ödüller" sidebar itemını gizle
-  const rewardsEnabled = settings?.rewards_enabled !== false
+  // Feature-flag: rewards_enabled varsayılan KAPALI; işletme Ayarlar → Özellikler'den açar
+  const rewardsEnabled = settings?.rewards_enabled === true
   const sectorItems = rewardsEnabled
     ? rawSectorItems
     : rawSectorItems.filter(item => item.key !== 'rewards')

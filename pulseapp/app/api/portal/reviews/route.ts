@@ -17,11 +17,12 @@ export async function GET(request: NextRequest) {
   const tab = searchParams.get('tab') === 'business' ? 'business' : 'my'
 
   if (tab === 'business') {
+    // İnceleme altındaki yorumlar (escalated) gizlenir; diğer müşterilerin yorumları görünür
     const { data: businessReviews } = await admin
       .from('reviews')
       .select('id, rating, comment, created_at, is_anonymous, customer_id, customers(name)')
       .eq('business_id', businessId)
-      .eq('status', 'published')
+      .neq('status', 'escalated')
       .order('created_at', { ascending: false })
       .limit(100)
 

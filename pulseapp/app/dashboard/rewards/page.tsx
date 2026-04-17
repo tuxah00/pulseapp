@@ -67,7 +67,7 @@ type TabType = 'referrals' | 'rewards'
 export default function RewardsPage() {
   const { businessId, sector, settings, loading: ctxLoading, permissions } = useBusinessContext()
   const customerLabel = getCustomerLabelSingular(sector ?? undefined)
-  const rewardsEnabled = settings?.rewards_enabled !== false
+  const rewardsEnabled = settings?.rewards_enabled === true
 
   const [activeTab, setActiveTab] = useState<TabType>('rewards')
 

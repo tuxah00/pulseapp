@@ -86,6 +86,7 @@ export default function PortalReviewsPage() {
   // "İşletme" tab verileri
   const [businessReviews, setBusinessReviews] = useState<BusinessReview[]>([])
   const [loadingBiz, setLoadingBiz] = useState(false)
+  const [bizLoaded, setBizLoaded] = useState(false)
 
   const [modalAppt, setModalAppt] = useState<PendingAppointmentForReview | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
@@ -103,12 +104,16 @@ export default function PortalReviewsPage() {
 
   const loadBusiness = useCallback(async () => {
     setLoadingBiz(true)
-    const res = await fetch('/api/portal/reviews?tab=business')
-    if (res.ok) {
-      const data = await res.json()
-      setBusinessReviews(data.reviews || [])
+    try {
+      const res = await fetch('/api/portal/reviews?tab=business')
+      if (res.ok) {
+        const data = await res.json()
+        setBusinessReviews(data.reviews || [])
+      }
+    } finally {
+      setLoadingBiz(false)
+      setBizLoaded(true)
     }
-    setLoadingBiz(false)
   }, [])
 
   useEffect(() => {
@@ -116,10 +121,10 @@ export default function PortalReviewsPage() {
   }, [loadMy])
 
   useEffect(() => {
-    if (tab === 'business' && businessReviews.length === 0 && !loadingBiz) {
+    if (tab === 'business' && !bizLoaded && !loadingBiz) {
       loadBusiness()
     }
-  }, [tab, loadBusiness, businessReviews.length, loadingBiz])
+  }, [tab, loadBusiness, bizLoaded, loadingBiz])
 
   function openModal(apt: PendingAppointmentForReview | null) {
     setModalAppt(apt)
@@ -365,7 +370,7 @@ export default function PortalReviewsPage() {
         open={modalOpen}
         appointment={modalAppt}
         onClose={() => setModalOpen(false)}
-        onSubmitted={() => { loadMy(); if (tab === 'business') loadBusiness() }}
+        onSubmitted={() => { loadMy(); setBizLoaded(false); if (tab === 'business') loadBusiness() }}
       />
     </div>
   )

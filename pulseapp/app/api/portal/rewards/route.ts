@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     .select('settings')
     .eq('id', businessId)
     .maybeSingle()
-  const rewardsEnabled = (bizRow?.settings as any)?.rewards_enabled !== false
+  const rewardsEnabled = (bizRow?.settings as any)?.rewards_enabled === true
   if (!rewardsEnabled) {
     return NextResponse.json({
       rewards: [],

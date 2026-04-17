@@ -47,7 +47,7 @@ export default async function PortalDashboardLayout({ params, children }: Layout
   const business = businessRes.data
   const showTreatments = CLINIC_SECTORS.has(business.sector || '')
   const logoUrl = (business.settings as { logo_url?: string | null } | null)?.logo_url ?? null
-  const rewardsEnabled = (business.settings as { rewards_enabled?: boolean } | null)?.rewards_enabled !== false
+  const rewardsEnabled = (business.settings as { rewards_enabled?: boolean } | null)?.rewards_enabled === true
 
   return (
     <PortalShell
