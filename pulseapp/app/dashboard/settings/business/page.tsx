@@ -672,7 +672,6 @@ export default function BusinessSettingsPage() {
       {activeTab === 'settings' && (
         <form onSubmit={handleSaveSettings}>
           <div className="space-y-6">
-            {/* ── BÖLÜM 1: İletişim (SMS / WhatsApp / Hatırlatma) ── */}
             <SectionHeader
               icon={<Bell className="h-4 w-4" />}
               title="İletişim"
@@ -738,7 +737,6 @@ export default function BusinessSettingsPage() {
               </div>
             </div>
 
-            {/* ── BÖLÜM 2: Otomasyon (otomatik hatırlatıcılar ve akıllı doldurma) ── */}
             <SectionHeader
               icon={<Sparkles className="h-4 w-4" />}
               title="Otomasyon"
@@ -805,7 +803,6 @@ export default function BusinessSettingsPage() {
               </div>
             </div>
 
-            {/* ── BÖLÜM 3: Sadakat & Müşteri Deneyimi ── */}
             <SectionHeader
               icon={<Cake className="h-4 w-4" />}
               title="Sadakat & Müşteri Deneyimi"
@@ -927,7 +924,6 @@ export default function BusinessSettingsPage() {
               </div>
             </div>
 
-            {/* ── BÖLÜM 4: Ek Kanallar & AI ── */}
             <SectionHeader
               icon={<Smartphone className="h-4 w-4" />}
               title="Ek Kanallar & AI"
