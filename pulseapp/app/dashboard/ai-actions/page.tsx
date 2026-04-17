@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
   CheckCircle2, XCircle, Clock, Loader2, AlertTriangle,
-  Inbox, Calendar, Sparkles, History, PlayCircle,
+  Inbox, Calendar, Bot, History, PlayCircle,
 } from 'lucide-react'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { formatDateTime } from '@/lib/utils'
@@ -173,7 +173,7 @@ export default function AiActionsPage() {
         </div>
       ) : actions.length === 0 ? (
         <EmptyState
-          icon={<Sparkles className="w-7 h-7" />}
+          icon={<Bot className="w-7 h-7" />}
           title={tab === 'open' ? 'Bekleyen aksiyon yok' : 'Geçmiş aksiyon yok'}
           description={tab === 'open'
             ? 'İş Zekası önerilerinden "Uygula" tıklarsan burada görünür.'
