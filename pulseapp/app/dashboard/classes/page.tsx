@@ -98,9 +98,13 @@ export default function ClassesPage() {
     try {
       const res = await fetch(`/api/classes?businessId=${businessId}`)
       const data = await res.json()
+      if (!res.ok) {
+        window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: data.error || 'Sınıflar yüklenemedi' } }))
+        return
+      }
       setClasses(data.classes || [])
     } catch {
-      // ignore
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Bağlantı hatası' } }))
     } finally {
       setLoading(false)
     }
@@ -149,23 +153,27 @@ export default function ClassesPage() {
     if (!businessId || !form.name.trim() || form.day_of_week.length === 0) return
     setSaving(true)
     try {
-      if (editingClass) {
-        await fetch(`/api/classes?id=${editingClass.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(form),
-        })
-      } else {
-        await fetch('/api/classes', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...form, business_id: businessId }),
-        })
+      const res = editingClass
+        ? await fetch(`/api/classes?id=${editingClass.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(form),
+          })
+        : await fetch('/api/classes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...form, business_id: businessId }),
+          })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: data.error || 'Kaydedilemedi' } }))
+        return
       }
       closeModal()
       fetchClasses()
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Kaydedildi' } }))
     } catch {
-      // ignore
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Bağlantı hatası' } }))
     } finally {
       setSaving(false)
     }
@@ -174,16 +182,27 @@ export default function ClassesPage() {
   async function handleDelete(id: string) {
     const ok = await confirm({ title: 'Onay', message: 'Bu sınıfı silmek istediğinizden emin misiniz?' })
     if (!ok) return
-    await fetch(`/api/classes?id=${id}`, { method: 'DELETE' })
+    const res = await fetch(`/api/classes?id=${id}`, { method: 'DELETE' })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: data.error || 'Silinemedi' } }))
+      return
+    }
     fetchClasses()
+    window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Silindi' } }))
   }
 
   async function handleToggleActive(cls: ClassItem) {
-    await fetch(`/api/classes?id=${cls.id}`, {
+    const res = await fetch(`/api/classes?id=${cls.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ is_active: !cls.is_active }),
     })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: data.error || 'Durum güncellenemedi' } }))
+      return
+    }
     fetchClasses()
   }
 

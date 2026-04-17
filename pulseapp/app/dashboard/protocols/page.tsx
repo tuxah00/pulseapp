@@ -75,9 +75,15 @@ export default function ProtocolsPage() {
       params.set('pageSize', String(PAGE_SIZE))
       const res = await fetch(`/api/protocols?${params}`)
       const json = await res.json()
+      if (!res.ok) {
+        window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: json.error || 'Protokoller yüklenemedi' } }))
+        return
+      }
       setProtocols(json.protocols || [])
       setTotalCount(json.total || 0)
-    } catch { /* ignore */ } finally { setLoading(false) }
+    } catch {
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Bağlantı hatası', body: 'Protokoller yüklenemedi' } }))
+    } finally { setLoading(false) }
   }, [businessId, statusFilter, page])
 
   const fetchMeta = useCallback(async () => {
@@ -116,8 +122,13 @@ export default function ProtocolsPage() {
         resetForm()
         fetchProtocols()
         window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Oluşturuldu' } }))
+      } else {
+        const json = await res.json().catch(() => ({}))
+        window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: json.error || 'Oluşturulamadı' } }))
       }
-    } catch { /* ignore */ } finally { setSaving(false) }
+    } catch {
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Bağlantı hatası' } }))
+    } finally { setSaving(false) }
   }
 
   const resetForm = () => {
@@ -133,28 +144,40 @@ export default function ProtocolsPage() {
   const updateProtocolStatus = async (protocolId: string, status: ProtocolStatus) => {
     if (!businessId) return
     try {
-      await fetch(`/api/protocols/${protocolId}`, {
+      const res = await fetch(`/api/protocols/${protocolId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ businessId, status }),
       })
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}))
+        window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: json.error || 'Durum güncellenemedi' } }))
+        return
+      }
       fetchProtocols()
       if (selectedProtocol?.id === protocolId) {
         setSelectedProtocol(prev => prev ? { ...prev, status } : null)
       }
       window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Kaydedildi' } }))
-    } catch { /* ignore */ }
+    } catch {
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Bağlantı hatası' } }))
+    }
   }
 
   // Update session
   const updateSession = async (protocolId: string, sessionId: string, status: SessionStatus) => {
     if (!businessId) return
     try {
-      await fetch(`/api/protocols/${protocolId}/sessions`, {
+      const res = await fetch(`/api/protocols/${protocolId}/sessions`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ businessId, sessionId, status }),
       })
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}))
+        window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: json.error || 'Seans güncellenemedi' } }))
+        return
+      }
       // Refresh list and detail in parallel
       const [, detailJson] = await Promise.all([
         fetchProtocols(),
@@ -162,7 +185,9 @@ export default function ProtocolsPage() {
       ])
       if (detailJson.protocol) setSelectedProtocol(detailJson.protocol)
       window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Kaydedildi' } }))
-    } catch { /* ignore */ }
+    } catch {
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Bağlantı hatası' } }))
+    }
   }
 
   // Refresh single protocol (for photo uploads etc.)
@@ -188,11 +213,18 @@ export default function ProtocolsPage() {
     })
     if (!ok) return
     try {
-      await fetch(`/api/protocols/${protocolId}?businessId=${businessId}`, { method: 'DELETE' })
+      const res = await fetch(`/api/protocols/${protocolId}?businessId=${businessId}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}))
+        window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: json.error || 'Silinemedi' } }))
+        return
+      }
       fetchProtocols()
       if (selectedProtocol?.id === protocolId) setSelectedProtocol(null)
       window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Silindi' } }))
-    } catch { /* ignore */ }
+    } catch {
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Bağlantı hatası' } }))
+    }
   }
 
   // Filter
