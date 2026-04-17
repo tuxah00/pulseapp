@@ -1,7 +1,7 @@
 'use client'
 
 import { useBusinessData } from './business-context-provider'
-import type { SectorType, StaffRole, StaffPermissions, StaffWritePermissions } from '@/types'
+import type { SectorType, StaffRole, StaffPermissions, StaffWritePermissions, BusinessSettings } from '@/types'
 
 interface BusinessContext {
   businessId: string | null
@@ -12,6 +12,7 @@ interface BusinessContext {
   permissions: StaffPermissions | null
   writePermissions: StaffWritePermissions | null
   sector: SectorType | null
+  settings: BusinessSettings | null
   loading: boolean
 }
 
@@ -27,6 +28,7 @@ export function useBusinessContext(): BusinessContext {
       permissions: data.permissions,
       writePermissions: data.writePermissions,
       sector: data.sector,
+      settings: data.settings,
       loading: false,
     }
   } catch {
@@ -39,6 +41,7 @@ export function useBusinessContext(): BusinessContext {
       permissions: null,
       writePermissions: null,
       sector: null,
+      settings: null,
       loading: true,
     }
   }

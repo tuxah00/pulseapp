@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { logAudit } from '@/lib/utils/audit'
@@ -8,6 +9,7 @@ import {
   Loader2, TrendingUp, TrendingDown, Users, Calendar,
   DollarSign, AlertTriangle, Clock, Star, UserCheck, Minus,
   BarChart3, PieChart, Activity, Plus, X, Wallet, Download, Layers, Sparkles, Gem,
+  Megaphone, MessageSquare,
 } from 'lucide-react'
 import { formatCurrency, cn, formatDateISO } from '@/lib/utils'
 import { useConfirm } from '@/lib/hooks/use-confirm'
@@ -705,20 +707,37 @@ export default function AnalyticsPage() {
 
           {/* Risk Uyarısı */}
           {riskCustomers.length > 0 && (
-            <div className="card p-4 border-amber-200 bg-amber-50/50 dark:bg-amber-900/10">
-              <div className="flex items-center gap-2 mb-2">
-                <AlertTriangle className="h-5 w-5 text-amber-600" />
-                <h3 className="text-sm font-semibold text-amber-800 dark:text-amber-400">
-                  {riskCustomers.length} {customerLabel} Risk Altında
-                </h3>
+            <div className="card p-4 border-amber-200 bg-amber-50/50 dark:bg-amber-900/10 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-semibold text-amber-800 dark:text-amber-400">
+                    Riskli {customerLabel}
+                  </h3>
+                  <p className="text-xs text-amber-700/80 dark:text-amber-300/80 mt-0.5">
+                    {riskCustomers.length} {customerLabel.toLowerCase()} — son ziyaretten uzun süre geçmiş
+                  </p>
+                </div>
+                <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0" />
               </div>
-              <div className="flex flex-wrap gap-2 mt-3">
-                {riskCustomers.slice(0, 10).map(c => (
-                  <span key={c.id} className="badge bg-amber-100 text-amber-700">{c.name}</span>
-                ))}
-                {riskCustomers.length > 10 && (
-                  <span className="badge bg-amber-100 text-amber-700">+{riskCustomers.length - 10} daha</span>
-                )}
+              <div className="flex flex-wrap gap-2">
+                <Link
+                  href="/dashboard/customers?segment=risk"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-amber-200 dark:border-amber-900/40 text-xs font-medium text-amber-800 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+                >
+                  <Users className="h-3.5 w-3.5" /> Görüntüle
+                </Link>
+                <Link
+                  href="/dashboard/campaigns?segment=risk"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-amber-200 dark:border-amber-900/40 text-xs font-medium text-amber-800 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+                >
+                  <Megaphone className="h-3.5 w-3.5" /> Kampanya Oluştur
+                </Link>
+                <Link
+                  href="/dashboard/campaigns?segment=risk&channel=whatsapp"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-amber-200 dark:border-amber-900/40 text-xs font-medium text-amber-800 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+                >
+                  <MessageSquare className="h-3.5 w-3.5" /> Mesaj Akışı Oluştur
+                </Link>
               </div>
             </div>
           )}

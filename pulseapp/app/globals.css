@@ -471,10 +471,34 @@
 .dark ::-webkit-scrollbar-thumb { background: #374151; }
 .dark ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
 
-/* ── Micro-interaction: focus-visible ring ── */
-:focus-visible {
+/* ── Micro-interaction: focus-visible ring ──
+   Yalnızca gerçek etkileşim elementlerinde ring göster (WCAG).
+   Grafik/tablo/decorative div'lerde outline oluşmaz. */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[role="button"]:focus-visible,
+[role="link"]:focus-visible,
+[role="menuitem"]:focus-visible,
+[role="tab"]:focus-visible {
   outline: 2px solid var(--pulse-primary);
   outline-offset: 2px;
+}
+
+/* Recharts grafik segmentleri, tablo hücreleri, dekoratif div'ler → outline yok */
+.recharts-wrapper *:focus,
+.recharts-wrapper *:focus-visible,
+.recharts-surface:focus,
+.recharts-surface:focus-visible,
+td:focus,
+td:focus-visible,
+tr:focus,
+tr:focus-visible,
+div:focus {
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 /* ── Link / nav micro-animation ── */

@@ -427,7 +427,7 @@ export default function BusinessSettingsPage() {
   }
 
   const tabs: { id: TabId; label: string; icon: React.ReactNode }[] = [
-    { id: 'info', label: 'İşletme Bilgileri', icon: <Building2 className="h-4 w-4" /> },
+    { id: 'info', label: 'İşletme', icon: <Building2 className="h-4 w-4" /> },
     { id: 'settings', label: 'Bildirim & AI', icon: <Bell className="h-4 w-4" /> },
     { id: 'rooms', label: 'Odalar', icon: <DoorOpen className="h-4 w-4" /> },
     { id: 'subscription', label: 'Abonelik', icon: <CreditCard className="h-4 w-4" /> },

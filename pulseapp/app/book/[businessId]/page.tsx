@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import {
   CheckCircle2, ChevronLeft, Loader2, Clock, Calendar,
@@ -387,14 +387,21 @@ export default function BookingPage() {
 
       {/* Step Indicator */}
       <div className="mt-4 bg-white rounded-2xl shadow-sm border border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-start">
           {STEPS.map((label, i) => {
             const stepNum = i + 1
             const isCompleted = step > stepNum
             const isCurrent = step === stepNum
             return (
-              <div key={label} className="flex items-center flex-1">
-                <div className="flex flex-col items-center">
+              <React.Fragment key={label}>
+                {/* Bağlantı çizgisi — adımlar arasında */}
+                {i > 0 && (
+                  <div className={`flex-1 h-0.5 mt-[18px] mx-1 transition-colors ${
+                    step > i ? 'bg-blue-500' : 'bg-gray-200'
+                  }`} />
+                )}
+                {/* Adım: daire + etiket */}
+                <div className="flex flex-col items-center flex-1">
                   <div
                     className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold transition-all ${
                       isCompleted
@@ -406,18 +413,13 @@ export default function BookingPage() {
                   >
                     {isCompleted ? <CheckCircle2 className="h-5 w-5" /> : stepNum}
                   </div>
-                  <span className={`mt-1.5 text-[11px] font-medium whitespace-nowrap ${
+                  <span className={`mt-1.5 text-[11px] font-medium whitespace-nowrap text-center ${
                     isCurrent ? 'text-blue-600' : isCompleted ? 'text-gray-600' : 'text-gray-400'
                   }`}>
                     {label}
                   </span>
                 </div>
-                {i < STEPS.length - 1 && (
-                  <div className={`flex-1 mx-2 h-0.5 mt-[-14px] transition-colors ${
-                    step > stepNum ? 'bg-blue-500' : 'bg-gray-200'
-                  }`} />
-                )}
-              </div>
+              </React.Fragment>
             )
           })}
         </div>

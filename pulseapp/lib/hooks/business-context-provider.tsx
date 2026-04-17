@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useContext } from 'react'
-import type { SectorType, PlanType, StaffRole, StaffPermissions, StaffWritePermissions } from '@/types'
+import type { SectorType, PlanType, StaffRole, StaffPermissions, StaffWritePermissions, BusinessSettings } from '@/types'
 
 interface BusinessContextValue {
   businessId: string
@@ -14,6 +14,7 @@ interface BusinessContextValue {
   staffRole: StaffRole
   permissions: StaffPermissions
   writePermissions: StaffWritePermissions
+  settings: BusinessSettings | null
 }
 
 const BusinessContext = createContext<BusinessContextValue | null>(null)

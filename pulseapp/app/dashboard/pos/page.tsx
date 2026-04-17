@@ -30,6 +30,15 @@ interface Product {
   is_active: boolean
 }
 
+interface ServicePackage {
+  id: string
+  name: string
+  service_id: string | null
+  sessions_total: number
+  price: number
+  is_active: boolean
+}
+
 interface CartItem extends POSItem {
   _key: string
 }
@@ -57,6 +66,7 @@ export default function KasaPage() {
   // Data
   const [services, setServices] = useState<Service[]>([])
   const [products, setProducts] = useState<Product[]>([])
+  const [packages, setPackages] = useState<ServicePackage[]>([])
   const [transactions, setTransactions] = useState<POSTransaction[]>([])
   const [session, setSession] = useState<POSSession | null>(null)
   const [loading, setLoading] = useState(true)
@@ -86,7 +96,7 @@ export default function KasaPage() {
   const [processing, setProcessing] = useState(false)
 
   // UI
-  const [itemTab, setItemTab] = useState<'services' | 'products'>('services')
+  const [itemTab, setItemTab] = useState<'services' | 'products' | 'packages'>('services')
   const [searchQuery, setSearchQuery] = useState('')
   const debouncedSearch = useDebounce(searchQuery, 300)
 
@@ -103,15 +113,17 @@ export default function KasaPage() {
     if (!businessId) return
     setLoading(true)
 
-    const [svcRes, prodRes, txRes, sessRes] = await Promise.all([
+    const [svcRes, prodRes, pkgRes, txRes, sessRes] = await Promise.all([
       supabase.from('services').select('*').eq('business_id', businessId).eq('is_active', true).order('sort_order'),
       supabase.from('products').select('id, name, price, stock_count, category, is_active').eq('business_id', businessId).eq('is_active', true).order('name'),
+      supabase.from('service_packages').select('id, name, service_id, sessions_total, price, is_active').eq('business_id', businessId).eq('is_active', true).order('sort_order'),
       fetch(`/api/pos?businessId=${businessId}&from=${formatDateISO(new Date())}`).then(r => r.json()),
       fetch(`/api/pos/sessions?businessId=${businessId}`).then(r => r.json()),
     ])
 
     setServices(svcRes.data || [])
     setProducts(prodRes.data || [])
+    setPackages(pkgRes.data || [])
     setTransactions(txRes.transactions || [])
     setSession(sessRes.openSession || null)
     setLoading(false)
@@ -336,6 +348,10 @@ export default function KasaPage() {
 
   async function handleCheckout() {
     if (cart.length === 0 || remaining > 0.01) return
+    if (cartHasPackage && !selectedCustomerId) {
+      showToast('Müşteri Gerekli', 'Paket satışı için müşteri seçilmelidir.')
+      return
+    }
     setProcessing(true)
 
     try {
@@ -369,6 +385,32 @@ export default function KasaPage() {
         resourceId: data.transaction.id,
         details: { total: grandTotal, receipt: data.transaction.receipt_number },
       })
+
+      // Paket satışı varsa customer_packages kayıtlarını oluştur
+      const packageItems = cart.filter(c => c.type === 'package')
+      if (packageItems.length > 0 && selectedCustomerId) {
+        for (const pkgItem of packageItems) {
+          for (let i = 0; i < pkgItem.quantity; i++) {
+            try {
+              await fetch('/api/customer-packages', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  business_id: businessId,
+                  package_id: pkgItem.package_id,
+                  customer_id: selectedCustomerId,
+                  package_name: pkgItem.name,
+                  service_id: pkgItem.service_id || null,
+                  sessions_total: pkgItem.sessions_total || 1,
+                  price_paid: pkgItem.unit_price,
+                  staff_id: staffId,
+                  invoice_id: data.transaction.invoice_id || null,
+                }),
+              })
+            } catch { /* ignore — tek paket hatası işlemi bozmasın */ }
+          }
+        }
+      }
 
       // Referans ödülü kullanıldıysa otomatik olarak 'rewarded' işaretle
       if (appliedReferralId) {
@@ -464,6 +506,14 @@ export default function KasaPage() {
     return products.filter(p => p.name.toLowerCase().includes(q))
   }, [products, debouncedSearch])
 
+  const filteredPackages = useMemo(() => {
+    if (!debouncedSearch) return packages
+    const q = debouncedSearch.toLowerCase()
+    return packages.filter(p => p.name.toLowerCase().includes(q))
+  }, [packages, debouncedSearch])
+
+  const cartHasPackage = useMemo(() => cart.some(c => c.type === 'package'), [cart])
+
   if (permissions && !permissions.pos) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
@@ -532,6 +582,14 @@ export default function KasaPage() {
             >
               <Package className="h-3.5 w-3.5" /> Ürünler
             </button>
+            <button
+              onClick={() => setItemTab('packages')}
+              className={cn('flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
+                itemTab === 'packages' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              )}
+            >
+              <Gift className="h-3.5 w-3.5" /> Paketler
+            </button>
           </div>
 
           <div className="relative">
@@ -568,7 +626,7 @@ export default function KasaPage() {
                   </button>
                 ))
               )
-            ) : (
+            ) : itemTab === 'products' ? (
               filteredProducts.length === 0 ? (
                 <p className="text-sm text-gray-400 text-center py-4">Ürün bulunamadı</p>
               ) : (
@@ -589,6 +647,33 @@ export default function KasaPage() {
                     </div>
                     <span className="text-sm text-pulse-900 font-semibold flex-shrink-0 ml-2">
                       {prod.price ? formatCurrency(prod.price) : '—'}
+                    </span>
+                  </button>
+                ))
+              )
+            ) : (
+              filteredPackages.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-4">Paket bulunamadı</p>
+              ) : (
+                filteredPackages.map(pkg => (
+                  <button
+                    key={pkg.id}
+                    onClick={() => pkg.price && addToCart({
+                      id: pkg.id, name: pkg.name, type: 'package',
+                      quantity: 1, unit_price: pkg.price, total: pkg.price,
+                      package_id: pkg.id,
+                      service_id: pkg.service_id || undefined,
+                      sessions_total: pkg.sessions_total,
+                    })}
+                    disabled={!pkg.price}
+                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left disabled:opacity-40"
+                  >
+                    <div className="min-w-0">
+                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate block">{pkg.name}</span>
+                      <span className="text-xs text-gray-400">{pkg.sessions_total} seans</span>
+                    </div>
+                    <span className="text-sm text-pulse-900 font-semibold flex-shrink-0 ml-2">
+                      {pkg.price ? formatCurrency(pkg.price) : '—'}
                     </span>
                   </button>
                 ))

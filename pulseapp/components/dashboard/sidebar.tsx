@@ -49,7 +49,7 @@ import {
   Inbox,
   type LucideIcon,
 } from 'lucide-react'
-import type { SectorType, PlanType, StaffPermissions } from '@/types'
+import type { SectorType, PlanType, StaffPermissions, BusinessSettings } from '@/types'
 import { getSidebarSections } from '@/lib/config/sector-modules'
 
 
@@ -107,15 +107,16 @@ interface SidebarProps {
   sector: SectorType
   plan: PlanType
   permissions: StaffPermissions
+  settings?: BusinessSettings | null
 }
 
-export default function Sidebar({ businessName, userName, sector, plan, permissions }: SidebarProps) {
+export default function Sidebar({ businessName, userName, sector, plan, permissions, settings }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const { collapsed, setCollapsed } = useSidebar()
   const [mobileOpen, setMobileOpen] = useState(false)
 
-  const rawSections = getSidebarSections(sector, plan)
+  const rawSections = getSidebarSections(sector, plan, settings)
 
   const sections = rawSections.map(section => ({
     ...section,

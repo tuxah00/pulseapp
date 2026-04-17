@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Star, Loader2, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Portal } from '@/components/ui/portal'
 
 export interface PendingAppointmentForReview {
   id: string
@@ -37,6 +38,7 @@ export function ReviewFormModal({ open, appointment, onClose, onSubmitted }: Rev
   const [rating, setRating] = useState(5)
   const [hoverRating, setHoverRating] = useState(0)
   const [comment, setComment] = useState('')
+  const [isAnonymous, setIsAnonymous] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -45,6 +47,7 @@ export function ReviewFormModal({ open, appointment, onClose, onSubmitted }: Rev
     setRating(5)
     setHoverRating(0)
     setComment('')
+    setIsAnonymous(true)
     setError(null)
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', onKey)
@@ -67,6 +70,7 @@ export function ReviewFormModal({ open, appointment, onClose, onSubmitted }: Rev
           rating,
           comment: comment.trim() || null,
           appointmentId: appointment?.id || null,
+          isAnonymous,
         }),
       })
       const data = await res.json().catch(() => ({}))
@@ -87,6 +91,7 @@ export function ReviewFormModal({ open, appointment, onClose, onSubmitted }: Rev
   const displayRating = hoverRating || rating
 
   return (
+    <Portal>
     <div
       className="fixed inset-0 z-[100] bg-black/60 dark:bg-black/70 flex items-center justify-center p-4 modal-overlay"
       onClick={onClose}
@@ -172,6 +177,21 @@ export function ReviewFormModal({ open, appointment, onClose, onSubmitted }: Rev
             </p>
           </div>
 
+          <label className="flex items-start gap-3 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={isAnonymous}
+              onChange={(e) => setIsAnonymous(e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-pulse-900 focus:ring-pulse-900/30"
+            />
+            <div>
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Anonim olarak yorum yap</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                Anonim yorumlarda adınız işletme yorumları listesinde gösterilmez.
+              </p>
+            </div>
+          </label>
+
           {error && (
             <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-sm text-red-700 dark:text-red-300">
               {error}
@@ -198,5 +218,6 @@ export function ReviewFormModal({ open, appointment, onClose, onSubmitted }: Rev
         </div>
       </div>
     </div>
+    </Portal>
   )
 }

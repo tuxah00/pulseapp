@@ -3,7 +3,9 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { requirePortalSession } from '@/lib/portal/guards'
 
 /**
- * GET — Müşterinin yazdığı yorumlar + yorum bekleyen tamamlanmış randevular.
+ * GET — Müşterinin yazdığı yorumlar + yorum bekleyen randevular.
+ * ?tab=my (default): müşterinin kendi yorumları + yorum bekleyen randevular
+ * ?tab=business: tüm yayınlanmış işletme yorumları (anonim olanlar ad olmadan)
  */
 export async function GET(request: NextRequest) {
   const guard = requirePortalSession(request)
@@ -11,6 +13,30 @@ export async function GET(request: NextRequest) {
   const { customerId, businessId } = guard
 
   const admin = createAdminClient()
+  const { searchParams } = new URL(request.url)
+  const tab = searchParams.get('tab') === 'business' ? 'business' : 'my'
+
+  if (tab === 'business') {
+    // İnceleme altındaki yorumlar (escalated) gizlenir; diğer müşterilerin yorumları görünür
+    const { data: businessReviews } = await admin
+      .from('reviews')
+      .select('id, rating, comment, created_at, is_anonymous, customer_id, customers(name)')
+      .eq('business_id', businessId)
+      .neq('status', 'escalated')
+      .order('created_at', { ascending: false })
+      .limit(100)
+
+    const normalized = (businessReviews || []).map((r: any) => ({
+      id: r.id,
+      rating: r.rating,
+      comment: r.comment,
+      created_at: r.created_at,
+      author_name: r.is_anonymous ? 'Anonim' : (r.customers?.name || 'Müşteri'),
+      is_mine: r.customer_id === customerId,
+    }))
+
+    return NextResponse.json({ reviews: normalized, tab: 'business' })
+  }
 
   const thirtyDaysAgo = new Date()
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
@@ -19,7 +45,7 @@ export async function GET(request: NextRequest) {
   const [reviewsRes, completedRes] = await Promise.all([
     admin
       .from('reviews')
-      .select('id, rating, comment, status, created_at, appointment_id, actual_response')
+      .select('id, rating, comment, status, created_at, appointment_id, actual_response, is_anonymous')
       .eq('business_id', businessId)
       .eq('customer_id', customerId)
       .order('created_at', { ascending: false }),
@@ -41,6 +67,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     reviews: reviewsRes.data || [],
     pendingAppointments: pending,
+    tab: 'my',
   })
 }
 
@@ -60,6 +87,7 @@ export async function POST(request: NextRequest) {
 
   const comment: string | null = typeof body.comment === 'string' ? body.comment.trim().slice(0, 2000) : null
   const appointmentId: string | null = typeof body.appointmentId === 'string' ? body.appointmentId : null
+  const isAnonymous: boolean = body.isAnonymous === false ? false : true
 
   const admin = createAdminClient()
 
@@ -98,8 +126,9 @@ export async function POST(request: NextRequest) {
       comment,
       status: 'pending',
       google_review_link_sent: false,
+      is_anonymous: isAnonymous,
     })
-    .select('id, rating, comment, status, created_at, appointment_id')
+    .select('id, rating, comment, status, created_at, appointment_id, is_anonymous')
     .single()
 
   if (error) {

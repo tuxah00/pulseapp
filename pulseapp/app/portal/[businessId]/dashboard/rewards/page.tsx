@@ -296,10 +296,10 @@ export default function PortalRewardsPage() {
                 <Gift className="h-7 w-7 text-pulse-900 dark:text-pulse-300" />
               </div>
               <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                Henüz bir ödülün veya puanın yok.
+                Randevu aldıkça puan kazanırsın.
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 max-w-sm mx-auto">
-                Randevu aldıkça puan kazanırsın, işletmen sana ödül tanımlayabilir.
+                İşletmen sana özel ödüller de tanımlayabilir.
               </p>
               <Link
                 href={`/book/${businessId}`}

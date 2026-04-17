@@ -95,10 +95,11 @@ export default function PortalFeedbackPage() {
       <section>
         <SectionHeader
           title="Yeni Geri Bildirim"
-          subtitle="Bir iki cümle bile olsa, okuyoruz."
           icon={Lightbulb}
         />
-        <FeedbackForm onSubmitted={load} />
+        <div className="mt-2">
+          <FeedbackForm onSubmitted={load} />
+        </div>
       </section>
 
       {/* Geçmiş Gönderiler */}
