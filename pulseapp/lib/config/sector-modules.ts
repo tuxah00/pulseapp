@@ -194,11 +194,8 @@ export function getSidebarSections(
 ): SidebarSection[] {
   const rawSectorItems = SECTOR_ITEMS[sector] ?? []
 
-  // Feature-flag: rewards_enabled varsayılan KAPALI; işletme Ayarlar → Özellikler'den açar
-  const rewardsEnabled = settings?.rewards_enabled === true
-  const sectorItems = rewardsEnabled
-    ? rawSectorItems
-    : rawSectorItems.filter(item => item.key !== 'rewards')
+  // Ödüller sekmesi her zaman sidebar'da görünür; aktifleştirme rewards sayfasından yapılır
+  const sectorItems = rawSectorItems
 
   // Sectors that replace appointments with reservations
   const excludeAppointments: SectorType[] = ['restaurant', 'cafe']
