@@ -53,6 +53,7 @@ export default function AIAssistantPanel({ businessName, sector, plan, permissio
     shouldRunSetup,
     markSeen,
     markSetupDone,
+    dismissForCurrentPath,
   } = useTutorial(sector)
 
   const [setupTriggered, setSetupTriggered] = useState(false)
@@ -141,13 +142,16 @@ export default function AIAssistantPanel({ businessName, sector, plan, permissio
     setIsMinimized(false)
     newConversation()
     sendMessage(`"${currentTopic.title}" sayfasını tanıt`, false, { tutorialTopic: currentTopic.pageKey })
-    markSeen(currentTopic.pageKey)
-  }, [currentTopic, newConversation, sendMessage, markSeen])
+    // "Görülenler" listesi için kayıt — balonun yeniden çıkmasını engellemiyor (artık her sayfada çıkar).
+    if (!currentTopic.pageKey.startsWith('generic:')) {
+      markSeen(currentTopic.pageKey)
+    }
+    dismissForCurrentPath()
+  }, [currentTopic, newConversation, sendMessage, markSeen, dismissForCurrentPath])
 
   const handleDismissBubble = useCallback(() => {
-    if (!currentTopic) return
-    markSeen(currentTopic.pageKey)
-  }, [currentTopic, markSeen])
+    dismissForCurrentPath()
+  }, [dismissForCurrentPath])
 
   // Auto-scroll to bottom
   useEffect(() => {

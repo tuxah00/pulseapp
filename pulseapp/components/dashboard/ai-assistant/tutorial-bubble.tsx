@@ -28,7 +28,7 @@ export default function TutorialBubble({ topic, onOpen, onDismiss }: Props) {
         <button
           onClick={onDismiss}
           className="absolute top-1.5 right-1.5 p-1 rounded-md text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-          title="Bir daha gösterme"
+          title="Bu sayfada gizle"
         >
           <X className="w-3 h-3" />
         </button>

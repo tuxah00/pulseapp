@@ -157,7 +157,7 @@ export const CORE_TUTORIAL_TOPICS: TutorialTopic[] = [
     path: '/dashboard/settings/ai',
     title: 'AI Tercihleri',
     skeleton:
-      'Asistanın ton (samimi/formal/kısa) tercihlerini, günlük brief saatini, varsayılan hatırlatma süresini ve özel talimatlarını buradan ayarla. Tutorial ipuçlarını da buradan aç/kapat.',
+      'Asistanın ton (samimi/formal/kısa) tercihlerini, günlük brief saatini, varsayılan hatırlatma süresini ve özel talimatlarını buradan ayarla. Başlangıç ipuçlarını da buradan aç/kapat.',
   },
   {
     pageKey: 'settings_business',
@@ -791,10 +791,33 @@ export function getTutorialTopicsForSector(sector: SectorType): TutorialTopic[] 
   return [...CORE_TUTORIAL_TOPICS, ...(SECTOR_TUTORIAL_TOPICS[sector] ?? [])]
 }
 
+/**
+ * Bilinmeyen sayfalar için kullanılacak jenerik tutorial topic.
+ * Asistan yine de sayfayı yorumlayabilir — başlık pathname'den üretilir.
+ */
+function buildGenericTopic(path: string): TutorialTopic {
+  const clean = path.split('?')[0].split('#')[0]
+  const last = clean.replace(/\/$/, '').split('/').filter(Boolean).pop() || 'dashboard'
+  const title = last
+    .replace(/[-_]/g, ' ')
+    .replace(/\b\w/g, c => c.toUpperCase())
+  return {
+    pageKey: `generic:${clean}`,
+    path: clean,
+    title,
+    skeleton:
+      'Bu sayfa hakkında kısa bir açıklama ister misin? Asistan sayfanın ana amacını ve öne çıkan butonları özetler.',
+  }
+}
+
 export function findTopicByPath(path: string, sector: SectorType): TutorialTopic | null {
   // Query string'leri at, yalnızca pathname eşleştir
   const clean = path.split('?')[0].split('#')[0]
-  return getTutorialTopicsForSector(sector).find(t => t.path === clean) ?? null
+  // Dashboard dışı (auth, booking, public) sayfalarda ipucu gösterme
+  if (!clean.startsWith('/dashboard')) return null
+  const match = getTutorialTopicsForSector(sector).find(t => t.path === clean)
+  if (match) return match
+  return buildGenericTopic(clean)
 }
 
 export function findTopicByKey(pageKey: string, sector: SectorType): TutorialTopic | null {
