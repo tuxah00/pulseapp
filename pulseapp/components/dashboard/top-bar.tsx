@@ -51,6 +51,11 @@ const ROUTE_LABELS: Record<string, string> = {
   waitlist: 'Bekleme Listesi',
   campaigns: 'Kampanyalar',
   'ai-actions': 'Asistan Aksiyonları',
+  insights: 'İş Zekası',
+  workflows: 'Mesaj Akışları',
+  commissions: 'Prim',
+  rewards: 'Ödüller',
+  records: 'Dosya Kayıtları',
   new: 'Yeni',
 }
 
