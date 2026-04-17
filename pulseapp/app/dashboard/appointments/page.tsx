@@ -28,7 +28,7 @@ import {
   Search, Filter, ArrowUpDown,
   Users, Building2, Ban, Lock, BellRing,
 } from 'lucide-react'
-import { formatTime, formatDate, getStatusColor, formatCurrency, cn } from '@/lib/utils'
+import { formatTime, formatDate, getStatusColor, formatCurrency, cn, formatDateISO } from '@/lib/utils'
 import { STATUS_LABELS, type AppointmentStatus, type Service, type StaffMember, type WorkingHours, type BlockedSlot } from '@/types'
 import type { AppointmentRow } from '@/types/db'
 
@@ -56,7 +56,7 @@ export default function AppointmentsPage() {
   const { confirm } = useConfirm()
   const [appointments, setAppointments] = useState<AppointmentView[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
+  const [selectedDate, setSelectedDate] = useState(formatDateISO(new Date()))
   const [now, setNow] = useState<Date | null>(null)
   const [viewMode, setViewMode] = useViewMode('appointments', 'list')
   const [selectedAppointment, setSelectedAppointment] = useState<AppointmentView | null>(null)
@@ -287,7 +287,7 @@ export default function AppointmentsPage() {
     return `${months[m - 1]} ${y}`
   }
 
-  function goToday() { setSelectedDate(new Date().toISOString().split('T')[0]) }
+  function goToday() { setSelectedDate(formatDateISO(new Date())) }
 
   const effectiveNow = now ?? new Date()
   const todayStr = `${effectiveNow.getFullYear()}-${String(effectiveNow.getMonth() + 1).padStart(2, '0')}-${String(effectiveNow.getDate()).padStart(2, '0')}`
@@ -2031,7 +2031,7 @@ export default function AppointmentsPage() {
                           )
                         })}
                         {/* Şu anki saat çizgisi (bugün için) */}
-                        {selectedDate === new Date().toISOString().split('T')[0] && now && colIdx === 0 && (() => {
+                        {selectedDate === formatDateISO(new Date()) && now && colIdx === 0 && (() => {
                           const currentMin = (now.getHours() * 60 + now.getMinutes()) - startHour * 60
                           if (currentMin < 0 || currentMin > hours.length * 60) return null
                           return (
@@ -2590,7 +2590,7 @@ export default function AppointmentsPage() {
                     onClick={async () => {
                       const ok = await confirm({ title: 'Onay', message: 'Bu serinin gelecekteki tüm randevularını iptal etmek istediğinize emin misiniz?' })
                       if (!ok) return
-                      const today = new Date().toISOString().split('T')[0]
+                      const today = formatDateISO(new Date())
                       const { error } = await supabase
                         .from('appointments')
                         .update({ status: 'cancelled' })

@@ -3,16 +3,18 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { isValidUUID } from '@/lib/utils/validate'
 import { shouldUseOtp, getPortalSession } from '@/lib/portal/auth'
 import { PortalLoginForm } from './_components/portal-login-form'
-import { Sparkles } from 'lucide-react'
+import { Sparkles, Info } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
 interface PageProps {
   params: { businessId: string }
+  searchParams: { no_customer?: string }
 }
 
-export default async function PortalLoginPage({ params }: PageProps) {
+export default async function PortalLoginPage({ params, searchParams }: PageProps) {
   const { businessId } = params
+  const noCustomerNotice = searchParams?.no_customer === '1'
   if (!isValidUUID(businessId)) notFound()
 
   const admin = createAdminClient()
@@ -74,7 +76,7 @@ export default async function PortalLoginPage({ params }: PageProps) {
               </span>
             </div>
           )}
-          <h1 className="mt-4 text-2xl font-serif font-bold text-white tracking-tight">
+          <h1 className="mt-4 text-2xl font-bold text-white tracking-tight">
             {business.name}
           </h1>
           <div className="inline-flex items-center gap-1.5 mt-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-sm ring-1 ring-white/20">
@@ -85,6 +87,15 @@ export default async function PortalLoginPage({ params }: PageProps) {
 
         {/* Giriş kartı — glassmorphism */}
         <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/50 p-6">
+          {noCustomerNotice && (
+            <div className="mb-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3">
+              <Info className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-900">
+                Önizleme için uygun bir müşteri bulunamadı. Önce müşteri ekleyin ya da mevcut bir müşterinin telefonuyla giriş yapın.
+              </p>
+            </div>
+          )}
+
           <h2 className="text-lg font-semibold text-gray-900 mb-1">Hesabınıza Giriş</h2>
           <p className="text-sm text-gray-500 mb-5">
             {useOtp

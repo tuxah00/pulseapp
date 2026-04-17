@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { verifyBusinessAccess } from '@/lib/utils/auth-guard'
 
 // GET: Gelir listesi
 export async function GET(req: NextRequest) {
@@ -14,6 +15,9 @@ export async function GET(req: NextRequest) {
   const category = searchParams.get('category')
 
   if (!businessId) return NextResponse.json({ error: 'businessId gerekli' }, { status: 400 })
+
+  const staff = await verifyBusinessAccess(supabase, user.id, businessId)
+  if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
 
   let query = supabase
     .from('income')
@@ -43,13 +47,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'business_id, category, amount, income_date gerekli' }, { status: 400 })
   }
 
+  const amt = Number(amount)
+  if (!Number.isFinite(amt) || amt < 0) {
+    return NextResponse.json({ error: 'Geçersiz tutar' }, { status: 400 })
+  }
+
+  const staff = await verifyBusinessAccess(supabase, user.id, business_id)
+  if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
+
   const { data: income, error } = await supabase
     .from('income')
     .insert({
       business_id,
       category,
       description: description || null,
-      amount,
+      amount: amt,
       income_date,
       is_recurring: is_recurring || false,
       recurring_period: recurring_period || null,
@@ -72,7 +84,21 @@ export async function DELETE(req: NextRequest) {
   const id = searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'id gerekli' }, { status: 400 })
 
-  const { error } = await supabase.from('income').delete().eq('id', id)
+  const { data: existing } = await supabase
+    .from('income')
+    .select('business_id')
+    .eq('id', id)
+    .single()
+  if (!existing) return NextResponse.json({ error: 'Bulunamadı' }, { status: 404 })
+
+  const staff = await verifyBusinessAccess(supabase, user.id, existing.business_id)
+  if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
+
+  const { error } = await supabase
+    .from('income')
+    .delete()
+    .eq('id', id)
+    .eq('business_id', existing.business_id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ success: true })
 }

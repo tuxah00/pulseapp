@@ -71,6 +71,14 @@ const RESOURCE_LABELS: Record<string, string> = {
   follow_up: 'Takip',
   protocol: 'Tedavi Protokolü',
   allergy: 'Alerji',
+  campaign: 'Kampanya',
+  waitlist: 'Bekleme Listesi',
+  tooth_record: 'Diş Kaydı',
+  contraindication: 'Kontrendikasyon',
+  blocked_slot: 'Bloklanmış Zaman',
+  room: 'Oda',
+  photo: 'Fotoğraf',
+  payment: 'Ödeme',
 }
 
 const STATUS_LABELS_TR: Record<string, string> = {

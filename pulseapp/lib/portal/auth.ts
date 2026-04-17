@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers'
-import type { NextRequest } from 'next/server'
+import type { NextRequest, NextResponse } from 'next/server'
 
 /**
  * Portal cookie-tabanlı oturum bilgisi.
@@ -42,4 +42,27 @@ export function getPortalSessionFromRequest(request: NextRequest): PortalSession
  */
 export function shouldUseOtp(): boolean {
   return !!process.env.TWILIO_ACCOUNT_SID && !!process.env.TWILIO_AUTH_TOKEN
+}
+
+/** Portal oturum çerezlerinin ömrü ve politikası — tek kaynak */
+export const PORTAL_SESSION_MAX_AGE = 7 * 24 * 60 * 60 // 7 gün
+
+/**
+ * Response üzerine portal oturum çerezlerini (customerId + businessId) set eder.
+ * Tüm portal giriş route'ları (direct-login, verify, owner-preview) bu helper'ı kullanmalı.
+ */
+export function setPortalSessionCookies(
+  response: NextResponse,
+  session: PortalSession
+): NextResponse {
+  const options = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax' as const,
+    maxAge: PORTAL_SESSION_MAX_AGE,
+    path: '/',
+  }
+  response.cookies.set(PORTAL_CUSTOMER_COOKIE, session.customerId, options)
+  response.cookies.set(PORTAL_BUSINESS_COOKIE, session.businessId, options)
+  return response
 }

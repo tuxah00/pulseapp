@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { normalizePhone, phoneOrFilter } from '@/lib/utils/phone'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
 import { isValidUUID } from '@/lib/utils/validate'
+import { setPortalSessionCookies } from '@/lib/portal/auth'
 import crypto from 'crypto'
 
 // POST — OTP doğrula ve müşteri cookie'si oluştur
@@ -77,7 +78,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Müşteri bulunamadı' }, { status: 404 })
   }
 
-  // Cookie oluştur — customerId bilgisini cookie olarak sakla
   const response = NextResponse.json({
     success: true,
     customer: {
@@ -88,23 +88,5 @@ export async function POST(request: NextRequest) {
     },
   })
 
-  // Cookie: 7 gün geçerli, httpOnly, sameSite
-  response.cookies.set('portal_customer_id', customer.id, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 7 * 24 * 60 * 60, // 7 gün
-    path: '/',
-  })
-
-  // BusinessId de sakla
-  response.cookies.set('portal_business_id', businessId, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 7 * 24 * 60 * 60,
-    path: '/',
-  })
-
-  return response
+  return setPortalSessionCookies(response, { customerId: customer.id, businessId })
 }

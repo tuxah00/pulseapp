@@ -59,7 +59,7 @@ export default function PortalInvoicesPage() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-5">
-      <h1 className="text-2xl font-serif font-bold text-gray-900 dark:text-gray-100">Faturalarım</h1>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Faturalarım</h1>
 
       {invoices.length > 0 && (
         <div className="grid grid-cols-2 gap-3">

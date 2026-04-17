@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
-  LayoutDashboard, CalendarDays, Sparkles, Receipt, FolderHeart,
+  LayoutDashboard, CalendarDays, Stethoscope, Receipt, Folder,
   Gift, Star, MessageSquarePlus, Settings, LogOut, Menu, X,
   ChevronLeft,
 } from 'lucide-react'
@@ -53,10 +53,10 @@ function buildNav(businessId: string, showTreatments: boolean): NavItem[] {
     { key: 'overview', label: 'Özet', href: base, icon: LayoutDashboard, mobileTab: true },
     { key: 'appointments', label: 'Randevularım', href: `${base}/appointments`, icon: CalendarDays, mobileTab: true },
     ...(showTreatments
-      ? [{ key: 'treatments', label: 'Tedavilerim', href: `${base}/treatments`, icon: Sparkles }]
+      ? [{ key: 'treatments', label: 'Tedavilerim', href: `${base}/treatments`, icon: Stethoscope }]
       : []),
     { key: 'invoices', label: 'Faturalarım', href: `${base}/invoices`, icon: Receipt },
-    { key: 'files', label: 'Dosyalarım', href: `${base}/files`, icon: FolderHeart, mobileTab: true },
+    { key: 'files', label: 'Dosyalarım', href: `${base}/files`, icon: Folder, mobileTab: true },
     { key: 'rewards', label: 'Ödüllerim', href: `${base}/rewards`, icon: Gift, mobileTab: true },
     { key: 'reviews', label: 'Yorumlarım', href: `${base}/reviews`, icon: Star },
     { key: 'feedback', label: 'Geri Bildirim', href: `${base}/feedback`, icon: MessageSquarePlus },
@@ -201,17 +201,11 @@ export function PortalShell({ businessId, business, customer, showTreatments, ch
               Randevu Sayfasına Dön
             </a>
             <div className="flex-1" />
-            <Link
-              href={`/book/${businessId}`}
-              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-pulse-900 text-white text-sm font-medium hover:bg-pulse-800 transition-colors"
-            >
-              + Yeni Randevu
-            </Link>
           </div>
         </header>
 
         {/* İçerik */}
-        <main className="flex-1 px-4 lg:px-8 py-5 lg:py-8 pb-24 lg:pb-8">
+        <main key={pathname} className="portal-page-enter flex-1 px-4 lg:px-8 py-5 lg:py-8 pb-24 lg:pb-8">
           {children}
         </main>
       </div>

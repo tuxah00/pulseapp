@@ -81,8 +81,14 @@ export default function CampaignsPage() {
     try {
       const res = await fetch('/api/campaigns')
       const json = await res.json()
+      if (!res.ok) {
+        window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: json.error || 'Kampanyalar yüklenemedi' } }))
+        return
+      }
       setCampaigns(json.campaigns || [])
-    } catch { /* ignore */ } finally { setLoading(false) }
+    } catch {
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Bağlantı hatası' } }))
+    } finally { setLoading(false) }
   }, [businessId])
 
   useEffect(() => { fetchCampaigns() }, [fetchCampaigns])

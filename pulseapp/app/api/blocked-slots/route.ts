@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { verifyBusinessAccess } from '@/lib/utils/auth-guard'
 
 // GET: Belirli tarih aralığı için bloklanmış slotları getir
 export async function GET(request: NextRequest) {
@@ -13,6 +14,9 @@ export async function GET(request: NextRequest) {
   const to = searchParams.get('to')
 
   if (!businessId) return NextResponse.json({ error: 'businessId gerekli' }, { status: 400 })
+
+  const staff = await verifyBusinessAccess(supabase, user.id, businessId)
+  if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
 
   let query = supabase
     .from('blocked_slots')
@@ -53,6 +57,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'businessId ve slots gerekli' }, { status: 400 })
   }
 
+  const staff = await verifyBusinessAccess(supabase, user.id, businessId)
+  if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
+
   const records = slots.map(s => ({
     business_id: businessId,
     date: s.date,
@@ -87,6 +94,9 @@ export async function DELETE(request: NextRequest) {
   if (!id || !businessId) {
     return NextResponse.json({ error: 'id ve businessId gerekli' }, { status: 400 })
   }
+
+  const staff = await verifyBusinessAccess(supabase, user.id, businessId)
+  if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
 
   const { error } = await supabase
     .from('blocked_slots')

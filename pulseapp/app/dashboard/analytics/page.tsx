@@ -9,7 +9,7 @@ import {
   DollarSign, AlertTriangle, Clock, Star, UserCheck, Minus,
   BarChart3, PieChart, Activity, Plus, X, Wallet, Download, Layers, Sparkles, Gem,
 } from 'lucide-react'
-import { formatCurrency, cn } from '@/lib/utils'
+import { formatCurrency, cn, formatDateISO } from '@/lib/utils'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { SEGMENT_LABELS } from '@/types'
 import { exportToCSV } from '@/lib/utils/export'
@@ -71,8 +71,8 @@ function getPeriodDates(period: 'week' | 'month' | 'year', offset = 0): { start:
   }
 
   return {
-    start: start.toISOString().split('T')[0],
-    end: end.toISOString().split('T')[0],
+    start: formatDateISO(start),
+    end: formatDateISO(end),
   }
 }
 
@@ -110,7 +110,7 @@ export default function AnalyticsPage() {
   const [expCategory, setExpCategory] = useState('')
   const [expDescription, setExpDescription] = useState('')
   const [expAmount, setExpAmount] = useState('')
-  const [expDate, setExpDate] = useState(() => new Date().toISOString().split('T')[0])
+  const [expDate, setExpDate] = useState(() => formatDateISO(new Date()))
   const [expIsRecurring, setExpIsRecurring] = useState(false)
   const [expRecurringPeriod, setExpRecurringPeriod] = useState('monthly')
   const [savingExpense, setSavingExpense] = useState(false)
@@ -122,7 +122,7 @@ export default function AnalyticsPage() {
   const [incCategory, setIncCategory] = useState('')
   const [incDescription, setIncDescription] = useState('')
   const [incAmount, setIncAmount] = useState('')
-  const [incDate, setIncDate] = useState(() => new Date().toISOString().split('T')[0])
+  const [incDate, setIncDate] = useState(() => formatDateISO(new Date()))
   const [incIsRecurring, setIncIsRecurring] = useState(false)
   const [incRecurringPeriod, setIncRecurringPeriod] = useState('monthly')
   const [incCustomDays, setIncCustomDays] = useState('7')
@@ -214,7 +214,7 @@ export default function AnalyticsPage() {
       setShowExpenseForm(false)
       logAudit({ businessId: businessId!, staffId: staffId || null, staffName: staffName || null, action: 'create', resource: 'expense', details: { category: expCategory, amount: parseFloat(expAmount), description: expDescription || null } })
       setExpCategory(''); setExpDescription(''); setExpAmount('')
-      setExpDate(new Date().toISOString().split('T')[0])
+      setExpDate(formatDateISO(new Date()))
       setExpIsRecurring(false); setExpRecurringPeriod('monthly'); setExpCustomDays('7')
       fetchExpenses()
       window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Oluşturuldu' } }))
@@ -255,7 +255,7 @@ export default function AnalyticsPage() {
       setShowIncomeForm(false)
       logAudit({ businessId: businessId!, staffId: staffId || null, staffName: staffName || null, action: 'create', resource: 'income', details: { category: incCategory, amount: parseFloat(incAmount), description: incDescription || null } })
       setIncCategory(''); setIncDescription(''); setIncAmount('')
-      setIncDate(new Date().toISOString().split('T')[0])
+      setIncDate(formatDateISO(new Date()))
       setIncIsRecurring(false); setIncRecurringPeriod('monthly'); setIncCustomDays('7')
       fetchIncome()
       window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Oluşturuldu' } }))

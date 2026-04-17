@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { Clock, TrendingUp } from 'lucide-react'
-import { cn, formatCurrency } from '@/lib/utils'
+import { cn, formatCurrency, formatDateISO } from '@/lib/utils'
 
 export default function PerformanceStats() {
   const { businessId, loading: ctxLoading } = useBusinessContext()
@@ -17,7 +17,7 @@ export default function PerformanceStats() {
     if (!businessId) return
     const start = new Date()
     start.setDate(start.getDate() - 30)
-    const startStr = start.toISOString().split('T')[0]
+    const startStr = formatDateISO(start)
 
     const [aptRes, svcRes] = await Promise.all([
       supabase.from('appointments')

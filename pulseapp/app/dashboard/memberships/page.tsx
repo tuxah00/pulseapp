@@ -11,7 +11,7 @@ import {
   Edit2, Trash2, Pause, Play, CheckCircle, Loader2,
   LayoutList, LayoutGrid, Filter, ArrowUpDown,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, formatDateISO } from '@/lib/utils'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
 import { ToolbarPopover, SortPopoverContent } from '@/components/ui/toolbar-popover'
 import CompactBoxCard from '@/components/ui/compact-box-card'
@@ -150,7 +150,7 @@ export default function MembershipsPage() {
     setCustomerName('')
     setCustomerPhone('')
     setPlanName('')
-    setStartDate(new Date().toISOString().split('T')[0])
+    setStartDate(formatDateISO(new Date()))
     setEndDate('')
     setPrice('')
     setSessionsTotal('')

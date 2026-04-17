@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { normalizePhone, phoneOrFilter } from '@/lib/utils/phone'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
 import { isValidUUID } from '@/lib/utils/validate'
+import { setPortalSessionCookies } from '@/lib/portal/auth'
 
 // POST — OTP atlamadan doğrudan müşteri girişi (SMS servisi aktif olana kadar)
 export async function POST(request: NextRequest) {
@@ -41,7 +42,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Giriş başarısız' }, { status: 404 })
   }
 
-  // Cookie oluştur — doğrudan giriş
   const response = NextResponse.json({
     success: true,
     customer: {
@@ -52,21 +52,5 @@ export async function POST(request: NextRequest) {
     },
   })
 
-  response.cookies.set('portal_customer_id', customer.id, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 7 * 24 * 60 * 60,
-    path: '/',
-  })
-
-  response.cookies.set('portal_business_id', businessId, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 7 * 24 * 60 * 60,
-    path: '/',
-  })
-
-  return response
+  return setPortalSessionCookies(response, { customerId: customer.id, businessId })
 }
