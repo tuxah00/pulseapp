@@ -28,7 +28,7 @@ export function AnimatedItem({
   return (
     <div
       className={`animated-item ${className || ''}`}
-      style={{ animationDelay: `${index * 40}ms` }}
+      style={{ animationDelay: `${Math.min(index, 10) * 15}ms` }}
       onClick={onClick}
       {...props}
     >

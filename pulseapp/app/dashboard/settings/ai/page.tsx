@@ -356,14 +356,14 @@ export default function AISettingsPage() {
           </div>
         </section>
 
-        {/* Tutorial ipuçları */}
+        {/* Başlangıç ipuçları */}
         <section className="card p-5">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Tutorial İpuçları</h2>
+              <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Başlangıç İpuçları</h2>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 max-w-md">
-                Yeni ziyaret ettiğin kritik sayfalarda kısa bir ipucu balonu görünür.
-                Kapattığında aynı sayfada bir daha çıkmaz.
+                Her sayfada &ldquo;Kısa bir ipucu ister misin?&rdquo; balonu belirir; tıkladığında asistan o sayfayı açıklar.
+                Kapat (X) yalnızca o sayfada gizler, diğer sayfalarda yine çıkar. Tamamen kapatmak için bu ayarı kapatabilirsin.
               </p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer shrink-0">

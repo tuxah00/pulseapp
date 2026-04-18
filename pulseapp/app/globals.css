@@ -374,7 +374,7 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 .animated-item {
-  animation: itemFadeIn 0.2s ease-out both;
+  animation: itemFadeIn 0.12s ease-out both;
 }
 
 /* ── Portal sayfa giriş animasyonu ── */

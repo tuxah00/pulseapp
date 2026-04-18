@@ -17,6 +17,7 @@ interface UseTutorialReturn {
   reset: () => Promise<void>
   allTopics: TutorialTopic[]
   seenTopics: TutorialTopic[]
+  dismissForCurrentPath: () => void
 }
 
 // sector opsiyonel: BusinessProvider dışında çağrılan yerler (AI paneli gibi)
@@ -60,14 +61,25 @@ export function useTutorial(sectorOverride?: SectorType | null): UseTutorialRetu
   }, [allTopics, progress?.seen_pages])
 
   const enabled = progress?.enabled !== false  // default true
-  const seenSet = useMemo(() => new Set(progress?.seen_pages ?? []), [progress?.seen_pages])
+
+  // İpucu balonu her sayfada görünür (ayarda kapatılmadığı sürece).
+  // Kullanıcı X'e basarsa aşağıdaki sayfa-lokal state ile yalnızca o sayfada gizlenir.
+  const [dismissedPath, setDismissedPath] = useState<string | null>(null)
+  useEffect(() => {
+    // Yol değişince lokal gizleme sıfırlanır — yeni sayfada balon yine çıkar
+    setDismissedPath(null)
+  }, [pathname])
 
   const shouldShowBubble = !!(
     !loading &&
     enabled &&
     currentTopic &&
-    !seenSet.has(currentTopic.pageKey)
+    dismissedPath !== pathname
   )
+
+  const dismissForCurrentPath = useCallback(() => {
+    setDismissedPath(pathname ?? null)
+  }, [pathname])
 
   const shouldRunSetup = !!(
     !loading &&
@@ -117,5 +129,6 @@ export function useTutorial(sectorOverride?: SectorType | null): UseTutorialRetu
     reset,
     allTopics,
     seenTopics,
+    dismissForCurrentPath,
   }
 }
