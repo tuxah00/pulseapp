@@ -273,6 +273,7 @@ Güncel durum (2026-04-18 taraması):
 - `2026-04-18`: Native `<select>` → `CustomSelect` dönüşümü (register, book, book/manage sayfaları)
 - `2026-04-18`: 6 ana dashboard sayfasında (appointments, customers, invoices, reviews, inventory, rewards) tekrarlayan boş-durum JSX'i ortak `EmptyState` bileşenine taşındı
 - `2026-04-18`: Dialog/Sheet `sr-only="Close"` etiketi Türkçeleştirildi (`"Kapat"`)
+- `2026-04-18` (`f389598`): Bekleme listesi onarım paketi — `.or()` AND'leme bug'ı, misafir müşteri auto-create, sıralı bildirim (15 dk hold), "Sıradakine Gönder" endpoint + butonu, dashboard tercih badge'leri + countdown
 
 ---
 
@@ -323,9 +324,9 @@ Her test turunda bulunan sorunlar aşağıda tutulur. Yayın öncesi hepsi ele a
 - "Randevu Oluştur" modal'ından waitlist → appointment dönüşümü (manuel)
 
 **Bozuk / Yüksek Öncelik:**
-1. **`fill-gap` rotasında birden fazla `.or()` zincirleme** ([fill-gap/route.ts:113-116](pulseapp/app/api/appointments/[id]/fill-gap/route.ts)). Supabase'de art arda `.or()` çağrıları öncekini **override eder** — şu an yalnızca son filtre (`preferred_time_start.eq OR is.null`) uygulanıyor; service/date/staff eşleşme filtreleri kaybediyor. Sonuç: eşleşmeyen waitlist kayıtları da bildirim alabilir. → Tek `.or()` içinde AND/OR grup olarak yazılmalı veya `rpc` ile özel sorgu.
-2. **`gap_fill_notifications.customer_id` NOT NULL constraint ihlali** ([040a_gap_fill_notifications.sql:9](pulseapp/supabase/migrations/040a_gap_fill_notifications.sql) + [fill-gap/route.ts:212-220](pulseapp/app/api/appointments/[id]/fill-gap/route.ts)). Public'ten gelen kayıtlarda `customer_id` null olabilir; bu durumda INSERT sessizce fail oluyor (try/catch yutuyor) → waitlist kaydı `is_notified` olmadan kalıyor, aynı slot için tekrar bildirim gönderilebilir. → Kolonu nullable yap veya INSERT'i `customerId` null'sa atla.
-3. **`auto_book_on_match` sadece `customerId` varsa çalışır** ([fill-gap/route.ts:149](pulseapp/app/api/appointments/[id]/fill-gap/route.ts)). Public booking'den telefonla kayıt olan yeni kullanıcı için otomatik rezervasyon tetiklenmiyor — kullanıcı gereksinimle çelişir. → Customer otomatik oluşturma (yoksa ekle) veya bu kısıt UI'da belirtilmeli.
+1. ✅ **ÇÖZÜLDÜ (2026-04-18, commit `f389598`)** — `.or()` zincirleme bug'ı JS tarafında AND filtresi ile yeniden yazıldı ([fill-gap/route.ts:109-123](pulseapp/app/api/appointments/[id]/fill-gap/route.ts)). Artık 4 kritere (service/date/staff/time) doğru AND uygulanıyor.
+2. ✅ **ÇÖZÜLDÜ (2026-04-18)** — `056_waitlist_sequential.sql` migration'ı ile `gap_fill_notifications.customer_id` NOT NULL kaldırıldı. Misafir waitlist kayıtları için INSERT artık başarılı.
+3. ✅ **ÇÖZÜLDÜ (2026-04-18)** — Public waitlist POST'unda ([app/api/public/business/[id]/waitlist/route.ts:50-72](pulseapp/app/api/public/business/[id]/waitlist/route.ts)) telefon eşleşmezse otomatik `customers` satırı oluşturuluyor, `auto_book_on_match` misafir kullanıcı için de çalışır.
 
 **Eksik / Orta Öncelik:**
 4. **Müşteri portalında "Bekleme listesi kayıtlarım" yok** — `/book/manage/[token]` sadece randevu için. Müşteri kendi waitlist durumunu, iptal edemiyor. → Basit bir "/book/waitlist/[phone]" sayfası veya token bazlı erişim eklenmeli.
@@ -333,7 +334,13 @@ Her test turunda bulunan sorunlar aşağıda tutulur. Yayın öncesi hepsi ele a
 6. **`/api/cron/daily/route.ts` waitlist bölümü boş** — WaitlistEntry tipi tanımlı ama süresi dolmuş kayıtları otomatik pasifleştirme / uzun süre bekleyen kayıtlara hatırlatma gibi bir implementasyon yok.
 7. **Waitlist → Booking konversiyon metriği yok** — Dashboard "Bildirim Gönderilen" sayıyor ama "Kaç tanesi sonunda randevu aldı" metriği yok. İşletme faydası ölçülmüyor.
 8. **Telefon eşleştirme `+90` prefix hassas** — `normalizePhone` + `phoneOrFilter` var ama DB'deki eski kayıtlar farklı normalize edilmişse link atlanabilir. Test edilmeli.
-9. **`waitlist_entries` TypeScript interface'de `auto_book_on_match` alanı eksik** ([types/index.ts](pulseapp/types/index.ts)) — kod string literal olarak kullanıyor, derleyici uyarı vermiyor.
+9. ✅ **ÇÖZÜLDÜ (2026-04-18)** — `WaitlistEntry` tipine `auto_book_on_match`, `notification_expires_at`, `notified_for_appointment_id`, `staff` alanları eklendi ([types/index.ts](pulseapp/types/index.ts)).
+
+**Paket 2+3 Eklemeleri (2026-04-18, commit `f389598`):**
+- **Sıralı bildirim mantığı:** `fill-gap` artık **tek** (ilk) eşleşen waitlist kaydına bildirim atar (paralel batch yerine). 15 dakikalık `notification_expires_at` hold süresi ayarlanır.
+- **"Sıradakine Gönder" endpoint'i:** Yeni `POST /api/appointments/[id]/fill-gap/next` — işletme personeli süresi dolan bildirimi atlayıp sıradaki eşleşene gönderebilir.
+- **Dashboard tercih görünürlüğü:** Her waitlist kartında hizmet/tarih/saat/personel badge'leri, "Otomatik Randevu" rozeti, canlı countdown ("Kalan MM:SS") ve notified entry'lerde "Sıradakine Gönder" butonu.
+- **auto_book_on_match akışı:** Misafir dahil otomatik randevu oluşturulduğunda waitlist entry `is_active=false` yapılır ve sıradakine bildirim gitmez.
 
 **İşletme Faydası:**
 > Bekleme listesi iptal edilen randevu slotlarını geri kazanmak için **yüksek değer** üretebilir — ancak şu an konversiyon oranı ölçülmüyor, otomatik rezervasyon yalnızca kayıtlı müşteriler için çalışıyor, ve eşleşme filtresi kırık. Çalışır hale getirildiğinde her iptali bir dolu slot'a çevirme potansiyeli var; öncelikli özellik.
@@ -352,7 +359,7 @@ Aşağıdaki migration'lar Supabase SQL Editor'de manuel olarak çalıştırılm
 ### Migration Numaralandırma Kuralı (2026-04-18'den itibaren)
 Aynı numaraya denk gelen migration'lar `a/b/c` harf suffix'i ile ayrılır. Alfabetik sıralama doğru çalışma sırasını korur.
 Mevcut a/b çiftleri: `036a/036b`, `037a/037b`, `040a/040b`, `049a/049b`, `050a/050b`, `053a/053b`, `054a/054b`.
-Son migration numarası: `055_waitlist_auto_book.sql`.
+Son migration numarası: `056_waitlist_sequential.sql`.
 
 ### Uygulanan Migration'lar (Supabase'de çalıştırıldı)
 - `006_create_shifts.sql` + `008_fix_shifts_trigger.sql` → **✅ Uygulandı (2026-03-19)**
@@ -361,3 +368,4 @@ Son migration numarası: `055_waitlist_auto_book.sql`.
 - `040b_staff_write_permissions.sql` → **✅ Uygulandı (2026-04-15)** — `staff_members.write_permissions` JSONB kolonu (granüler Düzenle yetkisi)
 - `053b_rewards_feature_flag.sql` → **✅ Uygulandı (2026-04-18)** — `businesses.settings.rewards_enabled` varsayılan değeri
 - `054b_reviews_anonymous.sql` → **✅ Uygulandı (2026-04-18)** — `reviews.is_anonymous` kolonu + partial index
+- `056_waitlist_sequential.sql` → **✅ Uygulandı (2026-04-18)** — `gap_fill_notifications.customer_id` NOT NULL kaldırıldı; `waitlist_entries.notification_expires_at` + `notified_for_appointment_id` kolonları + partial index
