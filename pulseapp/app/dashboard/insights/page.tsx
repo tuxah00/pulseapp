@@ -55,31 +55,31 @@ function fmtPct(v: number | null): string {
 }
 
 function marginInterpretation(v: number | null): string {
-  if (v == null) return 'Yeterli gelir-gider verisi henüz yok.'
-  if (v >= 30) return 'Sağlıklı — her 100₺ gelirin 30₺\'den fazlası elinizde kalıyor.'
-  if (v >= 15) return 'Ortalama — kâr var ama gider tarafı optimize edilebilir.'
-  return 'Dikkat — gelirin büyük kısmı giderlere gidiyor.'
+  if (v == null) return 'Veri yetersiz.'
+  if (v >= 30) return 'Sağlıklı.'
+  if (v >= 15) return 'Ortalama — gider optimize edilebilir.'
+  return 'Düşük — gider ağır basıyor.'
 }
 
 function occupancyInterpretation(v: number | null): string {
-  if (v == null) return 'Çalışma saati verisi eksik olabilir.'
-  if (v >= 70) return 'Dolusunuz — fiyat artırımı veya kapasite ekleme zamanı.'
-  if (v >= 40) return 'Makul doluluk — boş slotları kampanyayla doldurabilirsiniz.'
-  return 'Düşük doluluk — pazarlama ve hatırlatma öncelik olmalı.'
+  if (v == null) return 'Veri yok.'
+  if (v >= 70) return 'Dolu — fiyat/kapasite gözden geçir.'
+  if (v >= 40) return 'Makul.'
+  return 'Düşük — kampanya öncelikli.'
 }
 
 function retentionInterpretation(v: number | null): string {
-  if (v == null) return 'Elde tutma hesaplanamadı.'
-  if (v >= 40) return 'İyi — müşterileriniz geri dönüyor.'
-  if (v >= 20) return 'Orta — takip mesajı ve ödül sistemi etkiyi artırır.'
-  return 'Zayıf — müşterileriniz çoğunlukla dönmüyor, neden araştırılmalı.'
+  if (v == null) return 'Hesaplanamadı.'
+  if (v >= 40) return 'İyi.'
+  if (v >= 20) return 'Orta — takip mesajı ekle.'
+  return 'Zayıf — sebep araştır.'
 }
 
 function concentrationInterpretation(v: number | null): string {
   if (v == null) return '—'
-  if (v > 60) return 'Riskli konsantrasyon — gelirin büyük kısmı tek hizmete bağlı.'
-  if (v > 40) return 'Orta — birkaç hizmete çeşitlendirin.'
-  return 'Dengeli hizmet karışımı.'
+  if (v > 60) return 'Riskli — tek hizmete bağımlı.'
+  if (v > 40) return 'Orta — çeşitlendir.'
+  return 'Dengeli.'
 }
 
 export default function InsightsPage() {
@@ -147,7 +147,7 @@ export default function InsightsPage() {
           İş Zekası
         </h1>
         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-          İşletmenizin nabzı, kâr fırsatları ve gündem — sade Türkçe yorumlarla.
+          İşletmenizin nabzı ve fırsatlar.
         </p>
       </div>
 
@@ -248,7 +248,7 @@ export default function InsightsPage() {
         <div className="card p-6 text-center cursor-default">
           <Sparkles className="w-8 h-8 mx-auto text-gray-300 dark:text-gray-600 mb-2" />
           <div className="text-sm text-gray-600 dark:text-gray-400">
-            Şu an için aktif bir öneri yok. Daha fazla veri biriktikçe stratejik içgörüler burada görünecek.
+            Henüz öneri yok. Veri arttıkça içgörüler görünecek.
           </div>
         </div>
       )}
@@ -310,8 +310,7 @@ export default function InsightsPage() {
           </h2>
         </div>
         <p className="text-xs text-gray-500 dark:text-gray-400">
-          Her ay yeni kazanılan müşterilerin sonraki aylarda tekrar randevu alma oranı.
-          Yeşil = dönüş güçlü, gri = dönüş zayıf.
+          Yeni müşterilerin aylara göre dönüş oranı. Yeşil: güçlü, gri: zayıf.
         </p>
         <CohortHeatmap cohort={data.cohort} />
       </section>

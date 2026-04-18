@@ -20,8 +20,8 @@ export default function PulseCards({ pulse }: Props) {
         value={pulse.peak_hour ? pulse.peak_hour.label : '—'}
         hint={
           pulse.peak_hour
-            ? `Son 30 günde ${pulse.peak_hour.count} randevu bu aralıkta`
-            : 'Yeterli randevu yok'
+            ? `${pulse.peak_hour.count} randevu bu saatte`
+            : 'Veri yok'
         }
       />
       <PulseCard
@@ -31,7 +31,7 @@ export default function PulseCards({ pulse }: Props) {
         hint={
           pulse.new_vs_returning
             ? `${pulse.new_vs_returning.new_count} yeni · ${pulse.new_vs_returning.returning_count} düzenli`
-            : 'Müşteri hareketi yok'
+            : 'Veri yok'
         }
         tone={
           pulse.new_vs_returning == null ? 'default' :
@@ -47,7 +47,7 @@ export default function PulseCards({ pulse }: Props) {
           pulse.cancellation_rate == null
             ? 'Veri yok'
             : pulse.cancellation_rate > 15
-              ? 'Yüksek — hatırlatma SMS\'i ekle'
+              ? 'Yüksek — hatırlatma ekle'
               : pulse.cancellation_rate > 8
                 ? 'Ortalama üstü'
                 : 'Sağlıklı'
@@ -70,7 +70,7 @@ export default function PulseCards({ pulse }: Props) {
             ? '—'
             : `${pulse.weekly_revenue_delta > 0 ? '+' : ''}${pulse.weekly_revenue_delta.toFixed(1)}%`
         }
-        hint="Son 7 gün vs. önceki 7 gün"
+        hint="7 gün vs. önceki 7 gün"
         tone={
           pulse.weekly_revenue_delta == null ? 'default' :
           pulse.weekly_revenue_delta > 5 ? 'good' :

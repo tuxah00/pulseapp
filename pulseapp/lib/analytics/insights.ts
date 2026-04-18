@@ -448,8 +448,7 @@ export async function computeStrategicRecommendations(
       title: `${peakUpcoming.label} talep ${peakUpcoming.demand === 'peak' ? 'zirvesi' : 'artışı'} yaklaşıyor`,
       rationale: peakUpcoming.note,
       evidence: [
-        `Sektörel kalıp: ${peakUpcoming.label} → ${peakUpcoming.demand === 'peak' ? 'peak' : 'high'}`,
-        relevantPlaybook ? `Playbook: ${relevantPlaybook.action}` : 'Sezonluk kampanya planla',
+        relevantPlaybook ? relevantPlaybook.action : 'Sezonluk kampanya planla',
       ],
       suggested_action: relevantPlaybook
         ? {
@@ -474,10 +473,9 @@ export async function computeStrategicRecommendations(
       severity: kpi.occupancy_percentage < 35 ? 'critical' : 'high',
       focus: 'occupancy',
       title: `Doluluk oranı düşük (%${kpi.occupancy_percentage})`,
-      rationale: `Hedef doluluk ${strategy.kpi_targets.find(k => k.metric.toLowerCase().includes('doluluk'))?.target || '%65+'} seviyesinde olmalı. Şu an altında.`,
+      rationale: `Hedef: ${strategy.kpi_targets.find(k => k.metric.toLowerCase().includes('doluluk'))?.target || '%65+'}. Altında.`,
       evidence: [
-        `Bu ay doluluk: %${kpi.occupancy_percentage}`,
-        playbook ? `Playbook: ${playbook.action}` : 'Boş slot promosyonu',
+        playbook ? playbook.action : 'Boş slot promosyonu',
       ],
       suggested_action: playbook
         ? {
@@ -500,11 +498,10 @@ export async function computeStrategicRecommendations(
       severity: kpi.service_concentration > 65 ? 'high' : 'medium',
       focus: 'profit',
       title: `"${top.service_name}" gelirin %${kpi.service_concentration}'ini oluşturuyor`,
-      rationale: 'Tek hizmete aşırı bağımlılık riskli. Trend değişirse ciro ani düşebilir.',
+      rationale: 'Tek hizmete aşırı bağımlılık riskli.',
       evidence: [
-        `Top hizmet: ${top.service_name} — ${top.revenue.toLocaleString('tr-TR')}₺`,
-        `İkinci hizmet: ${margin[1]?.service_name || '—'} — ${margin[1]?.revenue.toLocaleString('tr-TR') || 0}₺`,
-        strategy.profit_drivers[0] || 'Hizmet çeşitlendirmesi öneriliyor',
+        `1. ${top.service_name} — ${top.revenue.toLocaleString('tr-TR')}₺`,
+        `2. ${margin[1]?.service_name || '—'} — ${margin[1]?.revenue.toLocaleString('tr-TR') || 0}₺`,
       ],
       suggested_action: {
         type: 'none',
@@ -524,10 +521,9 @@ export async function computeStrategicRecommendations(
         severity: kpi.margin_percentage < targetLow - 15 ? 'critical' : 'high',
         focus: 'profit',
         title: `Kâr marjı hedefin altında (%${kpi.margin_percentage})`,
-        rationale: `Sektör hedefi: ${marginTarget?.target || '%40-50'}. ${marginTarget?.why || 'Sağlıklı büyüme için marj gerekli.'}`,
+        rationale: `Sektör hedefi: ${marginTarget?.target || '%40-50'}.`,
         evidence: [
-          `Mevcut marj: %${kpi.margin_percentage}`,
-          `Hedef: ${marginTarget?.target || '%40-50'}`,
+          `Mevcut: %${kpi.margin_percentage} · Hedef: ${marginTarget?.target || '%40-50'}`,
           strategy.margin_leaks[0] || 'Gider kategorilerini gözden geçir',
         ],
         suggested_action: { type: 'none', label: 'Gider analizini asistana sor' },
@@ -543,10 +539,9 @@ export async function computeStrategicRecommendations(
       severity: kpi.retention_percentage < 25 ? 'high' : 'medium',
       focus: 'retention',
       title: `90 gün içinde dönen müşteri oranı düşük (%${kpi.retention_percentage})`,
-      rationale: 'Yeni müşteri kazanmak mevcudu elde tutmaktan 5x pahalı.',
+      rationale: 'Yeni müşteri bulmak mevcudu tutmaktan pahalı.',
       evidence: [
-        `Aktif (son 90 gün): %${kpi.retention_percentage}`,
-        `Öneri: ${hook}`,
+        hook,
       ],
       suggested_action: {
         type: 'create_workflow',
@@ -586,9 +581,9 @@ export async function computeStrategicRecommendations(
       severity: atRisk.length >= 10 ? 'high' : 'medium',
       focus: 'risk',
       title: `${atRisk.length} yüksek değerli müşteri 60+ gündür gelmedi`,
-      rationale: 'VIP/regular müşteri kaybı ciroyu doğrudan etkiler.',
+      rationale: 'VIP kaybı ciroyu doğrudan vurur.',
       evidence: atRisk.slice(0, 3).map((c: any) =>
-        `${c.name} — ${Number(c.total_revenue).toLocaleString('tr-TR')}₺ harcamış, son ziyaret ${Math.round((Date.now() - new Date(c.last_visit_at).getTime()) / (24 * 60 * 60 * 1000))} gün önce`,
+        `${c.name} — ${Number(c.total_revenue).toLocaleString('tr-TR')}₺, ${Math.round((Date.now() - new Date(c.last_visit_at).getTime()) / (24 * 60 * 60 * 1000))} gün önce`,
       ),
       suggested_action: {
         type: 'create_campaign',
