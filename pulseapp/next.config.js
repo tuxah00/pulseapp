@@ -23,6 +23,9 @@ const nextConfig = {
     }
     out.push({ source: '/dashboard/settings/vardiye', destination: '/dashboard/settings/shifts', permanent: true })
     out.push({ source: '/dashboard/settings/vardiye/:path*', destination: '/dashboard/settings/shifts/:path*', permanent: true })
+    // ai-actions → asistan-aksiyonlari
+    out.push({ source: '/dashboard/ai-actions', destination: '/dashboard/asistan-aksiyonlari', permanent: true })
+    out.push({ source: '/dashboard/ai-actions/:path*', destination: '/dashboard/asistan-aksiyonlari/:path*', permanent: true })
     return out
   },
 }
