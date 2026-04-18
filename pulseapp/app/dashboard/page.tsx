@@ -28,8 +28,6 @@ import type {
 import TodayAppointments from './_components/today-appointments'
 import WeeklyInsights from './_components/weekly-insights'
 import PerformanceStats from './_components/performance-stats'
-import AiInsightsWidget from './_components/ai-insights-widget'
-import AiBriefWidget from './_components/ai-brief-widget'
 import { Sparkline } from '@/components/ui/sparkline'
 
 type TodayAppointmentRow = AppointmentRow & {
@@ -323,8 +321,6 @@ export default async function DashboardPage() {
             )}
           </div>
 
-          {/* AI günlük özeti */}
-          <AiBriefWidget businessId={businessId} />
         </div>
       </div>
 
@@ -382,7 +378,6 @@ export default async function DashboardPage() {
           <WeeklyInsights />
         </div>
         <div className="space-y-5">
-          <AiInsightsWidget />
           {riskCustomers && riskCustomers.length > 0 && (
             <div className="relative overflow-hidden rounded-2xl border border-amber-200 dark:border-amber-900/50 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/20 p-4">
               <div className="flex items-center gap-2 mb-3">
