@@ -144,6 +144,29 @@ export const CORE_TUTORIAL_TOPICS: TutorialTopic[] = [
       'Müşteri aydınlatma/onay kayıtlarını ve veri silme taleplerini buradan yönet. Her müşteri için onay durumu ve tarihi saklanır.',
   },
 
+  // --- İş zekası & AI ---
+  {
+    pageKey: 'insights',
+    path: '/dashboard/insights',
+    title: 'İş Zekası',
+    skeleton:
+      'Müşteri segmentleri, mevsimsel trendler, kohort analizi ve AI önerilerini buradan izle. Satranç tahtası grafiği hangi müşteri grubunun büyüdüğünü gösterir.',
+  },
+  {
+    pageKey: 'ai-actions',
+    path: '/dashboard/ai-actions',
+    title: 'AI Önerileri',
+    skeleton:
+      'Asistanın önerdiği randevu, kampanya ve müşteri aksiyonlarını buradan onayla veya reddet. Onaylanan öneriler otomatik olarak uygulanır.',
+  },
+  {
+    pageKey: 'rewards',
+    path: '/dashboard/rewards',
+    title: 'Ödüller',
+    skeleton:
+      'Müşterilere verilebilecek ödül şablonlarını (indirim, ücretsiz hizmet, puan) buradan tanımla. Referans sistemi ve kampanyalarla birlikte çalışır.',
+  },
+
   // --- Ayarlar ---
   {
     pageKey: 'settings',
