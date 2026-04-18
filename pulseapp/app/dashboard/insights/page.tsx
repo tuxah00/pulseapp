@@ -12,7 +12,6 @@ import SeasonalChart from '@/components/dashboard/insights/seasonal-chart'
 import QuadrantTable from '@/components/dashboard/insights/quadrant-table'
 import CohortHeatmap from '@/components/dashboard/insights/cohort-heatmap'
 import PulseCards from '@/components/dashboard/insights/pulse-cards'
-import MacroPanel from '@/components/dashboard/insights/macro-panel'
 
 interface SummaryWithMacro extends InsightsSummary {
   macro: MacroContext | null
@@ -252,9 +251,6 @@ export default function InsightsPage() {
           </div>
         </div>
       )}
-
-      {/* Dış Dünya — Makro bağlam */}
-      <MacroPanel macro={data.macro} />
 
       {/* Mevsimsel Trend */}
       <section className="card p-4 cursor-default space-y-3">
