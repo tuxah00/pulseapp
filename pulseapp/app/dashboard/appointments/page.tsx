@@ -308,6 +308,26 @@ export default function AppointmentsPage() {
     return 'future'
   }
 
+  // Haftalık/günlük görünümde apt kendi tarihine göre değerlendirilir
+  function getAptTimeState(apt: AppointmentView): 'past' | 'current' | 'future' {
+    if (apt.appointment_date < todayStr) return 'past'
+    if (apt.appointment_date > todayStr) return 'future'
+    const toMin = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
+    const start = toMin(apt.start_time)
+    const end = toMin(apt.end_time)
+    if (end <= nowMinutes) return 'past'
+    if (start <= nowMinutes && nowMinutes < end) return 'current'
+    return 'future'
+  }
+
+  function getAptVisual(apt: AppointmentView) {
+    const ts = getAptTimeState(apt)
+    const isDim = apt.status === 'cancelled' || ts === 'past'
+    const isActive = ts === 'current' && apt.status !== 'completed' && apt.status !== 'cancelled' && apt.status !== 'no_show'
+    const isUnconfirmed = ts === 'future' && apt.status === 'pending'
+    return { isActive, isDim, isUnconfirmed }
+  }
+
   function formatSelectedDate() {
     const d = new Date(selectedDate + 'T00:00:00')
     const days = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi']
@@ -1664,6 +1684,7 @@ export default function AppointmentsPage() {
                                   const colLeft = column * colWidth
                                   const isAptPast = isDayPast || (isDayToday && apt.end_time <= nowTimeStr)
                                   const isAptUnresolved = isAptPast && apt.status !== 'completed' && apt.status !== 'cancelled' && apt.status !== 'no_show'
+                                  const visual = getAptVisual(apt)
                                   return (
                                     <div
                                       key={apt.id}
@@ -1682,10 +1703,13 @@ export default function AppointmentsPage() {
                                         }}
                                         onDragEnd={() => setDraggingId(null)}
                                         className={cn(
-                                          'absolute inset-0 rounded-md px-1.5 py-0.5 overflow-hidden cursor-grab active:cursor-grabbing hover:opacity-90 transition-opacity border border-white/20',
-                                          staffColors[colorIdx]
+                                          'absolute inset-0 rounded-md px-1.5 py-0.5 overflow-hidden cursor-grab active:cursor-grabbing hover:opacity-90 transition-opacity',
+                                          staffColors[colorIdx],
+                                          visual.isActive ? 'ring-2 ring-inset ring-green-500' :
+                                          visual.isUnconfirmed ? 'ring-2 ring-inset ring-orange-400' :
+                                          'border border-white/20'
                                         )}
-                                        style={{ opacity: draggingId === apt.id ? 0.5 : isAptPast ? 0.5 : 1 }}
+                                        style={{ opacity: draggingId === apt.id ? 0.5 : visual.isDim ? 0.5 : 1 }}
                                         onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
                                       >
                                         <p className={cn('text-[10px] font-semibold truncate', staffTextColors[colorIdx])}>
@@ -2009,6 +2033,7 @@ export default function AppointmentsPage() {
                           const endMin = toMinutes(apt.end_time) - startHour * 60
                           const top = (startMin / 60) * hourHeight
                           const height = Math.max(((endMin - startMin) / 60) * hourHeight, 20)
+                          const visual = getAptVisual(apt)
                           return (
                             <div
                               key={apt.id}
@@ -2020,10 +2045,13 @@ export default function AppointmentsPage() {
                               }}
                               onDragEnd={() => setDraggingId(null)}
                               className={cn(
-                                'absolute left-0.5 right-0.5 rounded-md px-1.5 py-0.5 overflow-hidden cursor-grab active:cursor-grabbing hover:opacity-90 transition-opacity border border-white/20',
-                                staffColors[col.colorIdx]
+                                'absolute left-0.5 right-0.5 rounded-md px-1.5 py-0.5 overflow-hidden cursor-grab active:cursor-grabbing hover:opacity-90 transition-opacity',
+                                staffColors[col.colorIdx],
+                                visual.isActive ? 'ring-2 ring-inset ring-green-500' :
+                                visual.isUnconfirmed ? 'ring-2 ring-inset ring-orange-400' :
+                                'border border-white/20'
                               )}
-                              style={{ top, height, opacity: draggingId === apt.id ? 0.5 : isPast(apt) ? 0.5 : 1 }}
+                              style={{ top, height, opacity: draggingId === apt.id ? 0.5 : visual.isDim ? 0.5 : 1 }}
                               onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
                             >
                               <p className={cn('text-[10px] font-semibold truncate', staffTextColors[col.colorIdx])}>
@@ -2222,6 +2250,7 @@ export default function AppointmentsPage() {
                           const endMin = toMinutes(apt.end_time) - startHour * 60
                           const top = (startMin / 60) * hourHeight
                           const height = Math.max(((endMin - startMin) / 60) * hourHeight, 20)
+                          const visual = getAptVisual(apt)
                           return (
                             <div
                               key={apt.id}
@@ -2232,8 +2261,13 @@ export default function AppointmentsPage() {
                                 setDraggingId(apt.id)
                               }}
                               onDragEnd={() => setDraggingId(null)}
-                              className="absolute left-0.5 right-0.5 rounded-md px-1.5 py-0.5 overflow-hidden cursor-grab active:cursor-grabbing hover:opacity-80 transition-opacity text-white border border-white/20"
-                              style={{ top, height, backgroundColor: col.color, opacity: draggingId === apt.id ? 0.5 : isPast(apt) ? 0.5 : 1 }}
+                              className={cn(
+                                'absolute left-0.5 right-0.5 rounded-md px-1.5 py-0.5 overflow-hidden cursor-grab active:cursor-grabbing hover:opacity-80 transition-opacity text-white',
+                                visual.isActive ? 'ring-2 ring-inset ring-green-500' :
+                                visual.isUnconfirmed ? 'ring-2 ring-inset ring-orange-400' :
+                                'border border-white/20'
+                              )}
+                              style={{ top, height, backgroundColor: col.color, opacity: draggingId === apt.id ? 0.5 : visual.isDim ? 0.5 : 1 }}
                               onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
                             >
                               <p className="text-[10px] font-semibold truncate">{apt.customers?.name || 'İsimsiz'}</p>
@@ -2390,7 +2424,7 @@ export default function AppointmentsPage() {
         {viewMode === 'list' ? (
         <AnimatedList className="space-y-2">
           {filteredAppointments.map((apt) => {
-            const timeState = getTimeState(apt)
+            const visual = getAptVisual(apt)
             return (
               <AnimatedItem
                 key={apt.id}
@@ -2399,8 +2433,9 @@ export default function AppointmentsPage() {
                   'rounded-2xl border px-4 py-3 transition-all cursor-pointer',
                   'border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900/50',
                   'hover:border-gray-200 dark:hover:border-gray-700 hover:shadow-sm',
-                  timeState === 'past' && 'opacity-60',
-                  timeState === 'current' && 'border-green-400 dark:border-green-600 ring-1 ring-green-400 dark:ring-green-600',
+                  visual.isDim && 'opacity-60',
+                  visual.isActive && 'border-green-400 dark:border-green-600 ring-1 ring-green-400 dark:ring-green-600',
+                  visual.isUnconfirmed && 'border-orange-400 dark:border-orange-500 ring-1 ring-orange-400 dark:ring-orange-500',
                   isPastUnresolved(apt) && UNRESOLVED_BORDER_ONLY,
                   selectedAppointment?.id === apt.id && 'ring-2 ring-pulse-900 border-pulse-300 dark:border-pulse-700',
                 )}
@@ -2437,7 +2472,7 @@ export default function AppointmentsPage() {
       ) : (
         <AnimatedList className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(190px,220px))]">
           {filteredAppointments.map((apt) => {
-            const timeState = getTimeState(apt)
+            const visual = getAptVisual(apt)
             return (
               <AnimatedItem
                 key={apt.id}
@@ -2445,8 +2480,9 @@ export default function AppointmentsPage() {
                 className={cn(
                   'relative rounded-2xl border p-4 transition-all cursor-pointer hover:shadow-md flex flex-col',
                   'border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900/50',
-                  timeState === 'past' && 'opacity-60',
-                  timeState === 'current' && 'border-green-400 ring-1 ring-green-400',
+                  visual.isDim && 'opacity-60',
+                  visual.isActive && 'border-green-400 ring-1 ring-green-400',
+                  visual.isUnconfirmed && 'border-orange-400 dark:border-orange-500 ring-1 ring-orange-400 dark:ring-orange-500',
                   isPastUnresolved(apt) && UNRESOLVED_BORDER_ONLY,
                   selectedAppointment?.id === apt.id && 'ring-2 ring-pulse-900',
                 )}
