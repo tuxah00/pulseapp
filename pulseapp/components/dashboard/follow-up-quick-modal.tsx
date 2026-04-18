@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Bell, X, Clock, CheckCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatDateISO } from '@/lib/utils'
+import { Portal } from '@/components/ui/portal'
 
 export type FollowUpType = 'post_session' | 'next_session_reminder' | 'protocol_completion' | 'package_sold' | 'manual'
 
@@ -116,6 +117,7 @@ export function FollowUpQuickModal({
   if (!open) return null
 
   return (
+    <Portal>
     <div
       className={cn('fixed inset-0 z-[120] bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4 modal-overlay', closing && 'closing')}
       onClick={handleClose}
@@ -236,5 +238,6 @@ export function FollowUpQuickModal({
         )}
       </div>
     </div>
+    </Portal>
   )
 }
