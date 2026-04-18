@@ -50,7 +50,7 @@ const ROUTE_LABELS: Record<string, string> = {
   'follow-ups': 'Takipler',
   waitlist: 'Bekleme Listesi',
   campaigns: 'Kampanyalar',
-  'ai-actions': 'AI Önerileri',
+  'ai-actions': 'Asistan Aksiyonları',
   insights: 'İş Zekası',
   workflows: 'Otomatik Mesajlar',
   commissions: 'Prim',
