@@ -155,7 +155,7 @@ export const CORE_TUTORIAL_TOPICS: TutorialTopic[] = [
   {
     pageKey: 'ai-actions',
     path: '/dashboard/ai-actions',
-    title: 'AI Önerileri',
+    title: 'Asistan Aksiyonları',
     skeleton:
       'Asistanın önerdiği randevu, kampanya ve müşteri aksiyonlarını buradan onayla veya reddet. Onaylanan öneriler otomatik olarak uygulanır.',
   },

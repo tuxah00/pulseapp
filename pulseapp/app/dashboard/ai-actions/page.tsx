@@ -120,7 +120,7 @@ export default function AiActionsPage() {
       <div>
         <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
           <Inbox className="w-6 h-6 text-pulse-900 dark:text-pulse-300" />
-          AI Önerileri
+          Asistan Aksiyonları
         </h1>
         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
           Sistemin sizin için hazırladığı öneriler (kampanya, hatırlatma, geri kazanım). Onayladığınızda otomatik olarak uygulanır.
