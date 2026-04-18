@@ -21,6 +21,15 @@ Do not include claude.ai session links in commit messages.
 
 ---
 
+## Proje Durumu — Tasarım / Geliştirme Aşaması
+
+- **Canlı yayın YOK.** Proje henüz production'a alınmamış, hiç kullanıcıya açılmamış.
+- **Gerçek veri YOK.** Veritabanında sadece test/geliştirme kayıtları var, müşteri/işletme gerçek verisi yok.
+- **Saldırgan riski YOK.** Endpoint'ler dış dünyaya kapalı, public bir URL üzerinden erişim söz konusu değil.
+- **Sonuç:** Güvenlik bulguları (auth eksiği, rate-limit, PII sızıntısı vb.) **yayın öncesi** kapatılacak; şu an için acil değiller. Tasarım, tutarlılık ve mantık hatalarına öncelik verilir. Yayın kararı verildiğinde güvenlik checklist'i ayrı bir aşama olarak yürütülür.
+
+---
+
 ## İletişim Kuralı — Teknik Terimler
 
 Kullanıcı teknik terimlere yabancıdır. Bu nedenle:

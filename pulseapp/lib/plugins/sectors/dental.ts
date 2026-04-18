@@ -24,15 +24,6 @@ export const dentalPlugin: SectorPlugin = {
       endpoint: '/api/ai/photo-analysis',
       requiredPlan: 'pro',
     },
-    {
-      key: 'treatment-plan-generate',
-      label: 'Tedavi Planı Oluştur',
-      iconName: 'ClipboardList',
-      description: 'Mevcut bulgulara göre tedavi planı önerisi',
-      context: 'customer',
-      endpoint: '/api/ai/treatment-suggestion',
-      requiredPlan: 'pro',
-    },
   ],
 
   templates: [
@@ -157,13 +148,6 @@ Bilgilendirme yapıldı, riskleri anladım, tedaviyi kabul ediyorum.
       name: 'Panoramik Röntgen Analizi',
       description: 'AI destekli panoramik röntgen değerlendirmesi',
       endpoint: '/api/ai/photo-analysis',
-      requiredPlan: 'pro',
-    },
-    {
-      key: 'dental-treatment-suggest',
-      name: 'Tedavi Planı Önerisi',
-      description: 'Bulgulara dayalı AI tedavi planı önerisi',
-      endpoint: '/api/ai/treatment-suggestion',
       requiredPlan: 'pro',
     },
   ],
