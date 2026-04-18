@@ -550,9 +550,9 @@ export async function computeStrategicRecommendations(
       ],
       suggested_action: {
         type: 'create_workflow',
-        label: 'Otomatik winback akışı kur',
+        label: 'Otomatik geri kazanım akışı kur',
         payload: {
-          name: 'Winback 60 Gün',
+          name: 'Geri Kazanım 60 Gün',
           trigger_type: 'customer_inactive',
           trigger_config: { days_inactive: 60 },
           steps: [
@@ -592,7 +592,7 @@ export async function computeStrategicRecommendations(
       ),
       suggested_action: {
         type: 'create_campaign',
-        label: 'VIP winback kampanyası hazırla',
+        label: 'VIP geri kazanım kampanyası hazırla',
         payload: {
           name: 'VIP Geri Kazanım',
           message_template: `Merhaba {name}, özel indirimimiz sizin için hazır. Bir kahve içmeye bekleriz.`,

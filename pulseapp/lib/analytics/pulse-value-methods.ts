@@ -109,7 +109,7 @@ export const VALUE_METHOD_DESCRIPTIONS: Record<string, ValueMethodDescription> =
     summary: 'PulseApp özellikleri sayesinde işletmenize gelen ya da geri dönen müşteri sayısı.',
     steps: [
       'Referans (tavsiye) sistemi üzerinden gelen yeni müşteriler',
-      'Winback kampanyası ile ulaşılan, geri dönen müşteriler',
+      'Geri kazanım kampanyası ile ulaşılan, geri dönen müşteriler',
     ],
     assumption: 'Bu müşteriler platformun ilgili özellikleri olmadan çok büyük ihtimalle işletmenize ulaşmayacaktı.',
   },
