@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import {
   CalendarCheck, Gift, Loader2, Plus, ChevronRight, Sparkles,
-  Users, Trophy, TrendingUp, AlertCircle, Clock, Tag, Folder,
+  Users, Trophy, TrendingUp, AlertCircle, Clock, Megaphone, Folder,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { PortalHero } from './_components/portal-hero'
@@ -219,7 +219,7 @@ export default function PortalOverviewPage() {
                     {/* Etiket */}
                     <div className="flex items-center gap-2 mb-2">
                       <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-white/20 text-white rounded-full px-2.5 py-0.5">
-                        <Tag className="h-3 w-3" /> Sana Özel
+                        <Megaphone className="h-3 w-3" /> Sana Özel
                       </span>
                       {expiring && daysLeft !== null && (
                         <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-amber-400/30 text-amber-200 rounded-full px-2.5 py-0.5">

@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, CalendarDays, Stethoscope, Receipt, Folder,
-  Gift, Star, MessageSquarePlus, Settings, LogOut, Menu, X,
+  Gift, Star, Settings, LogOut, Menu, X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ConfirmProvider } from '@/lib/hooks/use-confirm'
@@ -61,7 +61,6 @@ function buildNav(businessId: string, showTreatments: boolean, rewardsEnabled: b
       ? [{ key: 'rewards', label: 'Ödüllerim', href: `${base}/rewards`, icon: Gift, mobileTab: true }]
       : []),
     { key: 'reviews', label: 'Yorumlarım', href: `${base}/reviews`, icon: Star },
-    { key: 'feedback', label: 'Geri Bildirim', href: `${base}/feedback`, icon: MessageSquarePlus },
     { key: 'settings', label: 'Ayarlar', href: `${base}/settings`, icon: Settings, mobileTab: true },
   ]
 }
