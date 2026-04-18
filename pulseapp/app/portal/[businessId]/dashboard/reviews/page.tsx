@@ -1,10 +1,11 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { Star, MessageSquare, Clock, Loader2, PenSquare, CheckCircle2, Users, User as UserIcon } from 'lucide-react'
+import { Star, MessageSquare, Clock, Loader2, PenSquare, CheckCircle2, Users, User as UserIcon, MessageSquarePlus, Inbox, Lightbulb, AlertTriangle, Heart, HelpCircle, Send } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ReviewFormModal, type PendingAppointmentForReview } from '../_components/review-form-modal'
 import { SectionHeader } from '../_components/section-header'
+import { FeedbackForm } from '../_components/feedback-form'
 
 interface PortalReview {
   id: string
@@ -26,7 +27,56 @@ interface BusinessReview {
   is_mine: boolean
 }
 
-type TabId = 'my' | 'business'
+type FeedbackType = 'suggestion' | 'complaint' | 'praise' | 'question'
+type FeedbackStatus = 'open' | 'in_progress' | 'resolved' | 'closed'
+
+interface FeedbackItem {
+  id: string
+  type: FeedbackType
+  subject: string | null
+  message: string
+  status: FeedbackStatus
+  response: string | null
+  responded_at: string | null
+  created_at: string
+}
+
+const FEEDBACK_TYPE_LABELS: Record<FeedbackType, string> = {
+  suggestion: 'Öneri',
+  complaint: 'Şikayet',
+  praise: 'Teşekkür',
+  question: 'Soru',
+}
+
+const FEEDBACK_TYPE_ICONS: Record<FeedbackType, typeof Lightbulb> = {
+  suggestion: Lightbulb,
+  complaint: AlertTriangle,
+  praise: Heart,
+  question: HelpCircle,
+}
+
+const FEEDBACK_TYPE_COLORS: Record<FeedbackType, string> = {
+  suggestion: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+  complaint: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+  praise: 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300',
+  question: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+}
+
+const FEEDBACK_STATUS_LABELS: Record<FeedbackStatus, string> = {
+  open: 'Açık',
+  in_progress: 'İşlemde',
+  resolved: 'Çözüldü',
+  closed: 'Kapalı',
+}
+
+const FEEDBACK_STATUS_COLORS: Record<FeedbackStatus, string> = {
+  open: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800',
+  in_progress: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800',
+  resolved: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800',
+  closed: 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700',
+}
+
+type TabId = 'my' | 'business' | 'feedback'
 
 const REVIEW_STATUS_LABELS: Record<string, string> = {
   pending: 'Beklemede',
@@ -88,6 +138,11 @@ export default function PortalReviewsPage() {
   const [loadingBiz, setLoadingBiz] = useState(false)
   const [bizLoaded, setBizLoaded] = useState(false)
 
+  // "Geri Bildirim" tab verileri
+  const [feedback, setFeedback] = useState<FeedbackItem[]>([])
+  const [loadingFb, setLoadingFb] = useState(false)
+  const [fbLoaded, setFbLoaded] = useState(false)
+
   const [modalAppt, setModalAppt] = useState<PendingAppointmentForReview | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
 
@@ -116,6 +171,20 @@ export default function PortalReviewsPage() {
     }
   }, [])
 
+  const loadFeedback = useCallback(async () => {
+    setLoadingFb(true)
+    try {
+      const res = await fetch('/api/portal/feedback')
+      if (res.ok) {
+        const data = await res.json()
+        setFeedback(data.feedback || [])
+      }
+    } finally {
+      setLoadingFb(false)
+      setFbLoaded(true)
+    }
+  }, [])
+
   useEffect(() => {
     loadMy()
   }, [loadMy])
@@ -126,6 +195,12 @@ export default function PortalReviewsPage() {
     }
   }, [tab, loadBusiness, bizLoaded, loadingBiz])
 
+  useEffect(() => {
+    if (tab === 'feedback' && !fbLoaded && !loadingFb) {
+      loadFeedback()
+    }
+  }, [tab, loadFeedback, fbLoaded, loadingFb])
+
   function openModal(apt: PendingAppointmentForReview | null) {
     setModalAppt(apt)
     setModalOpen(true)
@@ -133,6 +208,7 @@ export default function PortalReviewsPage() {
 
   const myCount = reviews.length
   const bizCount = businessReviews.length
+  const fbCount = feedback.length
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -144,11 +220,11 @@ export default function PortalReviewsPage() {
       </div>
 
       {/* Segmented tab */}
-      <div className="inline-flex rounded-xl bg-gray-100 dark:bg-gray-800 p-1">
+      <div className="inline-flex rounded-xl bg-gray-100 dark:bg-gray-800 p-1 max-w-full overflow-x-auto">
         <button
           onClick={() => setTab('my')}
           className={cn(
-            'flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors',
+            'flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap',
             tab === 'my'
               ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
               : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
@@ -166,7 +242,7 @@ export default function PortalReviewsPage() {
         <button
           onClick={() => setTab('business')}
           className={cn(
-            'flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors',
+            'flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap',
             tab === 'business'
               ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
               : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
@@ -181,9 +257,27 @@ export default function PortalReviewsPage() {
             )}>{bizCount}</span>
           )}
         </button>
+        <button
+          onClick={() => setTab('feedback')}
+          className={cn(
+            'flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap',
+            tab === 'feedback'
+              ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+          )}
+        >
+          <MessageSquarePlus className="h-4 w-4" />
+          Geri Bildirim
+          {fbCount > 0 && (
+            <span className={cn(
+              'ml-1 px-1.5 py-0.5 rounded-full text-[10px]',
+              tab === 'feedback' ? 'bg-pulse-900 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+            )}>{fbCount}</span>
+          )}
+        </button>
       </div>
 
-      {tab === 'my' ? (
+      {tab === 'my' && (
         loadingMy ? (
           <div className="flex items-center justify-center py-16">
             <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
@@ -309,7 +403,9 @@ export default function PortalReviewsPage() {
             </section>
           </div>
         )
-      ) : (
+      )}
+
+      {tab === 'business' && (
         // İşletme Yorumları tab
         loadingBiz ? (
           <div className="flex items-center justify-center py-16">
@@ -364,6 +460,109 @@ export default function PortalReviewsPage() {
             ))}
           </div>
         )
+      )}
+
+      {tab === 'feedback' && (
+        <div className="space-y-8">
+          {/* Yeni Geri Bildirim Formu */}
+          <section>
+            <SectionHeader
+              title="Yeni Geri Bildirim"
+              subtitle="Teşekkür, öneri, şikayet — ne varsa paylaş."
+              icon={Send}
+            />
+            <div className="mt-2">
+              <FeedbackForm onSubmitted={() => { setFbLoaded(false); loadFeedback() }} />
+            </div>
+          </section>
+
+          {/* Geçmiş Geri Bildirimler */}
+          <section>
+            <SectionHeader
+              title="Önceki Gönderilerim"
+              subtitle={feedback.length > 0 ? `Toplam ${feedback.length} gönderi` : undefined}
+              icon={Inbox}
+            />
+
+            {loadingFb ? (
+              <div className="flex items-center justify-center py-10">
+                <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+              </div>
+            ) : feedback.length === 0 ? (
+              <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-8 text-center">
+                <Inbox className="h-10 w-10 text-gray-300 dark:text-gray-700 mx-auto mb-3" />
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Henüz bir gönderimin yok.
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Aklına ne gelirse yaz — yukarıdan birkaç cümleyle paylaşabilirsin.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {feedback.map((item) => {
+                  const Icon = FEEDBACK_TYPE_ICONS[item.type]
+                  return (
+                    <div key={item.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-5">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-3 min-w-0 flex-1">
+                          <div className={cn(
+                            'h-9 w-9 rounded-lg flex items-center justify-center flex-shrink-0',
+                            FEEDBACK_TYPE_COLORS[item.type]
+                          )}>
+                            <Icon className="h-4 w-4" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[11px] font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                                {FEEDBACK_TYPE_LABELS[item.type]}
+                              </span>
+                              <span className="text-gray-300 dark:text-gray-700">·</span>
+                              <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                                {formatDate(item.created_at)}
+                              </span>
+                            </div>
+                            {item.subject && (
+                              <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mt-0.5">
+                                {item.subject}
+                              </h3>
+                            )}
+                            <p className="text-sm text-gray-700 dark:text-gray-300 mt-1 whitespace-pre-wrap break-words">
+                              {item.message}
+                            </p>
+                          </div>
+                        </div>
+                        <span className={cn(
+                          'text-[11px] font-medium px-2 py-0.5 rounded-full border whitespace-nowrap flex-shrink-0',
+                          FEEDBACK_STATUS_COLORS[item.status] || FEEDBACK_STATUS_COLORS.open
+                        )}>
+                          {FEEDBACK_STATUS_LABELS[item.status] || item.status}
+                        </span>
+                      </div>
+
+                      {item.response && (
+                        <div className="mt-4 bg-pulse-900/5 dark:bg-pulse-900/20 border-l-2 border-pulse-900 dark:border-pulse-300 rounded-r-lg p-3">
+                          <div className="flex items-center gap-1.5 text-[11px] font-medium text-pulse-900 dark:text-pulse-300 uppercase tracking-wide">
+                            <CheckCircle2 className="h-3 w-3" />
+                            İşletmenin yanıtı
+                            {item.responded_at && (
+                              <span className="text-gray-500 dark:text-gray-400 font-normal normal-case">
+                                · {formatDate(item.responded_at)}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-700 dark:text-gray-300 mt-1 whitespace-pre-wrap">
+                            {item.response}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </section>
+        </div>
       )}
 
       <ReviewFormModal
