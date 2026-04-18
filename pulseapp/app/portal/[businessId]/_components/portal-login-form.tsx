@@ -57,7 +57,7 @@ export function PortalLoginForm({ businessId, useOtp }: Props) {
         <label className="block text-sm font-medium text-gray-700 mb-1.5">
           Telefon Numarası
         </label>
-        <div className="flex items-center gap-2 border border-gray-200 rounded-xl px-3 py-3 bg-white focus-within:border-pulse-900 focus-within:ring-2 focus-within:ring-pulse-900/20 transition-all">
+        <div className="flex items-center gap-2 border border-gray-200 rounded-xl px-3 py-3 bg-white transition-all">
           <Phone className="h-4 w-4 text-gray-400 flex-shrink-0" />
           <input
             type="tel"
