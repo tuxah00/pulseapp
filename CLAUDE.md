@@ -236,13 +236,15 @@ Bu özellikler altyapısı hazır ama dış servis hesabı açılmadan çalışm
 - **Cron Otomasyonları**: Dış tetikleyici (Vercel Cron, cron-job.org) gerekli
 
 ### Eklenecek (Dış Hesap Gerektirmeyen)
-Bu özellikler sadece DB + UI çalışması gerektirir, herhangi bir dış servis gerektirmez:
-- **KVKK Onay Yönetimi**: Dashboard sayfası + booking sayfasında onay checkbox'u (`consent_records` tablosu mevcut)
-- **Müşteri Alerji Yönetimi**: Müşteri detayında alerji kayıt/görüntüleme UI (`customer_allergies` tablosu mevcut)
-- **Hizmet Kontrendikasyonları**: Hizmet ayarlarında kontrendikasyon tanımlama UI (`service_contraindications` tablosu mevcut)
-- **Takip Kuyruğu**: Randevu sonrası takip planlaması UI (`follow_up_queue` tablosu mevcut)
-- **AI Photo Analysis**: Fotoğraf analizi route implementasyonu (ANTHROPIC_API_KEY zaten mevcut)
-- **AI Treatment Suggestion**: Tedavi önerisi route implementasyonu (ANTHROPIC_API_KEY zaten mevcut)
+Bu özellikler sadece DB + UI çalışması gerektirir, herhangi bir dış servis gerektirmez.
+
+Güncel durum (2026-04-18 taraması):
+- **KVKK Onay Yönetimi** → Uygulandı: `app/dashboard/settings/consents` + booking onay checkbox'u
+- **Müşteri Alerji Yönetimi** → Uygulandı: müşteri paneli alerji tab'ı
+- **Hizmet Kontrendikasyonları** → Uygulandı: `settings/services` kontrendikasyon modal'ı
+- **Takip Kuyruğu** → Uygulandı: `/dashboard/follow-ups` + randevu sonrası planlama modal'ı
+- **AI Photo Analysis** → İptal/Kaldırıldı: route ve panel orphan olarak silindi (2026-04-18)
+- **AI Treatment Suggestion** → İptal/Kaldırıldı: route ve dental plugin aksiyonu silindi (2026-04-18)
 
 ---
 
@@ -266,6 +268,38 @@ Bu özellikler sadece DB + UI çalışması gerektirir, herhangi bir dış servi
 - `2026-03-19`: Sektör alanı ayarlar sayfasında değiştirilebilir hale getirildi (test modu)
 - `2026-03-19`: Vardiye yönetimi hata handling düzeltildi; `008_fix_shifts_trigger.sql` migration eklendi (moddatetime → standart trigger)
 - `2026-03-19`: Vardiye otomatik dağıtım paneli yeniden yazıldı — gün seçimi (pill toggle) + mesai saati inputları + özet satırı + hata görünürlüğü; working_hours DB bağımlılığı kaldırıldı
+- `2026-04-18`: Migration numara çakışmaları a/b suffix ile çözüldü (036, 037, 040, 049, 050, 053, 054); duplicate `032_kvkk_compliance.sql` silindi
+- `2026-04-18`: Orphan AI kodları temizlendi — `/api/ai/treatment-suggestion`, `photo-analysis-panel.tsx`, dental plugin içindeki `treatment-plan-generate` ve `dental-treatment-suggest` girişleri kaldırıldı
+- `2026-04-18`: Native `<select>` → `CustomSelect` dönüşümü (register, book, book/manage sayfaları)
+- `2026-04-18`: 6 ana dashboard sayfasında (appointments, customers, invoices, reviews, inventory, rewards) tekrarlayan boş-durum JSX'i ortak `EmptyState` bileşenine taşındı
+- `2026-04-18`: Dialog/Sheet `sr-only="Close"` etiketi Türkçeleştirildi (`"Kapat"`)
+
+---
+
+## Yayın Öncesi Kilit Kontroller (Pre-Launch Checklist)
+
+Proje tasarım aşamasında. Aşağıdakiler **production'a açılmadan önce** tamamlanmalı. Şu anda yokluk zararsız (saldırgan + gerçek veri yok), ancak yayın günü listenin tamamı kapatılmış olmalı.
+
+### Güvenlik / Doğrulama (Kritik)
+- [ ] `/api/consent` — auth kontrolü + `Zod` şeması + rate-limit
+- [ ] `/api/book` — public endpoint; işletme ayarlarında sızıntı riski olan alanları response'tan çıkar
+- [ ] Çift randevu oluşturma endpoint'lerini konsolide et (`/api/book` + `/api/public/business/[id]/book` arasında karar ver)
+- [ ] Twilio webhook'larında imza doğrulaması zorunlu hale getir (şu an opsiyonel)
+- [ ] `/api/ai/*` — her çağrıda `staff_members` membership kontrolü (mevcut plan + sektör izni)
+- [ ] Portal / direct-login guard — portal sayfalarının dashboard auth bypass'i olmaması
+- [ ] `Zod` validasyon eksik 10+ API route için şemalar yaz (öncelik: müşteri, randevu, fatura, mesaj)
+
+### Kod Borcu (Gecikebilir, Yayın Öncesi Hafifletilmeli)
+- [ ] `any` tip temizliği — AI route'ları, analytics, commissions modülünde yaygın
+- [ ] API route'larında `console.error` → merkezi logger (şu an direkt konsola yazıyor; deploy sonrası observability için Sentry/logger'a geçilmeli)
+- [ ] React hook deps warning'leri (~28 adet, `eslint-plugin-react-hooks`)
+- [ ] `<img>` → `next/image` (~5 adet; performance + LCP için)
+- [ ] Eksik alt text (~2 adet)
+
+### UI Tutarlılık (Sürekli Bakım)
+- [x] Native `<select>` → `CustomSelect` (booking + register akışı 2026-04-18'de tamamlandı; yeni sayfa eklenirken kontrol et)
+- [x] EmptyState ortak bileşen — 6 ana sayfa tamam; pos + messages layout placeholder olduğu için kapsam dışı
+- [ ] Dark mode bg-white audit — public + auth sayfalarında dark override çakışması taranmalı
 
 ---
 
@@ -275,8 +309,15 @@ Aşağıdaki migration'lar Supabase SQL Editor'de manuel olarak çalıştırılm
 - `008_fix_shifts_trigger.sql` — shifts tablosunun updated_at trigger'ını moddatetime'dan bağımsız hale getirir (vardiye kaydetme için kritik)
 - `035_rewards.sql` — `rewards` ve `customer_rewards` tabloları, RLS politikaları (ödül sistemi için gerekli)
 
+### Migration Numaralandırma Kuralı (2026-04-18'den itibaren)
+Aynı numaraya denk gelen migration'lar `a/b/c` harf suffix'i ile ayrılır. Alfabetik sıralama doğru çalışma sırasını korur.
+Mevcut a/b çiftleri: `036a/036b`, `037a/037b`, `040a/040b`, `049a/049b`, `050a/050b`, `053a/053b`, `054a/054b`.
+Son migration numarası: `055_waitlist_auto_book.sql`.
+
 ### Uygulanan Migration'lar (Supabase'de çalıştırıldı)
 - `006_create_shifts.sql` + `008_fix_shifts_trigger.sql` → **✅ Uygulandı (2026-03-19)**
 - `027_whatsapp_enhancements.sql` → **✅ Uygulandı (2026-04-09)** — `customers.preferred_channel` kolonu, WA index
 - `028_kvkk_compliance.sql` → **✅ Uygulandı (2026-04-09)** — `consent_records`, `data_deletion_requests` tabloları, RLS politikaları
-- `040_staff_write_permissions.sql` → **✅ Uygulandı (2026-04-15)** — `staff_members.write_permissions` JSONB kolonu (granüler Düzenle yetkisi)
+- `040b_staff_write_permissions.sql` → **✅ Uygulandı (2026-04-15)** — `staff_members.write_permissions` JSONB kolonu (granüler Düzenle yetkisi)
+- `053b_rewards_feature_flag.sql` → **✅ Uygulandı (2026-04-18)** — `businesses.settings.rewards_enabled` varsayılan değeri
+- `054b_reviews_anonymous.sql` → **✅ Uygulandı (2026-04-18)** — `reviews.is_anonymous` kolonu + partial index
