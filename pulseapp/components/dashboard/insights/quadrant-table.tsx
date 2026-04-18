@@ -11,22 +11,22 @@ const QUAD_LABEL: Record<Quadrant, { label: string; tone: string; desc: string }
   star: {
     label: 'Kazandıran Hizmetler',
     tone: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
-    desc: 'Hem çok satılıyor hem yüksek bilet — öne çıkar',
+    desc: 'Hem çok satılıyor hem işlem başına geliri yüksek — öne çıkar',
   },
   cash_cow: {
     label: 'Popüler Hizmetler',
     tone: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
-    desc: 'Çok satılan ama bileti düşük — hacim geliri',
+    desc: 'Çok satılıyor ama işlem başı gelir düşük — hacimden kazandırıyor',
   },
   question: {
     label: 'Büyüme Fırsatı',
     tone: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-    desc: 'Bileti yüksek ama az satılıyor — pazarlamayla büyür',
+    desc: 'İşlem başı gelir yüksek ama az satılıyor — pazarlamayla büyür',
   },
   dog: {
     label: 'Zayıf Satanlar',
     tone: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400',
-    desc: 'Az satılıyor ve bileti düşük — gözden geçir',
+    desc: 'Az satılıyor ve işlem başı geliri düşük — gözden geçir',
   },
 }
 

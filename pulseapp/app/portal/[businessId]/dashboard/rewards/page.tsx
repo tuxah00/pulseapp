@@ -65,6 +65,7 @@ export default function PortalRewardsPage() {
   const [transactions, setTransactions] = useState<PointTx[]>([])
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [loading, setLoading] = useState(true)
+  const [seenCampaigns, setSeenCampaigns] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     (async () => {
@@ -81,7 +82,17 @@ export default function PortalRewardsPage() {
         }
         if (cRes.ok) {
           const data = await cRes.json()
-          setCampaigns(data.campaigns || [])
+          const list: Campaign[] = data.campaigns || []
+          setCampaigns(list)
+          // localStorage — daha önce görülen kampanya id'leri
+          try {
+            const storageKey = `portal_seen_campaigns_${businessId}`
+            const seenRaw = localStorage.getItem(storageKey)
+            const seen: string[] = seenRaw ? JSON.parse(seenRaw) : []
+            setSeenCampaigns(new Set(seen))
+            const next = Array.from(new Set([...seen, ...list.map(c => c.id)]))
+            localStorage.setItem(storageKey, JSON.stringify(next))
+          } catch { /* ignore */ }
         }
       } finally {
         setLoading(false)
@@ -195,35 +206,64 @@ export default function PortalRewardsPage() {
                 icon={Megaphone}
               />
               <div className="space-y-3">
-                {campaigns.map((c) => (
-                  <div key={c.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-5 hover:shadow-md transition-shadow">
-                    <div className="flex items-start gap-4">
-                      <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-pulse-900 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-md shadow-pulse-900/20">
-                        <Megaphone className="h-5 w-5 text-white" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">{c.name}</h3>
-                        {c.description && (
-                          <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{c.description}</p>
-                        )}
-                        {c.message_template && (
-                          <div className="mt-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
-                            <p className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                              {c.message_template}
-                            </p>
+                {campaigns.map((c) => {
+                  const isNew = !seenCampaigns.has(c.id)
+                  return (
+                    <div
+                      key={c.id}
+                      className="relative overflow-hidden rounded-2xl border border-orange-200 dark:border-orange-800/60 bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 dark:from-orange-900/30 dark:via-amber-900/20 dark:to-yellow-900/20 p-5 shadow-sm hover:shadow-lg transition-shadow"
+                    >
+                      {/* dekoratif parıltılar */}
+                      <div className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-amber-300/30 blur-2xl" />
+                      <div className="pointer-events-none absolute -left-4 -bottom-4 h-20 w-20 rounded-full bg-orange-300/30 blur-2xl" />
+
+                      <div className="relative flex items-start gap-4">
+                        <div className="relative flex-shrink-0">
+                          <div
+                            className={cn(
+                              'h-14 w-14 rounded-2xl bg-gradient-to-br from-orange-400 via-amber-400 to-yellow-400 flex items-center justify-center shadow-lg shadow-orange-500/30 text-3xl',
+                              isNew && 'campaign-pop',
+                            )}
+                            aria-hidden
+                          >
+                            <span>🥂</span>
                           </div>
-                        )}
-                        <Link
-                          href={`/book/${businessId}`}
-                          className="inline-flex items-center gap-1 mt-3 text-sm font-medium text-pulse-900 dark:text-pulse-300 hover:underline"
-                        >
-                          Randevu Al
-                          <ArrowRight className="h-3.5 w-3.5" />
-                        </Link>
+                          {isNew && (
+                            <>
+                              <span className="campaign-sparkle absolute -right-1 -top-1 text-lg">✨</span>
+                              <span className="campaign-sparkle absolute -left-2 top-3 text-sm" style={{ animationDelay: '0.5s' }}>✨</span>
+                            </>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">{c.name}</h3>
+                            {isNew && (
+                              <span className="text-[10px] uppercase tracking-wide font-bold px-1.5 py-0.5 rounded-full bg-orange-500 text-white">Yeni</span>
+                            )}
+                          </div>
+                          {c.description && (
+                            <p className="text-sm text-gray-700 dark:text-gray-200 mt-1">{c.description}</p>
+                          )}
+                          {c.message_template && (
+                            <div className="mt-3 bg-white/70 dark:bg-gray-900/40 backdrop-blur rounded-lg p-3 border border-orange-100 dark:border-orange-900/40">
+                              <p className="text-xs text-gray-700 dark:text-gray-200 whitespace-pre-wrap">
+                                {c.message_template}
+                              </p>
+                            </div>
+                          )}
+                          <Link
+                            href={`/book/${businessId}`}
+                            className="inline-flex items-center gap-1 mt-3 text-sm font-semibold text-orange-700 dark:text-orange-300 hover:text-orange-800 dark:hover:text-orange-200"
+                          >
+                            Randevu Al
+                            <ArrowRight className="h-3.5 w-3.5" />
+                          </Link>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </section>
           )}
