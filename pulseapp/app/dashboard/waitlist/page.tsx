@@ -6,7 +6,7 @@ import { getCustomerLabelSingular } from '@/lib/config/sector-modules'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import {
-  Plus, Clock, Search, Loader2, Phone, Calendar, User, Bell, BellOff, Trash2, X, ShieldX, CheckCircle
+  Plus, Clock, Search, Loader2, Phone, Calendar, User, Bell, BellOff, Trash2, X, ShieldX, CheckCircle, CalendarPlus
 } from 'lucide-react'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import { CustomerSearchSelect } from '@/components/ui/customer-search-select'
@@ -49,8 +49,9 @@ export default function WaitlistPage() {
   const [search, setSearch] = useState('')
   const [showActive, setShowActive] = useState(true)
   const [services, setServices] = useState<ServiceOption[]>([])
+  const [staffMembers, setStaffMembers] = useState<ServiceOption[]>([])
 
-  // Modal state
+  // Modal state — Listeye Ekle
   const [showCreate, setShowCreate] = useState(false)
   const [closingCreate, setClosingCreate] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -64,6 +65,18 @@ export default function WaitlistPage() {
   const [formTimeStart, setFormTimeStart] = useState('')
   const [formTimeEnd, setFormTimeEnd] = useState('')
   const [formNotes, setFormNotes] = useState('')
+
+  // Modal state — Randevu Oluştur
+  const [showBook, setShowBook] = useState(false)
+  const [closingBook, setClosingBook] = useState(false)
+  const [bookEntry, setBookEntry] = useState<WaitlistEntry | null>(null)
+  const [bookDate, setBookDate] = useState('')
+  const [bookTimeStart, setBookTimeStart] = useState('')
+  const [bookTimeEnd, setBookTimeEnd] = useState('')
+  const [bookStaffId, setBookStaffId] = useState('')
+  const [bookServiceId, setBookServiceId] = useState('')
+  const [bookNotes, setBookNotes] = useState('')
+  const [bookSaving, setBookSaving] = useState(false)
 
   const fetchEntries = useCallback(async () => {
     if (!businessId) return
@@ -88,16 +101,35 @@ export default function WaitlistPage() {
     } catch { /* ignore */ }
   }, [businessId, supabase])
 
+  const fetchStaff = useCallback(async () => {
+    if (!businessId) return
+    try {
+      const { data } = await supabase
+        .from('staff_members')
+        .select('id, name')
+        .eq('business_id', businessId)
+        .eq('is_active', true)
+        .order('name')
+      setStaffMembers((data || []).map((s: any) => ({ id: s.id, name: s.name })))
+    } catch { /* ignore */ }
+  }, [businessId, supabase])
+
   useEffect(() => { fetchEntries() }, [fetchEntries])
   useEffect(() => { fetchServices() }, [fetchServices])
+  useEffect(() => { fetchStaff() }, [fetchStaff])
 
   // ESC ile modal kapat
   useEffect(() => {
-    if (!showCreate) return
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') setClosingCreate(true) }
+    if (!showCreate && !showBook) return
+    const h = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (showBook) setClosingBook(true)
+        else setClosingCreate(true)
+      }
+    }
     document.addEventListener('keydown', h)
     return () => document.removeEventListener('keydown', h)
-  }, [showCreate])
+  }, [showCreate, showBook])
 
   const handleCreate = async () => {
     if (!formName || !formPhone) {
@@ -136,6 +168,49 @@ export default function WaitlistPage() {
     setFormCustomerId(''); setFormName(''); setFormPhone('')
     setFormServiceId(''); setFormDate(''); setFormTimeStart('')
     setFormTimeEnd(''); setFormNotes('')
+  }
+
+  const openBook = (entry: WaitlistEntry) => {
+    setBookEntry(entry)
+    setBookDate(entry.preferred_date || '')
+    setBookTimeStart(entry.preferred_time_start?.substring(0, 5) || '')
+    setBookTimeEnd(entry.preferred_time_end?.substring(0, 5) || '')
+    setBookStaffId(entry.staff_id || '')
+    setBookServiceId(entry.service_id || '')
+    setBookNotes(entry.notes || '')
+    setShowBook(true)
+  }
+
+  const handleBook = async () => {
+    if (!bookEntry || !bookDate || !bookTimeStart) {
+      toast.error('Tarih ve başlangıç saati zorunludur')
+      return
+    }
+    setBookSaving(true)
+    try {
+      const { error } = await supabase.from('appointments').insert({
+        business_id: businessId,
+        customer_id: bookEntry.customer_id || null,
+        service_id: bookServiceId || null,
+        staff_id: bookStaffId || null,
+        appointment_date: bookDate,
+        start_time: bookTimeStart,
+        end_time: bookTimeEnd || null,
+        notes: bookNotes || null,
+        status: 'confirmed',
+        source: 'manual',
+      })
+      if (error) { toast.error(error.message); setBookSaving(false); return }
+      // Bekleme listesinden kaldır
+      await fetch('/api/waitlist', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: bookEntry.id, is_active: false }),
+      })
+      toast.success('Randevu oluşturuldu, bekleme listesinden kaldırıldı')
+      setClosingBook(true)
+      fetchEntries()
+    } catch { toast.error('Bağlantı hatası') } finally { setBookSaving(false) }
   }
 
   const handleDeactivate = async (id: string) => {
@@ -244,7 +319,7 @@ export default function WaitlistPage() {
       ) : (
         <AnimatedList className="space-y-3">
           {filtered.map(e => (
-            <AnimatedItem key={e.id} className="card p-4">
+            <AnimatedItem key={e.id} className="card p-4 cursor-pointer hover:ring-1 hover:ring-pulse-500/40 transition-all" onClick={() => openBook(e)}>
               <div className="flex items-center gap-4">
                 <div className={cn(
                   'h-10 w-10 rounded-xl flex items-center justify-center text-sm font-bold flex-shrink-0',
@@ -273,7 +348,7 @@ export default function WaitlistPage() {
                   </div>
                   {e.notes && <p className="text-xs text-gray-400 mt-1 truncate">{e.notes}</p>}
                 </div>
-                <div className="flex-shrink-0 flex items-center gap-2">
+                <div className="flex-shrink-0 flex items-center gap-2" onClick={ev => ev.stopPropagation()}>
                   {e.is_notified && (
                     <span className="text-xs px-2 py-0.5 rounded-full bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 flex items-center gap-1">
                       <Bell className="h-3 w-3" /> Bildirildi
@@ -286,7 +361,16 @@ export default function WaitlistPage() {
                   )}
                   <p className="text-[10px] text-gray-400">{new Date(e.created_at).toLocaleDateString('tr-TR')}</p>
                   {e.is_active && (
-                    <button onClick={() => handleDeactivate(e.id)} className="text-gray-400 hover:text-red-500 transition-colors p-1" title="Listeden Kaldır">
+                    <button
+                      onClick={ev => { ev.stopPropagation(); openBook(e) }}
+                      className="text-pulse-600 hover:text-pulse-700 transition-colors p-1"
+                      title="Randevu Oluştur"
+                    >
+                      <CalendarPlus className="h-4 w-4" />
+                    </button>
+                  )}
+                  {e.is_active && (
+                    <button onClick={ev => { ev.stopPropagation(); handleDeactivate(e.id) }} className="text-gray-400 hover:text-red-500 transition-colors p-1" title="Listeden Kaldır">
                       <Trash2 className="h-4 w-4" />
                     </button>
                   )}
@@ -295,6 +379,71 @@ export default function WaitlistPage() {
             </AnimatedItem>
           ))}
         </AnimatedList>
+      )}
+
+      {/* ═══ Modal: Randevu Oluştur ═══ */}
+      {(showBook || closingBook) && bookEntry && (
+        <Portal>
+          <div
+            className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 ${closingBook ? 'closing' : ''}`}
+            onClick={() => setClosingBook(true)}
+            onAnimationEnd={() => { if (closingBook) { setShowBook(false); setClosingBook(false); setBookEntry(null) } }}
+          >
+            <div className={`modal-content card w-full max-w-lg dark:bg-gray-900 ${closingBook ? 'closing' : ''}`} onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-base font-medium text-gray-900 dark:text-white">Randevu Oluştur</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{bookEntry.customer_name} · {bookEntry.customer_phone}</p>
+                </div>
+                <button onClick={() => setClosingBook(true)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"><X className="h-4 w-4" /></button>
+              </div>
+              <div className="space-y-4">
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="col-span-3 sm:col-span-1">
+                    <label className="label label-required">Tarih</label>
+                    <input type="date" className="input w-full" value={bookDate} onChange={e => setBookDate(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="label label-required">Başlangıç</label>
+                    <input type="time" className="input w-full" value={bookTimeStart} onChange={e => setBookTimeStart(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="label">Bitiş</label>
+                    <input type="time" className="input w-full" value={bookTimeEnd} onChange={e => setBookTimeEnd(e.target.value)} />
+                  </div>
+                </div>
+                <div>
+                  <label className="label">Personel</label>
+                  <CustomSelect
+                    options={staffMembers.map(s => ({ value: s.id, label: s.name }))}
+                    value={bookStaffId}
+                    onChange={v => setBookStaffId(v)}
+                    placeholder="Personel seçin"
+                  />
+                </div>
+                <div>
+                  <label className="label">Hizmet</label>
+                  <CustomSelect
+                    options={services.map(s => ({ value: s.id, label: s.name }))}
+                    value={bookServiceId}
+                    onChange={v => setBookServiceId(v)}
+                    placeholder="Hizmet seçin"
+                  />
+                </div>
+                <div>
+                  <label className="label">Not</label>
+                  <textarea className="input w-full" rows={2} placeholder="Opsiyonel not..." value={bookNotes} onChange={e => setBookNotes(e.target.value)} />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 mt-4">
+                <button onClick={() => setClosingBook(true)} className="btn-secondary">İptal</button>
+                <button onClick={handleBook} disabled={bookSaving || !bookDate || !bookTimeStart} className="btn-primary disabled:opacity-50">
+                  {bookSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1 inline" /> : <CalendarPlus className="h-4 w-4 mr-1 inline" />} Randevu Oluştur
+                </button>
+              </div>
+            </div>
+          </div>
+        </Portal>
       )}
 
       {/* ═══ Modal: Listeye Ekle ═══ */}
