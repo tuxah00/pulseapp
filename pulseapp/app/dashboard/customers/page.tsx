@@ -37,6 +37,7 @@ import { ToolbarPopover, SortPopoverContent } from '@/components/ui/toolbar-popo
 import { exportToCSV } from '@/lib/utils/export'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { Portal } from '@/components/ui/portal'
+import EmptyState from '@/components/ui/empty-state'
 
 import { useRouter, useSearchParams } from 'next/navigation'
 import { getCustomerLabel, getCustomerLabelSingular } from '@/lib/config/sector-modules'
@@ -763,13 +764,15 @@ export default function CustomersPage() {
       </div>
 
       {filteredCustomers.length === 0 ? (
-        <div className="card flex flex-col items-center justify-center py-16">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 dark:bg-gray-800 mb-4">
-            <User className="h-7 w-7 text-gray-300 dark:text-gray-600" />
-          </div>
-          <p className="font-medium text-gray-500 dark:text-gray-400 mb-4">{search || dateFrom || dateTo || minVisits ? 'Filtreye uygun müşteri bulunamadı' : `Henüz ${singularLabel.toLowerCase()} eklenmemiş`}</p>
-          {!search && !dateFrom && !dateTo && !minVisits && <button onClick={openNewModal} className="btn-primary"><Plus className="mr-2 h-4 w-4" />{`İlk ${singularLabel} Ekle`}</button>}
-        </div>
+        <EmptyState
+          icon={<User className="h-7 w-7" />}
+          title={search || dateFrom || dateTo || minVisits ? 'Filtreye uygun müşteri bulunamadı' : `Henüz ${singularLabel.toLowerCase()} eklenmemiş`}
+          action={!search && !dateFrom && !dateTo && !minVisits ? {
+            label: `İlk ${singularLabel} Ekle`,
+            onClick: openNewModal,
+            icon: <Plus className="mr-2 h-4 w-4" />,
+          } : undefined}
+        />
       ) : (
         <div key={viewMode} className="view-transition">
         {viewMode === 'list' ? (

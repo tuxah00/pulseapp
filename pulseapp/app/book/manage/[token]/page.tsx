@@ -9,6 +9,7 @@ import {
 import { STATUS_LABELS } from '@/types'
 import type { AppointmentStatus } from '@/types'
 import { formatDateISO } from '@/lib/utils'
+import { CustomSelect } from '@/components/ui/custom-select'
 
 interface AppointmentData {
   id: string
@@ -263,14 +264,19 @@ export default function ManageAppointmentPage() {
               </h3>
               <div>
                 <label className="text-xs text-gray-600 dark:text-gray-400">İptal Nedeni (opsiyonel)</label>
-                <select className="w-full mt-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                  value={cancelReason} onChange={e => setCancelReason(e.target.value)}>
-                  <option value="">Neden seçin</option>
-                  <option value="Zamanım uygun değil">Zamanım uygun değil</option>
-                  <option value="Başka bir randevu aldım">Başka bir randevu aldım</option>
-                  <option value="Sağlık sorunu">Sağlık sorunu</option>
-                  <option value="Diğer">Diğer</option>
-                </select>
+                <div className="mt-1">
+                  <CustomSelect
+                    value={cancelReason}
+                    onChange={setCancelReason}
+                    placeholder="Neden seçin"
+                    options={[
+                      { value: 'Zamanım uygun değil', label: 'Zamanım uygun değil' },
+                      { value: 'Başka bir randevu aldım', label: 'Başka bir randevu aldım' },
+                      { value: 'Sağlık sorunu', label: 'Sağlık sorunu' },
+                      { value: 'Diğer', label: 'Diğer' },
+                    ]}
+                  />
+                </div>
               </div>
               <div className="flex gap-2">
                 <button onClick={() => setShowCancel(false)} className="flex-1 py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors bg-white dark:bg-gray-800">

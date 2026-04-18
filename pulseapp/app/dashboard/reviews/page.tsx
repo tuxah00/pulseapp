@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { formatDate, cn } from '@/lib/utils'
 import type { Review } from '@/types'
+import EmptyState from '@/components/ui/empty-state'
 
 type ReviewWithJoin = Review & {
   customers?: { name: string; phone: string | null } | null
@@ -207,10 +208,10 @@ export default function ReviewsPage() {
 
       {/* Yorum Listesi */}
       {filteredReviews.length === 0 ? (
-        <div className="card flex flex-col items-center justify-center py-16">
-          <Star className="mb-4 h-12 w-12 text-gray-300" />
-          <p className="text-gray-500 mb-4">{search ? 'Aramanızla eşleşen yorum bulunamadı' : statFilter === 'pending' ? 'Yanıt bekleyen yorum yok' : statFilter === 'low' ? 'Düşük puanlı yorum yok' : filterRating ? `${filterRating} yıldız yorum bulunamadı` : 'Henüz yorum yok'}</p>
-        </div>
+        <EmptyState
+          icon={<Star className="h-7 w-7" />}
+          title={search ? 'Aramanızla eşleşen yorum bulunamadı' : statFilter === 'pending' ? 'Yanıt bekleyen yorum yok' : statFilter === 'low' ? 'Düşük puanlı yorum yok' : filterRating ? `${filterRating} yıldız yorum bulunamadı` : 'Henüz yorum yok'}
+        />
       ) : (
         <div className="space-y-3">
           {filteredReviews.map((review) => (

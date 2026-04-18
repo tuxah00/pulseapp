@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import type { WorkingHours } from '@/types'
 import { getInitials } from '@/lib/utils'
+import { CustomSelect } from '@/components/ui/custom-select'
 
 interface BusinessData {
   id: string
@@ -452,16 +453,12 @@ export default function BookingPage() {
             {staff.length > 0 && (
               <div className="mb-4">
                 <label className="label">Personel (isteğe bağlı)</label>
-                <select
+                <CustomSelect
                   value={selectedStaffId}
-                  onChange={(e) => { setSelectedStaffId(e.target.value); setSelectedTime(null) }}
-                  className="input"
-                >
-                  <option value="">Fark etmez</option>
-                  {staff.map((s) => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
-                  ))}
-                </select>
+                  onChange={(v) => { setSelectedStaffId(v); setSelectedTime(null) }}
+                  placeholder="Fark etmez"
+                  options={staff.map(s => ({ value: s.id, label: s.name }))}
+                />
               </div>
             )}
 
@@ -566,16 +563,16 @@ export default function BookingPage() {
                   )}
                   <div>
                     <label className="text-xs font-medium text-gray-600">Şu saatte:</label>
-                    <select
-                      value={waitlistTime}
-                      onChange={(e) => setWaitlistTime(e.target.value)}
-                      className="input mt-1"
-                    >
-                      <option value="">Saat seçin</option>
-                      {(business && selectedDate && selectedService
-                        ? generateTimeSlots(business.working_hours, selectedDate, selectedService.duration_minutes)
-                        : []).map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
+                    <div className="mt-1">
+                      <CustomSelect
+                        value={waitlistTime}
+                        onChange={setWaitlistTime}
+                        placeholder="Saat seçin"
+                        options={(business && selectedDate && selectedService
+                          ? generateTimeSlots(business.working_hours, selectedDate, selectedService.duration_minutes)
+                          : []).map(t => ({ value: t, label: t }))}
+                      />
+                    </div>
                   </div>
                   <div>
                     <label className="text-xs font-medium text-gray-600">Şu tarihte:</label>
@@ -590,14 +587,14 @@ export default function BookingPage() {
                   {staff.length > 0 && (
                     <div>
                       <label className="text-xs font-medium text-gray-600">Şu personelde:</label>
-                      <select
-                        value={waitlistStaffId}
-                        onChange={(e) => setWaitlistStaffId(e.target.value)}
-                        className="input mt-1"
-                      >
-                        <option value="">Personel seçin</option>
-                        {staff.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                      </select>
+                      <div className="mt-1">
+                        <CustomSelect
+                          value={waitlistStaffId}
+                          onChange={setWaitlistStaffId}
+                          placeholder="Personel seçin"
+                          options={staff.map(s => ({ value: s.id, label: s.name }))}
+                        />
+                      </div>
                     </div>
                   )}
                   <label className="flex items-start gap-2 cursor-pointer pt-1">

@@ -22,6 +22,7 @@ import { CustomerSearchSelect } from '@/components/ui/customer-search-select'
 import { getCustomerLabelSingular } from '@/lib/config/sector-modules'
 import { Portal } from '@/components/ui/portal'
 import { Pagination } from '@/components/ui/pagination'
+import EmptyState from '@/components/ui/empty-state'
 
 interface SimpleCustomer {
   id: string
@@ -662,10 +663,7 @@ export default function InvoicesPage() {
               <Loader2 className="h-6 w-6 animate-spin text-pulse-900" />
             </div>
           ) : deletedInvoices.length === 0 ? (
-            <div className="card flex flex-col items-center justify-center py-16 text-center">
-              <Trash2 className="mb-3 h-12 w-12 text-gray-200 dark:text-gray-600" />
-              <p className="text-sm text-gray-400">Silinmiş fatura yok</p>
-            </div>
+            <EmptyState icon={<Trash2 className="h-7 w-7" />} title="Silinmiş fatura yok" />
           ) : (
             <div className="space-y-2">
               {deletedInvoices.map(invoice => (
@@ -700,20 +698,16 @@ export default function InvoicesPage() {
 
       {/* Fatura Listesi */}
       {!showDeleted && (filteredInvoices.length === 0 ? (
-        <div className="card flex flex-col items-center justify-center py-24 text-center">
-          <Receipt className="mb-4 h-16 w-16 text-gray-200 dark:text-gray-600" />
-          <h3 className="text-base font-semibold text-gray-700 dark:text-gray-300">
-            {search || hasActiveFilters ? 'Aramanızla eşleşen fatura bulunamadı' : 'Henüz fatura oluşturulmamış'}
-          </h3>
-          {!search && !hasActiveFilters && (
-            <>
-              <p className="mt-1 mb-4 text-sm text-gray-400">İlk faturanızı oluşturmak için butona tıklayın.</p>
-              <button onClick={() => { resetForm(); setShowCreateModal(true) }} className="btn-primary">
-                <Plus className="mr-2 h-4 w-4" />İlk Faturayı Oluştur
-              </button>
-            </>
-          )}
-        </div>
+        <EmptyState
+          icon={<Receipt className="h-7 w-7" />}
+          title={search || hasActiveFilters ? 'Aramanızla eşleşen fatura bulunamadı' : 'Henüz fatura oluşturulmamış'}
+          description={!search && !hasActiveFilters ? 'İlk faturanızı oluşturmak için butona tıklayın.' : undefined}
+          action={!search && !hasActiveFilters ? {
+            label: 'İlk Faturayı Oluştur',
+            onClick: () => { resetForm(); setShowCreateModal(true) },
+            icon: <Plus className="mr-2 h-4 w-4" />,
+          } : undefined}
+        />
       ) : (
         <AnimatedList className="space-y-2">
           {filteredInvoices.map((invoice) => {
