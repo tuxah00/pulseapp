@@ -103,132 +103,149 @@ export async function POST(
     `İyi günler dileriz!`
 
   // ── 1. Bekleme listesi: eşleşme filtresi ──
-  // Her alan: ya boş (fark etmez) ya da slot ile birebir eşleşir.
-  const { data: waitlistEntries } = await admin
+  // Supabase'in zincirli `.or()` çağrıları birbirini override ediyor → JS tarafında
+  // 4 kritere AND filtresi uyguluyoruz. Her kriter: ya NULL (fark etmez) ya da slot
+  // değerine eşit olmalı.
+  const { data: rawWaitlistEntries } = await admin
     .from('waitlist_entries')
-    .select('id, customer_id, customer_name, customer_phone, service_id, staff_id, preferred_date, preferred_time_start, auto_book_on_match, customers(id, name, phone)')
+    .select('id, customer_id, customer_name, customer_phone, service_id, staff_id, preferred_date, preferred_time_start, auto_book_on_match, notification_expires_at, is_notified, customers(id, name, phone)')
     .eq('business_id', staff.business_id)
     .eq('is_active', true)
-    .eq('is_notified', false)
-    .or(`service_id.eq.${serviceId},service_id.is.null`)
-    .or(`preferred_date.eq.${slotDate},preferred_date.is.null`)
-    .or(`staff_id.eq.${slotStaffId},staff_id.is.null`)
-    .or(`preferred_time_start.eq.${slotTime},preferred_time_start.is.null`)
     .order('created_at', { ascending: true })
 
-  for (const entry of waitlistEntries || []) {
-    const customer = entry.customers as any
-    const phone = customer?.phone || entry.customer_phone
-    const name = customer?.name || entry.customer_name
-    const customerId = customer?.id || null
-    if (!phone) continue
-    if (customerId && notifiedCustomerIds.has(customerId)) continue
+  const matchesSlot = (e: any) =>
+    (e.service_id === null || e.service_id === serviceId) &&
+    (e.preferred_date === null || e.preferred_date === slotDate) &&
+    (e.staff_id === null || e.staff_id === slotStaffId) &&
+    (e.preferred_time_start === null || e.preferred_time_start === slotTime)
 
-    // Duplicate kontrolü (sadece customer_id varsa)
-    if (customerId) {
-      const { data: existingNotif } = await admin
-        .from('gap_fill_notifications')
-        .select('id')
-        .eq('business_id', staff.business_id)
-        .eq('customer_id', customerId)
-        .eq('slot_date', slotDate)
-        .eq('slot_start_time', slotTime)
-        .limit(1)
+  // Eşleşen ve henüz bildirim atılmamış ilk entry (sıralı bildirim — parallel değil)
+  const waitlistEntries = (rawWaitlistEntries || []).filter(matchesSlot)
+  const nextEntry = waitlistEntries.find(e => !e.is_notified)
 
-      if (existingNotif?.length) { results.skippedDuplicates++; continue }
-    }
+  if (nextEntry) {
+    const customer = nextEntry.customers as any
+    const phone = customer?.phone || nextEntry.customer_phone
+    const name = customer?.name || nextEntry.customer_name
+    const customerId = customer?.id || nextEntry.customer_id || null
 
-    const pref = {
-      staffId: entry.staff_id as string | null,
-      date: entry.preferred_date as string | null,
-      time: entry.preferred_time_start as string | null,
-    }
-
-    try {
-      // auto_book_on_match: Boşluğa otomatik randevu at (ilk eşleşen kişi)
-      if (entry.auto_book_on_match && customerId) {
-        const { data: autoApt, error: autoErr } = await admin
-          .from('appointments')
-          .insert({
-            business_id: staff.business_id,
-            customer_id: customerId,
-            service_id: serviceId,
-            staff_id: slotStaffId,
-            appointment_date: slotDate,
-            start_time: slotTime,
-            end_time: slotEndTime,
-            status: 'pending',
-            notes: 'Bekleme listesinden otomatik oluşturuldu',
-          })
+    if (phone) {
+      // Duplicate kontrolü (aynı müşteri aynı slota daha önce bildirildi mi?)
+      let duplicate = false
+      if (customerId) {
+        const { data: existingNotif } = await admin
+          .from('gap_fill_notifications')
           .select('id')
-          .single()
-
-        if (autoErr || !autoApt) {
-          // Otomatik randevu atılmadıysa normal bildirime düş
-        } else {
-          await sendMessage({
-            to: phone,
-            body: buildAutoBookMessage(name),
-            businessId: staff.business_id,
-            customerId,
-            messageType: 'system',
-            channel: 'auto',
-          })
-
-          await Promise.all([
-            admin.from('gap_fill_notifications').insert({
-              business_id: staff.business_id,
-              appointment_id: appointmentId,
-              customer_id: customerId,
-              slot_date: slotDate,
-              slot_start_time: slotTime,
-              service_id: serviceId,
-              staff_id: slotStaffId,
-              source: 'waitlist',
-            }),
-            admin.from('waitlist_entries').update({ is_notified: true, is_active: false }).eq('id', entry.id),
-          ])
-
-          notifiedCustomerIds.add(customerId)
-          results.autoBooked++
-          results.waitlistMatches++
-          results.notified++
-          // Otomatik randevu atıldı — boşluk artık dolu, döngüden çık
-          break
-        }
+          .eq('business_id', staff.business_id)
+          .eq('customer_id', customerId)
+          .eq('slot_date', slotDate)
+          .eq('slot_start_time', slotTime)
+          .limit(1)
+        duplicate = !!existingNotif?.length
       }
 
-      // Normal bildirim
-      await sendMessage({
-        to: phone,
-        body: buildMessage(name, pref),
-        businessId: staff.business_id,
-        customerId: customerId || undefined,
-        messageType: 'system',
-        channel: 'auto',
-      })
+      if (duplicate) {
+        results.skippedDuplicates++
+      } else {
+        const pref = {
+          staffId: nextEntry.staff_id as string | null,
+          date: nextEntry.preferred_date as string | null,
+          time: nextEntry.preferred_time_start as string | null,
+        }
 
-      await Promise.all([
-        admin.from('gap_fill_notifications').insert({
-          business_id: staff.business_id,
-          appointment_id: appointmentId,
-          customer_id: customerId,
-          slot_date: slotDate,
-          slot_start_time: slotTime,
-          service_id: serviceId,
-          staff_id: slotStaffId,
-          source: 'waitlist',
-        }),
-        admin.from('waitlist_entries').update({ is_notified: true }).eq('id', entry.id),
-      ])
+        try {
+          // auto_book_on_match: Otomatik randevu aç, sıradakine bildirim gitmez
+          if (nextEntry.auto_book_on_match && customerId) {
+            const { data: autoApt, error: autoErr } = await admin
+              .from('appointments')
+              .insert({
+                business_id: staff.business_id,
+                customer_id: customerId,
+                service_id: serviceId,
+                staff_id: slotStaffId,
+                appointment_date: slotDate,
+                start_time: slotTime,
+                end_time: slotEndTime,
+                status: 'pending',
+                notes: 'Bekleme listesinden otomatik oluşturuldu',
+              })
+              .select('id')
+              .single()
 
-      if (customerId) notifiedCustomerIds.add(customerId)
-      results.waitlistMatches++
-      results.notified++
-    } catch { /* bildirim hatası diğerlerini engellemez */ }
+            if (!autoErr && autoApt) {
+              await sendMessage({
+                to: phone,
+                body: buildAutoBookMessage(name),
+                businessId: staff.business_id,
+                customerId,
+                messageType: 'system',
+                channel: 'auto',
+              })
+
+              await Promise.all([
+                admin.from('gap_fill_notifications').insert({
+                  business_id: staff.business_id,
+                  appointment_id: appointmentId,
+                  customer_id: customerId,
+                  slot_date: slotDate,
+                  slot_start_time: slotTime,
+                  service_id: serviceId,
+                  staff_id: slotStaffId,
+                  source: 'waitlist',
+                }),
+                admin.from('waitlist_entries')
+                  .update({ is_notified: true, is_active: false, notification_expires_at: null })
+                  .eq('id', nextEntry.id),
+              ])
+
+              notifiedCustomerIds.add(customerId)
+              results.autoBooked++
+              results.waitlistMatches++
+              results.notified++
+            }
+          } else {
+            // Normal bildirim — 15 dk'lık hold, cevap yoksa "sıradakine gönder" butonu
+            const holdUntil = new Date(Date.now() + 15 * 60 * 1000).toISOString()
+            await sendMessage({
+              to: phone,
+              body: buildMessage(name, pref),
+              businessId: staff.business_id,
+              customerId: customerId || undefined,
+              messageType: 'system',
+              channel: 'auto',
+            })
+
+            await Promise.all([
+              admin.from('gap_fill_notifications').insert({
+                business_id: staff.business_id,
+                appointment_id: appointmentId,
+                customer_id: customerId,
+                slot_date: slotDate,
+                slot_start_time: slotTime,
+                service_id: serviceId,
+                staff_id: slotStaffId,
+                source: 'waitlist',
+              }),
+              admin.from('waitlist_entries')
+                .update({ is_notified: true, notification_expires_at: holdUntil, notified_for_appointment_id: appointmentId })
+                .eq('id', nextEntry.id),
+            ])
+
+            if (customerId) notifiedCustomerIds.add(customerId)
+            results.waitlistMatches++
+            results.notified++
+          }
+        } catch { /* bildirim hatası akışı engellemez */ }
+      }
+    }
   }
 
-  // ── 2. Geçmiş müşteriler (son X ay içinde bu hizmeti alanlar, bu ay gelmeyenler) ──
+  // Waitlist eşleşmesi varsa boşluk tutuldu — historic fallback'e geçme
+  const hasWaitlistMatch = results.waitlistMatches > 0
+
+  // ── 2. Geçmiş müşteriler (waitlist eşleşmesi yoksa fallback) ──
+  // Waitlist'te eşleşen hasta varsa bildirim zaten ona gitti → historic atlanır.
+  if (!hasWaitlistMatch) {
   const lookbackDate = addMonthsSafe(new Date(), -lookbackMonths)
   const lookbackDateStr = lookbackDate.toISOString().split('T')[0]
 
@@ -297,6 +314,7 @@ export async function POST(
       } catch { /* bildirim hatası diğerlerini engellemez */ }
     }
   }
+  } // !hasWaitlistMatch
 
   await logAuditServer({
     businessId: staff.business_id,

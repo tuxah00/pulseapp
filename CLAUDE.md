@@ -303,6 +303,46 @@ Proje tasarım aşamasında. Aşağıdakiler **production'a açılmadan önce** 
 
 ---
 
+## QA Bulguları (Özellik Doğrulama Turu)
+
+Her test turunda bulunan sorunlar aşağıda tutulur. Yayın öncesi hepsi ele alınır.
+
+### Tur 1 — Bekleme Listesi (Waitlist) — 2026-04-18
+
+**Test ortamı:** `pulseapp@gmail.com` hesabı / sector `medical_aesthetic` / business_id `afc998b6-ab27-4085-80af-7090ad5b52a9` / 6 waitlist kaydı (5 mevcut + 1 QA testi).
+
+**Kanıt:**
+- Public API `/api/public/business/[id]/waitlist` POST → 200, kayıt oluşturuldu (`id: 8f4961e3…`, `customer_id: null` — telefon numarası mevcut müşteriyle eşleşmediği için link yok)
+- Dashboard `/dashboard/waitlist` sayfası: 5 kart doğru listeleniyor, istatistikler (Aktif 5, Bildirildi 2, Toplam 5) doğru
+- Admin API `/api/waitlist` GET → 200, customers/services/staff join çalışıyor
+
+**Çalışıyor:**
+- Public POST (Zod + rate-limit + phone normalize)
+- Dashboard CRUD (ekle/kaldır/randevu oluştur)
+- İstatistik kartları, arama, aktif/tümü filtresi
+- "Randevu Oluştur" modal'ından waitlist → appointment dönüşümü (manuel)
+
+**Bozuk / Yüksek Öncelik:**
+1. **`fill-gap` rotasında birden fazla `.or()` zincirleme** ([fill-gap/route.ts:113-116](pulseapp/app/api/appointments/[id]/fill-gap/route.ts)). Supabase'de art arda `.or()` çağrıları öncekini **override eder** — şu an yalnızca son filtre (`preferred_time_start.eq OR is.null`) uygulanıyor; service/date/staff eşleşme filtreleri kaybediyor. Sonuç: eşleşmeyen waitlist kayıtları da bildirim alabilir. → Tek `.or()` içinde AND/OR grup olarak yazılmalı veya `rpc` ile özel sorgu.
+2. **`gap_fill_notifications.customer_id` NOT NULL constraint ihlali** ([040a_gap_fill_notifications.sql:9](pulseapp/supabase/migrations/040a_gap_fill_notifications.sql) + [fill-gap/route.ts:212-220](pulseapp/app/api/appointments/[id]/fill-gap/route.ts)). Public'ten gelen kayıtlarda `customer_id` null olabilir; bu durumda INSERT sessizce fail oluyor (try/catch yutuyor) → waitlist kaydı `is_notified` olmadan kalıyor, aynı slot için tekrar bildirim gönderilebilir. → Kolonu nullable yap veya INSERT'i `customerId` null'sa atla.
+3. **`auto_book_on_match` sadece `customerId` varsa çalışır** ([fill-gap/route.ts:149](pulseapp/app/api/appointments/[id]/fill-gap/route.ts)). Public booking'den telefonla kayıt olan yeni kullanıcı için otomatik rezervasyon tetiklenmiyor — kullanıcı gereksinimle çelişir. → Customer otomatik oluşturma (yoksa ekle) veya bu kısıt UI'da belirtilmeli.
+
+**Eksik / Orta Öncelik:**
+4. **Müşteri portalında "Bekleme listesi kayıtlarım" yok** — `/book/manage/[token]` sadece randevu için. Müşteri kendi waitlist durumunu, iptal edemiyor. → Basit bir "/book/waitlist/[phone]" sayfası veya token bazlı erişim eklenmeli.
+5. **Bildirim kanalı seçimi `'auto'`** ([fill-gap/route.ts:175, 208](pulseapp/app/api/appointments/[id]/fill-gap/route.ts)) — `customers.preferred_channel` (sms/whatsapp) kolonu var, waitlist bildiriminde dikkate alınmıyor.
+6. **`/api/cron/daily/route.ts` waitlist bölümü boş** — WaitlistEntry tipi tanımlı ama süresi dolmuş kayıtları otomatik pasifleştirme / uzun süre bekleyen kayıtlara hatırlatma gibi bir implementasyon yok.
+7. **Waitlist → Booking konversiyon metriği yok** — Dashboard "Bildirim Gönderilen" sayıyor ama "Kaç tanesi sonunda randevu aldı" metriği yok. İşletme faydası ölçülmüyor.
+8. **Telefon eşleştirme `+90` prefix hassas** — `normalizePhone` + `phoneOrFilter` var ama DB'deki eski kayıtlar farklı normalize edilmişse link atlanabilir. Test edilmeli.
+9. **`waitlist_entries` TypeScript interface'de `auto_book_on_match` alanı eksik** ([types/index.ts](pulseapp/types/index.ts)) — kod string literal olarak kullanıyor, derleyici uyarı vermiyor.
+
+**İşletme Faydası:**
+> Bekleme listesi iptal edilen randevu slotlarını geri kazanmak için **yüksek değer** üretebilir — ancak şu an konversiyon oranı ölçülmüyor, otomatik rezervasyon yalnızca kayıtlı müşteriler için çalışıyor, ve eşleşme filtresi kırık. Çalışır hale getirildiğinde her iptali bir dolu slot'a çevirme potansiyeli var; öncelikli özellik.
+
+**Bonus bulgu (waitlist değil, genel):**
+- **Dashboard TopBar hydration error** — `lucide-react` icon SSR/CSR uyumsuzluğu; theme toggle butonundan kaynaklı (tema-bağımlı icon). Fonksiyonel etki yok, console warning dolduruyor. → Icon client-only render veya `suppressHydrationWarning` eklenmeli.
+
+---
+
 ## Supabase Migration Durumu
 
 Aşağıdaki migration'lar Supabase SQL Editor'de manuel olarak çalıştırılmalıdır:

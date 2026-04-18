@@ -805,10 +805,13 @@ export interface WaitlistEntry {
   notes: string | null
   is_notified: boolean
   is_active: boolean
+  auto_book_on_match: boolean
+  notification_expires_at: string | null
   created_at: string
   // JOIN
   customer?: Customer
   service?: Service
+  staff?: { id: string; name: string }
 }
 
 // ── Paket / Seans Sistemi ──
