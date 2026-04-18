@@ -8,7 +8,6 @@ import {
   Loader2, TrendingUp, TrendingDown, Users, Calendar,
   DollarSign, AlertTriangle, Clock, Star, UserCheck, Minus,
   BarChart3, PieChart, Activity, Plus, X, Wallet, Download, Layers, Sparkles, Gem,
-  ChevronDown, ChevronUp,
 } from 'lucide-react'
 import { formatCurrency, cn, formatDateISO } from '@/lib/utils'
 import { useConfirm } from '@/lib/hooks/use-confirm'
@@ -85,26 +84,6 @@ export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true)
   const [period, setPeriod] = useState<'week' | 'month' | 'year'>('month')
   const [activeTab, setActiveTab] = useState<AnalyticsTab>('overview')
-  const [showExtraTabs, setShowExtraTabs] = useState(false)
-
-  // Aç/kapat tercihini localStorage'dan oku
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('pulse-detail-toggle:analytics-extra-tabs')
-      if (saved === 'open') setShowExtraTabs(true)
-    } catch {}
-  }, [])
-  function toggleExtraTabs() {
-    const next = !showExtraTabs
-    setShowExtraTabs(next)
-    // Gizleniyorsa ve aktif sekme gizli sekmelerden biriyse, Özet'e dön
-    if (!next && (['sources', 'services', 'forecast', 'pulse_value'] as AnalyticsTab[]).includes(activeTab)) {
-      setActiveTab('overview')
-    }
-    try {
-      localStorage.setItem('pulse-detail-toggle:analytics-extra-tabs', next ? 'open' : 'closed')
-    } catch {}
-  }
 
   const [appointments, setAppointments] = useState<AnalyticsAppointment[]>([])
   const [prevAppointments, setPrevAppointments] = useState<PrevAppointment[]>([])
@@ -517,22 +496,19 @@ export default function AnalyticsPage() {
           value={completed.length} color="blue" />
       </div>
 
-      {/* Sekmeler — 4 ana sekme + "Daha fazla" ile 4 ek sekme */}
+      {/* Sekmeler — tüm sekmeler direkt görünür */}
       <div className="sticky top-14 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 bg-gray-50 dark:bg-gray-950 flex flex-wrap gap-1 border-b border-gray-200 dark:border-gray-700">
         {(() => {
-          const coreTabs = [
+          const tabsToShow = [
             ['overview', 'Özet', <BarChart3 key="o" className="h-3.5 w-3.5" />],
             ['staff', 'Personel', <Users key="s" className="h-3.5 w-3.5" />],
             ['customers', customerLabelPlural, <UserCheck key="c" className="h-3.5 w-3.5" />],
             ['expenses', 'Gelir-Gider', <Wallet key="e" className="h-3.5 w-3.5" />],
-          ] as const
-          const extraTabs = [
             ['sources', 'Kaynak', <PieChart key="sr" className="h-3.5 w-3.5" />],
             ['services', 'Hizmet', <Layers key="sv" className="h-3.5 w-3.5" />],
             ['forecast', 'Tahmin', <Sparkles key="f" className="h-3.5 w-3.5" />],
             ['pulse_value', 'PulseApp Katkısı', <Gem key="pv" className="h-3.5 w-3.5" />],
           ] as const
-          const tabsToShow = showExtraTabs ? [...coreTabs, ...extraTabs] : coreTabs
 
           const renderTab = ([key, label, icon]: readonly [string, string, React.ReactElement]) => {
             const isPulseValue = key === 'pulse_value'
@@ -560,20 +536,7 @@ export default function AnalyticsPage() {
             )
           }
 
-          return (
-            <>
-              {tabsToShow.map(renderTab)}
-              <button
-                type="button"
-                onClick={toggleExtraTabs}
-                className="flex items-center gap-1 px-3 py-2 text-xs font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 border-b-2 border-transparent -mb-px transition-colors"
-                title={showExtraTabs ? 'Ek sekmeleri gizle' : 'Kaynak, hizmet, tahmin ve PulseApp katkısı sekmelerini göster'}
-              >
-                {showExtraTabs ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                {showExtraTabs ? 'Daha az' : 'Daha fazla'}
-              </button>
-            </>
-          )
+          return <>{tabsToShow.map(renderTab)}</>
         })()}
       </div>
 
