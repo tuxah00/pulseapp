@@ -188,6 +188,54 @@ export default function WaitlistPage() {
     }
     setBookSaving(true)
     try {
+      // Bitiş saati yoksa hizmet süresinden hesapla (yoksa 30 dk varsayılan)
+      let effectiveEnd = bookTimeEnd
+      if (!effectiveEnd) {
+        let duration = 30
+        if (bookServiceId) {
+          const { data: svc } = await supabase
+            .from('services')
+            .select('duration_minutes')
+            .eq('id', bookServiceId)
+            .single()
+          if (svc?.duration_minutes) duration = svc.duration_minutes
+        }
+        const [h, m] = bookTimeStart.split(':').map(Number)
+        const total = h * 60 + m + duration
+        const eh = String(Math.floor(total / 60)).padStart(2, '0')
+        const em = String(total % 60).padStart(2, '0')
+        effectiveEnd = `${eh}:${em}`
+      }
+
+      // Personel çakışma kontrolü — aynı personelin aynı gün örtüşen randevusu varsa engelle
+      if (bookStaffId) {
+        const toMin = (t: string) => {
+          const [hh, mm] = t.split(':').map(Number)
+          return hh * 60 + mm
+        }
+        const { data: dayApts } = await supabase
+          .from('appointments')
+          .select('start_time, end_time')
+          .eq('business_id', businessId)
+          .eq('staff_id', bookStaffId)
+          .eq('appointment_date', bookDate)
+          .in('status', ['pending', 'confirmed'])
+          .is('deleted_at', null)
+
+        const newStart = toMin(bookTimeStart)
+        const newEnd = toMin(effectiveEnd)
+        const hasConflict = (dayApts ?? []).some(a => {
+          const s = toMin((a.start_time as string).substring(0, 5))
+          const e = toMin((a.end_time as string).substring(0, 5))
+          return newStart < e && s < newEnd
+        })
+        if (hasConflict) {
+          toast.error('Bu personelin seçilen saatte zaten randevusu var. Farklı saat veya personel seçin.')
+          setBookSaving(false)
+          return
+        }
+      }
+
       const { error } = await supabase.from('appointments').insert({
         business_id: businessId,
         customer_id: bookEntry.customer_id || null,
@@ -195,7 +243,7 @@ export default function WaitlistPage() {
         staff_id: bookStaffId || null,
         appointment_date: bookDate,
         start_time: bookTimeStart,
-        end_time: bookTimeEnd || null,
+        end_time: effectiveEnd,
         notes: bookNotes || null,
         status: 'confirmed',
         source: 'manual',
