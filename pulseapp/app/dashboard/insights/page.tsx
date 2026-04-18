@@ -244,6 +244,15 @@ export default function InsightsPage() {
         <PulseCards pulse={data.pulse} />
       </section>
 
+      {data.recommendations.length === 0 && (
+        <div className="card p-6 text-center cursor-default">
+          <Sparkles className="w-8 h-8 mx-auto text-gray-300 dark:text-gray-600 mb-2" />
+          <div className="text-sm text-gray-600 dark:text-gray-400">
+            Şu an için aktif bir öneri yok. Daha fazla veri biriktikçe stratejik içgörüler burada görünecek.
+          </div>
+        </div>
+      )}
+
       {/* Dış Dünya — Makro bağlam */}
       <MacroPanel macro={data.macro} />
 
@@ -322,15 +331,6 @@ export default function InsightsPage() {
             ))}
           </div>
         </section>
-      )}
-
-      {data.recommendations.length === 0 && (
-        <div className="card p-6 text-center cursor-default">
-          <Sparkles className="w-8 h-8 mx-auto text-gray-300 dark:text-gray-600 mb-2" />
-          <div className="text-sm text-gray-600 dark:text-gray-400">
-            Şu an için aktif bir öneri yok. Daha fazla veri biriktikçe stratejik içgörüler burada görünecek.
-          </div>
-        </div>
       )}
     </div>
   )

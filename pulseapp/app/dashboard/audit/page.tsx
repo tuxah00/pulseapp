@@ -48,7 +48,7 @@ const RESOURCE_LABELS: Record<string, string> = {
   patient_record: 'Hasta Dosyası',
   patient_record_file: 'Hasta Dosyası',
   message: 'Mesaj',
-  portfolio: 'Portfolyo',
+  portfolio: 'Çalışma Galerisi',
   membership: 'Üyelik',
   service_packages: 'Paket Şablonu',
   customer_packages: 'Müşteri Paketi',

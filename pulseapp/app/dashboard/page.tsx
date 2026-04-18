@@ -28,8 +28,6 @@ import type {
 import TodayAppointments from './_components/today-appointments'
 import WeeklyInsights from './_components/weekly-insights'
 import PerformanceStats from './_components/performance-stats'
-import AiInsightsWidget from './_components/ai-insights-widget'
-import AiBriefWidget from './_components/ai-brief-widget'
 import { Sparkline } from '@/components/ui/sparkline'
 
 type TodayAppointmentRow = AppointmentRow & {
@@ -263,63 +261,16 @@ export default async function DashboardPage() {
         <OnboardingCard bookingUrl={bookingUrl} customerLabel={customerLabel} customerLabelPlural={customerLabelPlural} />
       )}
 
-      {/* ── Online booking banner ── */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-pulse-900 to-indigo-600 px-5 py-4 shadow-lg shadow-pulse-900/20">
-        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
-        <div className="relative flex items-center gap-4">
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-white/70 uppercase tracking-wider mb-0.5">
-              Online Randevu Linkiniz
-            </p>
-            <p className="text-sm text-white/90 truncate font-mono">{bookingUrl}</p>
-          </div>
-          <a
-            href={bookingUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex-shrink-0 flex items-center gap-1.5 rounded-xl bg-white/20 hover:bg-white/30 px-3 py-2 text-xs font-semibold text-white transition-colors backdrop-blur-sm"
-          >
-            <ExternalLink className="h-3.5 w-3.5" />
-            Aç
-          </a>
-        </div>
-      </div>
-
-      {/* ── Portal banner ── */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-purple-700 to-fuchsia-600 px-5 py-4 shadow-lg shadow-purple-900/20">
-        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
-        <div className="relative flex items-center gap-4">
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-white/70 uppercase tracking-wider mb-0.5">
-              Müşteri Self-Servis Portal
-            </p>
-            <p className="text-sm text-white/90 truncate font-mono">{portalUrl}</p>
-            <p className="text-[11px] text-white/60 mt-0.5">
-              Aç butonu — portalı mevcut bir müşteri olarak önizler.
-            </p>
-          </div>
-          <a
-            href={portalPreviewUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex-shrink-0 flex items-center gap-1.5 rounded-xl bg-white/20 hover:bg-white/30 px-3 py-2 text-xs font-semibold text-white transition-colors backdrop-blur-sm"
-          >
-            <ExternalLink className="h-3.5 w-3.5" />
-            Aç
-          </a>
-        </div>
-      </div>
-
-      {/* ── Main content grid ── */}
+      {/* ── Ana içerik (sade varsayılan görünüm) ── */}
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Today's appointments */}
+        {/* Bugünkü randevular */}
         <div className="lg:col-span-2">
           <TodayAppointments appointments={todayAppointments} />
         </div>
 
-        {/* Right sidebar */}
+        {/* Sağ sütun: bildirim + AI günlük özeti */}
         <div className="space-y-5">
-          {/* Notifications */}
+          {/* Bildirimler */}
           <div className="card">
             <div className="mb-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -370,19 +321,63 @@ export default async function DashboardPage() {
             )}
           </div>
 
-          {/* AI daily brief */}
-          <AiBriefWidget businessId={businessId} />
+        </div>
+      </div>
 
-          {/* Performance stats */}
+      {/* Online randevu linki */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-pulse-900 to-indigo-600 px-5 py-4 shadow-lg shadow-pulse-900/20">
+        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
+        <div className="relative flex items-center gap-4">
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold text-white/70 uppercase tracking-wider mb-0.5">
+              Online Randevu Linkiniz
+            </p>
+            <p className="text-sm text-white/90 truncate font-mono">{bookingUrl}</p>
+          </div>
+          <a
+            href={bookingUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-shrink-0 flex items-center gap-1.5 rounded-xl bg-white/20 hover:bg-white/30 px-3 py-2 text-xs font-semibold text-white transition-colors backdrop-blur-sm"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            Aç
+          </a>
+        </div>
+      </div>
+
+      {/* Müşteri portalı */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-purple-700 to-fuchsia-600 px-5 py-4 shadow-lg shadow-purple-900/20">
+        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
+        <div className="relative flex items-center gap-4">
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold text-white/70 uppercase tracking-wider mb-0.5">
+              Müşteri Self-Servis Portal
+            </p>
+            <p className="text-sm text-white/90 truncate font-mono">{portalUrl}</p>
+            <p className="text-[11px] text-white/60 mt-0.5">
+              Aç butonu — portalı mevcut bir müşteri olarak önizler.
+            </p>
+          </div>
+          <a
+            href={portalPreviewUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-shrink-0 flex items-center gap-1.5 rounded-xl bg-white/20 hover:bg-white/30 px-3 py-2 text-xs font-semibold text-white transition-colors backdrop-blur-sm"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            Aç
+          </a>
+        </div>
+      </div>
+
+      {/* Performans + haftalık + AI kampanya + risk */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2 space-y-5">
           <PerformanceStats />
-
-          {/* Weekly AI insights */}
           <WeeklyInsights />
-
-          {/* AI Campaign suggestions */}
-          <AiInsightsWidget />
-
-          {/* Risk customers */}
+        </div>
+        <div className="space-y-5">
           {riskCustomers && riskCustomers.length > 0 && (
             <div className="relative overflow-hidden rounded-2xl border border-amber-200 dark:border-amber-900/50 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/20 p-4">
               <div className="flex items-center gap-2 mb-3">

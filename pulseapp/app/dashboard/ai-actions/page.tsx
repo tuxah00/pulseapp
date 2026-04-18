@@ -65,10 +65,10 @@ export default function AiActionsPage() {
   useEffect(() => { load() }, [load])
 
   async function handleDecide(action: PendingAction, decision: 'confirm' | 'cancel') {
-    const verbNoun = decision === 'confirm' ? 'onayla' : 'iptal et'
+    const verbNoun = decision === 'confirm' ? 'onayla' : 'reddet'
     const ok = await confirm({
-      title: decision === 'confirm' ? 'Aksiyonu onayla' : 'Aksiyonu iptal et',
-      message: `"${action.preview}" aksiyonunu ${verbNoun}mak istediğinize emin misiniz?`,
+      title: decision === 'confirm' ? 'Öneriyi onayla' : 'Öneriyi reddet',
+      message: `"${action.preview}" önerisini ${verbNoun}mek istediğinize emin misiniz?`,
       confirmText: decision === 'confirm' ? 'Onayla ve Çalıştır' : 'İptal Et',
       cancelText: 'Vazgeç',
       variant: decision === 'cancel' ? 'danger' : 'warning',
@@ -91,7 +91,7 @@ export default function AiActionsPage() {
         window.dispatchEvent(new CustomEvent('pulse-toast', {
           detail: {
             type: 'system',
-            title: decision === 'confirm' ? 'Aksiyon çalıştırıldı' : 'Aksiyon iptal edildi',
+            title: decision === 'confirm' ? 'Uygulandı' : 'Reddedildi',
             body: json?.message || 'Tamamlandı',
           },
         }))
@@ -120,11 +120,10 @@ export default function AiActionsPage() {
       <div>
         <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
           <Inbox className="w-6 h-6 text-pulse-900 dark:text-pulse-300" />
-          Asistan Aksiyonları
+          AI Önerileri
         </h1>
         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-          İş Zekası önerilerinden ve AI asistan konuşmalarından gelen bekleyen aksiyonlar burada.
-          Onayladığında sistem aksiyonu yürütür.
+          Sistemin sizin için hazırladığı öneriler (kampanya, hatırlatma, geri kazanım). Onayladığınızda otomatik olarak uygulanır.
         </p>
       </div>
 
@@ -166,7 +165,7 @@ export default function AiActionsPage() {
           <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
           <div>
             <div className="text-sm font-semibold text-red-700 dark:text-red-300 mb-1">
-              Aksiyonlar yüklenemedi
+              Öneriler yüklenemedi
             </div>
             <div className="text-xs text-gray-600 dark:text-gray-400">{error}</div>
           </div>
@@ -174,10 +173,10 @@ export default function AiActionsPage() {
       ) : actions.length === 0 ? (
         <EmptyState
           icon={<Bot className="w-7 h-7" />}
-          title={tab === 'open' ? 'Bekleyen aksiyon yok' : 'Geçmiş aksiyon yok'}
+          title={tab === 'open' ? 'Bekleyen öneri yok' : 'Geçmiş öneri yok'}
           description={tab === 'open'
-            ? 'İş Zekası önerilerinden "Uygula" tıklarsan burada görünür.'
-            : 'Onaylanan ve iptal edilen aksiyonlar geçmişte listelenir.'}
+            ? 'İş Zekası sayfasındaki önerilerden "Uygula" tıklarsan burada görünür.'
+            : 'Onaylanan ve reddedilen öneriler geçmişte listelenir.'}
         />
       ) : (
         <div className="space-y-3">
