@@ -66,7 +66,7 @@ export async function POST(
 
   const buildMessage = (customerName: string) =>
     `Merhaba ${customerName}! 👋\n\n` +
-    `${bizName} randevunuzda yeni bir uygun slot açıldı.\n\n` +
+    `${bizName} randevunuzda yeni bir uygun boşluk açıldı.\n\n` +
     `Hemen almak için:\n🔗 ${appUrl}/book/${staff.business_id}\n\n` +
     `İyi günler dileriz!`
 
