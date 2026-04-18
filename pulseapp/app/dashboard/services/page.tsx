@@ -10,12 +10,17 @@ import { Portal } from '@/components/ui/portal'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
 import type { Service } from '@/types'
 import { logAudit } from '@/lib/utils/audit'
+import { getContraindicationLabel, isMedicalSector } from '@/lib/config/sector-labels'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import { ToolbarPopover, SortPopoverContent } from '@/components/ui/toolbar-popover'
 import { CustomSelect } from '@/components/ui/custom-select'
 
 export default function ServicesPage() {
-  const { businessId, staffId: currentStaffId, staffName: currentStaffName, loading: ctxLoading, permissions } = useBusinessContext()
+  const { businessId, staffId: currentStaffId, staffName: currentStaffName, sector, loading: ctxLoading, permissions } = useBusinessContext()
+  const contraindicationLabel = getContraindicationLabel(sector)
+  const contraindicationHelp = isMedicalSector(sector)
+    ? 'Bu hizmet hangi alerjenlerde risk oluşturur?'
+    : 'Bu hizmetten önce müşteriye sorulması gereken durumlar (alerji, özel koşul vb.)'
   const [services, setServices] = useState<Service[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
@@ -412,8 +417,8 @@ export default function ServicesPage() {
               )}
 
               <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
-                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Kontrendikasyonlar</h4>
-                <p className="text-xs text-gray-400 mb-3">Bu hizmet hangi alerjenlerde risk oluşturur?</p>
+                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{contraindicationLabel}</h4>
+                <p className="text-xs text-gray-400 mb-3">{contraindicationHelp}</p>
 
                 {/* Mevcut kontrendikasyonlar (düzenleme modu) */}
                 {editingService && contraindications.map(c => (

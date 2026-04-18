@@ -220,10 +220,10 @@ export const VALUE_METHOD_DESCRIPTIONS: Record<string, ValueMethodDescription> =
     assumption: 'Referans özelliği olmasa bu müşterilerin bir kısmı işletmenizi duymayabilirdi.',
   },
   winback_recovered: {
-    title: 'Winback ile Geri Dönüş',
-    summary: 'Uzun süredir gelmeyen müşterilere gönderilen winback kampanyasıyla ulaşılan kişiler.',
+    title: 'Geri Kazanım',
+    summary: 'Uzun süredir gelmeyen müşteriye otomatik hatırlatma gönderip geri kazandığımız kişiler.',
     steps: [
-      'Winback tipindeki kampanyaların ulaştığı müşteri sayısı toplanır',
+      'Geri kazanım tipindeki kampanyaların ulaştığı müşteri sayısı toplanır',
     ],
     assumption: 'Kayıp/risk segmentindeki müşterilere otomatik ulaşma işi yapılır.',
   },

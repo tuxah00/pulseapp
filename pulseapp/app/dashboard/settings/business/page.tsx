@@ -672,6 +672,12 @@ export default function BusinessSettingsPage() {
       {activeTab === 'settings' && (
         <form onSubmit={handleSaveSettings}>
           <div className="space-y-6">
+            <SectionHeader
+              icon={<Bell className="h-4 w-4" />}
+              title="İletişim"
+              subtitle="Müşterilere ne zaman ve nasıl mesaj gittiğini yönetin"
+            />
+
             <div className="card">
               <h2 className="text-lg font-semibold text-gray-900 mb-1">Hatırlatma Bildirimleri</h2>
               <p className="text-sm text-gray-500 mb-6">
@@ -730,6 +736,12 @@ export default function BusinessSettingsPage() {
                 )}
               </div>
             </div>
+
+            <SectionHeader
+              icon={<Sparkles className="h-4 w-4" />}
+              title="Otomasyon"
+              subtitle="Tekrarlayan işlerin kendiliğinden yürümesi için kurallar"
+            />
 
             <div className="card">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Periyodik Kontrol Hatırlatıcı</h2>
@@ -790,6 +802,12 @@ export default function BusinessSettingsPage() {
                 )}
               </div>
             </div>
+
+            <SectionHeader
+              icon={<Cake className="h-4 w-4" />}
+              title="Sadakat & Müşteri Deneyimi"
+              subtitle="Müşteri memnuniyeti, ödül ve geri kazanım"
+            />
 
             <div className="card">
               <h2 className="text-lg font-semibold text-gray-900 mb-1">Sadakat Puan Sistemi</h2>
@@ -905,6 +923,12 @@ export default function BusinessSettingsPage() {
                 </p>
               </div>
             </div>
+
+            <SectionHeader
+              icon={<Smartphone className="h-4 w-4" />}
+              title="Ek Kanallar & AI"
+              subtitle="Doğum günü, rezervasyon, WhatsApp ve AI asistan"
+            />
 
             <div className="card">
               <div className="flex items-center gap-3 mb-1">
@@ -1363,6 +1387,28 @@ export default function BusinessSettingsPage() {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+function SectionHeader({
+  icon,
+  title,
+  subtitle,
+}: {
+  icon: React.ReactNode
+  title: string
+  subtitle?: string
+}) {
+  return (
+    <div className="flex items-center gap-3 pt-2">
+      <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-pulse-50 text-pulse-900 dark:bg-pulse-900/20 dark:text-pulse-400">
+        {icon}
+      </span>
+      <div>
+        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">{title}</h3>
+        {subtitle && <p className="text-xs text-gray-500 dark:text-gray-400">{subtitle}</p>}
+      </div>
     </div>
   )
 }

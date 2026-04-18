@@ -471,7 +471,7 @@ export default function AnalyticsPage() {
       {/* Başlık */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Gelir-Gider Tablosu</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Analitik</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{periodLabel} · önceki dönemle karşılaştırmalı</p>
         </div>
         <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
@@ -498,41 +498,48 @@ export default function AnalyticsPage() {
           value={completed.length} color="blue" />
       </div>
 
-      {/* Sekmeler */}
+      {/* Sekmeler — tüm sekmeler direkt görünür */}
       <div className="sticky top-14 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 bg-gray-50 dark:bg-gray-950 flex flex-wrap gap-1 border-b border-gray-200 dark:border-gray-700">
-        {([
-          ['overview', 'Genel Bakış', <BarChart3 key="o" className="h-3.5 w-3.5" />],
-          ['staff', 'Personel', <Users key="s" className="h-3.5 w-3.5" />],
-          ['customers', customerLabelPlural, <UserCheck key="c" className="h-3.5 w-3.5" />],
-          ['sources', 'Kaynak', <PieChart key="sr" className="h-3.5 w-3.5" />],
-          ['services', 'Hizmet', <Layers key="sv" className="h-3.5 w-3.5" />],
-          ['expenses', 'Gelir-Gider', <Wallet key="e" className="h-3.5 w-3.5" />],
-          ['forecast', 'Tahmin', <Sparkles key="f" className="h-3.5 w-3.5" />],
-          ['pulse_value', 'PulseApp Kazandırdıkları', <Gem key="pv" className="h-3.5 w-3.5" />],
-        ] as const).map(([key, label, icon]) => {
-          const isPulseValue = key === 'pulse_value'
-          return (
-          <button key={key} onClick={() => {
-            setActiveTab(key as AnalyticsTab)
-            if (key === 'forecast' && !forecastData && !forecastLoading) {
-              setForecastLoading(true)
-              fetch('/api/analytics/forecast?months=3')
-                .then(r => r.json())
-                .then(d => setForecastData(d))
-                .catch(() => {})
-                .finally(() => setForecastLoading(false))
-            }
-          }}
-            className={cn('flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors',
-              activeTab === key
-                ? 'border-pulse-900 text-pulse-900 dark:text-pulse-400'
-                : isPulseValue
-                  ? 'border-transparent text-pulse-900/75 dark:text-pulse-400/80 hover:text-pulse-900 dark:hover:text-pulse-300'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-            )}>
-            {icon}{label}
-          </button>
-        )})}
+        {(() => {
+          const tabsToShow = [
+            ['overview', 'Özet', <BarChart3 key="o" className="h-3.5 w-3.5" />],
+            ['staff', 'Personel', <Users key="s" className="h-3.5 w-3.5" />],
+            ['customers', customerLabelPlural, <UserCheck key="c" className="h-3.5 w-3.5" />],
+            ['expenses', 'Gelir-Gider', <Wallet key="e" className="h-3.5 w-3.5" />],
+            ['sources', 'Kaynak', <PieChart key="sr" className="h-3.5 w-3.5" />],
+            ['services', 'Hizmet', <Layers key="sv" className="h-3.5 w-3.5" />],
+            ['forecast', 'Tahmin', <Sparkles key="f" className="h-3.5 w-3.5" />],
+            ['pulse_value', 'PulseApp Katkısı', <Gem key="pv" className="h-3.5 w-3.5" />],
+          ] as const
+
+          const renderTab = ([key, label, icon]: readonly [string, string, React.ReactElement]) => {
+            const isPulseValue = key === 'pulse_value'
+            return (
+              <button key={key} onClick={() => {
+                setActiveTab(key as AnalyticsTab)
+                if (key === 'forecast' && !forecastData && !forecastLoading) {
+                  setForecastLoading(true)
+                  fetch('/api/analytics/forecast?months=3')
+                    .then(r => r.json())
+                    .then(d => setForecastData(d))
+                    .catch(() => {})
+                    .finally(() => setForecastLoading(false))
+                }
+              }}
+                className={cn('flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors',
+                  activeTab === key
+                    ? 'border-pulse-900 text-pulse-900 dark:text-pulse-400'
+                    : isPulseValue
+                      ? 'border-transparent text-pulse-900/75 dark:text-pulse-400/80 hover:text-pulse-900 dark:hover:text-pulse-300'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                )}>
+                {icon}{label}
+              </button>
+            )
+          }
+
+          return <>{tabsToShow.map(renderTab)}</>
+        })()}
       </div>
 
       {/* Genel Bakış Sekmesi */}

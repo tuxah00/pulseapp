@@ -115,8 +115,8 @@ export default function WorkflowsPage() {
   // Delete
   const handleDelete = async (workflow: Workflow) => {
     const ok = await confirm({
-      title: 'Akış Silinsin mi?',
-      message: `"${workflow.name}" akışı ve tüm çalışma geçmişi kalıcı olarak silinecek.`,
+      title: 'Otomatik mesaj silinsin mi?',
+      message: `"${workflow.name}" ve tüm çalışma geçmişi kalıcı olarak silinecek.`,
       confirmText: 'Sil',
       variant: 'danger',
     })
@@ -125,7 +125,7 @@ export default function WorkflowsPage() {
       const res = await fetch(`/api/workflows?id=${workflow.id}`, { method: 'DELETE' })
       if (!res.ok) throw new Error('Silinemedi')
       setWorkflows(prev => prev.filter(w => w.id !== workflow.id))
-      toast('system', 'Akış Silindi')
+      toast('system', 'Silindi')
     } catch (e: any) {
       toast('error', 'Hata', e.message)
     }
@@ -206,7 +206,7 @@ export default function WorkflowsPage() {
         throw new Error(err.error || 'Kaydedilemedi')
       }
 
-      toast('system', editingWorkflow ? 'Akış Güncellendi' : 'Akış Oluşturuldu')
+      toast('system', editingWorkflow ? 'Güncellendi' : 'Oluşturuldu')
       closeModal()
       await fetchWorkflows()
     } catch (e: any) {
@@ -221,13 +221,13 @@ export default function WorkflowsPage() {
       {/* Başlık */}
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Mesaj Akışları</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Otomatik Mesajlar</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Tetikleyici olaylara göre otomatik mesaj dizileri oluşturun.
+            Belirli bir olay sonrası (örn. randevu bitti) otomatik SMS gönderin.
           </p>
         </div>
         <button onClick={openCreateModal} className="btn-primary shrink-0">
-          <Plus className="mr-2 h-4 w-4" />Yeni Akış
+          <Plus className="mr-2 h-4 w-4" />Yeni Otomatik Mesaj
         </button>
       </div>
 
@@ -240,7 +240,7 @@ export default function WorkflowsPage() {
             </div>
             <div>
               <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{workflows.length}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Toplam Akış</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Toplam</p>
             </div>
           </div>
         </div>
@@ -374,7 +374,7 @@ export default function WorkflowsPage() {
             >
               <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  {editingWorkflow ? 'Akışı Düzenle' : 'Yeni Mesaj Akışı'}
+                  {editingWorkflow ? 'Düzenle' : 'Yeni Otomatik Mesaj'}
                 </h2>
                 <button onClick={closeModal} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                   <X className="h-5 w-5" />
@@ -385,7 +385,7 @@ export default function WorkflowsPage() {
                 <form id="workflow-form" onSubmit={handleSave} className="space-y-5">
                   {/* Name */}
                   <div>
-                    <label className="label">Akış Adı</label>
+                    <label className="label">Ad</label>
                     <input
                       type="text"
                       value={formName}
