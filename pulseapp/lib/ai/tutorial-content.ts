@@ -153,8 +153,8 @@ export const CORE_TUTORIAL_TOPICS: TutorialTopic[] = [
       'Müşteri segmentleri, mevsimsel trendler, kohort analizi ve AI önerilerini buradan izle. Satranç tahtası grafiği hangi müşteri grubunun büyüdüğünü gösterir.',
   },
   {
-    pageKey: 'ai-actions',
-    path: '/dashboard/ai-actions',
+    pageKey: 'assistant-actions',
+    path: '/dashboard/assistant-actions',
     title: 'Asistan Aksiyonları',
     skeleton:
       'Asistanın önerdiği randevu, kampanya ve müşteri aksiyonlarını buradan onayla veya reddet. Onaylanan öneriler otomatik olarak uygulanır.',

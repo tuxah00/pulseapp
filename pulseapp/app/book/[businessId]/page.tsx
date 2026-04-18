@@ -98,9 +98,7 @@ export default function BookingPage() {
   const [waitlistTime, setWaitlistTime] = useState('')
   const [waitlistDate, setWaitlistDate] = useState('')
   const [waitlistStaffId, setWaitlistStaffId] = useState('')
-  const [waitlistEarliest, setWaitlistEarliest] = useState(false)
-  const [autoBookEnabled, setAutoBookEnabled] = useState(false)
-  const [autoBookResult, setAutoBookResult] = useState<{ date: string; time: string; staffName?: string } | null>(null)
+  const [waitlistAutoBook, setWaitlistAutoBook] = useState(false)
 
   const [kvkkConsent, setKvkkConsent] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -172,42 +170,16 @@ export default function BookingPage() {
 
   async function handleSubmit() {
     if (!selectedServiceId || !customerName || !customerPhone) return
-    // Normal mod: tarih+saat zorunlu; auto-book modunda gerekmez
-    if (!autoBookEnabled && (!selectedDate || !selectedTime)) return
+    // En az biri olmalı: ya normal tarih/saat ya da bekleme listesi
+    const hasNormalBooking = !!(selectedDate && selectedTime)
+    if (!hasNormalBooking && !waitlistEnabled) return
 
     setSubmitting(true)
     setSubmitError(null)
 
     try {
-      if (autoBookEnabled) {
-        // Otomatik randevu: sunucu tarafında en yakın slot bulup atar
-        const res = await fetch(`/api/public/business/${businessId}/auto-book`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            serviceId: selectedServiceId,
-            name: customerName.trim(),
-            phone: customerPhone.replace(/\s/g, ''),
-            staffId: selectedStaffId || undefined,
-            notes: undefined,
-          }),
-        })
-
-        if (!res.ok) {
-          const data = await res.json()
-          setSubmitError(data.error || 'Otomatik randevu oluşturulamadı')
-          setSubmitting(false)
-          return
-        }
-
-        const data = await res.json()
-        setAutoBookResult({
-          date: data.date,
-          time: data.startTime,
-          staffName: data.staffName || undefined,
-        })
-      } else {
-        // Normal randevu akışı
+      // Normal randevu (tarih/saat seçiliyse)
+      if (hasNormalBooking) {
         const res = await fetch(`/api/book?businessId=${businessId}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -229,7 +201,7 @@ export default function BookingPage() {
         }
       }
 
-      // Bekleme listesine de kaydet (işaretliyse)
+      // Bekleme listesine kaydet (işaretliyse)
       if (waitlistEnabled) {
         try {
           await fetch(`/api/public/business/${businessId}/waitlist`, {
@@ -241,6 +213,8 @@ export default function BookingPage() {
               serviceId: selectedServiceId,
               staffId: waitlistStaffId || undefined,
               preferredDate: waitlistDate || undefined,
+              preferredTime: waitlistTime || undefined,
+              autoBookOnMatch: waitlistAutoBook,
             }),
           })
         } catch {
@@ -312,30 +286,21 @@ export default function BookingPage() {
 
           <div className="mt-6 bg-gray-50 rounded-xl p-4 text-left space-y-3 text-sm">
             <SummaryRow label="Hizmet" value={selectedService?.name ?? ''} />
-            <SummaryRow label="Tarih" value={formatDate(autoBookResult?.date ?? selectedDate)} />
-            <SummaryRow label="Saat" value={autoBookResult?.time ?? selectedTime ?? ''} />
-            {autoBookResult?.staffName && (
-              <SummaryRow label="Personel" value={autoBookResult.staffName} />
-            )}
+            {selectedDate && selectedTime ? (
+              <>
+                <SummaryRow label="Tarih" value={formatDate(selectedDate)} />
+                <SummaryRow label="Saat" value={selectedTime} />
+              </>
+            ) : waitlistEnabled ? (
+              <div className="flex items-center gap-2 py-1.5 px-2 bg-blue-50 border border-blue-200 rounded-lg">
+                <Bell className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                <span className="text-xs text-blue-700 font-medium">Bekleme listesine eklendiniz — boşluk oluşunca haber vereceğiz.</span>
+              </div>
+            ) : null}
             {selectedService?.price != null && (
               <SummaryRow label="Ücret" value={formatPrice(selectedService.price)} />
             )}
-            {autoBookResult && (
-              <div className="border-t border-gray-200 pt-3">
-                <div className="flex items-center gap-2 py-1.5 px-2 bg-amber-50 border border-amber-200 rounded-lg">
-                  <Clock className="h-4 w-4 text-amber-500 flex-shrink-0" />
-                  <span className="text-xs text-amber-700 font-medium">Randevunuz onay bekliyor — işletme tarafından onaylandıktan sonra kesinleşecektir.</span>
-                </div>
-              </div>
-            )}
           </div>
-
-          {autoBookResult && (
-            <div className="mt-3 rounded-xl bg-amber-50 border border-amber-200 p-3 text-sm text-amber-700 flex gap-2">
-              <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-              <span>Randevunuz <strong>onay bekliyor</strong>. İşletme tarafından onaylandığında bilgilendirileceksiniz.</span>
-            </div>
-          )}
 
           <button
             onClick={() => {
@@ -346,15 +311,11 @@ export default function BookingPage() {
               setSelectedStaffId('')
               setCustomerName('')
               setCustomerPhone('')
-              setAutoBookEnabled(false)
-              setAutoBookResult(null)
               setWaitlistEnabled(false)
               setWaitlistTime('')
               setWaitlistDate('')
               setWaitlistStaffId('')
-              setWaitlistEarliest(false)
-              setAutoBookEnabled(false)
-              setAutoBookResult(null)
+              setWaitlistAutoBook(false)
               setKvkkConsent(false)
               setSubmitted(false)
             }}
@@ -574,7 +535,6 @@ export default function BookingPage() {
                   onChange={(e) => {
                     setWaitlistEnabled(e.target.checked)
                     if (e.target.checked) {
-                      setAutoBookEnabled(false)
                       setWaitlistTime(selectedTime || '')
                       setWaitlistDate(selectedDate || '')
                     }
@@ -608,7 +568,7 @@ export default function BookingPage() {
                     <label className="text-xs font-medium text-gray-600">Şu saatte:</label>
                     <select
                       value={waitlistTime}
-                      onChange={(e) => { setWaitlistTime(e.target.value); if (e.target.value) setWaitlistEarliest(false) }}
+                      onChange={(e) => setWaitlistTime(e.target.value)}
                       className="input mt-1"
                     >
                       <option value="">Saat seçin</option>
@@ -622,7 +582,7 @@ export default function BookingPage() {
                     <input
                       type="date"
                       value={waitlistDate}
-                      onChange={(e) => { setWaitlistDate(e.target.value); if (e.target.value) setWaitlistEarliest(false) }}
+                      onChange={(e) => setWaitlistDate(e.target.value)}
                       min={getTodayStr()}
                       className="input mt-1"
                     />
@@ -632,7 +592,7 @@ export default function BookingPage() {
                       <label className="text-xs font-medium text-gray-600">Şu personelde:</label>
                       <select
                         value={waitlistStaffId}
-                        onChange={(e) => { setWaitlistStaffId(e.target.value); if (e.target.value) setWaitlistEarliest(false) }}
+                        onChange={(e) => setWaitlistStaffId(e.target.value)}
                         className="input mt-1"
                       >
                         <option value="">Personel seçin</option>
@@ -640,52 +600,25 @@ export default function BookingPage() {
                       </select>
                     </div>
                   )}
-                  <label className="flex items-center gap-2 cursor-pointer pt-1">
+                  <label className="flex items-start gap-2 cursor-pointer pt-1">
                     <input
                       type="checkbox"
-                      checked={waitlistEarliest}
-                      onChange={(e) => {
-                        setWaitlistEarliest(e.target.checked)
-                        if (e.target.checked) { setWaitlistTime(''); setWaitlistDate(''); setWaitlistStaffId('') }
-                      }}
-                      className="h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+                      checked={waitlistAutoBook}
+                      onChange={(e) => setWaitlistAutoBook(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 rounded border-gray-300 text-green-500 focus:ring-green-500"
                     />
-                    <span className="text-sm text-gray-700">En yakın zamanda</span>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm text-gray-900 flex items-center gap-1.5">
+                        <CalendarPlus className="h-4 w-4 text-green-500" />
+                        Boşluk oluşursa otomatik al
+                      </span>
+                      <span className="text-xs text-gray-400 mt-0.5 block">
+                        Tercihlerinize göre, boşluk oluştuğunda otomatik randevu alınacaktır.
+                      </span>
+                    </div>
                   </label>
                 </div>
               )}
-            </div>
-
-            {/* ── Otomatik Randevu ───────────────────────── */}
-            <div className="flex items-center gap-3 my-4">
-              <div className="flex-1 h-px bg-gray-200" />
-              <span className="text-xs text-gray-400 font-medium px-1">veya</span>
-              <div className="flex-1 h-px bg-gray-200" />
-            </div>
-            <div className={`rounded-xl border p-4 transition-all ${autoBookEnabled ? 'border-green-300 bg-green-50' : 'border-gray-100 bg-gray-50'}`}>
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={autoBookEnabled}
-                  onChange={(e) => {
-                    setAutoBookEnabled(e.target.checked)
-                    if (e.target.checked) {
-                      // Auto-book seçilince manuel tarih/saat seçimine gerek yok
-                      setWaitlistEnabled(false)
-                    }
-                  }}
-                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-green-500 focus:ring-green-500"
-                />
-                <div className="flex-1 min-w-0">
-                  <span className="text-sm font-medium text-gray-900 flex items-center gap-1.5">
-                    <CalendarPlus className="h-4 w-4 text-green-500" />
-                    Boşluk oluştuğunda otomatik randevu al
-                  </span>
-                  <span className="text-xs text-gray-400 mt-0.5 block">
-                    En yakın müsait saate otomatik randevu oluşturulur. Randevunuz onay bekleyecektir.
-                  </span>
-                </div>
-              </label>
             </div>
 
             <div className="mt-4 pt-4 border-t border-gray-100 flex gap-2.5">
@@ -694,10 +627,10 @@ export default function BookingPage() {
               </button>
               <button
                 onClick={() => setStep(3)}
-                disabled={!autoBookEnabled && (!selectedDate || !selectedTime)}
+                disabled={!waitlistEnabled && (!selectedDate || !selectedTime)}
                 className="btn-primary flex-1"
               >
-                {autoBookEnabled ? 'Otomatik Randevu ile Devam Et' : 'Devam Et'}
+                Devam Et
               </button>
             </div>
           </div>
@@ -770,17 +703,12 @@ export default function BookingPage() {
             <div className="bg-gray-50 rounded-xl border border-gray-100 p-4 space-y-3 text-sm">
               <SummaryRow label="İşletme" value={business.name} />
               <SummaryRow label="Hizmet" value={selectedService.name} />
-              {autoBookEnabled ? (
-                <div className="flex items-center gap-2 py-1.5 px-2 bg-green-50 border border-green-200 rounded-lg">
-                  <CalendarPlus className="h-4 w-4 text-green-500 flex-shrink-0" />
-                  <span className="text-xs text-green-700 font-medium">En yakın müsait saate otomatik randevu alınacak</span>
-                </div>
-              ) : (
+              {selectedDate && selectedTime ? (
                 <>
                   <SummaryRow label="Tarih" value={formatDate(selectedDate)} />
-                  <SummaryRow label="Saat" value={selectedTime ?? ''} />
+                  <SummaryRow label="Saat" value={selectedTime} />
                 </>
-              )}
+              ) : null}
               <SummaryRow label="Süre" value={`${selectedService.duration_minutes} dk`} />
               {selectedService.price != null && (
                 <SummaryRow label="Ücret" value={formatPrice(selectedService.price)} highlight />
@@ -790,11 +718,23 @@ export default function BookingPage() {
                 <SummaryRow label="Telefon" value={customerPhone} />
               </div>
               {waitlistEnabled && (
-                <div className="border-t border-gray-200 pt-3">
+                <div className="border-t border-gray-200 pt-3 space-y-2">
                   <div className="flex items-center gap-2 py-1.5 px-2 bg-blue-50 border border-blue-200 rounded-lg">
                     <Bell className="h-4 w-4 text-blue-500 flex-shrink-0" />
-                    <span className="text-xs text-blue-700 font-medium">Bekleme listesine de kaydedilecek</span>
+                    <span className="text-xs text-blue-700 font-medium">
+                      {selectedDate && selectedTime
+                        ? 'Bekleme listesine de kaydedilecek'
+                        : 'Bekleme listesine eklenecek — boşluk oluşunca haber vereceğiz'}
+                    </span>
                   </div>
+                  {waitlistAutoBook && (
+                    <div className="flex items-center gap-2 py-1.5 px-2 bg-green-50 border border-green-200 rounded-lg">
+                      <CalendarPlus className="h-4 w-4 text-green-500 flex-shrink-0" />
+                      <span className="text-xs text-green-700 font-medium">
+                        Tercihinize uygun boşluk oluştuğunda otomatik randevu alınacak (onay bekler)
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -809,7 +749,7 @@ export default function BookingPage() {
                 className="btn-primary flex-1"
               >
                 {submitting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                {autoBookEnabled ? 'Otomatik Randevu Al' : 'Randevuyu Onayla'}
+                {!selectedDate || !selectedTime ? 'Bekleme Listesine Kaydol' : 'Randevuyu Onayla'}
               </button>
             </div>
 

@@ -71,7 +71,7 @@ const PERMISSION_MAP: Record<string, keyof StaffPermissions> = {
   '/dashboard/customers': 'customers',
   '/dashboard/analytics': 'analytics',
   '/dashboard/insights': 'analytics',
-  '/dashboard/ai-actions': 'analytics',
+  '/dashboard/assistant-actions': 'analytics',
   '/dashboard/messages': 'messages',
   '/dashboard/reviews': 'reviews',
   '/dashboard/services': 'services',
