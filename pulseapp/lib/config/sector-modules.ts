@@ -28,7 +28,7 @@ const MANAGEMENT_ITEMS: SidebarItem[] = [
   { key: 'staff', name: 'Personeller', href: '/dashboard/staff', iconName: 'UserCog' },
   { key: 'messages', name: 'Mesajlar', href: '/dashboard/messages', iconName: 'MessageSquare' },
   { key: 'insights', name: 'İş Zekası', href: '/dashboard/insights', iconName: 'TrendingUp' },
-  { key: 'ai-actions', name: 'AI Önerileri', href: '/dashboard/ai-actions', iconName: 'Inbox' },
+  { key: 'ai-actions', name: 'Asistan Aksiyonları', href: '/dashboard/ai-actions', iconName: 'Inbox' },
   { key: 'analytics', name: 'Gelir-Gider', href: '/dashboard/analytics', iconName: 'BarChart3' },
   { key: 'invoices', name: 'Faturalar', href: '/dashboard/invoices', iconName: 'Receipt' },
   { key: 'shifts', name: 'Vardiya', href: '/dashboard/shifts', iconName: 'CalendarDays' },
