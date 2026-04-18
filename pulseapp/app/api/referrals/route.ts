@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
 
   const body = await request.json()
-  const { businessId, referrerCustomerId, referredName, referredPhone, rewardType, rewardValue, expiresAt } = body
+  const { businessId, referrerCustomerId, referredCustomerId: providedReferredId, referredName, referredPhone, rewardType, rewardValue, expiresAt } = body
 
   if (!businessId || !referrerCustomerId) {
     return NextResponse.json({ error: 'businessId ve referrerCustomerId zorunlu' }, { status: 400 })
@@ -64,16 +64,16 @@ export async function POST(request: NextRequest) {
   const staff = await getStaffInfo(supabase, user.id, businessId)
   if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
 
-  // Referred kişi zaten müşteri mi kontrol et
-  let referredCustomerId = null
-  if (referredPhone) {
+  // Client yeni müşteri oluşturduysa o id'yi kullan; yoksa telefondan eşleştir
+  let referredCustomerId: string | null = providedReferredId || null
+  if (!referredCustomerId && referredPhone) {
     const { data: existing } = await supabase
       .from('customers')
       .select('id')
       .eq('business_id', businessId)
       .eq('phone', referredPhone)
       .eq('is_active', true)
-      .single()
+      .maybeSingle()
     if (existing) referredCustomerId = existing.id
   }
 

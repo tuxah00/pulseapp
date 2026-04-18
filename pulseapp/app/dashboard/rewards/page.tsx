@@ -15,6 +15,7 @@ import { CustomerSearchSelect } from '@/components/ui/customer-search-select'
 import { cn } from '@/lib/utils'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import { Portal } from '@/components/ui/portal'
+import { useConfirm } from '@/lib/hooks/use-confirm'
 
 const STATUS_CONFIG: Record<ReferralStatus, { bg: string; text: string; icon: typeof CheckCircle }> = {
   pending: { bg: 'bg-yellow-50 dark:bg-yellow-900/20', text: 'text-yellow-600 dark:text-yellow-400', icon: Clock },
@@ -71,6 +72,7 @@ export default function RewardsPage() {
   const rewardsEnabled = settings?.rewards_enabled === true
   const [activating, setActivating] = useState(false)
   const supabase = createClient()
+  const { confirm } = useConfirm()
 
   async function handleActivate() {
     if (!businessId) return
@@ -167,14 +169,63 @@ export default function RewardsPage() {
     if (!businessId || !formReferrerId) return
     setRefSaving(true)
     try {
+      // Telefon girildiyse sistemde var mı kontrol et
+      let referredCustomerId: string | null = null
+      const trimmedPhone = (formReferredPhone || '').trim()
+      const trimmedName = (formReferredName || '').trim()
+
+      if (trimmedPhone) {
+        const { data: existing } = await supabase
+          .from('customers')
+          .select('id, name')
+          .eq('business_id', businessId)
+          .eq('phone', trimmedPhone)
+          .eq('is_active', true)
+          .limit(1)
+          .maybeSingle()
+
+        if (existing) {
+          referredCustomerId = existing.id
+        } else if (trimmedName) {
+          // Yeni müşteri — onay iste
+          const ok = await confirm({
+            title: 'Yeni müşteri bulundu',
+            message: `"${trimmedName}" (${trimmedPhone}) sistemde kayıtlı değil. ${customerLabel} olarak kayıt edilsin mi?`,
+            confirmText: 'Evet, kaydet',
+            cancelText: 'Hayır, sadece referans',
+          })
+          if (ok) {
+            const { data: newCustomer, error: createErr } = await supabase
+              .from('customers')
+              .insert({
+                business_id: businessId,
+                name: trimmedName,
+                phone: trimmedPhone,
+                segment: 'new',
+                is_active: true,
+              })
+              .select('id')
+              .single()
+            if (createErr) {
+              toast.error(createErr.message || 'Müşteri kaydedilemedi')
+              setRefSaving(false)
+              return
+            }
+            referredCustomerId = newCustomer?.id || null
+            toast.success('Yeni müşteri kaydedildi')
+          }
+        }
+      }
+
       const res = await fetch('/api/referrals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           businessId,
           referrerCustomerId: formReferrerId,
-          referredName: formReferredName || null,
-          referredPhone: formReferredPhone || null,
+          referredCustomerId,
+          referredName: trimmedName || null,
+          referredPhone: trimmedPhone || null,
           rewardType: formRewardType || null,
           rewardValue: formRewardValue ? Number(formRewardValue) : null,
         }),
@@ -491,25 +542,25 @@ export default function RewardsPage() {
                           {(referred?.phone || r.referred_phone) && <p className="text-xs text-gray-500 flex items-center gap-1"><Phone className="h-3 w-3" /> {referred?.phone || r.referred_phone}</p>}
                         </div>
                       </div>
-                      <div className="w-[160px] flex-shrink-0 text-right">
+                      <div className="flex-shrink-0 text-right flex flex-col items-end gap-1">
                         {r.reward_type ? (
-                          <p className="text-xs text-purple-600 dark:text-purple-400 flex items-center gap-1 justify-end mb-1 truncate">
+                          <p className="text-xs text-purple-600 dark:text-purple-400 flex items-center gap-1 justify-end truncate">
                             <Gift className="h-3 w-3 flex-shrink-0" />
                             <span className="truncate">{r.reward_value}{r.reward_type === 'discount_percent' ? '%' : r.reward_type === 'discount_amount' ? '₺' : ''} {REWARD_TYPE_LABELS[r.reward_type]}</span>
                           </p>
                         ) : (
-                          <p className="text-xs text-gray-300 dark:text-gray-600 mb-1">—</p>
+                          <p className="text-xs text-gray-300 dark:text-gray-600">—</p>
                         )}
-                        <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${sc.bg} ${sc.text}`}>
-                          <Icon className="h-3 w-3" /> {REFERRAL_STATUS_LABELS[r.status]}
-                        </span>
-                      </div>
-                      <div className="w-[90px] flex-shrink-0 flex justify-end">
-                        {r.status === 'pending' ? (
-                          <button onClick={() => handleReward(r.id)} className="text-xs px-2 py-1 rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200 transition-colors whitespace-nowrap">Ödül Ver</button>
-                        ) : r.status === 'rewarded' ? (
-                          <span className="text-[10px] text-green-500 whitespace-nowrap">Ödül verildi</span>
-                        ) : null}
+                        <div className="flex items-center gap-2">
+                          <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${sc.bg} ${sc.text}`}>
+                            <Icon className="h-3 w-3" /> {REFERRAL_STATUS_LABELS[r.status]}
+                          </span>
+                          {r.status === 'pending' ? (
+                            <button onClick={() => handleReward(r.id)} className="text-xs px-2 py-1 rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200 transition-colors whitespace-nowrap">Ödül Ver</button>
+                          ) : r.status === 'rewarded' ? (
+                            <span className="text-[10px] text-green-500 whitespace-nowrap">Ödül verildi</span>
+                          ) : null}
+                        </div>
                       </div>
                     </div>
                   </AnimatedItem>

@@ -195,7 +195,7 @@ export default function InsightsPage() {
             icon={<Activity className="w-4 h-4" />}
             label="Doluluk"
             value={fmtPct(data.kpi.occupancy_percentage)}
-            hint="Dolu slot / toplam kapasite"
+            hint="İşletmenin doluluk oranı"
             interpretation={occupancyInterpretation(data.kpi.occupancy_percentage)}
             tone={
               data.kpi.occupancy_percentage == null ? 'default' :
