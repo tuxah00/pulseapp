@@ -51,6 +51,7 @@ export function Sparkline({ data, color, height = 48, labels, unit }: SparklineP
             content={<CustomTooltip unit={unit} />}
             cursor={{ stroke: color, strokeWidth: 1, strokeDasharray: '3 3' }}
             allowEscapeViewBox={{ x: true, y: true }}
+            wrapperStyle={{ zIndex: 50, pointerEvents: 'none' }}
           />
           <Area
             type="monotone"

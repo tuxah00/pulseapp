@@ -98,7 +98,7 @@ export default function BookingPage() {
   const [waitlistTime, setWaitlistTime] = useState('')
   const [waitlistDate, setWaitlistDate] = useState('')
   const [waitlistStaffId, setWaitlistStaffId] = useState('')
-  const [waitlistAutoBook, setWaitlistAutoBook] = useState(false)
+  const [waitlistAutoBook, setWaitlistAutoBook] = useState(true)
 
   const [kvkkConsent, setKvkkConsent] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -315,7 +315,7 @@ export default function BookingPage() {
               setWaitlistTime('')
               setWaitlistDate('')
               setWaitlistStaffId('')
-              setWaitlistAutoBook(false)
+              setWaitlistAutoBook(true)
               setKvkkConsent(false)
               setSubmitted(false)
             }}
