@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     .select('*, services(name), staff_members(name)')
     .eq('business_id', businessId)
     .eq('is_active', true)
-    .order('created_at', { ascending: false })
+    .order('created_at', { ascending: true })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ waitlist: data })

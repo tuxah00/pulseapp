@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     .from('waitlist_entries')
     .select('*, services(name), staff_members:staff_id(name), customers:customer_id(name, phone, segment)')
     .eq('business_id', staff.business_id)
-    .order('created_at', { ascending: false })
+    .order('created_at', { ascending: true })
 
   if (activeOnly) {
     query = query.eq('is_active', true)

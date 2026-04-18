@@ -240,25 +240,6 @@ export default function BookingPage() {
         }
       }
 
-      // Bekleme listesine de kaydet (işaretliyse)
-      if (waitlistEnabled) {
-        try {
-          await fetch(`/api/public/business/${businessId}/waitlist`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              customerName: customerName.trim(),
-              customerPhone: customerPhone.replace(/\s/g, ''),
-              serviceId: selectedServiceId,
-              staffId: waitlistStaffId || undefined,
-              preferredDate: waitlistDate || undefined,
-            }),
-          })
-        } catch {
-          // Bekleme listesi hatası randevu başarısını etkilememeli
-        }
-      }
-
       if (kvkkConsent) {
         try {
           await fetch('/api/consent', {
