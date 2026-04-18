@@ -141,6 +141,14 @@ export default function BookingPage() {
     return () => { cancelled = true }
   }, [business, businessId, selectedDate, selectedService, selectedStaffId, isDayClosed])
 
+  // Müşteri tarih/saat değiştirdikçe bekleme listesi tercihlerini güncelle
+  useEffect(() => {
+    if (waitlistEnabled) {
+      setWaitlistDate(selectedDate || '')
+      setWaitlistTime(selectedTime || '')
+    }
+  }, [selectedDate, selectedTime, waitlistEnabled])
+
   useEffect(() => {
     async function fetchData() {
       try {
@@ -586,6 +594,16 @@ export default function BookingPage() {
 
               {waitlistEnabled && (
                 <div className="mt-4 space-y-3 pl-7">
+                  {/* Seçili tarih/saat özeti */}
+                  {(selectedDate || selectedTime) && (
+                    <div className="flex items-center gap-2 rounded-lg bg-blue-50 border border-blue-200 px-3 py-2 text-xs text-blue-700 font-medium">
+                      <Calendar className="h-3.5 w-3.5 flex-shrink-0" />
+                      <span>
+                        Tercih ettiğiniz{selectedDate ? ` ${new Date(selectedDate + 'T00:00:00').toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}` : ''}
+                        {selectedTime ? ` saat ${selectedTime}` : ''}
+                      </span>
+                    </div>
+                  )}
                   <div>
                     <label className="text-xs font-medium text-gray-600">Şu saatte:</label>
                     <select
