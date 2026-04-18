@@ -23,6 +23,11 @@ const nextConfig = {
     }
     out.push({ source: '/dashboard/settings/vardiye', destination: '/dashboard/settings/shifts', permanent: true })
     out.push({ source: '/dashboard/settings/vardiye/:path*', destination: '/dashboard/settings/shifts/:path*', permanent: true })
+    // ai-actions → assistant-actions
+    out.push({ source: '/dashboard/ai-actions', destination: '/dashboard/assistant-actions', permanent: true })
+    out.push({ source: '/dashboard/ai-actions/:path*', destination: '/dashboard/assistant-actions/:path*', permanent: true })
+    // asistan-aksiyonlari → assistant-actions (geçici Türkçe slug geri alındı)
+    out.push({ source: '/dashboard/asistan-aksiyonlari', destination: '/dashboard/assistant-actions', permanent: true })
     return out
   },
 }

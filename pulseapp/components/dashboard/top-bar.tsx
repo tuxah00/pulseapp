@@ -50,7 +50,7 @@ const ROUTE_LABELS: Record<string, string> = {
   'follow-ups': 'Takipler',
   waitlist: 'Bekleme Listesi',
   campaigns: 'Kampanyalar',
-  'ai-actions': 'Asistan Aksiyonları',
+  'assistant-actions': 'Asistan Aksiyonları',
   insights: 'İş Zekası',
   workflows: 'Otomatik Mesajlar',
   commissions: 'Prim',
@@ -258,7 +258,7 @@ export default function TopBar({ businessName, userName, onOpenCommand }: TopBar
         {/* Pending AI actions */}
         {permissions?.analytics !== false && (
           <Link
-            href="/dashboard/ai-actions"
+            href="/dashboard/assistant-actions"
             className="relative h-9 w-9 flex items-center justify-center rounded-lg
                        text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10
                        hover:text-gray-700 dark:hover:text-gray-200 transition-all duration-150"

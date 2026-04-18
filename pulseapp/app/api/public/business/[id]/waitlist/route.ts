@@ -21,7 +21,7 @@ export async function POST(
 
   const result = await validateBody(request, waitlistCreateSchema)
   if (!result.ok) return result.response
-  const { customerName, customerPhone, serviceId, staffId, preferredDate } = result.data
+  const { customerName, customerPhone, serviceId, staffId, preferredDate, preferredTime, autoBookOnMatch } = result.data
 
   // İşletmenin var olduğunu doğrula
   const { data: business } = await supabase
@@ -45,6 +45,11 @@ export async function POST(
     .eq('is_active', true)
     .limit(1)
 
+  // HH:MM formatını HH:MM:00'a normalize et
+  const normalizedTime = preferredTime
+    ? (preferredTime.length === 5 ? `${preferredTime}:00` : preferredTime)
+    : null
+
   const { error: insertError } = await supabase
     .from('waitlist_entries')
     .insert({
@@ -55,6 +60,8 @@ export async function POST(
       service_id: serviceId || null,
       staff_id: staffId || null,
       preferred_date: preferredDate || null,
+      preferred_time_start: normalizedTime,
+      auto_book_on_match: !!autoBookOnMatch,
       is_notified: false,
       is_active: true,
     })
