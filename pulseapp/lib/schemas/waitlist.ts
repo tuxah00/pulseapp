@@ -21,6 +21,11 @@ export const waitlistCreateSchema = z.object({
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, MSG.INVALID_DATE_FORMAT)
     .optional(),
+  preferredTime: z
+    .string()
+    .regex(/^\d{2}:\d{2}(:\d{2})?$/, 'Geçersiz saat formatı')
+    .optional(),
+  autoBookOnMatch: z.boolean().optional(),
 })
 
 export type WaitlistCreateInput = z.infer<typeof waitlistCreateSchema>
