@@ -22,7 +22,7 @@ import {
   READ_ONLY_PERMISSION_KEYS,
 } from '@/types'
 import { CustomSelect } from '@/components/ui/custom-select'
-import { getCustomerLabel } from '@/lib/config/sector-modules'
+import { getCustomerLabel, getSectorPermissionKeys } from '@/lib/config/sector-modules'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 
 const ROLE_LABELS: Record<StaffRole, string> = {
@@ -92,6 +92,19 @@ export default function StaffPage() {
   const permissionLabels = useMemo(
     () => ({ ...PERMISSION_LABELS, customers: sector ? getCustomerLabel(sector) : 'Müşteriler' }),
     [sector],
+  )
+
+  // Sektöre göre filtrelenmiş yetki kategorileri — bu sektörde bulunmayan
+  // modüller (örn. estetik klinikte "Sınıflar") yetki editöründe gösterilmez.
+  const sectorPermKeys = useMemo(
+    () => new Set(sector ? getSectorPermissionKeys(sector) : []),
+    [sector],
+  )
+  const filteredPermCategories = useMemo(
+    () => PERMISSION_CATEGORIES
+      .map(cat => ({ ...cat, keys: cat.keys.filter(k => sectorPermKeys.has(k)) }))
+      .filter(cat => cat.keys.length > 0),
+    [sectorPermKeys],
   )
   const [staff, setStaff] = useState<StaffMember[]>([])
   const [loading, setLoading] = useState(true)
@@ -636,7 +649,7 @@ export default function StaffPage() {
                     <span className="text-center">Düzenle</span>
                   </div>
 
-                  {PERMISSION_CATEGORIES.map(cat => (
+                  {filteredPermCategories.map(cat => (
                     <div key={cat.label} className="mb-3">
                       <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mt-2 mb-1 px-2">{cat.label}</p>
                       <div className="space-y-0.5">
