@@ -223,6 +223,10 @@ export default function WaitlistPage() {
       toast.error('Tarih ve başlangıç saati zorunludur')
       return
     }
+    if (!bookEntry.customer_id) {
+      toast.error('Müşteri bilgisi eksik. Lütfen müşteriyi yeniden seçin.')
+      return
+    }
     setBookSaving(true)
     try {
       // Bitiş saati yoksa hizmet süresinden hesapla (yoksa 30 dk varsayılan)
@@ -285,7 +289,20 @@ export default function WaitlistPage() {
         status: 'confirmed',
         source: 'manual',
       })
-      if (error) { toast.error(error.message); setBookSaving(false); return }
+      if (error) {
+        const raw = (error.message || '').toLowerCase()
+        let msg = error.message
+        if (raw.includes('customer_id') && raw.includes('null')) {
+          msg = 'Müşteri bilgisi eksik. Lütfen müşteriyi yeniden seçin.'
+        } else if (raw.includes('violates') && raw.includes('foreign key')) {
+          msg = 'Seçilen kayıt artık mevcut değil. Lütfen sayfayı yenileyin.'
+        } else if (raw.includes('duplicate') || raw.includes('unique')) {
+          msg = 'Bu randevu zaten kayıtlı.'
+        }
+        toast.error(msg)
+        setBookSaving(false)
+        return
+      }
       // Bekleme listesinden kaldır
       await fetch('/api/waitlist', {
         method: 'PATCH',

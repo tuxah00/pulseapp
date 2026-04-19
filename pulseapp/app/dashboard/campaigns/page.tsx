@@ -261,7 +261,7 @@ export default function CampaignsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Kampanyalar</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Müşteri segmentlerine toplu mesaj gönderin</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Müşterilerinize kampanyalar oluşturun</p>
         </div>
         <button onClick={openCreate} className="btn-primary flex items-center gap-2">
           <Plus className="h-4 w-4" /> Yeni Kampanya
