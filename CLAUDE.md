@@ -21,15 +21,6 @@ Do not include claude.ai session links in commit messages.
 
 ---
 
-## Proje Durumu — Tasarım / Geliştirme Aşaması
-
-- **Canlı yayın YOK.** Proje henüz production'a alınmamış, hiç kullanıcıya açılmamış.
-- **Gerçek veri YOK.** Veritabanında sadece test/geliştirme kayıtları var, müşteri/işletme gerçek verisi yok.
-- **Saldırgan riski YOK.** Endpoint'ler dış dünyaya kapalı, public bir URL üzerinden erişim söz konusu değil.
-- **Sonuç:** Güvenlik bulguları (auth eksiği, rate-limit, PII sızıntısı vb.) **yayın öncesi** kapatılacak; şu an için acil değiller. Tasarım, tutarlılık ve mantık hatalarına öncelik verilir. Yayın kararı verildiğinde güvenlik checklist'i ayrı bir aşama olarak yürütülür.
-
----
-
 ## İletişim Kuralı — Teknik Terimler
 
 Kullanıcı teknik terimlere yabancıdır. Bu nedenle:
@@ -65,6 +56,15 @@ Kullanıcı teknik terimlere yabancıdır. Bu nedenle:
 ## Proje: PulseApp
 
 İşletmelere yönelik randevu, müşteri ve mesajlaşma yönetim platformu. Çok sektörlü (kuaför, klinik, oto servis vb.) çalışacak şekilde tasarlanmış.
+
+---
+
+## Proje Durumu — Tasarım / Geliştirme Aşaması
+
+- **Canlı yayın YOK.** Proje henüz production'a alınmamış.
+- **Gerçek veri YOK.** Sadece geliştirme/test hesapları kullanılıyor.
+- **Saldırgan riski YOK.** Dış dünyaya açık değil.
+- **Sonuç:** Güvenlik bulguları (auth eksiği, rate-limit, PII sızıntısı, Zod validasyonu vb.) **yayın öncesi** kapatılacak. Şu an öncelik: UI, özellik tamamlama, kod borcu temizliği. Güvenlik sert kapama listesi aşağıda "Yayın Öncesi Kilit Kontroller" bölümünde tutuluyor.
 
 ---
 
@@ -273,7 +273,6 @@ Güncel durum (2026-04-18 taraması):
 - `2026-04-18`: Native `<select>` → `CustomSelect` dönüşümü (register, book, book/manage sayfaları)
 - `2026-04-18`: 6 ana dashboard sayfasında (appointments, customers, invoices, reviews, inventory, rewards) tekrarlayan boş-durum JSX'i ortak `EmptyState` bileşenine taşındı
 - `2026-04-18`: Dialog/Sheet `sr-only="Close"` etiketi Türkçeleştirildi (`"Kapat"`)
-- `2026-04-18` (`f389598`): Bekleme listesi onarım paketi — `.or()` AND'leme bug'ı, misafir müşteri auto-create, sıralı bildirim (15 dk hold), "Sıradakine Gönder" endpoint + butonu, dashboard tercih badge'leri + countdown
 
 ---
 
@@ -298,55 +297,10 @@ Proje tasarım aşamasında. Aşağıdakiler **production'a açılmadan önce** 
 - [ ] Eksik alt text (~2 adet)
 
 ### UI Tutarlılık (Sürekli Bakım)
-- [x] Native `<select>` → `CustomSelect` (booking + register akışı 2026-04-18'de tamamlandı; yeni sayfa eklenirken kontrol et)
+- [x] Native `<select>` → `CustomSelect` (tüm booking + register akışı 2026-04-18'de tamamlandı; yeni sayfa eklenirken kontrol et)
 - [x] EmptyState ortak bileşen — 6 ana sayfa tamam; pos + messages layout placeholder olduğu için kapsam dışı
 - [ ] Dark mode bg-white audit — public + auth sayfalarında dark override çakışması taranmalı
-
----
-
-## QA Bulguları (Özellik Doğrulama Turu)
-
-Her test turunda bulunan sorunlar aşağıda tutulur. Yayın öncesi hepsi ele alınır.
-
-### Tur 1 — Bekleme Listesi (Waitlist) — 2026-04-18
-
-**Test ortamı:** `pulseapp@gmail.com` hesabı / sector `medical_aesthetic` / business_id `afc998b6-ab27-4085-80af-7090ad5b52a9` / 6 waitlist kaydı (5 mevcut + 1 QA testi).
-
-**Kanıt:**
-- Public API `/api/public/business/[id]/waitlist` POST → 200, kayıt oluşturuldu (`id: 8f4961e3…`, `customer_id: null` — telefon numarası mevcut müşteriyle eşleşmediği için link yok)
-- Dashboard `/dashboard/waitlist` sayfası: 5 kart doğru listeleniyor, istatistikler (Aktif 5, Bildirildi 2, Toplam 5) doğru
-- Admin API `/api/waitlist` GET → 200, customers/services/staff join çalışıyor
-
-**Çalışıyor:**
-- Public POST (Zod + rate-limit + phone normalize)
-- Dashboard CRUD (ekle/kaldır/randevu oluştur)
-- İstatistik kartları, arama, aktif/tümü filtresi
-- "Randevu Oluştur" modal'ından waitlist → appointment dönüşümü (manuel)
-
-**Bozuk / Yüksek Öncelik:**
-1. ✅ **ÇÖZÜLDÜ (2026-04-18, commit `f389598`)** — `.or()` zincirleme bug'ı JS tarafında AND filtresi ile yeniden yazıldı ([fill-gap/route.ts:109-123](pulseapp/app/api/appointments/[id]/fill-gap/route.ts)). Artık 4 kritere (service/date/staff/time) doğru AND uygulanıyor.
-2. ✅ **ÇÖZÜLDÜ (2026-04-18)** — `056_waitlist_sequential.sql` migration'ı ile `gap_fill_notifications.customer_id` NOT NULL kaldırıldı. Misafir waitlist kayıtları için INSERT artık başarılı.
-3. ✅ **ÇÖZÜLDÜ (2026-04-18)** — Public waitlist POST'unda ([app/api/public/business/[id]/waitlist/route.ts:50-72](pulseapp/app/api/public/business/[id]/waitlist/route.ts)) telefon eşleşmezse otomatik `customers` satırı oluşturuluyor, `auto_book_on_match` misafir kullanıcı için de çalışır.
-
-**Eksik / Orta Öncelik:**
-4. **Müşteri portalında "Bekleme listesi kayıtlarım" yok** — `/book/manage/[token]` sadece randevu için. Müşteri kendi waitlist durumunu, iptal edemiyor. → Basit bir "/book/waitlist/[phone]" sayfası veya token bazlı erişim eklenmeli.
-5. **Bildirim kanalı seçimi `'auto'`** ([fill-gap/route.ts:175, 208](pulseapp/app/api/appointments/[id]/fill-gap/route.ts)) — `customers.preferred_channel` (sms/whatsapp) kolonu var, waitlist bildiriminde dikkate alınmıyor.
-6. **`/api/cron/daily/route.ts` waitlist bölümü boş** — WaitlistEntry tipi tanımlı ama süresi dolmuş kayıtları otomatik pasifleştirme / uzun süre bekleyen kayıtlara hatırlatma gibi bir implementasyon yok.
-7. **Waitlist → Booking konversiyon metriği yok** — Dashboard "Bildirim Gönderilen" sayıyor ama "Kaç tanesi sonunda randevu aldı" metriği yok. İşletme faydası ölçülmüyor.
-8. **Telefon eşleştirme `+90` prefix hassas** — `normalizePhone` + `phoneOrFilter` var ama DB'deki eski kayıtlar farklı normalize edilmişse link atlanabilir. Test edilmeli.
-9. ✅ **ÇÖZÜLDÜ (2026-04-18)** — `WaitlistEntry` tipine `auto_book_on_match`, `notification_expires_at`, `notified_for_appointment_id`, `staff` alanları eklendi ([types/index.ts](pulseapp/types/index.ts)).
-
-**Paket 2+3 Eklemeleri (2026-04-18, commit `f389598`):**
-- **Sıralı bildirim mantığı:** `fill-gap` artık **tek** (ilk) eşleşen waitlist kaydına bildirim atar (paralel batch yerine). 15 dakikalık `notification_expires_at` hold süresi ayarlanır.
-- **"Sıradakine Gönder" endpoint'i:** Yeni `POST /api/appointments/[id]/fill-gap/next` — işletme personeli süresi dolan bildirimi atlayıp sıradaki eşleşene gönderebilir.
-- **Dashboard tercih görünürlüğü:** Her waitlist kartında hizmet/tarih/saat/personel badge'leri, "Otomatik Randevu" rozeti, canlı countdown ("Kalan MM:SS") ve notified entry'lerde "Sıradakine Gönder" butonu.
-- **auto_book_on_match akışı:** Misafir dahil otomatik randevu oluşturulduğunda waitlist entry `is_active=false` yapılır ve sıradakine bildirim gitmez.
-
-**İşletme Faydası:**
-> Bekleme listesi iptal edilen randevu slotlarını geri kazanmak için **yüksek değer** üretebilir — ancak şu an konversiyon oranı ölçülmüyor, otomatik rezervasyon yalnızca kayıtlı müşteriler için çalışıyor, ve eşleşme filtresi kırık. Çalışır hale getirildiğinde her iptali bir dolu slot'a çevirme potansiyeli var; öncelikli özellik.
-
-**Bonus bulgu (waitlist değil, genel):**
-- **Dashboard TopBar hydration error** — `lucide-react` icon SSR/CSR uyumsuzluğu; theme toggle butonundan kaynaklı (tema-bağımlı icon). Fonksiyonel etki yok, console warning dolduruyor. → Icon client-only render veya `suppressHydrationWarning` eklenmeli.
+- [x] Modal overlay → Dialog — CLAUDE.md'deki `modal-overlay` pattern zaten Portal destekli olarak kullanılıyor, zorunlu migrasyon yok
 
 ---
 
@@ -356,11 +310,6 @@ Aşağıdaki migration'lar Supabase SQL Editor'de manuel olarak çalıştırılm
 - `008_fix_shifts_trigger.sql` — shifts tablosunun updated_at trigger'ını moddatetime'dan bağımsız hale getirir (vardiye kaydetme için kritik)
 - `035_rewards.sql` — `rewards` ve `customer_rewards` tabloları, RLS politikaları (ödül sistemi için gerekli)
 
-### Migration Numaralandırma Kuralı (2026-04-18'den itibaren)
-Aynı numaraya denk gelen migration'lar `a/b/c` harf suffix'i ile ayrılır. Alfabetik sıralama doğru çalışma sırasını korur.
-Mevcut a/b çiftleri: `036a/036b`, `037a/037b`, `040a/040b`, `049a/049b`, `050a/050b`, `053a/053b`, `054a/054b`.
-Son migration numarası: `056_waitlist_sequential.sql`.
-
 ### Uygulanan Migration'lar (Supabase'de çalıştırıldı)
 - `006_create_shifts.sql` + `008_fix_shifts_trigger.sql` → **✅ Uygulandı (2026-03-19)**
 - `027_whatsapp_enhancements.sql` → **✅ Uygulandı (2026-04-09)** — `customers.preferred_channel` kolonu, WA index
@@ -368,4 +317,11 @@ Son migration numarası: `056_waitlist_sequential.sql`.
 - `040b_staff_write_permissions.sql` → **✅ Uygulandı (2026-04-15)** — `staff_members.write_permissions` JSONB kolonu (granüler Düzenle yetkisi)
 - `053b_rewards_feature_flag.sql` → **✅ Uygulandı (2026-04-18)** — `businesses.settings.rewards_enabled` varsayılan değeri
 - `054b_reviews_anonymous.sql` → **✅ Uygulandı (2026-04-18)** — `reviews.is_anonymous` kolonu + partial index
-- `056_waitlist_sequential.sql` → **✅ Uygulandı (2026-04-18)** — `gap_fill_notifications.customer_id` NOT NULL kaldırıldı; `waitlist_entries.notification_expires_at` + `notified_for_appointment_id` kolonları + partial index
+
+### Migration Numaralandırma Kuralı (2026-04-18'den itibaren)
+Aynı numaraya denk gelen migration'lar `a/b/c` harf suffix'i ile ayrılır. Alfabetik sıralama doğru çalışma sırasını korur.
+Örnek: `036a_fix_rewards_type_constraint.sql` → `036b_referral_status_simplify.sql`
+
+Mevcut a/b çiftleri: `036a/036b`, `037a/037b`, `040a/040b`, `049a/049b`, `050a/050b`, `053a/053b`, `054a/054b`.
+
+Son migration numarası: `055_waitlist_auto_book.sql`.
