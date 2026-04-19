@@ -47,7 +47,10 @@ const PERMISSION_LABELS: Record<keyof StaffPermissions, string> = {
   dashboard: 'Genel Bakış',
   appointments: 'Randevular',
   customers: 'Müşteriler',
-  analytics: 'Analitik',
+  waitlist: 'Bekleme Listesi',
+  analytics: 'Gelir-Gider',
+  insights: 'İş Zekası',
+  assistant_actions: 'Asistan Aksiyonları',
   messages: 'Mesajlar',
   reviews: 'Yorumlar',
   services: 'Hizmetler',
@@ -65,16 +68,19 @@ const PERMISSION_LABELS: Record<keyof StaffPermissions, string> = {
   invoices: 'Faturalar',
   pos: 'Kasa',
   protocols: 'Tedavi Protokolleri',
+  follow_ups: 'Takipler',
   rewards: 'Ödüller',
   campaigns: 'Kampanyalar',
   workflows: 'Otomatik Mesajlar',
   commissions: 'Prim & Komisyon',
+  audit: 'Denetim',
+  kvkk: 'KVKK',
 }
 
 const PERMISSION_CATEGORIES: { label: string; keys: (keyof StaffPermissions)[] }[] = [
-  { label: 'Ana', keys: ['dashboard', 'appointments', 'customers'] },
-  { label: 'İçerik', keys: ['records', 'protocols', 'portfolio', 'classes', 'memberships', 'packages', 'reservations', 'orders', 'rewards'] },
-  { label: 'Yönetim', keys: ['services', 'staff', 'shifts', 'messages', 'analytics', 'reviews', 'inventory', 'pos', 'invoices', 'commissions', 'campaigns', 'workflows', 'settings'] },
+  { label: 'Ana', keys: ['dashboard', 'appointments', 'customers', 'waitlist'] },
+  { label: 'İçerik', keys: ['records', 'protocols', 'follow_ups', 'portfolio', 'classes', 'memberships', 'packages', 'reservations', 'orders', 'rewards'] },
+  { label: 'Yönetim', keys: ['services', 'staff', 'shifts', 'messages', 'analytics', 'insights', 'assistant_actions', 'reviews', 'inventory', 'pos', 'invoices', 'commissions', 'campaigns', 'workflows', 'audit', 'kvkk', 'settings'] },
 ]
 
 function canEditMember(myRole: StaffRole, targetRole: StaffRole): boolean {

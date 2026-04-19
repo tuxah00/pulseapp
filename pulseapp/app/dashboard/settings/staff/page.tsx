@@ -39,7 +39,10 @@ const PERMISSION_LABELS: Record<keyof StaffPermissions, string> = {
   dashboard: 'Genel Bakış',
   appointments: 'Randevular',
   customers: 'Müşteriler',
-  analytics: 'Analitik',
+  waitlist: 'Bekleme Listesi',
+  analytics: 'Gelir-Gider',
+  insights: 'İş Zekası',
+  assistant_actions: 'Asistan Aksiyonları',
   messages: 'Mesajlar',
   reviews: 'Yorumlar',
   services: 'Hizmetler',
@@ -57,17 +60,23 @@ const PERMISSION_LABELS: Record<keyof StaffPermissions, string> = {
   invoices: 'Faturalar',
   pos: 'Kasa',
   protocols: 'Tedavi Protokolleri',
+  follow_ups: 'Takipler',
   rewards: 'Ödüller',
   campaigns: 'Kampanyalar',
   workflows: 'Otomatik Mesajlar',
   commissions: 'Prim & Komisyon',
+  audit: 'Denetim',
+  kvkk: 'KVKK',
 }
 
 const PERMISSION_DESCRIPTIONS: Record<keyof StaffPermissions, string> = {
   dashboard: 'Günlük özet ve performans ekranı',
   appointments: 'Randevu oluşturma, düzenleme, iptal',
   customers: 'Müşteri kartları ve geçmişi',
+  waitlist: 'Bekleme listesi kayıtları ve sıralı bildirim',
   analytics: 'Gelir/gider, personel ve müşteri raporları',
+  insights: 'Trendler, öngörüler ve iş zekası panoları',
+  assistant_actions: 'AI asistanın önerdiği bekleyen aksiyonlar',
   messages: 'SMS/WhatsApp konuşmaları',
   reviews: 'Müşteri yorum ve puanları',
   services: 'Sunulan hizmetler ve fiyatları',
@@ -84,29 +93,32 @@ const PERMISSION_DESCRIPTIONS: Record<keyof StaffPermissions, string> = {
   orders: 'Sipariş yönetimi',
   invoices: 'Fatura oluşturma ve takibi',
   pos: 'Kasa ve ödeme alma',
-  protocols: 'Tedavi planları / protokolleri',
+  protocols: 'Tedavi protokolleri',
+  follow_ups: 'Seans sonrası takip kuyruğu',
   rewards: 'Ödül ve referans kampanyaları',
   campaigns: 'Toplu SMS/WhatsApp kampanyaları',
   workflows: 'Olay tabanlı otomatik mesajlar',
   commissions: 'Personel primleri ve komisyon hesaplama',
+  audit: 'Sistem denetim kayıtları',
+  kvkk: 'KVKK onay kayıtları ve veri silme talepleri',
 }
 
 const PERMISSION_CATEGORIES: { label: string; keys: (keyof StaffPermissions)[] }[] = [
   {
     label: 'Randevu & Müşteri',
-    keys: ['dashboard', 'appointments', 'customers', 'reservations', 'classes', 'records', 'portfolio'],
+    keys: ['dashboard', 'appointments', 'customers', 'waitlist', 'reservations', 'classes', 'records', 'portfolio', 'follow_ups'],
   },
   {
     label: 'Finans',
-    keys: ['invoices', 'pos', 'orders', 'inventory', 'analytics', 'memberships', 'packages', 'commissions'],
+    keys: ['invoices', 'pos', 'orders', 'inventory', 'analytics', 'insights', 'memberships', 'packages', 'commissions'],
   },
   {
     label: 'AI & Otomasyon',
-    keys: ['messages', 'workflows', 'campaigns', 'reviews', 'rewards'],
+    keys: ['messages', 'workflows', 'campaigns', 'assistant_actions', 'reviews', 'rewards'],
   },
   {
     label: 'Sistem',
-    keys: ['services', 'staff', 'shifts', 'protocols', 'settings'],
+    keys: ['services', 'staff', 'shifts', 'protocols', 'audit', 'kvkk', 'settings'],
   },
 ]
 

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
+import { requirePermission } from '@/lib/hooks/use-require-permission'
 import {
   Shield, FileText, Trash2, CheckCircle, Clock,
   AlertTriangle, Loader2, X,
@@ -67,7 +68,8 @@ const STATUS_COLORS: Record<string, string> = {
 }
 
 export default function KvkkPage() {
-  const { businessId, staffId, loading: ctxLoading } = useBusinessContext()
+  const { businessId, staffId, loading: ctxLoading, permissions } = useBusinessContext()
+  requirePermission(permissions, 'kvkk')
   const supabase = createClient()
 
   const [activeTab, setActiveTab] = useState<'consents' | 'deletions'>('consents')

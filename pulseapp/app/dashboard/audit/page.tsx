@@ -383,7 +383,7 @@ export default function AuditPage() {
     if (!ctxLoading) fetchLogs()
   }, [fetchLogs, ctxLoading])
 
-  requirePermission(permissions, 'settings')
+  requirePermission(permissions, 'audit')
 
   return (
     <div>

@@ -47,6 +47,12 @@ export interface StaffPermissions {
   campaigns?: boolean
   workflows?: boolean
   commissions?: boolean
+  waitlist?: boolean
+  follow_ups?: boolean
+  insights?: boolean
+  assistant_actions?: boolean
+  audit?: boolean
+  kvkk?: boolean
 }
 
 // Granüler "Düzenle" yetkileri — her modül için yazma iznini ayrı yönetir
@@ -58,11 +64,12 @@ export const WRITABLE_PERMISSION_KEYS: ReadonlyArray<keyof StaffPermissions> = [
   'messages', 'reservations', 'classes', 'memberships', 'packages',
   'records', 'portfolio', 'inventory', 'orders', 'invoices', 'pos',
   'protocols', 'rewards', 'campaigns', 'workflows', 'commissions', 'settings',
+  'waitlist', 'follow_ups', 'assistant_actions', 'kvkk',
 ] as const
 
 // Sadece görüntüleme modülleri (UI'de edit sütunu "—" gösterir)
 export const READ_ONLY_PERMISSION_KEYS: ReadonlyArray<keyof StaffPermissions> = [
-  'dashboard', 'analytics', 'reviews',
+  'dashboard', 'analytics', 'reviews', 'insights', 'audit',
 ] as const
 
 export const DEFAULT_PERMISSIONS: Record<StaffRole, StaffPermissions> = {
@@ -72,6 +79,7 @@ export const DEFAULT_PERMISSIONS: Record<StaffRole, StaffPermissions> = {
     settings: true, reservations: true, classes: true, memberships: true,
     packages: true, records: true, portfolio: true, inventory: true, orders: true, invoices: true, pos: true,
     protocols: true, rewards: true, campaigns: true, workflows: true, commissions: true,
+    waitlist: true, follow_ups: true, insights: true, assistant_actions: true, audit: true, kvkk: true,
   },
   manager: {
     dashboard: true, appointments: true, customers: true, analytics: true,
@@ -79,6 +87,7 @@ export const DEFAULT_PERMISSIONS: Record<StaffRole, StaffPermissions> = {
     settings: false, reservations: true, classes: true, memberships: true,
     packages: true, records: true, portfolio: true, inventory: true, orders: true, invoices: true, pos: true,
     protocols: true, rewards: true, campaigns: true, workflows: true, commissions: false,
+    waitlist: true, follow_ups: true, insights: true, assistant_actions: true, audit: false, kvkk: false,
   },
   // Personel varsayılanı: temel operasyon (randevu + müşteri) açık.
   // Diğer tüm modüller açıkça `false` — sidebar `permissions[key] !== false`
@@ -90,6 +99,7 @@ export const DEFAULT_PERMISSIONS: Record<StaffRole, StaffPermissions> = {
     packages: false, records: false, portfolio: false, inventory: false,
     orders: false, invoices: false, pos: false,
     protocols: false, rewards: false, campaigns: false, workflows: false, commissions: false,
+    waitlist: false, follow_ups: false, insights: false, assistant_actions: false, audit: false, kvkk: false,
   },
 }
 

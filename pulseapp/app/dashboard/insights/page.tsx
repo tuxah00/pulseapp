@@ -5,6 +5,8 @@ import {
   TrendingUp, Users, Activity, Layers, Loader2, AlertTriangle,
   Sparkles, Calendar, Target, Lightbulb, HeartPulse,
 } from 'lucide-react'
+import { useBusinessContext } from '@/lib/hooks/use-business-context'
+import { requirePermission } from '@/lib/hooks/use-require-permission'
 import type { InsightsSummary } from '@/lib/analytics/insights'
 import type { MacroContext } from '@/lib/analytics/macro-context'
 import StrategyCard from '@/components/dashboard/insights/strategy-card'
@@ -82,6 +84,8 @@ function concentrationInterpretation(v: number | null): string {
 }
 
 export default function InsightsPage() {
+  const { permissions } = useBusinessContext()
+  requirePermission(permissions, 'insights')
   const [data, setData] = useState<SummaryWithMacro | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)

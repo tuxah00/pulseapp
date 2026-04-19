@@ -6,6 +6,8 @@ import {
   Inbox, Calendar, Bot, History, PlayCircle,
 } from 'lucide-react'
 import { useConfirm } from '@/lib/hooks/use-confirm'
+import { useBusinessContext } from '@/lib/hooks/use-business-context'
+import { requirePermission } from '@/lib/hooks/use-require-permission'
 import { formatDateTime } from '@/lib/utils'
 import { ACTION_TYPE_LABELS } from '@/lib/ai/assistant-tools'
 import EmptyState from '@/components/ui/empty-state'
@@ -37,6 +39,8 @@ function timeUntil(iso: string | null): string | null {
 }
 
 export default function AiActionsPage() {
+  const { permissions } = useBusinessContext()
+  requirePermission(permissions, 'assistant_actions')
   const [tab, setTab] = useState<Tab>('open')
   const [actions, setActions] = useState<PendingAction[]>([])
   const [loading, setLoading] = useState(true)
