@@ -653,10 +653,7 @@ export default function WaitlistPage() {
                 <div>
                   <label className="label">Hizmet</label>
                   <CustomSelect
-                    options={[
-                      { value: '', label: 'Fark etmez' },
-                      ...services.map(s => ({ value: s.id, label: s.name })),
-                    ]}
+                    options={services.map(s => ({ value: s.id, label: s.name }))}
                     value={formServiceId}
                     onChange={v => setFormServiceId(v)}
                     placeholder="Fark etmez"
@@ -665,10 +662,7 @@ export default function WaitlistPage() {
                 <div>
                   <label className="label">Personel</label>
                   <CustomSelect
-                    options={[
-                      { value: '', label: 'Fark etmez' },
-                      ...staffMembers.map(s => ({ value: s.id, label: s.name })),
-                    ]}
+                    options={staffMembers.map(s => ({ value: s.id, label: s.name }))}
                     value={formStaffId}
                     onChange={v => setFormStaffId(v)}
                     placeholder="Fark etmez"
