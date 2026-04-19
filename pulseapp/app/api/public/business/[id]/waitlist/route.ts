@@ -8,6 +8,63 @@ import { normalizePhone, phoneOrFilter } from '@/lib/utils/phone'
 
 const supabase = createAdminClient()
 
+// GET — Telefona göre bekleme listesi kayıtları (müşteri portalı)
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  if (!isValidUUID(params.id)) return NextResponse.json({ error: 'Geçersiz istek' }, { status: 400 })
+
+  const phone = request.nextUrl.searchParams.get('phone')
+  if (!phone) return NextResponse.json({ error: 'Telefon gerekli' }, { status: 400 })
+
+  const normalized = normalizePhone(phone)
+
+  const { data: entries, error } = await supabase
+    .from('waitlist_entries')
+    .select('id, customer_name, customer_phone, preferred_date, preferred_time_start, is_active, created_at, services:service_id(name), staff_members:staff_id(name)')
+    .eq('business_id', params.id)
+    .eq('is_active', true)
+    .or(phoneOrFilter(normalized))
+    .order('created_at', { ascending: false })
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ entries: entries || [] })
+}
+
+// DELETE — Müşteri kendi kaydını iptal eder (telefon doğrulaması)
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  if (!isValidUUID(params.id)) return NextResponse.json({ error: 'Geçersiz istek' }, { status: 400 })
+
+  const entryId = request.nextUrl.searchParams.get('entryId')
+  const phone = request.nextUrl.searchParams.get('phone')
+  if (!entryId || !phone) return NextResponse.json({ error: 'Eksik parametre' }, { status: 400 })
+
+  const normalized = normalizePhone(phone)
+
+  // Kaydın bu işletmeye ve bu telefona ait olduğunu doğrula
+  const { data: entry } = await supabase
+    .from('waitlist_entries')
+    .select('id')
+    .eq('id', entryId)
+    .eq('business_id', params.id)
+    .or(phoneOrFilter(normalized))
+    .single()
+
+  if (!entry) return NextResponse.json({ error: 'Kayıt bulunamadı' }, { status: 404 })
+
+  const { error } = await supabase
+    .from('waitlist_entries')
+    .delete()
+    .eq('id', entryId)
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
