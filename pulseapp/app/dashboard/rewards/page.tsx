@@ -72,12 +72,6 @@ export default function RewardsPage() {
   const { businessId, sector, settings, loading: ctxLoading, permissions } = useBusinessContext()
   const customerLabel = getCustomerLabelSingular(sector ?? undefined)
   const rewardsEnabled = settings?.rewards_enabled === true
-
-  // Ödüller kapalıysa 404 — doğrudan URL ile erişimi engelle
-  if (!ctxLoading && businessId && !rewardsEnabled) {
-    notFound()
-  }
-
   const [activating, setActivating] = useState(false)
   const supabase = createClient()
   const { confirm } = useConfirm()
@@ -367,59 +361,9 @@ export default function RewardsPage() {
     }
   }
 
-  // ── Feature Flag Check — Aktivasyon Ekranı ──
-  if (!ctxLoading && !rewardsEnabled) {
-    return (
-      <div className="max-w-2xl mx-auto py-12 px-4">
-        {/* Hero */}
-        <div className="text-center mb-10">
-          <div className="relative inline-flex mb-6">
-            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-pulse-900 to-indigo-600 flex items-center justify-center shadow-xl">
-              <Gift className="h-10 w-10 text-white" />
-            </div>
-            <div className="absolute -top-1 -right-1 w-7 h-7 rounded-full bg-amber-400 flex items-center justify-center shadow">
-              <Sparkles className="h-4 w-4 text-white" />
-            </div>
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Ödüller Sistemi</h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed max-w-md mx-auto">
-            Müşterilerinize özel ödüller, indirimler ve referans kampanyaları oluşturun. Sadakati artırın, geri dönüşü yükseltin.
-          </p>
-        </div>
-
-        {/* Özellikler */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-          {[
-            { icon: Gift, title: 'Ödül Tanımla', desc: 'İndirim, ücretsiz hizmet veya hediye ödülleri oluşturun.' },
-            { icon: Star, title: 'Ödül Ver', desc: 'İstediğiniz müşteriye birkaç tıkla ödül atayın.' },
-            { icon: Zap, title: 'Referans Sistemi', desc: 'Müşterileriniz arkadaş getirince ödül kazansın.' },
-          ].map(({ icon: Icon, title, desc }) => (
-            <div key={title} className="card p-4 text-center">
-              <div className="w-10 h-10 rounded-xl bg-pulse-900/10 dark:bg-pulse-300/10 flex items-center justify-center mx-auto mb-3">
-                <Icon className="h-5 w-5 text-pulse-900 dark:text-pulse-300" />
-              </div>
-              <p className="text-sm font-semibold text-gray-900 dark:text-white mb-1">{title}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">{desc}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* Aktifleştir Butonu */}
-        <div className="text-center">
-          <button
-            onClick={handleActivate}
-            disabled={activating}
-            className="btn-primary inline-flex items-center gap-2 px-8 py-3 text-base disabled:opacity-60"
-          >
-            {activating ? <Loader2 className="h-5 w-5 animate-spin" /> : <Zap className="h-5 w-5" />}
-            {activating ? 'Aktifleştiriliyor...' : 'Ödülleri Aktifleştir'}
-          </button>
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">
-            İstediğiniz zaman sayfanın sağ üst köşesindeki ayar butonundan kapatabilirsiniz.
-          </p>
-        </div>
-      </div>
-    )
+  // ── Feature Flag Check — Ödüller kapalıysa 404 ──
+  if (!ctxLoading && businessId && !rewardsEnabled) {
+    notFound()
   }
 
   // ── Permission Check ──
