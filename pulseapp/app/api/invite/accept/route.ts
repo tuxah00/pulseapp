@@ -31,12 +31,13 @@ export async function POST(req: NextRequest) {
   if (invitation.used_at) return NextResponse.json({ error: 'Bu davet zaten kullanıldı' }, { status: 410 })
   if (new Date(invitation.expires_at) < new Date()) return NextResponse.json({ error: 'Davet süresi dolmuş' }, { status: 410 })
 
-  // Davet e-postası zorunlu: null olursa link sızıntısında herhangi biri kabul edebilir
-  if (!invitation.email) {
-    return NextResponse.json({ error: 'Geçersiz davet — e-posta bilgisi eksik' }, { status: 400 })
-  }
-  if (!user.email || invitation.email.toLowerCase() !== user.email.toLowerCase()) {
-    return NextResponse.json({ error: 'Bu davet farklı bir e-posta için oluşturulmuş' }, { status: 403 })
+  // E-posta kontrolü: davet belirli bir e-postaya yönelikse eşleşme zorunlu.
+  // E-posta belirtilmeden oluşturulan "genel davet linki" ise kontrol atlanır —
+  // token zaten yeterince rastgele (UUID), link kendisi sır görevi görür.
+  if (invitation.email) {
+    if (!user.email || invitation.email.toLowerCase() !== user.email.toLowerCase()) {
+      return NextResponse.json({ error: 'Bu davet farklı bir e-posta için oluşturulmuş' }, { status: 403 })
+    }
   }
 
   // Duplicate koruması: aynı user + business için ikinci personel kaydı açılamaz

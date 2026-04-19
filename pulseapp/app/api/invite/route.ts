@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logAuditServer } from '@/lib/utils/audit'
+import { resolveActiveStaffForApi } from '@/lib/auth/active-business'
 
 // POST: Create invitation
 export async function POST(req: NextRequest) {
@@ -9,12 +10,7 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
 
-  const { data: staff } = await supabase
-    .from('staff_members')
-    .select('id, name, business_id, role')
-    .eq('user_id', user.id)
-    .eq('is_active', true)
-    .single()
+  const { staff } = await resolveActiveStaffForApi(supabase, user.id, 'id, name, business_id, role, is_active')
 
   if (!staff || staff.role !== 'owner') {
     return NextResponse.json({ error: 'Sadece işletme sahibi davet oluşturabilir' }, { status: 403 })
