@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
+import { requirePermission } from '@/lib/hooks/use-require-permission'
 import { logAudit } from '@/lib/utils/audit'
 import { Loader2, Save, ToggleRight, Gift } from 'lucide-react'
 import type { BusinessSettings } from '@/types'
@@ -94,13 +95,7 @@ export default function FeaturesSettingsPage() {
     )
   }
 
-  if (permissions && !permissions.settings) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <p className="text-gray-500 dark:text-gray-400">Bu sayfaya erişim yetkiniz yok.</p>
-      </div>
-    )
-  }
+  requirePermission(permissions, 'settings')
 
   const rewardsOn = settings.rewards_enabled === true
 

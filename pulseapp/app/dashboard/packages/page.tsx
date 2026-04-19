@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { useDebounce } from '@/lib/hooks/use-debounce'
+import { requirePermission } from '@/lib/hooks/use-require-permission'
 import {
   Plus, Package, Loader2, X, Pencil, Trash2, Search,
   ChevronRight, Clock, CheckCircle, XCircle, AlertTriangle,
@@ -637,17 +638,7 @@ export default function PaketlerPage() {
     await insertAppointments(nonConflicting, endTime, duration)
   }
 
-  if (permissions && !permissions.packages) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="text-center space-y-3">
-          <ShieldX className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto" />
-          <p className="text-lg font-medium text-gray-500 dark:text-gray-400">Bu sayfaya erişim yetkiniz bulunmamaktadır.</p>
-          <p className="text-sm text-gray-400 dark:text-gray-500">İşletme sahibinizle iletişime geçin.</p>
-        </div>
-      </div>
-    )
-  }
+  requirePermission(permissions, 'packages')
 
   if (ctxLoading) {
     return (

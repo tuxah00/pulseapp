@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { useDebounce } from '@/lib/hooks/use-debounce'
+import { requirePermission } from '@/lib/hooks/use-require-permission'
 import {
   Plus, Package, Loader2, X, Pencil, Trash2,
   AlertTriangle, LayoutList, LayoutGrid, Search,
@@ -408,16 +409,7 @@ export default function StoklarPage() {
     )
   }
 
-  if (permissions && !permissions.inventory) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="text-center">
-          <p className="text-lg font-medium text-gray-500 dark:text-gray-400">Bu sayfaya erişim yetkiniz bulunmamaktadır.</p>
-          <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">İşletme sahibinizle iletişime geçin.</p>
-        </div>
-      </div>
-    )
-  }
+  requirePermission(permissions, 'inventory')
 
   if (loading) {
     return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-pulse-900" /></div>

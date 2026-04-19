@@ -17,7 +17,7 @@ const AIAssistantPanel = dynamic(() => import('./ai-assistant/ai-assistant-panel
   ssr: false,
   loading: () => null,
 })
-import type { SectorType, PlanType, StaffPermissions, BusinessSettings } from '@/types'
+import type { SectorType, PlanType, StaffPermissions, StaffRole, BusinessSettings } from '@/types'
 
 interface DashboardShellProps {
   children: React.ReactNode
@@ -26,6 +26,7 @@ interface DashboardShellProps {
   sector: SectorType
   plan: PlanType
   permissions: StaffPermissions
+  staffRole: StaffRole
   settings?: BusinessSettings | null
 }
 
@@ -46,6 +47,7 @@ function DashboardShellInner({
   sector,
   plan,
   permissions,
+  staffRole,
   settings,
 }: DashboardShellProps) {
   const { collapsed } = useSidebar()
@@ -111,6 +113,7 @@ function DashboardShellInner({
         sector={sector}
         plan={plan}
         permissions={permissions}
+        staffRole={staffRole}
         settings={settings}
       />
 

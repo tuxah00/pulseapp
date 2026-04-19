@@ -46,6 +46,7 @@ export interface StaffPermissions {
   rewards?: boolean
   campaigns?: boolean
   workflows?: boolean
+  commissions?: boolean
 }
 
 // Granüler "Düzenle" yetkileri — her modül için yazma iznini ayrı yönetir
@@ -56,7 +57,7 @@ export const WRITABLE_PERMISSION_KEYS: ReadonlyArray<keyof StaffPermissions> = [
   'appointments', 'customers', 'services', 'staff', 'shifts',
   'messages', 'reservations', 'classes', 'memberships', 'packages',
   'records', 'portfolio', 'inventory', 'orders', 'invoices', 'pos',
-  'protocols', 'rewards', 'campaigns', 'workflows', 'settings',
+  'protocols', 'rewards', 'campaigns', 'workflows', 'commissions', 'settings',
 ] as const
 
 // Sadece görüntüleme modülleri (UI'de edit sütunu "—" gösterir)
@@ -70,20 +71,25 @@ export const DEFAULT_PERMISSIONS: Record<StaffRole, StaffPermissions> = {
     messages: true, reviews: true, services: true, staff: true, shifts: true,
     settings: true, reservations: true, classes: true, memberships: true,
     packages: true, records: true, portfolio: true, inventory: true, orders: true, invoices: true, pos: true,
-    protocols: true, rewards: true, campaigns: true, workflows: true,
+    protocols: true, rewards: true, campaigns: true, workflows: true, commissions: true,
   },
   manager: {
     dashboard: true, appointments: true, customers: true, analytics: true,
     messages: true, reviews: true, services: true, staff: false, shifts: true,
     settings: false, reservations: true, classes: true, memberships: true,
     packages: true, records: true, portfolio: true, inventory: true, orders: true, invoices: true, pos: true,
-    protocols: true, rewards: true, campaigns: true, workflows: true,
+    protocols: true, rewards: true, campaigns: true, workflows: true, commissions: false,
   },
+  // Personel varsayılanı: temel operasyon (randevu + müşteri) açık.
+  // Diğer tüm modüller açıkça `false` — sidebar `permissions[key] !== false`
+  // kontrolünü `undefined` durumunda "izinli" sayıyor, bu yüzden açık false gerekiyor.
   staff: {
     dashboard: true, appointments: true, customers: true, analytics: false,
     messages: false, reviews: false, services: false, staff: false, shifts: false,
     settings: false, reservations: false, classes: false, memberships: false,
-    records: false, portfolio: false, inventory: false, orders: false, pos: false,
+    packages: false, records: false, portfolio: false, inventory: false,
+    orders: false, invoices: false, pos: false,
+    protocols: false, rewards: false, campaigns: false, workflows: false, commissions: false,
   },
 }
 

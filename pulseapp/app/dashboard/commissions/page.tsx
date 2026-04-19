@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useConfirm } from '@/lib/hooks/use-confirm'
+import { requirePermission } from '@/lib/hooks/use-require-permission'
 import {
   BadgePercent, Calculator, Check, RefreshCw, Loader2,
   Settings, ChevronDown, Users, TrendingUp, Clock, X
@@ -56,8 +57,10 @@ const periodOptions = Array.from({ length: 24 }, (_, i) => {
 })
 
 export default function CommissionsPage() {
-  const { businessId } = useBusinessContext()
+  const { businessId, permissions } = useBusinessContext()
   const { confirm } = useConfirm()
+
+  requirePermission(permissions, 'commissions')
 
   const [earnings, setEarnings] = useState<CommissionEarning[]>([])
   const [loading, setLoading] = useState(true)

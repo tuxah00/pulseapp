@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
+import { requirePermission } from '@/lib/hooks/use-require-permission'
 import { Plus, Pencil, Trash2, Loader2, UserPlus, X, Mail, Phone, Settings, LayoutList, LayoutGrid, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Portal } from '@/components/ui/portal'
@@ -59,6 +60,7 @@ const PERMISSION_LABELS: Record<keyof StaffPermissions, string> = {
   rewards: 'Ödüller',
   campaigns: 'Kampanyalar',
   workflows: 'Otomatik Mesajlar',
+  commissions: 'Prim & Komisyon',
 }
 
 const PERMISSION_DESCRIPTIONS: Record<keyof StaffPermissions, string> = {
@@ -86,6 +88,7 @@ const PERMISSION_DESCRIPTIONS: Record<keyof StaffPermissions, string> = {
   rewards: 'Ödül ve referans kampanyaları',
   campaigns: 'Toplu SMS/WhatsApp kampanyaları',
   workflows: 'Olay tabanlı otomatik mesajlar',
+  commissions: 'Personel primleri ve komisyon hesaplama',
 }
 
 const PERMISSION_CATEGORIES: { label: string; keys: (keyof StaffPermissions)[] }[] = [
@@ -95,7 +98,7 @@ const PERMISSION_CATEGORIES: { label: string; keys: (keyof StaffPermissions)[] }
   },
   {
     label: 'Finans',
-    keys: ['invoices', 'pos', 'orders', 'inventory', 'analytics', 'memberships', 'packages'],
+    keys: ['invoices', 'pos', 'orders', 'inventory', 'analytics', 'memberships', 'packages', 'commissions'],
   },
   {
     label: 'AI & Otomasyon',
@@ -379,16 +382,7 @@ export default function StaffPage() {
     return (Object.values(perms) as boolean[]).filter(Boolean).length
   }
 
-  if (permissions && !permissions.staff) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="text-center">
-          <p className="text-lg font-medium text-gray-500 dark:text-gray-400">Bu sayfaya erişim yetkiniz bulunmamaktadır.</p>
-          <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">İşletme sahibinizle iletişime geçin.</p>
-        </div>
-      </div>
-    )
-  }
+  requirePermission(permissions, 'staff')
 
   if (loading) {
     return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-pulse-900" /></div>

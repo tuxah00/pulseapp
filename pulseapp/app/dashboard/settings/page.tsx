@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
+import { requirePermission } from '@/lib/hooks/use-require-permission'
 import {
   Building2, Sparkles, BadgePercent, UserCog,
   CreditCard, ShieldCheck, ChevronRight, Loader2,
@@ -72,16 +73,7 @@ export default function SettingsHubPage() {
     )
   }
 
-  if (permissions && !permissions.settings) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="text-center">
-          <p className="text-lg font-medium text-gray-500 dark:text-gray-400">Bu sayfaya erişim yetkiniz bulunmamaktadır.</p>
-          <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">İşletme sahibinizle iletişime geçin.</p>
-        </div>
-      </div>
-    )
-  }
+  requirePermission(permissions, 'settings')
 
   const visibleCards = SETTINGS_CARDS.filter(card => {
     // Denetim kaydı sadece owner görsün

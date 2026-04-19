@@ -49,8 +49,14 @@ import {
   Inbox,
   type LucideIcon,
 } from 'lucide-react'
-import type { SectorType, PlanType, StaffPermissions, BusinessSettings } from '@/types'
+import type { SectorType, PlanType, StaffPermissions, StaffRole, BusinessSettings } from '@/types'
 import { getSidebarSections } from '@/lib/config/sector-modules'
+
+const ROLE_LABELS: Record<StaffRole, string> = {
+  owner: 'İşletme Sahibi',
+  manager: 'Yönetici',
+  staff: 'Personel',
+}
 
 
 const ICON_MAP: Record<string, LucideIcon> = {
@@ -93,11 +99,12 @@ const PERMISSION_MAP: Record<string, keyof StaffPermissions> = {
   '/dashboard/rewards': 'rewards',
   '/dashboard/campaigns': 'campaigns',
   '/dashboard/waitlist': 'appointments',
+  '/dashboard/commissions': 'commissions',
   '/dashboard/settings/services': 'services',
   '/dashboard/settings/staff': 'staff',
   '/dashboard/settings/shifts': 'shifts',
   '/dashboard/settings/audit': 'settings',
-  '/dashboard/settings/commissions': 'settings',
+  '/dashboard/settings/commissions': 'commissions',
   '/dashboard/workflows': 'messages',
 }
 
@@ -107,10 +114,11 @@ interface SidebarProps {
   sector: SectorType
   plan: PlanType
   permissions: StaffPermissions
+  staffRole: StaffRole
   settings?: BusinessSettings | null
 }
 
-export default function Sidebar({ businessName, userName, sector, plan, permissions, settings }: SidebarProps) {
+export default function Sidebar({ businessName, userName, sector, plan, permissions, staffRole, settings }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const { collapsed, setCollapsed } = useSidebar()
@@ -323,7 +331,7 @@ export default function Sidebar({ businessName, userName, sector, plan, permissi
                 </div>
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{userName}</p>
-                  <p className="truncate text-xs text-gray-500 dark:text-gray-400">İşletme Sahibi</p>
+                  <p className="truncate text-xs text-gray-500 dark:text-gray-400">{ROLE_LABELS[staffRole]}</p>
                 </div>
               </div>
             </motion.div>

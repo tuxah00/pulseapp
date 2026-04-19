@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import { Portal } from '@/components/ui/portal'
 import { useConfirm } from '@/lib/hooks/use-confirm'
+import { requirePermission } from '@/lib/hooks/use-require-permission'
 import EmptyState from '@/components/ui/empty-state'
 
 const STATUS_CONFIG: Record<ReferralStatus, { bg: string; text: string; icon: typeof CheckCircle }> = {
@@ -416,16 +417,7 @@ export default function RewardsPage() {
   }
 
   // ── Permission Check ──
-  if (permissions && !permissions.rewards) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="text-center space-y-3">
-          <ShieldX className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto" />
-          <p className="text-lg font-medium text-gray-500 dark:text-gray-400">Bu sayfaya erişim yetkiniz bulunmamaktadır.</p>
-        </div>
-      </div>
-    )
-  }
+  requirePermission(permissions, 'rewards')
 
   if (ctxLoading) {
     return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-pulse-900" /></div>

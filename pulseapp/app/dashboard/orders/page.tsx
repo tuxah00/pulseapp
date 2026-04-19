@@ -5,6 +5,7 @@ import { Portal } from '@/components/ui/portal'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { getCustomerLabelSingular } from '@/lib/config/sector-modules'
 import { useConfirm } from '@/lib/hooks/use-confirm'
+import { requirePermission } from '@/lib/hooks/use-require-permission'
 import { createClient } from '@/lib/supabase/client'
 import {
   Plus, Loader2, X, Trash2, ChefHat, Clock, CheckCircle,
@@ -203,15 +204,7 @@ export default function OrdersPage() {
     return new Date(dateStr).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
   }
 
-  if (permissions && !permissions.orders) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="text-center">
-          <p className="text-lg font-medium text-gray-500 dark:text-gray-400">Bu sayfaya erişim yetkiniz bulunmamaktadır.</p>
-        </div>
-      </div>
-    )
-  }
+  requirePermission(permissions, 'orders')
 
   return (
     <div className="space-y-6">

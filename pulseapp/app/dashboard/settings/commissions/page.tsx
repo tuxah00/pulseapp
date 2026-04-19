@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useConfirm } from '@/lib/hooks/use-confirm'
+import { requirePermission } from '@/lib/hooks/use-require-permission'
 import {
   BadgePercent, Plus, Trash2, Loader2, Calculator, ChevronDown,
   Check, X, RefreshCw, DollarSign
@@ -63,8 +64,10 @@ function formatPeriod(period: string): string {
 }
 
 export default function CommissionsPage() {
-  const { businessId, staffId: currentStaffId, staffName: currentStaffName } = useBusinessContext()
+  const { businessId, staffId: currentStaffId, staffName: currentStaffName, permissions } = useBusinessContext()
   const { confirm } = useConfirm()
+
+  requirePermission(permissions, 'commissions')
 
   // Rules state
   const [rules, setRules] = useState<CommissionRule[]>([])

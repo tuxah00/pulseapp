@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useDebounce } from '@/lib/hooks/use-debounce'
 import { useConfirm } from '@/lib/hooks/use-confirm'
+import { requirePermission } from '@/lib/hooks/use-require-permission'
 import {
   Plus, Receipt, Loader2, X, Trash2,
   CheckCircle, Clock, AlertCircle, XCircle, Download,
@@ -477,15 +478,7 @@ export default function InvoicesPage() {
   const pendingTotal = invoices.filter(i => i.status === 'pending' || i.status === 'partial').reduce((s, i) => s + i.total - (i.paid_amount || 0), 0)
   const overdueCount = invoices.filter(i => i.status === 'overdue').length
 
-  if (permissions && !permissions.invoices) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="text-center">
-          <p className="text-lg font-medium text-gray-500 dark:text-gray-400">Bu sayfaya erişim yetkiniz bulunmamaktadır.</p>
-        </div>
-      </div>
-    )
-  }
+  requirePermission(permissions, 'invoices')
 
   if (loading && invoices.length === 0) {
     return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-pulse-900" /></div>

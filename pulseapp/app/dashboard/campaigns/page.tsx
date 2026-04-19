@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
+import { requirePermission } from '@/lib/hooks/use-require-permission'
 import { toast } from 'sonner'
 import {
   Plus, Megaphone, Send, Clock, CheckCircle2, XCircle, Ban,
@@ -240,16 +241,7 @@ export default function CampaignsPage() {
   const totalRecipients = campaigns.filter(c => c.status === 'completed').reduce((s, c) => s + (c.stats?.total_recipients || 0), 0)
   const activeCampaigns = campaigns.filter(c => ['scheduled', 'sending'].includes(c.status)).length
 
-  if (permissions && !permissions.campaigns) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="text-center space-y-3">
-          <ShieldX className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto" />
-          <p className="text-lg font-medium text-gray-500 dark:text-gray-400">Bu sayfaya erişim yetkiniz bulunmamaktadır.</p>
-        </div>
-      </div>
-    )
-  }
+  requirePermission(permissions, 'campaigns')
 
   if (ctxLoading) {
     return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-pulse-900" /></div>

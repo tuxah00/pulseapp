@@ -18,6 +18,7 @@ import {
 import { formatCurrency, cn } from '@/lib/utils'
 import { Portal } from '@/components/ui/portal'
 import { useConfirm } from '@/lib/hooks/use-confirm'
+import { requirePermission } from '@/lib/hooks/use-require-permission'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { logAudit } from '@/lib/utils/audit'
 
@@ -398,16 +399,7 @@ export default function BusinessSettingsPage() {
     }
   }
 
-  if (permissions && !permissions.settings) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="text-center">
-          <p className="text-lg font-medium text-gray-500 dark:text-gray-400">Bu sayfaya erişim yetkiniz bulunmamaktadır.</p>
-          <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">İşletme sahibinizle iletişime geçin.</p>
-        </div>
-      </div>
-    )
-  }
+  requirePermission(permissions, 'settings')
 
   if (loading || ctxLoading) {
     return (

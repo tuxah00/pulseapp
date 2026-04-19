@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { formatCurrency, cn, formatDateISO } from '@/lib/utils'
 import { useConfirm } from '@/lib/hooks/use-confirm'
+import { requirePermission } from '@/lib/hooks/use-require-permission'
 import { SEGMENT_LABELS } from '@/types'
 import { exportToCSV } from '@/lib/utils/export'
 import type { Expense, Income } from '@/types'
@@ -278,16 +279,7 @@ export default function AnalyticsPage() {
 
   useEffect(() => { if (!ctxLoading) fetchData() }, [fetchData, ctxLoading])
 
-  if (permissions && !permissions.analytics) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="text-center">
-          <p className="text-lg font-medium text-gray-500 dark:text-gray-400">Bu sayfaya erişim yetkiniz bulunmamaktadır.</p>
-          <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">İşletme sahibinizle iletişime geçin.</p>
-        </div>
-      </div>
-    )
-  }
+  requirePermission(permissions, 'analytics')
 
   if (loading || ctxLoading) {
     return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-pulse-900" /></div>

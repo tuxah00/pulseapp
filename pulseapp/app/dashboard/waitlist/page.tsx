@@ -14,6 +14,7 @@ import { CustomSelect } from '@/components/ui/custom-select'
 import { Portal } from '@/components/ui/portal'
 import { cn } from '@/lib/utils'
 import { useConfirm } from '@/lib/hooks/use-confirm'
+import { requirePermission } from '@/lib/hooks/use-require-permission'
 
 interface WaitlistEntry {
   id: string
@@ -382,16 +383,7 @@ export default function WaitlistPage() {
   const notifiedCount = entries.filter(e => e.is_notified).length
 
   // Permission check
-  if (permissions && !permissions.appointments) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="text-center space-y-3">
-          <ShieldX className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto" />
-          <p className="text-lg font-medium text-gray-500 dark:text-gray-400">Bu sayfaya erişim yetkiniz bulunmamaktadır.</p>
-        </div>
-      </div>
-    )
-  }
+  requirePermission(permissions, 'appointments')
 
   if (ctxLoading) {
     return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-pulse-900" /></div>

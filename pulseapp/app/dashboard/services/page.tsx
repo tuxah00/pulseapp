@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useConfirm } from '@/lib/hooks/use-confirm'
+import { requirePermission } from '@/lib/hooks/use-require-permission'
 import { Plus, Pencil, Trash2, Loader2, Banknote, LayoutList, LayoutGrid, ArrowUpDown, X } from 'lucide-react'
 import { formatCurrency, cn } from '@/lib/utils'
 import { Portal } from '@/components/ui/portal'
@@ -204,16 +205,7 @@ export default function ServicesPage() {
     })
   }
 
-  if (permissions && !permissions.services) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="text-center">
-          <p className="text-lg font-medium text-gray-500 dark:text-gray-400">Bu sayfaya erişim yetkiniz bulunmamaktadır.</p>
-          <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">İşletme sahibinizle iletişime geçin.</p>
-        </div>
-      </div>
-    )
-  }
+  requirePermission(permissions, 'services')
 
   if (loading) {
     return (

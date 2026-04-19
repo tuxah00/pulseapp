@@ -7,6 +7,7 @@ import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { getCustomerLabelSingular } from '@/lib/config/sector-modules'
 import { useDebounce } from '@/lib/hooks/use-debounce'
 import { useConfirm } from '@/lib/hooks/use-confirm'
+import { requirePermission } from '@/lib/hooks/use-require-permission'
 import { logAudit } from '@/lib/utils/audit'
 import { formatCurrency, formatDateTime, cn, formatDateISO } from '@/lib/utils'
 import type { Service, POSItem, POSPayment, POSTransaction, POSSession, PaymentMethod, Referral, RewardType } from '@/types'
@@ -514,17 +515,7 @@ export default function KasaPage() {
 
   const cartHasPackage = useMemo(() => cart.some(c => c.type === 'package'), [cart])
 
-  if (permissions && !permissions.pos) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="text-center space-y-3">
-          <ShieldX className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto" />
-          <p className="text-lg font-medium text-gray-500 dark:text-gray-400">Bu sayfaya erişim yetkiniz bulunmamaktadır.</p>
-          <p className="text-sm text-gray-400 dark:text-gray-500">İşletme sahibinizle iletişime geçin.</p>
-        </div>
-      </div>
-    )
-  }
+  requirePermission(permissions, 'pos')
 
   if (loading) {
     return (

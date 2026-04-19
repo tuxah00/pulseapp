@@ -7,6 +7,7 @@ import { ThemeProvider } from '@/components/theme-provider'
 import { ConfirmProvider } from '@/lib/hooks/use-confirm'
 import { resolveActiveStaff } from '@/lib/auth/active-business'
 import SignOutLink from '@/components/auth/sign-out-link'
+import SessionWatcher from '@/components/auth/session-watcher'
 import { getEffectivePermissions, getEffectiveWritePermissions, type StaffRole, type SectorType, type PlanType, type BusinessSettings } from '@/types'
 
 export default async function DashboardLayout({
@@ -59,6 +60,7 @@ export default async function DashboardLayout({
 
   return (
     <ThemeProvider>
+      <SessionWatcher expectedUserId={user.id} />
       <BusinessProvider value={{
         businessId: staffMember.business_id,
         userId: user.id,
@@ -78,6 +80,7 @@ export default async function DashboardLayout({
           sector={sector}
           plan={plan}
           permissions={permissions}
+          staffRole={staffRole}
           settings={settings}
         >
           <ConfirmProvider>
