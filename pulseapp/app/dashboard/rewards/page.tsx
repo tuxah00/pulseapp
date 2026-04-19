@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { notFound } from 'next/navigation'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { getCustomerLabelSingular } from '@/lib/config/sector-modules'
 import { createClient } from '@/lib/supabase/client'
@@ -71,6 +72,12 @@ export default function RewardsPage() {
   const { businessId, sector, settings, loading: ctxLoading, permissions } = useBusinessContext()
   const customerLabel = getCustomerLabelSingular(sector ?? undefined)
   const rewardsEnabled = settings?.rewards_enabled === true
+
+  // Ödüller kapalıysa 404 — doğrudan URL ile erişimi engelle
+  if (!ctxLoading && businessId && !rewardsEnabled) {
+    notFound()
+  }
+
   const [activating, setActivating] = useState(false)
   const supabase = createClient()
   const { confirm } = useConfirm()
