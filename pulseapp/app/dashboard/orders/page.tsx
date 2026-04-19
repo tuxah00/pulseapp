@@ -5,7 +5,7 @@ import { Portal } from '@/components/ui/portal'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { getCustomerLabelSingular } from '@/lib/config/sector-modules'
 import { useConfirm } from '@/lib/hooks/use-confirm'
-import { requirePermission } from '@/lib/hooks/use-require-permission'
+import { requirePermission, requireSectorModule } from '@/lib/hooks/use-require-permission'
 import { createClient } from '@/lib/supabase/client'
 import {
   Plus, Loader2, X, Trash2, ChefHat, Clock, CheckCircle,
@@ -204,6 +204,7 @@ export default function OrdersPage() {
     return new Date(dateStr).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
   }
 
+  requireSectorModule(sector, 'orders')
   requirePermission(permissions, 'orders')
 
   return (

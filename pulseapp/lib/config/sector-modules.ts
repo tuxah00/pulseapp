@@ -1,4 +1,4 @@
-import type { SectorType, PlanType, BusinessSettings } from '@/types'
+import type { SectorType, PlanType, BusinessSettings, StaffPermissions } from '@/types'
 
 export interface SidebarItem {
   key: string
@@ -212,6 +212,93 @@ export function getSidebarSections(
   ]
 }
 
+// ---------------------------------------------------------------------------
+// Sector module helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Some sidebar keys are aliases that resolve to the same page/permission.
+ * e.g. `vehicles` (auto_service / car_wash) → /dashboard/records → permission 'records'
+ *      `attendance` → /dashboard/classes/attendance → permission 'classes'
+ */
+const SECTOR_KEY_ALIASES: Record<string, string[]> = {
+  records: ['records', 'vehicles'],
+  classes: ['classes', 'attendance'],
+}
+
+/**
+ * Returns true if the given sector's sidebar includes the module identified
+ * by `moduleKey`. Only checks sector-specific items (not base / management),
+ * so base modules (appointments, customers, …) always return false here —
+ * those are universally accessible.
+ */
+export function sectorHasModule(sector: SectorType, moduleKey: string): boolean {
+  const sectorItems = SECTOR_ITEMS[sector] ?? []
+  const keys = SECTOR_KEY_ALIASES[moduleKey] ?? [moduleKey]
+  return sectorItems.some(i => keys.includes(i.key))
+}
+
+// Sidebar item key → StaffPermissions key (null = no direct permission key)
+const SIDEBAR_KEY_TO_PERM: Record<string, keyof StaffPermissions | null> = {
+  // BASE_ITEMS
+  dashboard: 'dashboard',
+  appointments: 'appointments',
+  customers: 'customers',
+  waitlist: null,
+  // MANAGEMENT_ITEMS
+  pos: 'pos',
+  campaigns: 'campaigns',
+  services: 'services',
+  staff: 'staff',
+  messages: 'messages',
+  insights: null,
+  'assistant-actions': null,
+  analytics: 'analytics',
+  invoices: 'invoices',
+  shifts: 'shifts',
+  workflows: 'workflows',
+  commissions: 'commissions',
+  audit: null,
+  kvkk: null,
+  // SECTOR_ITEMS
+  packages: 'packages',
+  records: 'records',
+  vehicles: 'records',
+  'follow-ups': null,
+  reviews: 'reviews',
+  protocols: 'protocols',
+  rewards: 'rewards',
+  inventory: 'inventory',
+  memberships: 'memberships',
+  classes: 'classes',
+  attendance: 'classes',
+  orders: 'orders',
+  reservations: 'reservations',
+  portfolio: 'portfolio',
+}
+
+/**
+ * Returns the StaffPermissions keys that are relevant for the given sector.
+ * The settings/staff permission editor uses this to hide toggles for modules
+ * that don't exist in the current sector (e.g. no "Sınıflar" for a clinic).
+ */
+export function getSectorPermissionKeys(
+  sector: SectorType,
+  plan: PlanType = 'starter',
+  settings?: BusinessSettings | null
+): (keyof StaffPermissions)[] {
+  const sections = getSidebarSections(sector, plan, settings)
+  const allItems = sections.flatMap(s => s.items)
+
+  const permKeys = allItems
+    .map(item => SIDEBAR_KEY_TO_PERM[item.key])
+    .filter((k): k is keyof StaffPermissions => k != null)
+
+  // 'settings' doesn't appear as a sidebar item but is always a valid permission
+  return [...new Set(['settings' as keyof StaffPermissions, ...permKeys])]
+}
+
+// ---------------------------------------------------------------------------
 // Sector category groupings for onboarding form
 export const SECTOR_GROUPS: { label: string; sectors: SectorType[] }[] = [
   {

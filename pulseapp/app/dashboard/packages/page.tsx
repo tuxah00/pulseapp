@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { useDebounce } from '@/lib/hooks/use-debounce'
-import { requirePermission } from '@/lib/hooks/use-require-permission'
+import { requirePermission, requireSectorModule } from '@/lib/hooks/use-require-permission'
 import {
   Plus, Package, Loader2, X, Pencil, Trash2, Search,
   ChevronRight, Clock, CheckCircle, XCircle, AlertTriangle,
@@ -638,6 +638,7 @@ export default function PaketlerPage() {
     await insertAppointments(nonConflicting, endTime, duration)
   }
 
+  requireSectorModule(sector, 'packages')
   requirePermission(permissions, 'packages')
 
   if (ctxLoading) {

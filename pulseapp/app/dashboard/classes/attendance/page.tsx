@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
+import { requireSectorModule } from '@/lib/hooks/use-require-permission'
 import { Users, Plus, Trash2, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { formatDateISO } from '@/lib/utils'
@@ -41,7 +42,8 @@ function getJsDayIndex(date: Date): number {
 }
 
 function AttendancePage() {
-  const { businessId } = useBusinessContext()
+  const { businessId, sector } = useBusinessContext()
+  requireSectorModule(sector, 'classes')
   const searchParams = useSearchParams()
 
   const [selectedDate, setSelectedDate] = useState(() => {

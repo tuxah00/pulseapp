@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
+import { requirePermission, requireSectorModule } from '@/lib/hooks/use-require-permission'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { createClient } from '@/lib/supabase/client'
 import {
@@ -36,7 +37,9 @@ const SESSION_STATUS_CONFIG: Record<SessionStatus, { bg: string; text: string; i
 }
 
 export default function ProtocolsPage() {
-  const { businessId, loading: ctxLoading } = useBusinessContext()
+  const { businessId, sector, permissions, loading: ctxLoading } = useBusinessContext()
+  requireSectorModule(sector, 'protocols')
+  requirePermission(permissions, 'protocols')
   const { confirm } = useConfirm()
 
   // State

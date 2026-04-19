@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
+import { requireSectorModule } from '@/lib/hooks/use-require-permission'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import {
@@ -50,6 +51,7 @@ const STATUS_CONFIG: Record<string, { bg: string; text: string; icon: typeof Clo
 
 export default function FollowUpsPage() {
   const { businessId, sector, loading: ctxLoading } = useBusinessContext()
+  requireSectorModule(sector, 'follow-ups')
   const customerLabel = getCustomerLabelSingular(sector ?? undefined)
   const supabase = createClient()
 

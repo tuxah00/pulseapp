@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useConfirm } from '@/lib/hooks/use-confirm'
@@ -15,7 +15,7 @@ import { logAudit } from '@/lib/utils/audit'
 import { DEFAULT_PERMISSIONS, getEffectivePermissions } from '@/types'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import { CustomSelect } from '@/components/ui/custom-select'
-import { getCustomerLabel } from '@/lib/config/sector-modules'
+import { getCustomerLabel, getSectorPermissionKeys } from '@/lib/config/sector-modules'
 
 const ROLE_LABELS: Record<StaffRole, string> = {
   owner: 'İşletme Sahibi',
@@ -123,6 +123,19 @@ function canEditPermissions(myRole: StaffRole, targetRole: StaffRole): boolean {
 export default function StaffPage() {
   const { businessId, staffId: currentStaffId, staffName: currentStaffName, sector, loading: ctxLoading, staffRole: currentUserRole, permissions } = useBusinessContext()
   const permissionLabels = { ...PERMISSION_LABELS, customers: sector ? getCustomerLabel(sector) : 'Müşteriler' }
+
+  // Sektöre göre filtrelenmiş yetki kategorileri — bu sektörde bulunmayan
+  // modüller (örn. estetik klinikte "Sınıflar") yetki editöründe gösterilmez.
+  const sectorPermKeys = useMemo(
+    () => new Set(sector ? getSectorPermissionKeys(sector) : []),
+    [sector]
+  )
+  const filteredPermCategories = useMemo(
+    () => PERMISSION_CATEGORIES
+      .map(cat => ({ ...cat, keys: cat.keys.filter(k => sectorPermKeys.has(k)) }))
+      .filter(cat => cat.keys.length > 0),
+    [sectorPermKeys]
+  )
   const [staff, setStaff] = useState<StaffMember[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
@@ -597,7 +610,7 @@ export default function StaffPage() {
                       <span className="flex items-center gap-1 text-xs text-green-600"><Check className="h-3 w-3" /> Kaydedildi</span>
                     )}
                   </div>
-                  {PERMISSION_CATEGORIES.map(cat => (
+                  {filteredPermCategories.map(cat => (
                     <div key={cat.label} className="mb-3">
                       <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">{cat.label}</p>
                       <div className="space-y-1">
@@ -724,7 +737,7 @@ export default function StaffPage() {
                 </button>
               </div>
 
-              {PERMISSION_CATEGORIES.map(cat => (
+              {filteredPermCategories.map(cat => (
                 <div key={cat.label} className="mb-5 last:mb-0">
                   <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
                     {cat.label}

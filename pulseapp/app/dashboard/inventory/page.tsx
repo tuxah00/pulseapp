@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { useDebounce } from '@/lib/hooks/use-debounce'
-import { requirePermission } from '@/lib/hooks/use-require-permission'
+import { requirePermission, requireSectorModule } from '@/lib/hooks/use-require-permission'
 import {
   Plus, Package, Loader2, X, Pencil, Trash2,
   AlertTriangle, LayoutList, LayoutGrid, Search,
@@ -44,7 +44,7 @@ type DetailTab = 'info' | 'movements'
 type PageTab = 'products' | 'suppliers'
 
 export default function StoklarPage() {
-  const { businessId, staffId, staffName, loading: ctxLoading, permissions } = useBusinessContext()
+  const { businessId, staffId, staffName, sector, loading: ctxLoading, permissions } = useBusinessContext()
   const PAGE_SIZE = 50
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
@@ -409,6 +409,7 @@ export default function StoklarPage() {
     )
   }
 
+  requireSectorModule(sector, 'inventory')
   requirePermission(permissions, 'inventory')
 
   if (loading) {

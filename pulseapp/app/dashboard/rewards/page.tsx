@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import { Portal } from '@/components/ui/portal'
 import { useConfirm } from '@/lib/hooks/use-confirm'
-import { requirePermission } from '@/lib/hooks/use-require-permission'
+import { requirePermission, requireSectorModule } from '@/lib/hooks/use-require-permission'
 import EmptyState from '@/components/ui/empty-state'
 
 const STATUS_CONFIG: Record<ReferralStatus, { bg: string; text: string; icon: typeof CheckCircle }> = {
@@ -416,7 +416,7 @@ export default function RewardsPage() {
     )
   }
 
-  // ── Permission Check ──
+  requireSectorModule(sector, 'rewards')
   requirePermission(permissions, 'rewards')
 
   if (ctxLoading) {

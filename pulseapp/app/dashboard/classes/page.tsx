@@ -5,7 +5,7 @@ import { Portal } from '@/components/ui/portal'
 import { useRouter } from 'next/navigation'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useConfirm } from '@/lib/hooks/use-confirm'
-import { requirePermission } from '@/lib/hooks/use-require-permission'
+import { requirePermission, requireSectorModule } from '@/lib/hooks/use-require-permission'
 import {
   CalendarDays,
   Plus,
@@ -71,7 +71,7 @@ function formatDateISO(date: Date): string {
 }
 
 export default function ClassesPage() {
-  const { businessId, permissions } = useBusinessContext()
+  const { businessId, sector, permissions } = useBusinessContext()
   const { confirm } = useConfirm()
   const router = useRouter()
   const [classes, setClasses] = useState<ClassItem[]>([])
@@ -218,6 +218,7 @@ export default function ClassesPage() {
 
   const todayISO = formatDateISO(new Date())
 
+  requireSectorModule(sector, 'classes')
   requirePermission(permissions, 'classes')
 
   return (

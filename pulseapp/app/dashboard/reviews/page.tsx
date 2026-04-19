@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
-import { requirePermission } from '@/lib/hooks/use-require-permission'
+import { requirePermission, requireSectorModule } from '@/lib/hooks/use-require-permission'
 import { getCustomerLabelSingular } from '@/lib/config/sector-modules'
 import {
   Star, Loader2, MessageSquare, AlertTriangle,
@@ -305,6 +305,7 @@ export default function ReviewsPage() {
     )
   })
 
+  requireSectorModule(sector, 'reviews')
   requirePermission(permissions, 'reviews')
 
   if (loading || ctxLoading) {

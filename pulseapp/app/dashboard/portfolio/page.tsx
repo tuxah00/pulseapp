@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { Portal } from '@/components/ui/portal'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
-import { requirePermission } from '@/lib/hooks/use-require-permission'
+import { requirePermission, requireSectorModule } from '@/lib/hooks/use-require-permission'
 import { createClient } from '@/lib/supabase/client'
 import { logAudit } from '@/lib/utils/audit'
 import {
@@ -46,7 +46,7 @@ const INITIAL_FORM: UploadForm = {
 }
 
 export default function PortfolioPage() {
-  const { businessId, staffId, staffName, permissions } = useBusinessContext()
+  const { businessId, staffId, staffName, sector, permissions } = useBusinessContext()
   const [items, setItems] = useState<PortfolioItem[]>([])
   const [loading, setLoading] = useState(true)
   const [activeCategory, setActiveCategory] = useState('all')
@@ -254,6 +254,7 @@ export default function PortfolioPage() {
     }
   }
 
+  requireSectorModule(sector, 'portfolio')
   requirePermission(permissions, 'portfolio')
 
   return (

@@ -1,7 +1,8 @@
 'use client'
 
 import { notFound } from 'next/navigation'
-import type { StaffPermissions } from '@/types'
+import type { StaffPermissions, SectorType } from '@/types'
+import { sectorHasModule } from '@/lib/config/sector-modules'
 
 /**
  * Yetki kontrolü. permissions yüklendi ve istenen anahtar `false` ise
@@ -10,15 +11,28 @@ import type { StaffPermissions } from '@/types'
  *
  * Kullanım:
  *   requirePermission(permissions, 'invoices')
- *
- * Böylece yetkisiz kullanıcılar "erişim yetkiniz yok" mesajı yerine 404
- * görür → sayfanın varlığı sızdırılmaz.
  */
 export function requirePermission(
   permissions: StaffPermissions | null | undefined,
   key: keyof StaffPermissions
 ) {
   if (permissions && permissions[key] === false) {
+    notFound()
+  }
+}
+
+/**
+ * Sektör modül kontrolü. Bu sektörde bulunmayan bir modülün URL'ine
+ * girilirse gerçek 404 döner.
+ *
+ * Kullanım:
+ *   requireSectorModule(sector, 'classes')  // sadece fitness/yoga_pilates için geçerli
+ */
+export function requireSectorModule(
+  sector: SectorType | null | undefined,
+  moduleKey: string
+) {
+  if (sector && !sectorHasModule(sector, moduleKey)) {
     notFound()
   }
 }

@@ -16,7 +16,7 @@ import { ToolbarPopover, SortPopoverContent } from '@/components/ui/toolbar-popo
 import { createClient } from '@/lib/supabase/client'
 import { logAudit } from '@/lib/utils/audit'
 import { useConfirm } from '@/lib/hooks/use-confirm'
-import { requirePermission } from '@/lib/hooks/use-require-permission'
+import { requirePermission, requireSectorModule } from '@/lib/hooks/use-require-permission'
 import type { Customer } from '@/types'
 import CompactBoxCard from '@/components/ui/compact-box-card'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
@@ -374,7 +374,7 @@ function RecordsPageInner() {
   const rawType = searchParams.get('type')
   const recordType: RecordType = isValidType(rawType) ? rawType : DEFAULT_TYPE
 
-  const { businessId, staffId, staffName, loading: ctxLoading, permissions } = useBusinessContext()
+  const { businessId, staffId, staffName, sector, loading: ctxLoading, permissions } = useBusinessContext()
   const { confirm } = useConfirm()
   const config = TYPE_CONFIG[recordType]
 
@@ -799,6 +799,7 @@ function RecordsPageInner() {
     return Array.from(set).sort((a, b) => a.localeCompare(b, 'tr'))
   }, [records])
 
+  requireSectorModule(sector, 'records')
   requirePermission(permissions, 'records')
 
   if (loading) {

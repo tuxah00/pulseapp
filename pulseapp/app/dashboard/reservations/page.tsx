@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { getCustomerLabelSingular } from '@/lib/config/sector-modules'
 import { useConfirm } from '@/lib/hooks/use-confirm'
-import { requirePermission } from '@/lib/hooks/use-require-permission'
+import { requirePermission, requireSectorModule } from '@/lib/hooks/use-require-permission'
 import {
   Plus,
   Loader2,
@@ -256,6 +256,7 @@ export default function ReservationsPage() {
       })
     : reservations
 
+  requireSectorModule(sector, 'reservations')
   requirePermission(permissions, 'reservations')
 
   return (

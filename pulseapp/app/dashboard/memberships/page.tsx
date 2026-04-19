@@ -6,7 +6,7 @@ import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { getCustomerLabelSingular } from '@/lib/config/sector-modules'
 import { useDebounce } from '@/lib/hooks/use-debounce'
 import { useConfirm } from '@/lib/hooks/use-confirm'
-import { requirePermission } from '@/lib/hooks/use-require-permission'
+import { requirePermission, requireSectorModule } from '@/lib/hooks/use-require-permission'
 import {
   CreditCard, Users, Calendar, Plus, Search, X,
   Edit2, Trash2, Pause, Play, CheckCircle, Loader2,
@@ -305,6 +305,7 @@ export default function MembershipsPage() {
       })
     : memberships
 
+  requireSectorModule(sector, 'memberships')
   requirePermission(permissions, 'memberships')
 
   if (loading && !memberships.length) {
