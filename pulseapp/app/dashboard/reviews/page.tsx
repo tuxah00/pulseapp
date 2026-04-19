@@ -461,9 +461,6 @@ export default function ReviewsPage() {
                     <span className="font-medium text-gray-900 dark:text-gray-100">
                       {(review as any).is_anonymous ? 'Anonim' : (review.customers?.name || 'Anonim')}
                     </span>
-                    {(review as any).is_anonymous && (
-                      <span className="text-[10px] text-gray-400 dark:text-gray-500">(gerçek ad: {review.customers?.name || '—'})</span>
-                    )}
                     {renderStars(review.rating)}
                     {review.rating <= 3 && review.status !== 'responded' && (
                       <span className="badge bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"><AlertTriangle className="h-3 w-3 mr-1" />Dikkat</span>

@@ -27,7 +27,7 @@ export default async function PortalRewardsGuard({ params, children }: LayoutPro
 
   const enabled = (business?.settings as { rewards_enabled?: boolean } | null)?.rewards_enabled === true
   if (!enabled) {
-    redirect(`/portal/${businessId}/dashboard`)
+    notFound()
   }
 
   return <>{children}</>
