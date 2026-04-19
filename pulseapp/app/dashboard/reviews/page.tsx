@@ -450,7 +450,7 @@ export default function ReviewsPage() {
                   'flex h-10 w-10 items-center justify-center rounded-full font-semibold text-sm flex-shrink-0',
                   review.rating >= 4 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' : review.rating === 3 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
                 )}>
-                  {(review as any).is_anonymous
+                  {review.is_anonymous
                     ? 'A'
                     : (review.customers?.name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || '?')}
                 </div>
@@ -459,7 +459,7 @@ export default function ReviewsPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="font-medium text-gray-900 dark:text-gray-100">
-                      {(review as any).is_anonymous ? 'Anonim' : (review.customers?.name || 'Anonim')}
+                      {review.is_anonymous ? 'Anonim' : (review.customers?.name || 'Anonim')}
                     </span>
                     {renderStars(review.rating)}
                     {review.rating <= 3 && review.status !== 'responded' && (
