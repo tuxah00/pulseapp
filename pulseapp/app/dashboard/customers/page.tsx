@@ -1292,7 +1292,7 @@ export default function CustomersPage() {
                   {...register('birthday')}
                   className="input"
                   min={(() => { const d = new Date(); d.setFullYear(d.getFullYear() - 120); return formatDateISO(d) })()}
-                  max={(() => { const d = new Date(); d.setFullYear(d.getFullYear() - 1); return formatDateISO(d) })()}
+                  max={(() => { const d = new Date(); d.setFullYear(d.getFullYear() - 2); return formatDateISO(d) })()}
                 />
 
                 {errors.birthday && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.birthday.message}</p>}
