@@ -1,5 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { resolveActiveStaff } from '@/lib/auth/active-business'
 import {
   Calendar,
   Star,
@@ -46,13 +47,12 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
-  const { data: staff } = await supabase
-    .from('staff_members')
-    .select('business_id, name, businesses(sector)')
-    .eq('user_id', user.id)
-    .single()
-
-  if (!staff) redirect('/auth/register')
+  // Aktif işletme cookie'sine göre doğru staff kaydını çöz (multi-business destek).
+  // Layout `needs_selection` durumunu zaten yakalayıp picker'a yönlendirir;
+  // burada yalnızca active ve needs_onboarding senaryoları kalır.
+  const result = await resolveActiveStaff(supabase, user.id, 'business_id, name, businesses(sector)')
+  if (result.status !== 'active' || !result.staffMember) redirect('/auth/register')
+  const staff = result.staffMember
   const businessId = staff.business_id
   const sector = ((staff as unknown as { businesses: { sector?: string } }).businesses?.sector || 'other') as SectorType
   const customerLabelPlural = getCustomerLabel(sector)

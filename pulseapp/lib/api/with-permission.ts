@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { resolveActiveStaffForApi } from '@/lib/auth/active-business'
 import {
   getEffectivePermissions,
   getEffectiveWritePermissions,
@@ -38,63 +39,76 @@ type PermissionHandler = (
   ctx: AuthContext
 ) => Promise<NextResponse> | NextResponse
 
+/**
+ * Kullanıcının aktif staff kaydını çözer. Birden fazla işletmede çalışan
+ * kullanıcılar için aktif işletme cookie'sine göre doğru kayıt seçilir.
+ * Dönüş: { ok, ctx } veya { ok: false, response }
+ */
+async function resolveAuthContext(): Promise<
+  | { ok: true; ctx: AuthContext }
+  | { ok: false; response: NextResponse }
+> {
+  const supabase = createServerSupabaseClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+  if (authError || !user) {
+    return {
+      ok: false,
+      response: NextResponse.json({ error: 'Oturum bulunamadı. Lütfen giriş yapın.' }, { status: 401 }),
+    }
+  }
+
+  const admin = createAdminClient()
+  const { staff, status } = await resolveActiveStaffForApi(admin, user.id)
+
+  if (status === 'needs_selection') {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { error: 'Aktif işletme seçilmedi. Lütfen işletme seçin.', code: 'NEEDS_BUSINESS_SELECTION' },
+        { status: 409 }
+      ),
+    }
+  }
+
+  if (!staff) {
+    return {
+      ok: false,
+      response: NextResponse.json({ error: 'Personel kaydı bulunamadı.' }, { status: 403 }),
+    }
+  }
+
+  const role = staff.role as StaffRole
+  return {
+    ok: true,
+    ctx: {
+      userId: user.id,
+      staffId: staff.id,
+      businessId: staff.business_id,
+      role,
+      permissions: getEffectivePermissions(role, staff.permissions),
+      writePermissions: getEffectiveWritePermissions(role, staff.write_permissions ?? null),
+    },
+  }
+}
+
 export function withPermission(
   permission: keyof StaffPermissions,
   handler: PermissionHandler
 ) {
-  return async (req: NextRequest, routeContext?: any) => {
+  return async (req: NextRequest, _routeContext?: any) => {
     try {
-      // 1. Auth kontrolü
-      const supabase = createServerSupabaseClient()
-      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      const auth = await resolveAuthContext()
+      if (!auth.ok) return auth.response
 
-      if (authError || !user) {
-        return NextResponse.json(
-          { error: 'Oturum bulunamadı. Lütfen giriş yapın.' },
-          { status: 401 }
-        )
-      }
-
-      // 2. Staff member bilgisini çek
-      const admin = createAdminClient()
-      const { data: staff, error: staffError } = await admin
-        .from('staff_members')
-        .select('id, business_id, role, permissions, write_permissions, is_active')
-        .eq('user_id', user.id)
-        .eq('is_active', true)
-        .limit(1)
-        .single()
-
-      if (staffError || !staff) {
-        return NextResponse.json(
-          { error: 'Personel kaydı bulunamadı.' },
-          { status: 403 }
-        )
-      }
-
-      // 3. Permission kontrolü
-      const role = staff.role as StaffRole
-      const effectivePerms = getEffectivePermissions(role, staff.permissions)
-      const effectiveWrite = getEffectiveWritePermissions(role, (staff as any).write_permissions ?? null)
-
-      if (!effectivePerms[permission]) {
+      if (!auth.ctx.permissions[permission]) {
         return NextResponse.json(
           { error: `Bu işlem için yetkiniz yok: ${permission}` },
           { status: 403 }
         )
       }
 
-      // 4. Handler'a context ile devam et
-      const ctx: AuthContext = {
-        userId: user.id,
-        staffId: staff.id,
-        businessId: staff.business_id,
-        role,
-        permissions: effectivePerms,
-        writePermissions: effectiveWrite,
-      }
-
-      return handler(req, ctx)
+      return handler(req, auth.ctx)
     } catch (err: any) {
       console.error('Permission middleware hatası:', err)
       return NextResponse.json(
@@ -136,44 +150,17 @@ export function withWritePermission(
  * ```
  */
 export async function requirePermission(
-  req: NextRequest,
+  _req: NextRequest,
   permission: keyof StaffPermissions
 ): Promise<
   | { ok: true; ctx: AuthContext }
   | { ok: false; response: NextResponse }
 > {
   try {
-    const supabase = createServerSupabaseClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const auth = await resolveAuthContext()
+    if (!auth.ok) return auth
 
-    if (authError || !user) {
-      return {
-        ok: false,
-        response: NextResponse.json({ error: 'Oturum bulunamadı.' }, { status: 401 }),
-      }
-    }
-
-    const admin = createAdminClient()
-    const { data: staff } = await admin
-      .from('staff_members')
-      .select('id, business_id, role, permissions, write_permissions, is_active')
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .limit(1)
-      .single()
-
-    if (!staff) {
-      return {
-        ok: false,
-        response: NextResponse.json({ error: 'Personel kaydı bulunamadı.' }, { status: 403 }),
-      }
-    }
-
-    const role = staff.role as StaffRole
-    const effectivePerms = getEffectivePermissions(role, staff.permissions)
-    const effectiveWrite = getEffectiveWritePermissions(role, (staff as any).write_permissions ?? null)
-
-    if (!effectivePerms[permission]) {
+    if (!auth.ctx.permissions[permission]) {
       return {
         ok: false,
         response: NextResponse.json(
@@ -183,17 +170,7 @@ export async function requirePermission(
       }
     }
 
-    return {
-      ok: true,
-      ctx: {
-        userId: user.id,
-        staffId: staff.id,
-        businessId: staff.business_id,
-        role,
-        permissions: effectivePerms,
-        writePermissions: effectiveWrite,
-      },
-    }
+    return auth
   } catch {
     return {
       ok: false,
@@ -238,45 +215,11 @@ export async function requireWritePermission(
  * Public olmayan ama tüm staff'ın erişebildiği endpoint'ler için.
  */
 export function withAuth(handler: PermissionHandler) {
-  return async (req: NextRequest, routeContext?: any) => {
+  return async (req: NextRequest, _routeContext?: any) => {
     try {
-      const supabase = createServerSupabaseClient()
-      const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-      if (authError || !user) {
-        return NextResponse.json(
-          { error: 'Oturum bulunamadı. Lütfen giriş yapın.' },
-          { status: 401 }
-        )
-      }
-
-      const admin = createAdminClient()
-      const { data: staff } = await admin
-        .from('staff_members')
-        .select('id, business_id, role, permissions, write_permissions, is_active')
-        .eq('user_id', user.id)
-        .eq('is_active', true)
-        .limit(1)
-        .single()
-
-      if (!staff) {
-        return NextResponse.json(
-          { error: 'Personel kaydı bulunamadı.' },
-          { status: 403 }
-        )
-      }
-
-      const role = staff.role as StaffRole
-      const ctx: AuthContext = {
-        userId: user.id,
-        staffId: staff.id,
-        businessId: staff.business_id,
-        role,
-        permissions: getEffectivePermissions(role, staff.permissions),
-        writePermissions: getEffectiveWritePermissions(role, (staff as any).write_permissions ?? null),
-      }
-
-      return handler(req, ctx)
+      const auth = await resolveAuthContext()
+      if (!auth.ok) return auth.response
+      return handler(req, auth.ctx)
     } catch (err: any) {
       console.error('Auth middleware hatası:', err)
       return NextResponse.json(

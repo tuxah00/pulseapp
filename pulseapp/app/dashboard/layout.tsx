@@ -5,6 +5,7 @@ import DashboardShell from '@/components/dashboard/dashboard-shell'
 import { BusinessProvider } from '@/lib/hooks/business-context-provider'
 import { ThemeProvider } from '@/components/theme-provider'
 import { ConfirmProvider } from '@/lib/hooks/use-confirm'
+import { resolveActiveStaff } from '@/lib/auth/active-business'
 import { getEffectivePermissions, getEffectiveWritePermissions, type StaffRole, type SectorType, type PlanType, type BusinessSettings } from '@/types'
 
 export default async function DashboardLayout({
@@ -17,14 +18,13 @@ export default async function DashboardLayout({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
-  const { data: staffMember, error: staffError } = await supabase
-    .from('staff_members')
-    .select('*, businesses(*)')
-    .eq('user_id', user.id)
-    .eq('is_active', true)
-    .single()
+  const result = await resolveActiveStaff(supabase, user.id)
 
-  if (!staffMember || staffError) {
+  if (result.status === 'needs_selection') {
+    redirect('/auth/select-business')
+  }
+
+  if (result.status === 'needs_onboarding') {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-pulse-50 via-white to-pulse-100 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 p-4">
         <div className="w-full max-w-md">
@@ -42,6 +42,7 @@ export default async function DashboardLayout({
     )
   }
 
+  const staffMember = result.staffMember!
   const business = (staffMember as unknown as { businesses: { name?: string; sector?: string; subscription_plan?: string; settings?: BusinessSettings | null } }).businesses
   const userName = staffMember.name || user.user_metadata?.full_name || user.email || 'Kullanıcı'
   const businessName = business?.name || 'İşletme'
