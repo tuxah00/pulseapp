@@ -318,18 +318,6 @@ export default function WaitlistPage() {
     } catch { toast.error('Bağlantı hatası') } finally { setBookSaving(false) }
   }
 
-  const handleDeactivate = async (id: string) => {
-    const res = await fetch('/api/waitlist', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, is_active: false }),
-    })
-    if (res.ok) {
-      toast.success('Listeden kaldırıldı')
-      fetchEntries()
-    }
-  }
-
   const handleDelete = async (id: string) => {
     const ok = await confirm({
       title: 'Kaydı Sil',
@@ -341,7 +329,7 @@ export default function WaitlistPage() {
     const res = await fetch(`/api/waitlist?id=${id}`, { method: 'DELETE' })
     if (res.ok) {
       toast.success('Kayıt silindi')
-      fetchEntries()
+      setEntries(prev => prev.filter(e => e.id !== id))
     } else {
       toast.error('Silinemedi')
     }
