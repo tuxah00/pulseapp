@@ -103,11 +103,6 @@ export default function WaitlistPage() {
   const [formTimeStart, setFormTimeStart] = useState('')
   const [formTimeEnd, setFormTimeEnd] = useState('')
   const [formNotes, setFormNotes] = useState('')
-  // "Fark etmez" toggle'ları
-  const [formAnyService, setFormAnyService] = useState(false)
-  const [formAnyStaff, setFormAnyStaff] = useState(false)
-  const [formAnyDate, setFormAnyDate] = useState(false)
-  const [formAnyTime, setFormAnyTime] = useState(false)
 
   // Modal state — Randevu Oluştur
   const [showBook, setShowBook] = useState(false)
@@ -188,11 +183,11 @@ export default function WaitlistPage() {
           customerName: formName,
           customerPhone: formPhone,
           customerId: formCustomerId || null,
-          serviceId: formAnyService ? null : (formServiceId || null),
-          staffId: formAnyStaff ? null : (formStaffId || null),
-          preferredDate: formAnyDate ? null : (formDate || null),
-          preferredTimeStart: formAnyTime ? null : (formTimeStart || null),
-          preferredTimeEnd: formAnyTime ? null : (formTimeEnd || null),
+          serviceId: formServiceId || null,
+          staffId: formStaffId || null,
+          preferredDate: formDate || null,
+          preferredTimeStart: formTimeStart || null,
+          preferredTimeEnd: formTimeEnd || null,
           notes: formNotes || null,
         }),
       })
@@ -212,7 +207,6 @@ export default function WaitlistPage() {
     setFormCustomerId(''); setFormName(''); setFormPhone('')
     setFormServiceId(''); setFormStaffId(''); setFormDate(''); setFormTimeStart('')
     setFormTimeEnd(''); setFormNotes('')
-    setFormAnyService(false); setFormAnyStaff(false); setFormAnyDate(false); setFormAnyTime(false)
   }
 
   const openBook = (entry: WaitlistEntry) => {
@@ -657,80 +651,45 @@ export default function WaitlistPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="label mb-0">Hizmet</label>
-                    <label className="flex items-center gap-1 cursor-pointer select-none text-[11px] text-gray-500 dark:text-gray-400">
-                      <input type="checkbox" checked={formAnyService} onChange={e => { setFormAnyService(e.target.checked); if (e.target.checked) setFormServiceId('') }} className="rounded" />
-                      Fark etmez
-                    </label>
-                  </div>
-                  {formAnyService ? (
-                    <div className="input w-full text-gray-400 dark:text-gray-500 text-sm bg-gray-50 dark:bg-gray-800 pointer-events-none">Fark etmez</div>
-                  ) : (
-                    <CustomSelect
-                      options={services.map(s => ({ value: s.id, label: s.name }))}
-                      value={formServiceId}
-                      onChange={v => setFormServiceId(v)}
-                      placeholder="Hizmet seçin"
-                    />
-                  )}
+                  <label className="label">Hizmet</label>
+                  <CustomSelect
+                    options={[
+                      { value: '', label: 'Fark etmez' },
+                      ...services.map(s => ({ value: s.id, label: s.name })),
+                    ]}
+                    value={formServiceId}
+                    onChange={v => setFormServiceId(v)}
+                    placeholder="Fark etmez"
+                  />
                 </div>
                 <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="label mb-0">Personel</label>
-                    <label className="flex items-center gap-1 cursor-pointer select-none text-[11px] text-gray-500 dark:text-gray-400">
-                      <input type="checkbox" checked={formAnyStaff} onChange={e => { setFormAnyStaff(e.target.checked); if (e.target.checked) setFormStaffId('') }} className="rounded" />
-                      Fark etmez
-                    </label>
-                  </div>
-                  {formAnyStaff ? (
-                    <div className="input w-full text-gray-400 dark:text-gray-500 text-sm bg-gray-50 dark:bg-gray-800 pointer-events-none">Fark etmez</div>
-                  ) : (
-                    <CustomSelect
-                      options={staffMembers.map(s => ({ value: s.id, label: s.name }))}
-                      value={formStaffId}
-                      onChange={v => setFormStaffId(v)}
-                      placeholder="Personel seçin"
-                    />
-                  )}
+                  <label className="label">Personel</label>
+                  <CustomSelect
+                    options={[
+                      { value: '', label: 'Fark etmez' },
+                      ...staffMembers.map(s => ({ value: s.id, label: s.name })),
+                    ]}
+                    value={formStaffId}
+                    onChange={v => setFormStaffId(v)}
+                    placeholder="Fark etmez"
+                  />
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="label mb-0">Tercih Tarihi</label>
-                    <label className="flex items-center gap-1 cursor-pointer select-none text-[11px] text-gray-500 dark:text-gray-400">
-                      <input type="checkbox" checked={formAnyDate} onChange={e => { setFormAnyDate(e.target.checked); if (e.target.checked) setFormDate('') }} className="rounded" />
-                      Fark etmez
-                    </label>
-                  </div>
-                  {formAnyDate ? (
-                    <div className="input w-full text-gray-400 dark:text-gray-500 text-sm bg-gray-50 dark:bg-gray-800">Fark etmez</div>
-                  ) : (
-                    <input type="date" className="input w-full" value={formDate} onChange={e => setFormDate(e.target.value)} />
-                  )}
+                  <label className="label">Tercih Tarihi</label>
+                  <input type="date" className="input w-full" value={formDate} onChange={e => setFormDate(e.target.value)} />
+                  <p className="text-[10px] text-gray-400 mt-1">Boş = fark etmez</p>
                 </div>
                 <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="label mb-0">Başlangıç</label>
-                    <label className="flex items-center gap-1 cursor-pointer select-none text-[11px] text-gray-500 dark:text-gray-400">
-                      <input type="checkbox" checked={formAnyTime} onChange={e => { setFormAnyTime(e.target.checked); if (e.target.checked) { setFormTimeStart(''); setFormTimeEnd('') } }} className="rounded" />
-                      Fark etmez
-                    </label>
-                  </div>
-                  {formAnyTime ? (
-                    <div className="input w-full text-gray-400 dark:text-gray-500 text-sm bg-gray-50 dark:bg-gray-800">Fark etmez</div>
-                  ) : (
-                    <input type="time" className="input w-full" value={formTimeStart} onChange={e => setFormTimeStart(e.target.value)} />
-                  )}
+                  <label className="label">Başlangıç</label>
+                  <input type="time" className="input w-full" value={formTimeStart} onChange={e => setFormTimeStart(e.target.value)} />
+                  <p className="text-[10px] text-gray-400 mt-1">Boş = fark etmez</p>
                 </div>
                 <div>
                   <label className="label">Bitiş</label>
-                  {formAnyTime ? (
-                    <div className="input w-full text-gray-400 dark:text-gray-500 text-sm bg-gray-50 dark:bg-gray-800">Fark etmez</div>
-                  ) : (
-                    <input type="time" className="input w-full" value={formTimeEnd} onChange={e => setFormTimeEnd(e.target.value)} />
-                  )}
+                  <input type="time" className="input w-full" value={formTimeEnd} onChange={e => setFormTimeEnd(e.target.value)} />
+                  <p className="text-[10px] text-gray-400 mt-1">Boş = fark etmez</p>
                 </div>
               </div>
               <div>
