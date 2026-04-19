@@ -6,6 +6,7 @@ import { BusinessProvider } from '@/lib/hooks/business-context-provider'
 import { ThemeProvider } from '@/components/theme-provider'
 import { ConfirmProvider } from '@/lib/hooks/use-confirm'
 import { resolveActiveStaff } from '@/lib/auth/active-business'
+import SignOutLink from '@/components/auth/sign-out-link'
 import { getEffectivePermissions, getEffectiveWritePermissions, type StaffRole, type SectorType, type PlanType, type BusinessSettings } from '@/types'
 
 export default async function DashboardLayout({
@@ -37,6 +38,9 @@ export default async function DashboardLayout({
             </p>
           </div>
           <OnboardingForm userId={user.id} userEmail={user.email || ''} userName={user.user_metadata?.full_name || ''} />
+          <div className="mt-6 text-center">
+            <SignOutLink />
+          </div>
         </div>
       </div>
     )

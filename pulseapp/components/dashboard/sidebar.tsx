@@ -131,6 +131,9 @@ export default function Sidebar({ businessName, userName, sector, plan, permissi
   async function handleLogout() {
     const supabase = createClient()
     await supabase.auth.signOut()
+    // Çoklu işletme seçimi cookie'sini de temizle — farklı hesaba geçilince
+    // stale business_id kalmasın.
+    document.cookie = 'active_business_id=; path=/; max-age=0'
     router.push('/auth/login')
     router.refresh()
   }
