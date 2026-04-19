@@ -509,7 +509,7 @@ export default function WaitlistPage() {
                   </div>
                   {e.notes && <p className="text-xs text-gray-400 mt-1 truncate">{e.notes}</p>}
                 </div>
-                <div className="flex-shrink-0 flex items-center gap-2" onClick={ev => ev.stopPropagation()}>
+                <div className="flex-shrink-0 flex items-center gap-2 self-center" onClick={ev => ev.stopPropagation()}>
                   {e.is_notified && e.is_active && <CountdownBadge expiresAt={e.notification_expires_at} />}
                   {e.is_notified && !e.is_active && (
                     <span className="text-xs px-2 py-0.5 rounded-full bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 flex items-center gap-1">
