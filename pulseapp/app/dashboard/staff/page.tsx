@@ -73,8 +73,8 @@ const PERMISSION_LABELS: Record<keyof StaffPermissions, string> = {
 
 const PERMISSION_CATEGORIES: { label: string; keys: (keyof StaffPermissions)[] }[] = [
   { label: 'Ana', keys: ['dashboard', 'appointments', 'customers'] },
-  { label: 'İçerik', keys: ['records', 'portfolio', 'classes', 'memberships', 'packages', 'reservations', 'orders'] },
-  { label: 'Yönetim', keys: ['services', 'staff', 'shifts', 'messages', 'analytics', 'reviews', 'inventory', 'invoices', 'campaigns', 'settings'] },
+  { label: 'İçerik', keys: ['records', 'protocols', 'portfolio', 'classes', 'memberships', 'packages', 'reservations', 'orders', 'rewards'] },
+  { label: 'Yönetim', keys: ['services', 'staff', 'shifts', 'messages', 'analytics', 'reviews', 'inventory', 'pos', 'invoices', 'commissions', 'campaigns', 'workflows', 'settings'] },
 ]
 
 function canEditMember(myRole: StaffRole, targetRole: StaffRole): boolean {
