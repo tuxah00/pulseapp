@@ -13,6 +13,7 @@ import { CustomerSearchSelect } from '@/components/ui/customer-search-select'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { Portal } from '@/components/ui/portal'
 import { cn } from '@/lib/utils'
+import { useConfirm } from '@/lib/hooks/use-confirm'
 
 interface WaitlistEntry {
   id: string
@@ -80,6 +81,7 @@ export default function WaitlistPage() {
   const { businessId, sector, loading: ctxLoading, permissions } = useBusinessContext()
   const customerLabel = getCustomerLabelSingular(sector ?? undefined)
   const supabase = createClient()
+  const { confirm } = useConfirm()
 
   const [entries, setEntries] = useState<WaitlistEntry[]>([])
   const [loading, setLoading] = useState(true)
@@ -328,10 +330,19 @@ export default function WaitlistPage() {
   }
 
   const handleDelete = async (id: string) => {
+    const ok = await confirm({
+      title: 'Kaydı Sil',
+      message: 'Bu bekleme listesi kaydını silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.',
+      confirmText: 'Sil',
+      variant: 'danger',
+    })
+    if (!ok) return
     const res = await fetch(`/api/waitlist?id=${id}`, { method: 'DELETE' })
     if (res.ok) {
       toast.success('Kayıt silindi')
       fetchEntries()
+    } else {
+      toast.error('Silinemedi')
     }
   }
 
@@ -534,11 +545,9 @@ export default function WaitlistPage() {
                       <CalendarPlus className="h-4 w-4" />
                     </button>
                   )}
-                  {e.is_active && (
-                    <button onClick={ev => { ev.stopPropagation(); handleDeactivate(e.id) }} className="text-gray-400 hover:text-red-500 transition-colors p-1" title="Listeden Kaldır">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  )}
+                  <button onClick={ev => { ev.stopPropagation(); handleDelete(e.id) }} className="text-gray-400 hover:text-red-500 transition-colors p-1" title="Kaydı Sil">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
                 </div>
               </div>
             </AnimatedItem>
