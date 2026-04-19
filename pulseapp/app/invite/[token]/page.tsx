@@ -92,7 +92,7 @@ export default function InvitePage() {
     }
 
     setSuccess(true)
-    setTimeout(() => router.push('/auth/login'), 3000)
+    setTimeout(() => router.push('/dashboard'), 2000)
   }
 
   if (loading) {
