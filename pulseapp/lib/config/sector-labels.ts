@@ -40,12 +40,12 @@ export function isBeautySector(sector: SectorKey): boolean {
 
 /**
  * "Protokoller" → sektöre göre:
- * - medikal: "Tedavi Planları"
+ * - medikal: "Tedavi Protokolleri"
  * - güzellik: "Hizmet Paketleri"
  * - diğer: null (sidebar'dan gizle)
  */
 export function getProtocolsLabel(sector: SectorKey): string | null {
-  if (isMedicalSector(sector)) return 'Tedavi Planları'
+  if (isMedicalSector(sector)) return 'Tedavi Protokolleri'
   if (isBeautySector(sector)) return 'Hizmet Paketleri'
   return null
 }
