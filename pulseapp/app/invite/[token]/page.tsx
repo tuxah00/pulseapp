@@ -48,24 +48,40 @@ export default function InvitePage() {
     setSubmitting(true)
     setError(null)
 
-    // 1. Create Supabase Auth user
+    // 1. Önce signUp dene — yeni kullanıcı için çalışır
     const { data: authData, error: signUpErr } = await supabase.auth.signUp({
       email,
       password,
       options: { data: { full_name: name } },
     })
 
-    if (signUpErr || !authData.user) {
+    let userId = authData?.user?.id
+
+    // 2. "User already registered" ise signIn dene —
+    // önceden yarım kalan bir kayıt veya başka bir kayıt olabilir
+    if (signUpErr && /already registered|already been registered|User already/i.test(signUpErr.message)) {
+      const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
+      if (signInErr || !signInData.user) {
+        setError('Bu e-posta zaten kayıtlı. Lütfen mevcut şifrenizle giriş yapın veya şifrenizi sıfırlayın.')
+        setSubmitting(false)
+        setTimeout(() => router.push('/auth/login'), 2500)
+        return
+      }
+      userId = signInData.user.id
+    } else if (signUpErr || !userId) {
       setError(signUpErr?.message || 'Hesap oluşturulamadı')
       setSubmitting(false)
       return
     }
 
-    // 2. Register via API to create staff_member record
+    // 3. API ile staff_member kaydını oluştur
     const res = await fetch(`/api/invite/accept`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token, user_id: authData.user.id, name }),
+      body: JSON.stringify({ token, user_id: userId, name }),
     })
 
     if (!res.ok) {
