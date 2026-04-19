@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import { Portal } from '@/components/ui/portal'
 import { useConfirm } from '@/lib/hooks/use-confirm'
+import EmptyState from '@/components/ui/empty-state'
 
 const STATUS_CONFIG: Record<ReferralStatus, { bg: string; text: string; icon: typeof CheckCircle }> = {
   pending: { bg: 'bg-yellow-50 dark:bg-yellow-900/20', text: 'text-yellow-600 dark:text-yellow-400', icon: Clock },
@@ -515,10 +516,7 @@ export default function RewardsPage() {
           {refLoading ? (
             <div className="flex items-center justify-center h-32"><Loader2 className="h-6 w-6 animate-spin text-pulse-900" /></div>
           ) : filteredRefs.length === 0 ? (
-            <div className="card p-8 text-center">
-              <UserCheck className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-              <p className="text-gray-500 dark:text-gray-400">Henüz referans yok</p>
-            </div>
+            <EmptyState icon={<UserCheck className="h-7 w-7" />} title="Henüz referans yok" />
           ) : (
             <AnimatedList className="space-y-3">
               {filteredRefs.map(r => {
@@ -578,11 +576,11 @@ export default function RewardsPage() {
           <div>
             <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Ödül Şablonları</h2>
             {rewardTemplates.length === 0 ? (
-              <div className="card p-6 text-center">
-                <Award className="h-10 w-10 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
-                <p className="text-sm text-gray-500 dark:text-gray-400">Henüz ödül şablonu tanımlanmamış</p>
-                <p className="text-xs text-gray-400 mt-1">&ldquo;Ödül Tanımla&rdquo; butonuyla başlayın</p>
-              </div>
+              <EmptyState
+                icon={<Award className="h-7 w-7" />}
+                title="Henüz ödül şablonu tanımlanmamış"
+                description={'"Ödül Tanımla" butonuyla başlayın'}
+              />
             ) : (
               <AnimatedList className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {rewardTemplates.map(t => (
@@ -623,10 +621,7 @@ export default function RewardsPage() {
             {rwLoading ? (
               <div className="flex items-center justify-center h-24"><Loader2 className="h-5 w-5 animate-spin text-pulse-900" /></div>
             ) : customerRewards.length === 0 ? (
-              <div className="card p-6 text-center">
-                <Gift className="h-10 w-10 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
-                <p className="text-sm text-gray-500 dark:text-gray-400">Henüz atanmış ödül yok</p>
-              </div>
+              <EmptyState icon={<Gift className="h-7 w-7" />} title="Henüz atanmış ödül yok" />
             ) : (
               <AnimatedList className="space-y-2">
                 {customerRewards.map(cr => (

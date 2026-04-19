@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Loader2, User, Mail, Phone, Lock, Building2, MapPin } from 'lucide-react'
 import { SECTOR_LABELS, type SectorType } from '@/types'
+import { CustomSelect } from '@/components/ui/custom-select'
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -234,17 +235,11 @@ export default function RegisterPage() {
             </div>
             <div>
               <label htmlFor="sector" className="label">Sektör</label>
-              <select
-                id="sector"
+              <CustomSelect
                 value={sector}
-                onChange={(e) => setSector(e.target.value as SectorType)}
-                className="input"
-                required
-              >
-                {Object.entries(SECTOR_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>{label}</option>
-                ))}
-              </select>
+                onChange={(v) => setSector(v as SectorType)}
+                options={Object.entries(SECTOR_LABELS).map(([value, label]) => ({ value, label }))}
+              />
             </div>
             <div>
               <label htmlFor="city" className="label">Şehir</label>

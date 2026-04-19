@@ -14,9 +14,9 @@ import type { AIAssistantTone, AIPermissionCategory, AIPermissions, AIPreference
 import { DEFAULT_AI_PERMISSIONS } from '@/types'
 
 const TONE_OPTIONS: { value: AIAssistantTone; label: string; description: string }[] = [
-  { value: 'samimi', label: 'Samimi', description: 'Doğal, sıcak, profesyonel (varsayılan)' },
+  { value: 'samimi', label: 'Samimi', description: 'Doğal, sıcak, profesyonel' },
   { value: 'formal', label: 'Resmi', description: 'Siz, rica ederim, arz ederim' },
-  { value: 'kisa', label: 'Kısa', description: 'Doğrudan sonuç, gereksiz açıklama yok' },
+  { value: 'kisa', label: 'Kısa', description: 'Doğrudan sonuç, gereksiz açıklama yok (varsayılan)' },
 ]
 
 const DEFAULT_PREFS: AIPreferences = {

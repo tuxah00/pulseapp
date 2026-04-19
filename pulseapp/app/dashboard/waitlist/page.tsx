@@ -6,7 +6,7 @@ import { getCustomerLabelSingular } from '@/lib/config/sector-modules'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import {
-  Plus, Clock, Search, Loader2, Phone, Calendar, User, Bell, BellOff, Trash2, X, ShieldX, CheckCircle, CalendarPlus
+  Plus, Clock, Search, Loader2, Phone, Calendar, User, Bell, BellOff, Trash2, X, ShieldX, CheckCircle, CalendarPlus, Zap, UserCircle2, SkipForward
 } from 'lucide-react'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import { CustomerSearchSelect } from '@/components/ui/customer-search-select'
@@ -28,6 +28,9 @@ interface WaitlistEntry {
   notes: string | null
   is_notified: boolean
   is_active: boolean
+  auto_book_on_match: boolean
+  notification_expires_at: string | null
+  notified_for_appointment_id: string | null
   created_at: string
   services?: { name: string } | null
   staff_members?: { name: string } | null
@@ -37,6 +40,40 @@ interface WaitlistEntry {
 interface ServiceOption {
   id: string
   name: string
+}
+
+function useCountdown(expiresAt: string | null) {
+  const [left, setLeft] = useState<string | null>(null)
+  useEffect(() => {
+    if (!expiresAt) { setLeft(null); return }
+    const tick = () => {
+      const diff = new Date(expiresAt).getTime() - Date.now()
+      if (diff <= 0) { setLeft('Süresi doldu'); return }
+      const m = Math.floor(diff / 60000)
+      const s = Math.floor((diff % 60000) / 1000)
+      setLeft(`${m}:${String(s).padStart(2, '0')}`)
+    }
+    tick()
+    const t = setInterval(tick, 1000)
+    return () => clearInterval(t)
+  }, [expiresAt])
+  return left
+}
+
+function CountdownBadge({ expiresAt }: { expiresAt: string | null }) {
+  const left = useCountdown(expiresAt)
+  if (!left) return null
+  const expired = left === 'Süresi doldu'
+  return (
+    <span className={cn(
+      'text-xs px-2 py-0.5 rounded-full flex items-center gap-1',
+      expired
+        ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300'
+        : 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+    )}>
+      <Clock className="h-3 w-3" /> {expired ? 'Cevap süresi doldu' : `Kalan ${left}`}
+    </span>
+  )
 }
 
 export default function WaitlistPage() {
@@ -61,6 +98,7 @@ export default function WaitlistPage() {
   const [formName, setFormName] = useState('')
   const [formPhone, setFormPhone] = useState('')
   const [formServiceId, setFormServiceId] = useState('')
+  const [formStaffId, setFormStaffId] = useState('')
   const [formDate, setFormDate] = useState('')
   const [formTimeStart, setFormTimeStart] = useState('')
   const [formTimeEnd, setFormTimeEnd] = useState('')
@@ -146,6 +184,7 @@ export default function WaitlistPage() {
           customerPhone: formPhone,
           customerId: formCustomerId || null,
           serviceId: formServiceId || null,
+          staffId: formStaffId || null,
           preferredDate: formDate || null,
           preferredTimeStart: formTimeStart || null,
           preferredTimeEnd: formTimeEnd || null,
@@ -166,7 +205,7 @@ export default function WaitlistPage() {
 
   const resetForm = () => {
     setFormCustomerId(''); setFormName(''); setFormPhone('')
-    setFormServiceId(''); setFormDate(''); setFormTimeStart('')
+    setFormServiceId(''); setFormStaffId(''); setFormDate(''); setFormTimeStart('')
     setFormTimeEnd(''); setFormNotes('')
   }
 
@@ -184,6 +223,10 @@ export default function WaitlistPage() {
   const handleBook = async () => {
     if (!bookEntry || !bookDate || !bookTimeStart) {
       toast.error('Tarih ve başlangıç saati zorunludur')
+      return
+    }
+    if (!bookEntry.customer_id) {
+      toast.error('Müşteri bilgisi eksik. Lütfen müşteriyi yeniden seçin.')
       return
     }
     setBookSaving(true)
@@ -231,7 +274,6 @@ export default function WaitlistPage() {
         })
         if (hasConflict) {
           toast.error('Bu personelin seçilen saatte zaten randevusu var. Farklı saat veya personel seçin.')
-          setBookSaving(false)
           return
         }
       }
@@ -248,7 +290,19 @@ export default function WaitlistPage() {
         status: 'confirmed',
         source: 'manual',
       })
-      if (error) { toast.error(error.message); setBookSaving(false); return }
+      if (error) {
+        const raw = (error.message || '').toLowerCase()
+        let msg = error.message
+        if (raw.includes('customer_id') && raw.includes('null')) {
+          msg = 'Müşteri bilgisi eksik. Lütfen müşteriyi yeniden seçin.'
+        } else if (raw.includes('violates') && raw.includes('foreign key')) {
+          msg = 'Seçilen kayıt artık mevcut değil. Lütfen sayfayı yenileyin.'
+        } else if (raw.includes('duplicate') || raw.includes('unique')) {
+          msg = 'Bu randevu zaten kayıtlı.'
+        }
+        toast.error(msg)
+        return
+      }
       // Bekleme listesinden kaldır
       await fetch('/api/waitlist', {
         method: 'PATCH',
@@ -279,6 +333,32 @@ export default function WaitlistPage() {
       toast.success('Kayıt silindi')
       fetchEntries()
     }
+  }
+
+  const handleNotifyNext = async (entry: WaitlistEntry) => {
+    if (!entry.notified_for_appointment_id) {
+      toast.error('Bu kayıt için bağlı bir boşluk bulunamadı')
+      return
+    }
+    try {
+      const res = await fetch(`/api/appointments/${entry.notified_for_appointment_id}/fill-gap/next`, { method: 'POST' })
+      const json = await res.json()
+      if (res.ok) {
+        if (json.notified > 0) {
+          toast.success(json.autoBooked ? 'Sıradaki hastaya otomatik randevu açıldı' : 'Sıradaki hastaya bildirim gönderildi')
+        } else {
+          toast.message(json.message || 'Sırada eşleşen hasta kalmadı')
+        }
+        fetchEntries()
+      } else {
+        toast.error(json.error || 'İşlem başarısız')
+      }
+    } catch { toast.error('Bağlantı hatası') }
+  }
+
+  const formatDateShort = (iso: string) => {
+    const d = new Date(iso)
+    return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', weekday: 'short' })
   }
 
   const filtered = entries.filter(e => {
@@ -368,7 +448,7 @@ export default function WaitlistPage() {
         <AnimatedList className="space-y-3">
           {filtered.map(e => (
             <AnimatedItem key={e.id} className="card p-4 cursor-pointer hover:ring-1 hover:ring-pulse-500/40 transition-all" onClick={() => openBook(e)}>
-              <div className="flex items-center gap-4">
+              <div className="flex items-start gap-4">
                 <div className={cn(
                   'h-10 w-10 rounded-xl flex items-center justify-center text-sm font-bold flex-shrink-0',
                   e.is_notified
@@ -378,26 +458,54 @@ export default function WaitlistPage() {
                   {e.is_notified ? <CheckCircle className="h-5 w-5" /> : <Clock className="h-5 w-5" />}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-900 dark:text-white truncate">{e.customer_name}</p>
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-medium text-gray-900 dark:text-white truncate">{e.customer_name}</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
                       <Phone className="h-3 w-3" /> {e.customer_phone}
                     </p>
-                    {e.services?.name && (
-                      <p className="text-xs text-purple-600 dark:text-purple-400">{e.services.name}</p>
+                    {e.auto_book_on_match && (
+                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 flex items-center gap-1">
+                        <Zap className="h-3 w-3" /> Otomatik Randevu
+                      </span>
                     )}
-                    {e.preferred_date && (
-                      <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                        <Calendar className="h-3 w-3" /> {new Date(e.preferred_date).toLocaleDateString('tr-TR')}
-                        {e.preferred_time_start && ` ${e.preferred_time_start.substring(0, 5)}`}
+                  </div>
+                  {/* Tercih rozetleri */}
+                  <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                    {e.services?.name ? (
+                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300">
+                        {e.services.name}
+                      </span>
+                    ) : (
+                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">Hizmet: fark etmez</span>
+                    )}
+                    {e.preferred_date ? (
+                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 flex items-center gap-1">
+                        <Calendar className="h-3 w-3" /> {formatDateShort(e.preferred_date)}
+                      </span>
+                    ) : (
+                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">Tarih: fark etmez</span>
+                    )}
+                    {e.preferred_time_start ? (
+                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 flex items-center gap-1">
+                        <Clock className="h-3 w-3" /> {e.preferred_time_start.substring(0, 5)}
                         {e.preferred_time_end && `-${e.preferred_time_end.substring(0, 5)}`}
-                      </p>
+                      </span>
+                    ) : (
+                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">Saat: fark etmez</span>
+                    )}
+                    {e.staff_members?.name ? (
+                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300 flex items-center gap-1">
+                        <UserCircle2 className="h-3 w-3" /> {e.staff_members.name}
+                      </span>
+                    ) : (
+                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">Personel: fark etmez</span>
                     )}
                   </div>
                   {e.notes && <p className="text-xs text-gray-400 mt-1 truncate">{e.notes}</p>}
                 </div>
-                <div className="flex-shrink-0 flex items-center gap-2" onClick={ev => ev.stopPropagation()}>
-                  {e.is_notified && (
+                <div className="flex-shrink-0 flex items-center gap-2 self-center" onClick={ev => ev.stopPropagation()}>
+                  {e.is_notified && e.is_active && <CountdownBadge expiresAt={e.notification_expires_at} />}
+                  {e.is_notified && !e.is_active && (
                     <span className="text-xs px-2 py-0.5 rounded-full bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 flex items-center gap-1">
                       <Bell className="h-3 w-3" /> Bildirildi
                     </span>
@@ -408,6 +516,15 @@ export default function WaitlistPage() {
                     </span>
                   )}
                   <p className="text-[10px] text-gray-400">{new Date(e.created_at).toLocaleDateString('tr-TR')}</p>
+                  {e.is_active && e.is_notified && e.notified_for_appointment_id && (
+                    <button
+                      onClick={ev => { ev.stopPropagation(); handleNotifyNext(e) }}
+                      className="text-amber-600 hover:text-amber-700 transition-colors p-1"
+                      title="Sıradaki hastaya bildirim gönder"
+                    >
+                      <SkipForward className="h-4 w-4" />
+                    </button>
+                  )}
                   {e.is_active && (
                     <button
                       onClick={ev => { ev.stopPropagation(); openBook(e) }}
@@ -532,27 +649,41 @@ export default function WaitlistPage() {
                   <input className="input w-full" placeholder="05XX XXX XXXX" value={formPhone} onChange={e => setFormPhone(e.target.value)} disabled={!!formCustomerId} />
                 </div>
               </div>
-              <div>
-                <label className="label">Hizmet (opsiyonel)</label>
-                <CustomSelect
-                  options={services.map(s => ({ value: s.id, label: s.name }))}
-                  value={formServiceId}
-                  onChange={v => setFormServiceId(v)}
-                  placeholder="Hizmet seçin"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="label">Hizmet</label>
+                  <CustomSelect
+                    options={services.map(s => ({ value: s.id, label: s.name }))}
+                    value={formServiceId}
+                    onChange={v => setFormServiceId(v)}
+                    placeholder="Fark etmez"
+                  />
+                </div>
+                <div>
+                  <label className="label">Personel</label>
+                  <CustomSelect
+                    options={staffMembers.map(s => ({ value: s.id, label: s.name }))}
+                    value={formStaffId}
+                    onChange={v => setFormStaffId(v)}
+                    placeholder="Fark etmez"
+                  />
+                </div>
               </div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="label">Tercih Tarihi</label>
                   <input type="date" className="input w-full" value={formDate} onChange={e => setFormDate(e.target.value)} />
+                  <p className="text-[10px] text-gray-400 mt-1">Boş = fark etmez</p>
                 </div>
                 <div>
                   <label className="label">Başlangıç</label>
                   <input type="time" className="input w-full" value={formTimeStart} onChange={e => setFormTimeStart(e.target.value)} />
+                  <p className="text-[10px] text-gray-400 mt-1">Boş = fark etmez</p>
                 </div>
                 <div>
                   <label className="label">Bitiş</label>
                   <input type="time" className="input w-full" value={formTimeEnd} onChange={e => setFormTimeEnd(e.target.value)} />
+                  <p className="text-[10px] text-gray-400 mt-1">Boş = fark etmez</p>
                 </div>
               </div>
               <div>

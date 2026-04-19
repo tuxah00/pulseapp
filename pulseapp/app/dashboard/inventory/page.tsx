@@ -22,6 +22,7 @@ import { ToolbarPopover, SortPopoverContent } from '@/components/ui/toolbar-popo
 import { exportToCSV } from '@/lib/utils/export'
 import { Pagination } from '@/components/ui/pagination'
 import type { StockMovement, Supplier } from '@/types'
+import EmptyState from '@/components/ui/empty-state'
 
 interface Product {
   id: string
@@ -563,23 +564,25 @@ export default function StoklarPage() {
 
           {/* Ürün Listesi */}
           {products.length === 0 ? (
-            <div className="card flex flex-col items-center justify-center py-24 text-center">
-              <Package className="mb-4 h-16 w-16 text-gray-200 dark:text-gray-600" />
-              <h3 className="text-base font-semibold text-gray-700 dark:text-gray-300">Henüz ürün eklenmemiş</h3>
-              <p className="mt-1 mb-4 text-sm text-gray-400">Sağ üstteki butonu kullanarak ilk ürününüzü ekleyin.</p>
-              <button onClick={openNewModal} className="btn-primary"><Plus className="mr-2 h-4 w-4" />İlk Ürünü Ekle</button>
-            </div>
+            <EmptyState
+              icon={<Package className="h-7 w-7" />}
+              title="Henüz ürün eklenmemiş"
+              description="Sağ üstteki butonu kullanarak ilk ürününüzü ekleyin."
+              action={{
+                label: 'İlk Ürünü Ekle',
+                onClick: openNewModal,
+                icon: <Plus className="mr-2 h-4 w-4" />,
+              }}
+            />
           ) : filteredProducts.length === 0 ? (
-            <div className="card flex flex-col items-center justify-center py-16 text-center">
-              <Package className="mb-4 h-12 w-12 text-gray-300" />
-              <p className="text-gray-500">Filtreye uyan ürün bulunamadı</p>
-              <button
-                onClick={() => { setStockFilter(null); setCategoryFilter(''); setSearch('') }}
-                className="mt-3 btn-secondary text-sm"
-              >
-                Filtreleri Temizle
-              </button>
-            </div>
+            <EmptyState
+              icon={<Package className="h-7 w-7" />}
+              title="Filtreye uyan ürün bulunamadı"
+              action={{
+                label: 'Filtreleri Temizle',
+                onClick: () => { setStockFilter(null); setCategoryFilter(''); setSearch('') },
+              }}
+            />
           ) : (
             <div key={viewMode} className="view-transition">
             {viewMode === 'list' ? (
@@ -647,12 +650,16 @@ export default function StoklarPage() {
           {suppliersLoading ? (
             <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-pulse-900" /></div>
           ) : suppliers.length === 0 ? (
-            <div className="card flex flex-col items-center justify-center py-24 text-center">
-              <Truck className="mb-4 h-16 w-16 text-gray-200 dark:text-gray-600" />
-              <h3 className="text-base font-semibold text-gray-700 dark:text-gray-300">Henüz tedarikçi eklenmemiş</h3>
-              <p className="mt-1 mb-4 text-sm text-gray-400">Ürün tedarikçilerinizi buraya ekleyebilirsiniz.</p>
-              <button onClick={openNewSupplierModal} className="btn-primary"><Plus className="mr-2 h-4 w-4" />İlk Tedarikçiyi Ekle</button>
-            </div>
+            <EmptyState
+              icon={<Truck className="h-7 w-7" />}
+              title="Henüz tedarikçi eklenmemiş"
+              description="Ürün tedarikçilerinizi buraya ekleyebilirsiniz."
+              action={{
+                label: 'İlk Tedarikçiyi Ekle',
+                onClick: openNewSupplierModal,
+                icon: <Plus className="mr-2 h-4 w-4" />,
+              }}
+            />
           ) : (
             <div className="space-y-3">
               {suppliers.map((supplier) => (

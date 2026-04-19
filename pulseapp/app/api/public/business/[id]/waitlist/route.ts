@@ -45,6 +45,32 @@ export async function POST(
     .eq('is_active', true)
     .limit(1)
 
+  // Mevcut müşteri yoksa misafir olarak kaydı aç — auto_book_on_match ve fill-gap
+  // akışları customer_id gerektiriyor.
+  let customerId = existingCustomers?.[0]?.id || null
+  if (!customerId) {
+    const { data: newCustomer, error: customerError } = await supabase
+      .from('customers')
+      .insert({
+        business_id: params.id,
+        name: customerName,
+        phone: normalizedPhone,
+        segment: 'new',
+        total_visits: 0,
+        total_revenue: 0,
+        total_no_shows: 0,
+        is_active: true,
+      })
+      .select('id')
+      .single()
+
+    if (customerError || !newCustomer) {
+      console.error('Misafir müşteri oluşturulamadı:', customerError)
+      return NextResponse.json({ error: 'Kayıt oluşturulamadı' }, { status: 500 })
+    }
+    customerId = newCustomer.id
+  }
+
   // HH:MM formatını HH:MM:00'a normalize et
   const normalizedTime = preferredTime
     ? (preferredTime.length === 5 ? `${preferredTime}:00` : preferredTime)
@@ -54,7 +80,7 @@ export async function POST(
     .from('waitlist_entries')
     .insert({
       business_id: params.id,
-      customer_id: existingCustomers?.[0]?.id || null,
+      customer_id: customerId,
       customer_name: customerName,
       customer_phone: normalizedPhone,
       service_id: serviceId || null,

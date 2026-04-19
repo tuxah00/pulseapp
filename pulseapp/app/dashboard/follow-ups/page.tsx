@@ -20,7 +20,7 @@ interface FollowUp {
   appointment_id: string | null
   customer_id: string
   protocol_id: string | null
-  type: 'post_session' | 'next_session_reminder' | 'protocol_completion'
+  type: 'post_session' | 'next_session_reminder' | 'protocol_completion' | 'package_sold' | 'manual'
   scheduled_for: string
   status: 'pending' | 'sent' | 'cancelled'
   message: string | null
@@ -31,7 +31,9 @@ interface FollowUp {
 const TYPE_LABELS: Record<string, string> = {
   post_session: 'Seans Sonrası',
   next_session_reminder: 'Sonraki Seans Hatırlatma',
-  protocol_completion: 'Protokol Tamamlama',
+  protocol_completion: 'Protokol Tamamlandı',
+  package_sold: 'Paket Satıldı',
+  manual: 'Özel Takip',
 }
 
 const STATUS_LABELS: Record<string, string> = {

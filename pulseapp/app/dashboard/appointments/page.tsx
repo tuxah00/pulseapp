@@ -47,6 +47,7 @@ import { ToolbarPopover, SortPopoverContent, FilterPopoverList } from '@/compone
 import { CustomSelect } from '@/components/ui/custom-select'
 import { CustomerSearchSelect } from '@/components/ui/customer-search-select'
 import { Portal } from '@/components/ui/portal'
+import EmptyState from '@/components/ui/empty-state'
 
 const UNRESOLVED_BORDER = 'opacity-50 !border-l-[3px] !border-l-red-500'
 const UNRESOLVED_BORDER_ONLY = '!border-l-[3px] !border-l-red-500'
@@ -2412,13 +2413,15 @@ export default function AppointmentsPage() {
       )}
 
       {!loading && viewMode !== 'week' && viewMode !== 'month' && viewMode !== 'staff' && viewMode !== 'room' ? (filteredAppointments.length === 0 ? (
-        <div className="card flex flex-col items-center justify-center py-16">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 dark:bg-gray-800 mb-4">
-            <Calendar className="h-7 w-7 text-gray-300 dark:text-gray-600" />
-          </div>
-          <p className="mb-1 font-medium text-gray-500 dark:text-gray-400">{search || statusFilter ? 'Filtreye uygun randevu bulunamadı' : 'Bu tarihte randevu yok'}</p>
-          {!search && !statusFilter && <button onClick={() => openNewModal()} className="btn-primary mt-4"><Plus className="mr-2 h-4 w-4" />Randevu Ekle</button>}
-        </div>
+        <EmptyState
+          icon={<Calendar className="h-7 w-7" />}
+          title={search || statusFilter ? 'Filtreye uygun randevu bulunamadı' : 'Bu tarihte randevu yok'}
+          action={!search && !statusFilter ? {
+            label: 'Randevu Ekle',
+            onClick: () => openNewModal(),
+            icon: <Plus className="mr-2 h-4 w-4" />,
+          } : undefined}
+        />
       ) : (
         <div key={viewMode} className="view-transition">
         {viewMode === 'list' ? (

@@ -15,7 +15,7 @@ import {
 } from '@/lib/ai/strategic-context'
 import type { TutorialTopic } from '@/lib/ai/tutorial-content'
 
-export const DEFAULT_TONE: AIAssistantTone = 'samimi'
+export const DEFAULT_TONE: AIAssistantTone = 'kisa'
 export const CUSTOM_INSTRUCTIONS_MAX = 1000
 
 const TONE_INSTRUCTIONS: Record<NonNullable<AIPreferences['tone']>, string> = {
