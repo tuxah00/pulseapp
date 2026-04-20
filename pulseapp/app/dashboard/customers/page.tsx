@@ -1205,7 +1205,7 @@ export default function CustomersPage() {
                   )}
 
                   <div className="border-t border-gray-200 dark:border-gray-700 pt-4 flex gap-2">
-                    <button onClick={() => { openEditModal(selectedCustomer); setSelectedCustomer(null) }} className="btn-secondary flex-1 text-sm">
+                    <button onClick={() => openEditModal(selectedCustomer)} className="btn-secondary flex-1 text-sm">
                       <Pencil className="mr-1.5 h-3.5 w-3.5" />Düzenle
                     </button>
                     <button onClick={() => handleDelete(selectedCustomer)} className="btn-danger flex-1 text-sm">
@@ -1264,7 +1264,7 @@ export default function CustomersPage() {
       {/* Modal */}
       {(showModal || isClosingModal) && (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
+        <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
           <div className={`modal-content card w-full max-w-md dark:bg-gray-900 ${isClosingModal ? 'closing' : ''}`}>
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
               {editingCustomer ? `${singularLabel} Düzenle` : `Yeni ${singularLabel} Ekle`}
