@@ -391,7 +391,8 @@ function RecordsPageInner() {
   const closeRecord = () => setIsClosingRecord(true)
   const [editingRecord, setEditingRecord] = useState<BusinessRecord | null>(null)
   const [selectedRecord, setSelectedRecord] = useState<BusinessRecord | null>(null)
-  // Detay modalından Düzenle tıklanınca saklanan kayıt; edit kapanınca detayı yeniden açar
+  // Edit, detay modalı açıkken tetiklendi mi? (backdrop gizlemek için)
+  const [editingFromDetail, setEditingFromDetail] = useState(false)
   const pendingDetailRecordRef = useRef<BusinessRecord | null>(null)
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
@@ -537,10 +538,10 @@ function RecordsPageInner() {
     setShowModal(true)
   }
 
-  // Detay modalından Düzenle: detay kapanır → edit açılır → edit kapanınca detay geri gelir
+  // Detay modalından Düzenle: detay KAPANMAZ, edit üstünde backdrop'sız açılır
   function openEditModalFromDetail(record: BusinessRecord) {
     pendingDetailRecordRef.current = record
-    closeRecord()
+    setEditingFromDetail(true)
     openEditModal(record)
   }
 
@@ -1397,7 +1398,7 @@ function RecordsPageInner() {
       {/* ── Create / Edit Modal ── */}
       {(showModal || isClosingModal) && (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false); if (pendingDetailRecordRef.current) { setSelectedRecord(pendingDetailRecordRef.current); pendingDetailRecordRef.current = null } } }}>
+        <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center p-4 ${editingFromDetail ? '' : 'bg-black/60 dark:bg-black/70'} ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false); setEditingFromDetail(false); if (pendingDetailRecordRef.current) { setSelectedRecord(pendingDetailRecordRef.current); pendingDetailRecordRef.current = null } } }}>
           <div className={`modal-content card w-full max-w-lg max-h-[90vh] overflow-y-auto ${isClosingModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
