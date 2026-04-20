@@ -155,10 +155,10 @@ export default function ReviewsPage() {
   }, [businessId])
 
   useEffect(() => {
-    if (!ctxLoading && tab === 'feedback' && !fbLoaded && !fbLoading) {
+    if (!ctxLoading && !fbLoaded && !fbLoading) {
       fetchFeedback()
     }
-  }, [ctxLoading, tab, fbLoaded, fbLoading, fetchFeedback])
+  }, [ctxLoading, fbLoaded, fbLoading, fetchFeedback])
 
   // İstatistikler
   const totalReviews = reviews.length

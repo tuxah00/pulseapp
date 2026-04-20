@@ -70,5 +70,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Geri bildirim kaydedilemedi' }, { status: 500 })
   }
 
+  const TYPE_LABELS: Record<string, string> = {
+    suggestion: 'Öneri', complaint: 'Şikayet', praise: 'Teşekkür', question: 'Soru',
+  }
+  try {
+    await admin.from('notifications').insert({
+      business_id: businessId,
+      type: 'feedback',
+      title: 'Yeni Geri Bildirim',
+      body: `${customer?.name || 'Müşteri'} — ${TYPE_LABELS[body.type] ?? body.type}${subject ? `: ${subject.slice(0, 60)}` : ''}`,
+      related_id: created.id,
+      related_type: 'feedback',
+      is_read: false,
+    })
+  } catch { /* bildirim hatası feedback kaydını etkilemez */ }
+
   return NextResponse.json({ feedback: created })
 }
