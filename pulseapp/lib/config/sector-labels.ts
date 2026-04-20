@@ -287,6 +287,89 @@ export function getAllergiesPlaceholder(sector: SectorKey): string {
 }
 
 /**
+ * Üyelik Plan Adı alanı için sektöre özgü placeholder.
+ */
+export function getMembershipPlanPlaceholder(sector: SectorKey): string {
+  switch (sector) {
+    case 'dental_clinic':
+      return 'örn. Yıllık Diş Bakım Aboneliği'
+    case 'medical_aesthetic':
+      return 'örn. Aylık Cilt Bakım Paketi'
+    case 'physiotherapy':
+      return 'örn. 10 Seans Fizyoterapi Paketi'
+    case 'psychologist':
+      return 'örn. Aylık Terapi Paketi'
+    case 'fitness':
+      return 'örn. Aylık Fitness Üyeliği'
+    case 'yoga_pilates':
+      return 'örn. 3 Aylık Pilates Üyeliği'
+    case 'spa_massage':
+      return 'örn. Aylık SPA Üyeliği'
+    case 'hair_salon':
+    case 'barber':
+      return 'örn. Aylık Bakım Paketi'
+    case 'beauty_salon':
+      return 'örn. Aylık Güzellik Paketi'
+    case 'veterinary':
+      return 'örn. Yıllık Sağlık Paketi'
+    case 'dietitian':
+      return 'örn. 3 Aylık Danışmanlık Paketi'
+    default:
+      return 'örn. Aylık Üyelik Paketi'
+  }
+}
+
+/**
+ * Stok ürün adı alanı için sektöre özgü placeholder.
+ */
+export function getInventoryItemPlaceholder(sector: SectorKey): string {
+  switch (sector) {
+    case 'hair_salon':
+    case 'barber':
+      return 'örn. Saç Boyası No.5'
+    case 'beauty_salon':
+    case 'nail_salon':
+      return 'örn. Kalıcı Oje — Kırmızı'
+    case 'spa_massage':
+      return 'örn. Lavanta Masaj Yağı'
+    case 'dental_clinic':
+      return 'örn. Ağız Bakım Jeli'
+    case 'medical_aesthetic':
+      return 'örn. Hyalüronik Asit Serum'
+    case 'physiotherapy':
+      return 'örn. Kinesio Bant'
+    case 'veterinary':
+      return 'örn. Antiparaziter İlaç'
+    case 'auto_service':
+    case 'car_wash':
+      return 'örn. Motor Yağı 5W-30'
+    case 'tattoo_piercing':
+      return 'örn. Dövme Boyası — Siyah'
+    default:
+      return 'Ürün adı'
+  }
+}
+
+/**
+ * Stok ürün kategorisi alanı için sektöre özgü placeholder.
+ */
+export function getInventoryCategoryPlaceholder(sector: SectorKey): string {
+  switch (sector) {
+    case 'hair_salon':
+    case 'barber':
+      return 'örn. Boya, Şampuan, Jel'
+    case 'dental_clinic':
+    case 'medical_aesthetic':
+      return 'örn. Serum, İlaç, Sarf'
+    case 'auto_service':
+    case 'car_wash':
+      return 'örn. Yağ, Filtre, Lastik'
+    default:
+      return 'Kategori'
+  }
+}
+
+/**
  * Tedavi / protokol notları için sektöre özgü placeholder.
  */
 export function getTreatmentNotesPlaceholder(sector: SectorKey): string {
