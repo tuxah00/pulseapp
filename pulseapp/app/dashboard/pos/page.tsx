@@ -555,31 +555,31 @@ export default function KasaPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
 
         {/* ── SOL: Ürün/Hizmet Seçici ── */}
-        <div className="lg:col-span-3 card p-4 space-y-3">
-          <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 overflow-x-auto scrollbar-thin">
+        <div className="lg:col-span-4 card p-4 space-y-3">
+          <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
             <button
               onClick={() => setItemTab('services')}
-              className={cn('flex-shrink-0 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap',
+              className={cn('flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-sm font-medium transition-colors',
                 itemTab === 'services' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
               )}
             >
-              <Scissors className="h-3.5 w-3.5" /> Hizmetler
+              <Scissors className="h-3.5 w-3.5 shrink-0" /> Hizmetler
             </button>
             <button
               onClick={() => setItemTab('products')}
-              className={cn('flex-shrink-0 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap',
+              className={cn('flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-sm font-medium transition-colors',
                 itemTab === 'products' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 hover:text-gray-700'
               )}
             >
-              <Package className="h-3.5 w-3.5" /> Ürünler
+              <Package className="h-3.5 w-3.5 shrink-0" /> Ürünler
             </button>
             <button
               onClick={() => setItemTab('packages')}
-              className={cn('flex-shrink-0 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap',
+              className={cn('flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-sm font-medium transition-colors',
                 itemTab === 'packages' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 hover:text-gray-700'
               )}
             >
-              <Gift className="h-3.5 w-3.5" /> Paketler
+              <Gift className="h-3.5 w-3.5 shrink-0" /> Paketler
             </button>
           </div>
 
@@ -674,7 +674,7 @@ export default function KasaPage() {
         </div>
 
         {/* ── ORTA: Adisyon ── */}
-        <div className="lg:col-span-5 card p-4 space-y-4">
+        <div className="lg:col-span-4 card p-4 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
               <ShoppingBag className="h-5 w-5" /> Adisyon
