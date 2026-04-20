@@ -41,6 +41,7 @@ import EmptyState from '@/components/ui/empty-state'
 
 import { useRouter, useSearchParams } from 'next/navigation'
 import { getCustomerLabel, getCustomerLabelSingular } from '@/lib/config/sector-modules'
+import { getCustomerNotesPlaceholder } from '@/lib/config/sector-labels'
 import dynamic from 'next/dynamic'
 const ToothChart = dynamic(() => import('@/components/dashboard/tooth-chart'), {
   loading: () => <div className="h-40 w-full animate-pulse bg-gray-100 dark:bg-gray-800 rounded-lg" />
@@ -1298,7 +1299,7 @@ export default function CustomersPage() {
               </div>
               <div>
                 <label htmlFor="custNotes" className="label">Notlar (opsiyonel)</label>
-                <textarea id="custNotes" {...register('notes')} className="input" rows={3} placeholder="Tercihler, alerjiler, vb." />
+                <textarea id="custNotes" {...register('notes')} className="input" rows={3} placeholder={getCustomerNotesPlaceholder(sector)} />
                 {errors.notes && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.notes.message}</p>}
               </div>
               <div>
