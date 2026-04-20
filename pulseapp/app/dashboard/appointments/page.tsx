@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
+import { getAppointmentNotesPlaceholder } from '@/lib/config/sector-labels'
 import {
   Plus,
   Loader2,
@@ -2788,7 +2789,7 @@ export default function AppointmentsPage() {
               })()}
               <div>
                 <label className="label">Not (opsiyonel)</label>
-                <input type="text" value={notes} onChange={(e) => setNotes(e.target.value)} className="input" placeholder="Ek bilgi..." />
+                <input type="text" value={notes} onChange={(e) => setNotes(e.target.value)} className="input" placeholder={getAppointmentNotesPlaceholder(sector)} />
               </div>
 
               {/* Tekrarlayan Randevu */}

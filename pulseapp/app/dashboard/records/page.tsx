@@ -17,6 +17,7 @@ import { createClient } from '@/lib/supabase/client'
 import { logAudit } from '@/lib/utils/audit'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { requirePermission, requireSectorModule } from '@/lib/hooks/use-require-permission'
+import { getRecordDescriptionPlaceholder } from '@/lib/config/sector-labels'
 import type { Customer } from '@/types'
 import CompactBoxCard from '@/components/ui/compact-box-card'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
@@ -1367,7 +1368,7 @@ function RecordsPageInner() {
                 <textarea
                   className="input text-sm w-full resize-none"
                   rows={3}
-                  placeholder="Dosya açıklaması..."
+                  placeholder={getRecordDescriptionPlaceholder(sector)}
                   value={fileDescPopup.value}
                   onChange={e => setFileDescPopup({ ...fileDescPopup, value: e.target.value })}
                   onKeyDown={e => { if (e.key === 'Escape') setFileDescPopup(null) }}
