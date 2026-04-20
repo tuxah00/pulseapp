@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { logAudit } from '@/lib/utils/audit'
 import type { WorkingHours, ShiftDefinition } from '@/types'
 import { cn } from '@/lib/utils'
-import { ChevronLeft, ChevronRight, Plus, Trash2, Zap, Loader2, X, Save, Clock, CalendarDays, Download, Share2, RotateCcw, ImageIcon } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Trash2, Zap, Loader2, X, Save, Clock, CalendarDays, Download, Share2, RotateCcw, ImageIcon, ClipboardList, CheckCircle, XCircle, MessageSquare } from 'lucide-react'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { Portal } from '@/components/ui/portal'
 
@@ -78,8 +78,36 @@ interface Shift {
   notes: string | null
 }
 
+// ── Shift Request Types ────────────────────────────────────────────────────────
+interface ShiftRequest {
+  id: string
+  staff_id: string
+  staff_name: string
+  requested_date: string
+  requested_start: string | null
+  requested_end: string | null
+  shift_type: 'regular' | 'off' | 'part_time'
+  notes: string | null
+  status: 'pending' | 'approved' | 'rejected'
+  review_note: string | null
+  created_at: string
+}
+
+const SHIFT_TYPE_LABELS: Record<string, string> = {
+  regular: 'Normal Vardiya',
+  off: 'İzin / Kapalı',
+  part_time: 'Yarı Zamanlı',
+}
+
+const REQUEST_STATUS_CONFIG: Record<string, { bg: string; text: string; label: string }> = {
+  pending:  { bg: 'bg-yellow-50 dark:bg-yellow-900/20', text: 'text-yellow-700 dark:text-yellow-400', label: 'Bekliyor' },
+  approved: { bg: 'bg-green-50 dark:bg-green-900/20',  text: 'text-green-700 dark:text-green-400',  label: 'Onaylandı' },
+  rejected: { bg: 'bg-red-50 dark:bg-red-900/20',      text: 'text-red-700 dark:text-red-400',      label: 'Reddedildi' },
+}
+
 export default function VardiyePage() {
-  const { businessId, staffId: currentStaffId, staffName: currentStaffName, loading: ctxLoading, permissions } = useBusinessContext()
+  const { businessId, staffId: currentStaffId, staffName: currentStaffName, staffRole, loading: ctxLoading, permissions } = useBusinessContext()
+  const isManager = staffRole === 'owner' || staffRole === 'manager'
   const supabase = createClient()
 
   const [weekOffset, setWeekOffset] = useState(0)
@@ -102,7 +130,26 @@ export default function VardiyePage() {
   const [workingHours, setWorkingHours] = useState<WorkingHours | null>(null)
 
   // Tab
-  const [activeTab, setActiveTab] = useState<'shifts' | 'hours'>('shifts')
+  const [activeTab, setActiveTab] = useState<'shifts' | 'hours' | 'requests'>('shifts')
+
+  // Shift requests
+  const [requests, setRequests] = useState<ShiftRequest[]>([])
+  const [requestsLoading, setRequestsLoading] = useState(false)
+  const [pendingRequestCount, setPendingRequestCount] = useState(0)
+  // Talep oluşturma modal
+  const [showRequestModal, setShowRequestModal] = useState(false)
+  const [isClosingRequestModal, setIsClosingRequestModal] = useState(false)
+  const [reqDate, setReqDate] = useState('')
+  const [reqStart, setReqStart] = useState('09:00')
+  const [reqEnd, setReqEnd] = useState('18:00')
+  const [reqType, setReqType] = useState<'regular' | 'off' | 'part_time'>('regular')
+  const [reqNotes, setReqNotes] = useState('')
+  const [reqSaving, setReqSaving] = useState(false)
+  // Review modal
+  const [reviewTarget, setReviewTarget] = useState<ShiftRequest | null>(null)
+  const [isClosingReviewModal, setIsClosingReviewModal] = useState(false)
+  const [reviewNote, setReviewNote] = useState('')
+  const [reviewSaving, setReviewSaving] = useState(false)
 
   // Mesai tanımları (shift definitions)
   const [shiftDefs, setShiftDefs] = useState<ShiftDefinition[]>([])
@@ -333,6 +380,76 @@ export default function VardiyePage() {
     })
   }
 
+  // ── Shift Request Handlers ────────────────────────────────────────────────────
+  const fetchRequests = useCallback(async () => {
+    if (!businessId) return
+    setRequestsLoading(true)
+    try {
+      let query = supabase
+        .from('shift_requests')
+        .select('*')
+        .eq('business_id', businessId)
+        .order('created_at', { ascending: false })
+      if (!isManager && currentStaffId) {
+        query = query.eq('staff_id', currentStaffId)
+      }
+      const { data } = await query
+      setRequests((data as ShiftRequest[]) || [])
+      setPendingRequestCount((data || []).filter((r: ShiftRequest) => r.status === 'pending').length)
+    } catch { /* ignore */ } finally { setRequestsLoading(false) }
+  }, [businessId, isManager, currentStaffId])
+
+  useEffect(() => { if (activeTab === 'requests') fetchRequests() }, [activeTab, fetchRequests])
+
+  async function handleSubmitRequest() {
+    if (!businessId || !currentStaffId || !currentStaffName || !reqDate) return
+    setReqSaving(true)
+    try {
+      const { error } = await supabase.from('shift_requests').insert({
+        business_id: businessId, staff_id: currentStaffId, staff_name: currentStaffName,
+        requested_date: reqDate,
+        requested_start: reqType === 'off' ? null : reqStart,
+        requested_end:   reqType === 'off' ? null : reqEnd,
+        shift_type: reqType, notes: reqNotes || null,
+      })
+      if (error) throw error
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Talep gönderildi' } }))
+      setIsClosingRequestModal(true)
+      setReqDate(''); setReqStart('09:00'); setReqEnd('18:00'); setReqType('regular'); setReqNotes('')
+      fetchRequests()
+    } catch (err: unknown) {
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Talep gönderilemedi', body: err instanceof Error ? err.message : 'Hata' } }))
+    } finally { setReqSaving(false) }
+  }
+
+  async function handleReview(req: ShiftRequest, decision: 'approved' | 'rejected') {
+    if (!businessId || !currentStaffId) return
+    setReviewSaving(true)
+    try {
+      const { error } = await supabase.from('shift_requests').update({
+        status: decision, reviewed_by: currentStaffId,
+        reviewed_at: new Date().toISOString(), review_note: reviewNote || null,
+      }).eq('id', req.id)
+      if (error) throw error
+
+      if (decision === 'approved') {
+        await supabase.from('shifts').upsert({
+          business_id: businessId, staff_id: req.staff_id, shift_date: req.requested_date,
+          start_time: req.requested_start, end_time: req.requested_end,
+          shift_type: req.shift_type, notes: req.notes,
+        }, { onConflict: 'business_id,staff_id,shift_date' })
+      }
+
+      window.dispatchEvent(new CustomEvent('pulse-toast', {
+        detail: { type: 'success', title: decision === 'approved' ? 'Talep onaylandı — vardiya oluşturuldu' : 'Talep reddedildi' }
+      }))
+      setIsClosingReviewModal(true); setReviewNote(''); fetchRequests()
+    } catch (err: unknown) {
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'İşlem başarısız', body: err instanceof Error ? err.message : 'Hata' } }))
+    } finally { setReviewSaving(false) }
+  }
+  // ─────────────────────────────────────────────────────────────────────────────
+
   async function handleSaveHours(e: React.FormEvent) {
     e.preventDefault()
     if (!businessId) return
@@ -437,6 +554,22 @@ export default function VardiyePage() {
         >
           <CalendarDays className="h-4 w-4" />
           Vardiya Yönetimi
+        </button>
+        <button
+          onClick={() => setActiveTab('requests')}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
+            activeTab === 'requests'
+              ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+              : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+          }`}
+        >
+          <ClipboardList className="h-4 w-4" />
+          Talepler
+          {pendingRequestCount > 0 && (
+            <span className="ml-1 flex h-4 w-4 items-center justify-center rounded-full bg-yellow-500 text-[10px] font-bold text-white">
+              {pendingRequestCount > 9 ? '9+' : pendingRequestCount}
+            </span>
+          )}
         </button>
         <button
           onClick={() => setActiveTab('hours')}
@@ -930,6 +1063,189 @@ export default function VardiyePage() {
         )
       })()}
       </>)}
+
+      {/* ── Talepler Sekmesi ── */}
+      {activeTab === 'requests' && (
+        <div className="space-y-4">
+          {/* Başlık + Yeni Talep */}
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {isManager ? 'Personelin gönderdiği vardiya talepleri' : 'Kendi vardiya talepleriniz'}
+            </p>
+            <button
+              onClick={() => setShowRequestModal(true)}
+              className="btn-primary flex items-center gap-2 text-sm"
+            >
+              <Plus className="h-4 w-4" /> Talep Oluştur
+            </button>
+          </div>
+
+          {requestsLoading ? (
+            <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
+          ) : requests.length === 0 ? (
+            <div className="card p-8 text-center">
+              <ClipboardList className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+              <p className="text-gray-500 dark:text-gray-400">Henüz vardiya talebi yok</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {requests.map(req => {
+                const sc = REQUEST_STATUS_CONFIG[req.status]
+                return (
+                  <div key={req.id} className="card p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-medium text-gray-900 dark:text-white text-sm">{req.staff_name}</p>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${sc.bg} ${sc.text}`}>{sc.label}</span>
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                          {SHIFT_TYPE_LABELS[req.shift_type]}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-600 dark:text-gray-300 mt-0.5">
+                        {new Date(req.requested_date).toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                        {req.requested_start && req.requested_end && (
+                          <span className="text-gray-400"> · {req.requested_start.slice(0,5)}–{req.requested_end.slice(0,5)}</span>
+                        )}
+                      </p>
+                      {req.notes && (
+                        <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
+                          <MessageSquare className="h-3 w-3" /> {req.notes}
+                        </p>
+                      )}
+                      {req.review_note && (
+                        <p className="text-xs text-gray-400 mt-0.5 italic">Yanıt: {req.review_note}</p>
+                      )}
+                    </div>
+                    {isManager && req.status === 'pending' && (
+                      <div className="flex gap-2 flex-shrink-0">
+                        <button
+                          onClick={() => { setReviewTarget(req); setReviewNote('') }}
+                          className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40 transition-colors"
+                        >
+                          <CheckCircle className="h-3.5 w-3.5" /> İncele
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Talep Oluştur Modal ── */}
+      {(showRequestModal || isClosingRequestModal) && (
+        <Portal>
+          <div
+            className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 ${isClosingRequestModal ? 'closing' : ''}`}
+            onClick={() => setIsClosingRequestModal(true)}
+            onAnimationEnd={() => { if (isClosingRequestModal) { setShowRequestModal(false); setIsClosingRequestModal(false) } }}
+          >
+            <div className={`modal-content card w-full max-w-md dark:bg-gray-900 ${isClosingRequestModal ? 'closing' : ''}`} onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base font-semibold text-gray-900 dark:text-white">Vardiya Talebi Oluştur</h3>
+                <button onClick={() => setIsClosingRequestModal(true)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="label label-required">Tarih</label>
+                  <input type="date" className="input w-full" value={reqDate} onChange={e => setReqDate(e.target.value)} min={formatDate(new Date())} />
+                </div>
+                <div>
+                  <label className="label label-required">Vardiya Tipi</label>
+                  <CustomSelect
+                    options={Object.entries(SHIFT_TYPE_LABELS).map(([k, v]) => ({ value: k, label: v }))}
+                    value={reqType}
+                    onChange={v => setReqType(v as 'regular' | 'off' | 'part_time')}
+                    placeholder="Tip seçin"
+                  />
+                </div>
+                {reqType !== 'off' && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="label">Başlangıç</label>
+                      <CustomSelect options={TIME_OPTIONS.map(t => ({ value: t, label: t }))} value={reqStart} onChange={setReqStart} />
+                    </div>
+                    <div>
+                      <label className="label">Bitiş</label>
+                      <CustomSelect options={TIME_OPTIONS.map(t => ({ value: t, label: t }))} value={reqEnd} onChange={setReqEnd} />
+                    </div>
+                  </div>
+                )}
+                <div>
+                  <label className="label">Not (opsiyonel)</label>
+                  <textarea className="input w-full" rows={2} placeholder="Talep sebebi veya ek bilgi..." value={reqNotes} onChange={e => setReqNotes(e.target.value)} />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 mt-4">
+                <button onClick={() => setIsClosingRequestModal(true)} className="btn-secondary">İptal</button>
+                <button onClick={handleSubmitRequest} disabled={reqSaving || !reqDate} className="btn-primary disabled:opacity-50 flex items-center gap-1.5">
+                  {reqSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                  Gönder
+                </button>
+              </div>
+            </div>
+          </div>
+        </Portal>
+      )}
+
+      {/* ── İnceleme Modal (Yönetici) ── */}
+      {(reviewTarget || isClosingReviewModal) && (
+        <Portal>
+          <div
+            className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 ${isClosingReviewModal ? 'closing' : ''}`}
+            onClick={() => setIsClosingReviewModal(true)}
+            onAnimationEnd={() => { if (isClosingReviewModal) { setReviewTarget(null); setIsClosingReviewModal(false) } }}
+          >
+            <div className={`modal-content card w-full max-w-md dark:bg-gray-900 ${isClosingReviewModal ? 'closing' : ''}`} onClick={e => e.stopPropagation()}>
+              {reviewTarget && (
+                <>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-base font-semibold text-gray-900 dark:text-white">Talebi İncele</h3>
+                    <button onClick={() => setIsClosingReviewModal(true)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <div className="space-y-3 mb-4">
+                    <div className="rounded-lg bg-gray-50 dark:bg-gray-800 p-3 text-sm space-y-1">
+                      <p><span className="text-gray-500">Personel:</span> <span className="font-medium text-gray-900 dark:text-white">{reviewTarget.staff_name}</span></p>
+                      <p><span className="text-gray-500">Tarih:</span> {new Date(reviewTarget.requested_date).toLocaleDateString('tr-TR', { weekday:'long', day:'numeric', month:'long' })}</p>
+                      <p><span className="text-gray-500">Tip:</span> {SHIFT_TYPE_LABELS[reviewTarget.shift_type]}</p>
+                      {reviewTarget.requested_start && <p><span className="text-gray-500">Saat:</span> {reviewTarget.requested_start.slice(0,5)}–{reviewTarget.requested_end?.slice(0,5)}</p>}
+                      {reviewTarget.notes && <p><span className="text-gray-500">Not:</span> {reviewTarget.notes}</p>}
+                    </div>
+                    <div>
+                      <label className="label">Yanıt notu (opsiyonel)</label>
+                      <textarea className="input w-full" rows={2} placeholder="Onay/red sebebi..." value={reviewNote} onChange={e => setReviewNote(e.target.value)} />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => setIsClosingReviewModal(true)} className="btn-secondary flex-1">Kapat</button>
+                    <button
+                      onClick={() => handleReview(reviewTarget, 'rejected')}
+                      disabled={reviewSaving}
+                      className="flex-1 flex items-center justify-center gap-1.5 text-sm px-3 py-2 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors disabled:opacity-50"
+                    >
+                      <XCircle className="h-4 w-4" /> Reddet
+                    </button>
+                    <button
+                      onClick={() => handleReview(reviewTarget, 'approved')}
+                      disabled={reviewSaving}
+                      className="flex-1 flex items-center justify-center gap-1.5 btn-primary disabled:opacity-50"
+                    >
+                      {reviewSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+                      Onayla
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </Portal>
+      )}
 
       {activeTab === 'hours' && (
         <form onSubmit={handleSaveHours}>
