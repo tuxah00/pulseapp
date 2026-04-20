@@ -27,32 +27,30 @@ export const customerCreateSchema = z.object({
     .min(2, MSG.TOO_SHORT(2))
     .max(100, MSG.TOO_LONG(100)),
   phone: phoneField,
-  email: z
-    .string()
-    .trim()
-    .email(MSG.INVALID_EMAIL)
-    .optional()
-    .or(z.literal('').transform(() => undefined)),
-  notes: z
-    .string()
-    .trim()
-    .max(500, MSG.TOO_LONG(500))
-    .optional()
-    .or(z.literal('').transform(() => undefined)),
-  birthday: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Geçersiz tarih formatı')
-    .refine((d) => {
-      const minAge = new Date()
-      minAge.setFullYear(minAge.getFullYear() - 2)
-      return d <= minAge.toISOString().slice(0, 10)
-    }, { message: 'Lütfen geçerli bir doğum tarihi girin. Müşteri en az 2 yaşında olmalı.' })
-    .refine((d) => {
-      const year = parseInt(d.slice(0, 4), 10)
-      return year >= 1900 && year <= new Date().getFullYear()
-    }, { message: 'Geçersiz doğum yılı' })
-    .optional()
-    .or(z.literal('').transform(() => undefined)),
+  email: z.preprocess(
+    (val) => (val === '' || val == null ? undefined : val),
+    z.string().trim().email(MSG.INVALID_EMAIL).optional()
+  ),
+  notes: z.preprocess(
+    (val) => (val === '' || val == null ? undefined : val),
+    z.string().trim().max(500, MSG.TOO_LONG(500)).optional()
+  ),
+  birthday: z.preprocess(
+    (val) => (val === '' || val == null ? undefined : val),
+    z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, 'Geçersiz tarih formatı')
+      .refine((d) => {
+        const minAge = new Date()
+        minAge.setFullYear(minAge.getFullYear() - 2)
+        return d <= minAge.toISOString().slice(0, 10)
+      }, { message: 'Lütfen geçerli bir doğum tarihi girin. Müşteri en az 2 yaşında olmalı.' })
+      .refine((d) => {
+        const year = parseInt(d.slice(0, 4), 10)
+        return year >= 1900 && year <= new Date().getFullYear()
+      }, { message: 'Geçersiz doğum yılı' })
+      .optional()
+  ),
 })
 
 export type CustomerCreateInput = z.infer<typeof customerCreateSchema>
