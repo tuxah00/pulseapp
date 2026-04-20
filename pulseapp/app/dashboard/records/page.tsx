@@ -1399,7 +1399,7 @@ function RecordsPageInner() {
       {/* ── Create / Edit Modal ── */}
       {(showModal || isClosingModal) && (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center p-4 ${editingFromDetail ? '' : 'bg-black/60 dark:bg-black/70'} ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false); setEditingFromDetail(false); if (pendingDetailRecordRef.current) { setSelectedRecord(pendingDetailRecordRef.current); pendingDetailRecordRef.current = null } } }}>
+        <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center p-4 bg-black/60 dark:bg-black/70 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false); setEditingFromDetail(false); if (pendingDetailRecordRef.current) { setSelectedRecord(pendingDetailRecordRef.current); pendingDetailRecordRef.current = null } } }}>
           <div className={`modal-content card w-full max-w-lg max-h-[90vh] overflow-y-auto ${isClosingModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
