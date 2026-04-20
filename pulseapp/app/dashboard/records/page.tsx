@@ -1209,7 +1209,7 @@ function RecordsPageInner() {
                 {/* ── Section 4: Footer ── */}
                 <div className="border-t border-gray-200 dark:border-gray-700 px-6 py-4 flex gap-3 flex-shrink-0">
                   <button
-                    onClick={() => { openEditModal(selectedRecord); setSelectedRecord(null) }}
+                    onClick={() => openEditModal(selectedRecord)}
                     className="btn-secondary flex-1 text-sm"
                   >
                     <Pencil className="mr-1.5 h-3.5 w-3.5" />Düzenle
@@ -1384,7 +1384,7 @@ function RecordsPageInner() {
       {/* ── Create / Edit Modal ── */}
       {(showModal || isClosingModal) && (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
+        <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
           <div className={`modal-content card w-full max-w-lg max-h-[90vh] overflow-y-auto ${isClosingModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
