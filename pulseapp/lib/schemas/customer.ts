@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { MSG } from './messages'
 import { normalizePhone } from '@/lib/utils/phone'
+import { isValidCustomerBirthday } from '@/lib/utils/birthday'
 
 /**
  * Türk telefon numarası — kullanıcı "0532 123 45 67", "532 123 45 67",
@@ -41,19 +42,11 @@ export const customerCreateSchema = z.object({
     .or(z.literal('').transform(() => undefined)),
   birthday: z.union([
     z.undefined(),
-    z.literal('').transform((): undefined => undefined),
+    z.literal('').transform(() => undefined),
     z
       .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, 'Geçersiz tarih formatı')
-      .refine((d) => {
-        const minAge = new Date()
-        minAge.setFullYear(minAge.getFullYear() - 2)
-        return d <= minAge.toISOString().slice(0, 10)
-      }, { message: 'Lütfen geçerli bir doğum tarihi girin. Müşteri en az 2 yaşında olmalı.' })
-      .refine((d) => {
-        const year = parseInt(d.slice(0, 4), 10)
-        return year >= 1900 && year <= new Date().getFullYear()
-      }, { message: 'Geçersiz doğum yılı' }),
+      .regex(/^\d{4}-\d{2}-\d{2}$/, MSG.INVALID_DATE_FORMAT)
+      .refine(isValidCustomerBirthday, { message: MSG.BIRTHDAY_MIN_AGE }),
   ]),
 })
 

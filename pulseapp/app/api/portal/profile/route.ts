@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requirePortalSession } from '@/lib/portal/guards'
+import { isValidCustomerBirthday } from '@/lib/utils/birthday'
+import { MSG } from '@/lib/schemas/messages'
 
 const ALLOWED_CHANNELS = new Set(['sms', 'whatsapp', 'auto'])
 
@@ -61,10 +63,8 @@ export async function PATCH(request: NextRequest) {
     if (body.birthday === null || body.birthday === '') {
       updates.birthday = null
     } else if (typeof body.birthday === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.birthday)) {
-      const minAge = new Date()
-      minAge.setFullYear(minAge.getFullYear() - 2)
-      if (body.birthday > minAge.toISOString().slice(0, 10)) {
-        return NextResponse.json({ error: 'Lütfen geçerli bir doğum tarihi girin. Müşteri en az 2 yaşında olmalı.' }, { status: 400 })
+      if (!isValidCustomerBirthday(body.birthday)) {
+        return NextResponse.json({ error: MSG.BIRTHDAY_MIN_AGE }, { status: 400 })
       }
       updates.birthday = body.birthday
     } else {

@@ -193,23 +193,12 @@ export default function CustomersPage() {
   }
 
   const onValidSubmit = async (values: CustomerCreateInput) => {
-    // Belt-and-suspenders: Zod schema bunu zaten kontrol ediyor ama
-    // mutlak garanti için inline doğrulama (müşteri en az 2 yaşında olmalı).
-    if (values.birthday && values.birthday.trim() !== '') {
-      const minAge = new Date()
-      minAge.setFullYear(minAge.getFullYear() - 2)
-      const maxAllowed = minAge.toISOString().slice(0, 10)
-      if (values.birthday > maxAllowed) {
-        setError('Lütfen geçerli bir doğum tarihi girin. Müşteri en az 2 yaşında olmalı.')
-        return
-      }
-    }
     setSaving(true); setError(null)
     const customerData = {
       name: values.name,
       phone: values.phone, // schema 10 haneli "5XXXXXXXXX" formatına normalize etti
       email: values.email ?? null,
-      birthday: values.birthday && values.birthday.trim() !== '' ? values.birthday : null,
+      birthday: values.birthday ?? null,
       notes: values.notes ?? null,
       segment,
       business_id: businessId,
