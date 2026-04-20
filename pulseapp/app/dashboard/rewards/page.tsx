@@ -6,7 +6,7 @@ import { getCustomerLabelSingular } from '@/lib/config/sector-modules'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import {
-  Plus, UserCheck, Search, Loader2, Gift, Phone, ArrowRight, CheckCircle, Clock, ShieldX, Trash2, Award, X, Settings, Sparkles, Star, Zap
+  Plus, UserCheck, Search, Loader2, Gift, Phone, ArrowRight, CheckCircle, Clock, ShieldX, Trash2, Award, X, Power, Sparkles, Star, Zap
 } from 'lucide-react'
 import type { Referral, Customer, ReferralStatus, RewardType } from '@/types'
 import { REFERRAL_STATUS_LABELS, REWARD_TYPE_LABELS } from '@/types'
@@ -95,6 +95,13 @@ export default function RewardsPage() {
 
   async function handleDeactivate() {
     if (!businessId) return
+    const ok = await confirm({
+      title: 'Ödülleri Kapat',
+      message: 'Ödüller sistemini devre dışı bırakmak istediğinizden emin misiniz? Mevcut ödüller ve referanslar silinmez.',
+      confirmText: 'Kapat',
+      variant: 'danger',
+    })
+    if (!ok) return
     setActivating(true)
     try {
       const { data: biz } = await supabase.from('businesses').select('settings').eq('id', businessId).single()
@@ -454,7 +461,7 @@ export default function RewardsPage() {
             title="Ödüller sistemini devre dışı bırak"
             className="p-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
           >
-            {activating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Settings className="h-4 w-4" />}
+            {activating ? <Loader2 className="h-6 w-6 animate-spin" /> : <Power className="h-6 w-6" />}
           </button>
         </div>
       </div>
