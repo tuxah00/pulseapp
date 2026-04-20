@@ -556,30 +556,30 @@ export default function KasaPage() {
 
         {/* ── SOL: Ürün/Hizmet Seçici ── */}
         <div className="lg:col-span-4 card p-4 space-y-3">
-          <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+          <div className="flex gap-0.5 bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
             <button
               onClick={() => setItemTab('services')}
-              className={cn('flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-sm font-medium transition-colors',
+              className={cn('flex-1 flex items-center justify-center gap-1 px-1.5 py-1 rounded-md text-xs font-medium transition-colors',
                 itemTab === 'services' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
               )}
             >
-              <Scissors className="h-3.5 w-3.5 shrink-0" /> Hizmet
+              <Scissors className="h-3 w-3 shrink-0" /> Hizmet
             </button>
             <button
               onClick={() => setItemTab('products')}
-              className={cn('flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-sm font-medium transition-colors',
+              className={cn('flex-1 flex items-center justify-center gap-1 px-1.5 py-1 rounded-md text-xs font-medium transition-colors',
                 itemTab === 'products' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 hover:text-gray-700'
               )}
             >
-              <Package className="h-3.5 w-3.5 shrink-0" /> Ürün
+              <Package className="h-3 w-3 shrink-0" /> Ürün
             </button>
             <button
               onClick={() => setItemTab('packages')}
-              className={cn('flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-sm font-medium transition-colors',
+              className={cn('flex-1 flex items-center justify-center gap-1 px-1.5 py-1 rounded-md text-xs font-medium transition-colors',
                 itemTab === 'packages' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 hover:text-gray-700'
               )}
             >
-              <Gift className="h-3.5 w-3.5 shrink-0" /> Paket
+              <Gift className="h-3 w-3 shrink-0" /> Paket
             </button>
           </div>
 
@@ -827,18 +827,19 @@ export default function KasaPage() {
             </div>
           )}
 
-          {/* İndirim + KDV */}
+          {/* İndirim + KDV + Toplamlar */}
           {cart.length > 0 && (
             <div className="border-t border-gray-200 dark:border-gray-700 pt-3 space-y-2">
-              <div className="flex items-center gap-2">
-                <label className="text-sm text-gray-500 w-16">İndirim</label>
-                <div className="flex items-center gap-1 flex-1">
+              {/* İndirim ve KDV — sağa hizalı tek satır */}
+              <div className="flex items-center justify-end gap-3">
+                <div className="flex items-center gap-1">
+                  <label className="text-xs text-gray-500 whitespace-nowrap">İndirim</label>
                   <input
                     type="number"
                     min="0"
                     value={discountAmount || ''}
                     onChange={(e) => setDiscountAmount(parseFloat(e.target.value) || 0)}
-                    className="input w-24 text-sm"
+                    className="input w-16 text-xs py-1 px-2"
                     placeholder="0"
                   />
                   <CustomSelect
@@ -850,26 +851,19 @@ export default function KasaPage() {
                     ]}
                   />
                 </div>
-                {discountCalc > 0 && (
-                  <span className="text-sm text-red-500">-{formatCurrency(discountCalc)}</span>
-                )}
-              </div>
-
-              <div className="flex items-center gap-2">
-                <label className="text-sm text-gray-500 w-16">KDV</label>
-                <CustomSelect
-                  value={String(taxRate)}
-                  onChange={v => setTaxRate(Number(v))}
-                  options={[
-                    { value: '0', label: '%0' },
-                    { value: '1', label: '%1' },
-                    { value: '10', label: '%10' },
-                    { value: '20', label: '%20' },
-                  ]}
-                />
-                {taxCalc > 0 && (
-                  <span className="text-sm text-gray-500">+{formatCurrency(taxCalc)}</span>
-                )}
+                <div className="flex items-center gap-1">
+                  <label className="text-xs text-gray-500 whitespace-nowrap">KDV</label>
+                  <CustomSelect
+                    value={String(taxRate)}
+                    onChange={v => setTaxRate(Number(v))}
+                    options={[
+                      { value: '0', label: '%0' },
+                      { value: '1', label: '%1' },
+                      { value: '10', label: '%10' },
+                      { value: '20', label: '%20' },
+                    ]}
+                  />
+                </div>
               </div>
 
               {/* Toplamlar */}
