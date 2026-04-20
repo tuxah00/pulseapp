@@ -17,7 +17,13 @@ import { createClient } from '@/lib/supabase/client'
 import { logAudit } from '@/lib/utils/audit'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { requirePermission, requireSectorModule } from '@/lib/hooks/use-require-permission'
-import { getRecordDescriptionPlaceholder } from '@/lib/config/sector-labels'
+import {
+  getRecordDescriptionPlaceholder,
+  getDiagnosisPlaceholder,
+  getTreatmentPlanPlaceholder,
+  getAllergiesPlaceholder,
+  getTreatmentNotesPlaceholder,
+} from '@/lib/config/sector-labels'
 import type { Customer } from '@/types'
 import CompactBoxCard from '@/components/ui/compact-box-card'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
@@ -377,7 +383,21 @@ function RecordsPageInner() {
 
   const { businessId, staffId, staffName, sector, loading: ctxLoading, permissions } = useBusinessContext()
   const { confirm } = useConfirm()
-  const config = TYPE_CONFIG[recordType]
+  const config = useMemo(() => {
+    const base = TYPE_CONFIG[recordType]
+    if (recordType !== 'patient_file') return base
+    // patient_file alanlarında sektöre göre placeholder override
+    return {
+      ...base,
+      fields: base.fields.map(f => {
+        if (f.key === 'diagnosis') return { ...f, placeholder: getDiagnosisPlaceholder(sector) }
+        if (f.key === 'treatment_plan') return { ...f, placeholder: getTreatmentPlanPlaceholder(sector) }
+        if (f.key === 'treatment_notes') return { ...f, placeholder: getTreatmentNotesPlaceholder(sector) }
+        if (f.key === 'allergies') return { ...f, placeholder: getAllergiesPlaceholder(sector) }
+        return f
+      }),
+    }
+  }, [recordType, sector])
 
   const [records, setRecords] = useState<BusinessRecord[]>([])
   const [selectedCustomerName, setSelectedCustomerName] = useState<string>('')

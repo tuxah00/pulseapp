@@ -227,6 +227,66 @@ export function getRecordDescriptionPlaceholder(sector: SectorKey): string {
 }
 
 /**
+ * Teşhis alanı için sektöre özgü placeholder (Hasta Dosyaları).
+ */
+export function getDiagnosisPlaceholder(sector: SectorKey): string {
+  switch (sector) {
+    case 'dental_clinic':
+      return 'Örn: Diş çürüğü, kanal tedavisi gerekli'
+    case 'medical_aesthetic':
+      return 'Örn: Cilt sarkması, pigmentasyon, yaşlanma'
+    case 'physiotherapy':
+      return 'Örn: Bel fıtığı, boyun ağrısı, omuz sertliği'
+    case 'veterinary':
+      return 'Örn: Otitis, göz enfeksiyonu'
+    case 'psychologist':
+      return 'Örn: Anksiyete, depresyon, stres'
+    case 'dietitian':
+      return 'Örn: Obezite, insülin direnci'
+    default:
+      return 'Örn: Teşhis...'
+  }
+}
+
+/**
+ * Tedavi planı alanı için sektöre özgü placeholder.
+ */
+export function getTreatmentPlanPlaceholder(sector: SectorKey): string {
+  switch (sector) {
+    case 'dental_clinic':
+      return 'Kanal tedavisi → dolgu → kontrol planı...'
+    case 'medical_aesthetic':
+      return 'Seans sayısı, ürün, aralık...'
+    case 'physiotherapy':
+      return 'Seans programı, egzersizler, süre...'
+    case 'veterinary':
+      return 'Antibiyotik, kontrol, aşı...'
+    case 'psychologist':
+      return 'Terapi yaklaşımı, seans sayısı...'
+    case 'dietitian':
+      return 'Kalori, öğün, makro dağılımı...'
+    default:
+      return 'Tedavi planı detayları...'
+  }
+}
+
+/**
+ * Alerji alanı için sektöre özgü placeholder.
+ */
+export function getAllergiesPlaceholder(sector: SectorKey): string {
+  switch (sector) {
+    case 'dental_clinic':
+      return 'Penisilin, lateks, lokal anestezi...'
+    case 'medical_aesthetic':
+      return 'Lidokain, salisilik asit, kozmetik ürün...'
+    case 'veterinary':
+      return 'İlaç, mama, çevresel...'
+    default:
+      return 'Bilinen alerjiler...'
+  }
+}
+
+/**
  * Tedavi / protokol notları için sektöre özgü placeholder.
  */
 export function getTreatmentNotesPlaceholder(sector: SectorKey): string {
