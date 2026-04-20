@@ -106,6 +106,9 @@ export default function BookingPage() {
   const [submitted, setSubmitted] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
+  // Önerilen tekrar aralığı uyarısı (önceki randevu kontrolü)
+  const [intervalWarning, setIntervalWarning] = useState<string | null>(null)
+
   const selectedService = services.find(s => s.id === selectedServiceId) || null
   const [availableSlots, setAvailableSlots] = useState<string[]>([])
   const [slotsLoading, setSlotsLoading] = useState(false)
@@ -147,6 +150,32 @@ export default function BookingPage() {
       setWaitlistTime(selectedTime || '')
     }
   }, [selectedDate, selectedTime, waitlistEnabled])
+
+  // Önerilen tekrar aralığı kontrolü — telefon yeterli haneye ulaşınca
+  useEffect(() => {
+    const digits = customerPhone.replace(/\D/g, '')
+    if (!selectedServiceId || digits.length < 10) {
+      setIntervalWarning(null)
+      return
+    }
+    let cancelled = false
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/public/business/${businessId}/interval-check`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: digits, serviceId: selectedServiceId }),
+        })
+        if (!res.ok) return
+        const data = await res.json()
+        if (cancelled) return
+        setIntervalWarning(data.hasWarning ? data.message : null)
+      } catch {
+        // sessiz geç
+      }
+    }, 500)
+    return () => { cancelled = true; clearTimeout(t) }
+  }, [businessId, selectedServiceId, customerPhone])
 
   useEffect(() => {
     async function fetchData() {
@@ -662,6 +691,18 @@ export default function BookingPage() {
                   className="input"
                 />
               </div>
+              {intervalWarning && (
+                <div className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm">
+                  <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600" />
+                  <div className="flex-1 text-amber-900">
+                    <p className="font-medium">Önerilen tekrar aralığı dolmadı</p>
+                    <p className="mt-0.5 text-xs opacity-90">{intervalWarning}</p>
+                    <p className="mt-1.5 text-xs opacity-75">
+                      Yine de devam edebilirsiniz, ancak işletme bu durumu görebilir.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
             <label className="flex items-start gap-3 mt-4 cursor-pointer">
               <input

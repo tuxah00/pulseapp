@@ -17,7 +17,7 @@ PulseApp, çok sektörlü SaaS işletme yönetim platformu. Next.js 14, Supabase
 ## Supabase Migration Kuralı
 - **Migration dosyası oluşturduktan sonra Supabase Management API ile otomatik olarak çalıştır**
 - Endpoint: `POST https://api.supabase.com/v1/projects/dtahmvtmwtqodgypvopn/database/query`
-- Auth: `Bearer sbp_541d5eb0771b58ed5f74c670a0ba8dbb31034703` (7 gün geçerli, yenileme: 2026-04-27)
+- Auth: `Bearer sbp_f95a93d8575418730e6fb00ac813800acd1e2aa6` (30 gün geçerli, yenileme: 2026-05-21)
 - Node.js ile her SQL statement'ı ayrı ayrı gönder (tek request'te birden fazla statement hata verebilir)
 - Başarılı response: HTTP 201, body `[]`
 - Migration çalıştırıldıktan sonra `CLAUDE.md` SQL Migration Gereksinimleri bölümüne ekle
