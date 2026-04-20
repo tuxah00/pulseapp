@@ -128,7 +128,7 @@ export default function KasaPage() {
     setTransactions(txRes.transactions || [])
     setSession(sessRes.openSession || null)
     setLoading(false)
-  }, [businessId])
+  }, [businessId, supabase])
 
   useEffect(() => { fetchData() }, [fetchData])
 

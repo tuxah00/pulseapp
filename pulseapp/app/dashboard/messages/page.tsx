@@ -131,7 +131,7 @@ export default function MessagesPage() {
 
     setConversations(convList)
     setLoading(false)
-  }, [businessId, filterClassification, filterChannel])
+  }, [businessId, filterClassification, filterChannel, supabase])
 
   // Seçili müşterinin mesajlarını çek
   const fetchMessages = useCallback(async (customerId: string) => {
@@ -148,7 +148,7 @@ export default function MessagesPage() {
     if (data) setMessages(data)
     if (error) console.error('Mesaj detay çekme hatası:', error)
     setMessagesLoading(false)
-  }, [businessId])
+  }, [businessId, supabase])
 
   useEffect(() => {
     if (!ctxLoading) fetchConversations()
@@ -185,7 +185,7 @@ export default function MessagesPage() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [businessId, selectedCustomer, fetchConversations])
+  }, [businessId, selectedCustomer, fetchConversations, supabase])
 
   function selectConversation(conv: Conversation) {
     setSelectedCustomer(conv.customer)

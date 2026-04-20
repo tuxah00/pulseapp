@@ -155,7 +155,7 @@ export default function AppointmentsPage() {
       router.replace('/dashboard/appointments', { scroll: false })
     }
     openFromNotification()
-  }, [searchParams, businessId, ctxLoading])
+  }, [searchParams, businessId, ctxLoading, router, supabase])
 
   // Hafta hesaplama yardımcıları
   function getWeekRange(dateStr: string): { start: string; end: string } {
@@ -228,7 +228,9 @@ export default function AppointmentsPage() {
     if (data) setAppointments(data)
     if (error) console.error('Randevu çekme hatası:', error)
     setLoading(false)
-  }, [selectedDate, businessId, viewMode])
+    // getMonthRange/getWeekRange: saf fonksiyonlar, bağımlılık listesine eklenmeleri gerekmez
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDate, businessId, viewMode, supabase])
 
   const fetchFormData = useCallback(async () => {
     if (!businessId) return
@@ -242,7 +244,7 @@ export default function AppointmentsPage() {
     if (staffRes.data) setStaffMembers(staffRes.data)
     if (bizRes.data?.working_hours) setWorkingHours(bizRes.data.working_hours)
     if (roomsRes.rooms) setRooms(roomsRes.rooms)
-  }, [businessId])
+  }, [businessId, supabase])
 
   useEffect(() => {
     setNow(new Date())
@@ -267,6 +269,8 @@ export default function AppointmentsPage() {
         setBlockedSlots(data.blockedSlots || [])
       }
     } catch { /* ignore */ }
+    // getMonthRange/getWeekRange: saf fonksiyon
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [businessId, selectedDate, viewMode])
 
   useEffect(() => { if (!ctxLoading) fetchAppointments() }, [fetchAppointments, ctxLoading])

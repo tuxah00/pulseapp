@@ -128,7 +128,7 @@ export default function StoklarPage() {
       setDbError(null)
     }
     setLoading(false)
-  }, [businessId, page])
+  }, [businessId, page, supabase])
 
   const fetchSuppliers = useCallback(async () => {
     if (!businessId) return
@@ -140,7 +140,7 @@ export default function StoklarPage() {
       .order('name')
     setSuppliers(data || [])
     setSuppliersLoading(false)
-  }, [businessId])
+  }, [businessId, supabase])
 
   useEffect(() => {
     if (!ctxLoading) {

@@ -200,7 +200,7 @@ export default function VardiyePage() {
     } finally {
       setLoading(false)
     }
-  }, [businessId, weekStart, weekEnd])
+  }, [businessId, weekStart, weekEnd, supabase])
 
   useEffect(() => {
     if (!ctxLoading && businessId) fetchData()
@@ -397,7 +397,7 @@ export default function VardiyePage() {
       setRequests((data as ShiftRequest[]) || [])
       setPendingRequestCount((data || []).filter((r: ShiftRequest) => r.status === 'pending').length)
     } catch { /* ignore */ } finally { setRequestsLoading(false) }
-  }, [businessId, isManager, currentStaffId])
+  }, [businessId, isManager, currentStaffId, supabase])
 
   useEffect(() => { if (activeTab === 'requests') fetchRequests() }, [activeTab, fetchRequests])
 

@@ -359,7 +359,7 @@ export default function AuditPage() {
     if (!businessId) return
     supabase.from('staff_members').select('id, name').eq('business_id', businessId).eq('is_active', true).order('name')
       .then(({ data }) => setStaffList(data || []))
-  }, [businessId])
+  }, [businessId, supabase])
 
   const fetchLogs = useCallback(async () => {
     setLoading(true)

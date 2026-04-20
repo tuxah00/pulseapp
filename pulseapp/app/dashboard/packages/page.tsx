@@ -139,7 +139,7 @@ export default function PaketlerPage() {
       .order('created_at')
     setTemplates(data || [])
     setTemplatesLoading(false)
-  }, [businessId])
+  }, [businessId, supabase])
 
   // ── Fetch services (for dropdowns) ──
   const fetchServices = useCallback(async () => {
@@ -151,7 +151,7 @@ export default function PaketlerPage() {
       .eq('is_active', true)
       .order('name')
     setServices(data || [])
-  }, [businessId])
+  }, [businessId, supabase])
 
   // ── Fetch customer packages ──
   const fetchCustomerPackages = useCallback(async () => {

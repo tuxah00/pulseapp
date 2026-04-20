@@ -135,7 +135,7 @@ export default function ReviewsPage() {
     const { data } = await query
     if (data) setReviews(data)
     setLoading(false)
-  }, [businessId, filterRating])
+  }, [businessId, filterRating, supabase])
 
   useEffect(() => { if (!ctxLoading) fetchReviews() }, [fetchReviews, ctxLoading])
 

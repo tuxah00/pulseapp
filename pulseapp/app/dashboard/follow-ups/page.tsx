@@ -135,7 +135,7 @@ export default function FollowUpsPage() {
       setPendingCount(pCount ?? 0)
       setDoneCount(dCount ?? 0)
     } catch { /* ignore */ } finally { setLoading(false) }
-  }, [businessId, statusFilter, page])
+  }, [businessId, statusFilter, page, supabase])
 
   useEffect(() => { fetchFollowUps() }, [fetchFollowUps])
   useEffect(() => { setPage(0) }, [statusFilter])

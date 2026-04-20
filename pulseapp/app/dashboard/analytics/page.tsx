@@ -166,7 +166,7 @@ export default function AnalyticsPage() {
     if (staffRes.data) setStaffMembers(staffRes.data as StaffSummary[])
     if (invRes.data) setPaidInvoices(invRes.data as AnalyticsInvoice[])
     setLoading(false)
-  }, [businessId, period])
+  }, [businessId, period, supabase])
 
   const fetchExpenses = useCallback(async () => {
     if (!businessId) return

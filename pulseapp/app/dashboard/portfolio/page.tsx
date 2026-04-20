@@ -7,7 +7,7 @@ import { requirePermission, requireSectorModule } from '@/lib/hooks/use-require-
 import { createClient } from '@/lib/supabase/client'
 import { logAudit } from '@/lib/utils/audit'
 import {
-  Image,
+  Image as ImageIcon,
   Plus,
   Star,
   Trash2,
@@ -302,7 +302,7 @@ export default function PortfolioPage() {
       ) : items.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
-            <Image className="w-8 h-8 text-gray-400" />
+            <ImageIcon className="w-8 h-8 text-gray-400" />
           </div>
           <p className="text-gray-500 text-lg font-medium">Henüz portfolyo görseli eklenmedi.</p>
           <p className="text-gray-400 text-sm mt-1">İlk görselinizi ekleyin!</p>
@@ -332,7 +332,7 @@ export default function PortfolioPage() {
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
-                    <Image className="w-10 h-10 text-gray-300" />
+                    <ImageIcon className="w-10 h-10 text-gray-300" />
                   </div>
                 )}
 
