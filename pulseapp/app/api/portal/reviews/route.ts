@@ -136,5 +136,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Yorum kaydedilemedi' }, { status: 500 })
   }
 
+  try {
+    await admin.from('notifications').insert({
+      business_id: businessId,
+      type: 'review',
+      title: 'Yeni Yorum',
+      body: `${body.rating} yıldız${comment ? ` — "${comment.slice(0, 60)}"` : ''}`,
+      related_id: created.id,
+      related_type: 'review',
+      is_read: false,
+    })
+  } catch { /* bildirim hatası yorum kaydını etkilemez */ }
+
   return NextResponse.json({ review: created })
 }
