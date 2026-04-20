@@ -227,6 +227,149 @@ export function getRecordDescriptionPlaceholder(sector: SectorKey): string {
 }
 
 /**
+ * Teşhis alanı için sektöre özgü placeholder (Hasta Dosyaları).
+ */
+export function getDiagnosisPlaceholder(sector: SectorKey): string {
+  switch (sector) {
+    case 'dental_clinic':
+      return 'Örn: Diş çürüğü, kanal tedavisi gerekli'
+    case 'medical_aesthetic':
+      return 'Örn: Cilt sarkması, pigmentasyon, yaşlanma'
+    case 'physiotherapy':
+      return 'Örn: Bel fıtığı, boyun ağrısı, omuz sertliği'
+    case 'veterinary':
+      return 'Örn: Otitis, göz enfeksiyonu'
+    case 'psychologist':
+      return 'Örn: Anksiyete, depresyon, stres'
+    case 'dietitian':
+      return 'Örn: Obezite, insülin direnci'
+    default:
+      return 'Örn: Teşhis...'
+  }
+}
+
+/**
+ * Tedavi planı alanı için sektöre özgü placeholder.
+ */
+export function getTreatmentPlanPlaceholder(sector: SectorKey): string {
+  switch (sector) {
+    case 'dental_clinic':
+      return 'Kanal tedavisi → dolgu → kontrol planı...'
+    case 'medical_aesthetic':
+      return 'Seans sayısı, ürün, aralık...'
+    case 'physiotherapy':
+      return 'Seans programı, egzersizler, süre...'
+    case 'veterinary':
+      return 'Antibiyotik, kontrol, aşı...'
+    case 'psychologist':
+      return 'Terapi yaklaşımı, seans sayısı...'
+    case 'dietitian':
+      return 'Kalori, öğün, makro dağılımı...'
+    default:
+      return 'Tedavi planı detayları...'
+  }
+}
+
+/**
+ * Alerji alanı için sektöre özgü placeholder.
+ */
+export function getAllergiesPlaceholder(sector: SectorKey): string {
+  switch (sector) {
+    case 'dental_clinic':
+      return 'Penisilin, lateks, lokal anestezi...'
+    case 'medical_aesthetic':
+      return 'Lidokain, salisilik asit, kozmetik ürün...'
+    case 'veterinary':
+      return 'İlaç, mama, çevresel...'
+    default:
+      return 'Bilinen alerjiler...'
+  }
+}
+
+/**
+ * Üyelik Plan Adı alanı için sektöre özgü placeholder.
+ */
+export function getMembershipPlanPlaceholder(sector: SectorKey): string {
+  switch (sector) {
+    case 'dental_clinic':
+      return 'örn. Yıllık Diş Bakım Aboneliği'
+    case 'medical_aesthetic':
+      return 'örn. Aylık Cilt Bakım Paketi'
+    case 'physiotherapy':
+      return 'örn. 10 Seans Fizyoterapi Paketi'
+    case 'psychologist':
+      return 'örn. Aylık Terapi Paketi'
+    case 'fitness':
+      return 'örn. Aylık Fitness Üyeliği'
+    case 'yoga_pilates':
+      return 'örn. 3 Aylık Pilates Üyeliği'
+    case 'spa_massage':
+      return 'örn. Aylık SPA Üyeliği'
+    case 'hair_salon':
+    case 'barber':
+      return 'örn. Aylık Bakım Paketi'
+    case 'beauty_salon':
+      return 'örn. Aylık Güzellik Paketi'
+    case 'veterinary':
+      return 'örn. Yıllık Sağlık Paketi'
+    case 'dietitian':
+      return 'örn. 3 Aylık Danışmanlık Paketi'
+    default:
+      return 'örn. Aylık Üyelik Paketi'
+  }
+}
+
+/**
+ * Stok ürün adı alanı için sektöre özgü placeholder.
+ */
+export function getInventoryItemPlaceholder(sector: SectorKey): string {
+  switch (sector) {
+    case 'hair_salon':
+    case 'barber':
+      return 'örn. Saç Boyası No.5'
+    case 'beauty_salon':
+    case 'nail_salon':
+      return 'örn. Kalıcı Oje — Kırmızı'
+    case 'spa_massage':
+      return 'örn. Lavanta Masaj Yağı'
+    case 'dental_clinic':
+      return 'örn. Ağız Bakım Jeli'
+    case 'medical_aesthetic':
+      return 'örn. Hyalüronik Asit Serum'
+    case 'physiotherapy':
+      return 'örn. Kinesio Bant'
+    case 'veterinary':
+      return 'örn. Antiparaziter İlaç'
+    case 'auto_service':
+    case 'car_wash':
+      return 'örn. Motor Yağı 5W-30'
+    case 'tattoo_piercing':
+      return 'örn. Dövme Boyası — Siyah'
+    default:
+      return 'Ürün adı'
+  }
+}
+
+/**
+ * Stok ürün kategorisi alanı için sektöre özgü placeholder.
+ */
+export function getInventoryCategoryPlaceholder(sector: SectorKey): string {
+  switch (sector) {
+    case 'hair_salon':
+    case 'barber':
+      return 'örn. Boya, Şampuan, Jel'
+    case 'dental_clinic':
+    case 'medical_aesthetic':
+      return 'örn. Serum, İlaç, Sarf'
+    case 'auto_service':
+    case 'car_wash':
+      return 'örn. Yağ, Filtre, Lastik'
+    default:
+      return 'Kategori'
+  }
+}
+
+/**
  * Tedavi / protokol notları için sektöre özgü placeholder.
  */
 export function getTreatmentNotesPlaceholder(sector: SectorKey): string {

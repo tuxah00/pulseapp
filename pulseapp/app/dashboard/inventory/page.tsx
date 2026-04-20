@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Portal } from '@/components/ui/portal'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
+import { getInventoryItemPlaceholder, getInventoryCategoryPlaceholder } from '@/lib/config/sector-labels'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { useDebounce } from '@/lib/hooks/use-debounce'
 import { requirePermission, requireSectorModule } from '@/lib/hooks/use-require-permission'
@@ -829,13 +830,13 @@ export default function StoklarPage() {
             <form onSubmit={handleSave} className="space-y-4">
               <div>
                 <label className="label">Ürün Adı</label>
-                <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="input" placeholder="Saç Boyası No.5" required autoFocus />
+                <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="input" placeholder={getInventoryItemPlaceholder(sector)} required autoFocus />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="label">Kategori (opsiyonel)</label>
-                  <input type="text" value={category} onChange={(e) => setCategory(e.target.value)} className="input" placeholder="Boya" />
+                  <input type="text" value={category} onChange={(e) => setCategory(e.target.value)} className="input" placeholder={getInventoryCategoryPlaceholder(sector)} />
                 </div>
                 <div>
                   <label className="label">Birim</label>
