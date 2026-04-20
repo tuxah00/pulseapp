@@ -563,7 +563,7 @@ export default function KasaPage() {
                 itemTab === 'services' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
               )}
             >
-              <Scissors className="h-3.5 w-3.5 shrink-0" /> Hizmetler
+              <Scissors className="h-3.5 w-3.5 shrink-0" /> Hizmet
             </button>
             <button
               onClick={() => setItemTab('products')}
@@ -571,7 +571,7 @@ export default function KasaPage() {
                 itemTab === 'products' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 hover:text-gray-700'
               )}
             >
-              <Package className="h-3.5 w-3.5 shrink-0" /> Ürünler
+              <Package className="h-3.5 w-3.5 shrink-0" /> Ürün
             </button>
             <button
               onClick={() => setItemTab('packages')}
@@ -579,7 +579,7 @@ export default function KasaPage() {
                 itemTab === 'packages' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 hover:text-gray-700'
               )}
             >
-              <Gift className="h-3.5 w-3.5 shrink-0" /> Paketler
+              <Gift className="h-3.5 w-3.5 shrink-0" /> Paket
             </button>
           </div>
 

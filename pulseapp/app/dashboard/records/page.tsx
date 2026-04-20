@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, Suspense, useMemo } from 'react'
+import { useState, useEffect, useCallback, Suspense, useMemo, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useDebounce } from '@/lib/hooks/use-debounce'
@@ -391,6 +391,8 @@ function RecordsPageInner() {
   const closeRecord = () => setIsClosingRecord(true)
   const [editingRecord, setEditingRecord] = useState<BusinessRecord | null>(null)
   const [selectedRecord, setSelectedRecord] = useState<BusinessRecord | null>(null)
+  // Detay modalından Düzenle tıklanınca saklanan kayıt; edit kapanınca detayı yeniden açar
+  const pendingDetailRecordRef = useRef<BusinessRecord | null>(null)
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [viewMode, setViewMode] = useViewMode('records', 'list')
@@ -535,6 +537,13 @@ function RecordsPageInner() {
     setShowModal(true)
   }
 
+  // Detay modalından Düzenle: detay kapanır → edit açılır → edit kapanınca detay geri gelir
+  function openEditModalFromDetail(record: BusinessRecord) {
+    pendingDetailRecordRef.current = record
+    closeRecord()
+    openEditModal(record)
+  }
+
   // ── Save ──────────────────────────────────────────────────────────────────
 
   async function handleSave(e: React.FormEvent) {
@@ -622,6 +631,10 @@ function RecordsPageInner() {
 
         if (selectedRecord?.id === editingRecord.id) {
           setSelectedRecord({ ...selectedRecord, title: title.trim(), data: dataPayload })
+        }
+        // Detay modundan düzenlendiyse, geri dönülecek kaydı güncelle
+        if (pendingDetailRecordRef.current?.id === editingRecord.id) {
+          pendingDetailRecordRef.current = { ...pendingDetailRecordRef.current, title: title.trim(), data: dataPayload }
         }
       } else {
         // Auto-fill title from customer name if not set
@@ -1209,7 +1222,7 @@ function RecordsPageInner() {
                 {/* ── Section 4: Footer ── */}
                 <div className="border-t border-gray-200 dark:border-gray-700 px-6 py-4 flex gap-3 flex-shrink-0">
                   <button
-                    onClick={() => openEditModal(selectedRecord)}
+                    onClick={() => openEditModalFromDetail(selectedRecord)}
                     className="btn-secondary flex-1 text-sm"
                   >
                     <Pencil className="mr-1.5 h-3.5 w-3.5" />Düzenle
@@ -1384,7 +1397,7 @@ function RecordsPageInner() {
       {/* ── Create / Edit Modal ── */}
       {(showModal || isClosingModal) && (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
+        <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false); if (pendingDetailRecordRef.current) { setSelectedRecord(pendingDetailRecordRef.current); pendingDetailRecordRef.current = null } } }}>
           <div className={`modal-content card w-full max-w-lg max-h-[90vh] overflow-y-auto ${isClosingModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
