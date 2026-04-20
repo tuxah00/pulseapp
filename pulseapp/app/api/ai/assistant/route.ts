@@ -17,6 +17,19 @@ import type { PlanType } from '@/types'
 export const runtime = 'nodejs'
 export const maxDuration = 60
 
+// ── SSE event tipleri ──
+type SseEvent =
+  | { type: 'text'; content: string }
+  | { type: 'tool_start'; name: string; label: string }
+  | { type: 'tool_end'; name: string; summary: string }
+  | { type: 'block'; block: unknown }
+  | { type: 'confirmation_required'; action_id?: string; action_type?: string; preview?: unknown; details?: unknown }
+  | { type: 'done'; conversationId?: string | null }
+  | { type: 'error'; error: string }
+  | { type: 'limit'; error: string }
+
+type AccumulatedToolCall = { index: number; id: string; name: string; arguments: string }
+
 export async function POST(req: NextRequest) {
   // 1. Rate limit
   const rl = checkRateLimit(req, RATE_LIMITS.aiAssistant)
@@ -204,7 +217,7 @@ export async function POST(req: NextRequest) {
 
   const stream = new ReadableStream({
     async start(controller) {
-      function send(event: any) {
+      function send(event: SseEvent) {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`))
       }
 
@@ -236,8 +249,8 @@ export async function POST(req: NextRequest) {
           })
 
           let accumulatedContent = ''
-          let accumulatedToolCalls: any[] = []
-          let currentToolCall: { index: number; id: string; name: string; arguments: string } | null = null
+          const accumulatedToolCalls: AccumulatedToolCall[] = []
+          let currentToolCall: AccumulatedToolCall | null = null
 
           for await (const chunk of response) {
             const choice = chunk.choices[0]
@@ -316,7 +329,7 @@ export async function POST(req: NextRequest) {
               const toolLabel = TOOL_LABELS[tc.name] || `${tc.name} çalışıyor...`
               send({ type: 'tool_start', name: tc.name, label: toolLabel })
 
-              let parsedArgs: Record<string, any> = {}
+              let parsedArgs: Record<string, unknown> = {}
               try {
                 parsedArgs = JSON.parse(tc.arguments || '{}')
               } catch {}
@@ -402,7 +415,7 @@ export async function POST(req: NextRequest) {
 
         send({ type: 'done', conversationId: convId })
         controller.close()
-      } catch (err: any) {
+      } catch (err) {
         console.error('AI Assistant stream error:', err)
         send({ type: 'error', error: 'Bir hata oluştu. Lütfen tekrar deneyin.' })
         controller.close()
@@ -421,7 +434,7 @@ export async function POST(req: NextRequest) {
 
 // ── Helpers ──
 
-function sseResponse(events: any[]): Response {
+function sseResponse(events: SseEvent[]): Response {
   const encoder = new TextEncoder()
   const body = events.map(e => `data: ${JSON.stringify(e)}\n\n`).join('')
   return new Response(encoder.encode(body), {
@@ -441,7 +454,7 @@ async function getBusinessServices(admin: ReturnType<typeof createAdminClient>, 
   return (data || []) as Array<{ name: string; duration_minutes: number; price: number | null }>
 }
 
-function summarizeToolResult(toolName: string, data: any): string {
+function summarizeToolResult(toolName: string, data: Record<string, any> | null | undefined): string {
   if (!data) return 'Veri bulunamadı'
 
   switch (toolName) {

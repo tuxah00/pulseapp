@@ -72,10 +72,11 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(result)
-  } catch (error: any) {
+  } catch (error) {
     console.error('AI classify hatası:', error)
+    const message = error instanceof Error ? error.message : String(error)
     return NextResponse.json(
-      { error: 'AI sınıflandırma hatası', details: error.message },
+      { error: 'AI sınıflandırma hatası', details: message },
       { status: 500 }
     )
   }

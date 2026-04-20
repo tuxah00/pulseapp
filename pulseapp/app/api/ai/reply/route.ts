@@ -85,10 +85,11 @@ export async function POST(request: NextRequest) {
       reply: reply.trim(),
       classification: classification || null,
     })
-  } catch (error: any) {
+  } catch (error) {
     console.error('AI reply hatası:', error)
+    const message = error instanceof Error ? error.message : String(error)
     return NextResponse.json(
-      { error: 'AI yanıt oluşturma hatası', details: error.message },
+      { error: 'AI yanıt oluşturma hatası', details: message },
       { status: 500 }
     )
   }
