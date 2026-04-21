@@ -111,6 +111,12 @@ export default function AppointmentsPage() {
   const [recurrenceFrequency, setRecurrenceFrequency] = useState<'weekly' | 'biweekly' | 'monthly'>('weekly')
   const [recurrenceCount, setRecurrenceCount] = useState(4)
 
+  // Önerilen tekrar aralığı uyarısı (services.recommended_interval_days)
+  const [intervalWarning, setIntervalWarning] = useState<{
+    message: string
+    daysRemaining: number
+  } | null>(null)
+
   // Bloklanmış slotlar
   const [blockedSlots, setBlockedSlots] = useState<BlockedSlot[]>([])
 
@@ -149,7 +155,7 @@ export default function AppointmentsPage() {
       router.replace('/dashboard/appointments', { scroll: false })
     }
     openFromNotification()
-  }, [searchParams, businessId, ctxLoading])
+  }, [searchParams, businessId, ctxLoading, router, supabase])
 
   // Hafta hesaplama yardımcıları
   function getWeekRange(dateStr: string): { start: string; end: string } {
@@ -222,7 +228,9 @@ export default function AppointmentsPage() {
     if (data) setAppointments(data)
     if (error) console.error('Randevu çekme hatası:', error)
     setLoading(false)
-  }, [selectedDate, businessId, viewMode])
+    // getMonthRange/getWeekRange: saf fonksiyonlar, bağımlılık listesine eklenmeleri gerekmez
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDate, businessId, viewMode, supabase])
 
   const fetchFormData = useCallback(async () => {
     if (!businessId) return
@@ -236,7 +244,7 @@ export default function AppointmentsPage() {
     if (staffRes.data) setStaffMembers(staffRes.data)
     if (bizRes.data?.working_hours) setWorkingHours(bizRes.data.working_hours)
     if (roomsRes.rooms) setRooms(roomsRes.rooms)
-  }, [businessId])
+  }, [businessId, supabase])
 
   useEffect(() => {
     setNow(new Date())
@@ -261,11 +269,40 @@ export default function AppointmentsPage() {
         setBlockedSlots(data.blockedSlots || [])
       }
     } catch { /* ignore */ }
+    // getMonthRange/getWeekRange: saf fonksiyon
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [businessId, selectedDate, viewMode])
 
   useEffect(() => { if (!ctxLoading) fetchAppointments() }, [fetchAppointments, ctxLoading])
   useEffect(() => { if (!ctxLoading) fetchFormData() }, [fetchFormData, ctxLoading])
   useEffect(() => { if (!ctxLoading) fetchBlockedSlots() }, [fetchBlockedSlots, ctxLoading])
+
+  // Müşteri + hizmet seçildiğinde önerilen tekrar aralığı kontrolü
+  useEffect(() => {
+    if (!showModal || !businessId || !customerId || !serviceId) {
+      setIntervalWarning(null)
+      return
+    }
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch(
+          `/api/services/interval-check?businessId=${businessId}&customerId=${customerId}&serviceId=${serviceId}`
+        )
+        if (!res.ok) return
+        const data = await res.json()
+        if (cancelled) return
+        if (data.hasWarning) {
+          setIntervalWarning({ message: data.message, daysRemaining: data.daysRemaining })
+        } else {
+          setIntervalWarning(null)
+        }
+      } catch {
+        // sessiz geç — uyarı kritik değil
+      }
+    })()
+    return () => { cancelled = true }
+  }, [showModal, businessId, customerId, serviceId])
 
   useEffect(() => {
     if (!showModal) return
@@ -2715,6 +2752,15 @@ export default function AppointmentsPage() {
                   placeholder="Hizmet seçin (opsiyonel)..."
                   className="input"
                 />
+                {intervalWarning && (
+                  <div className="mt-2 flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm dark:border-amber-700 dark:bg-amber-900/20">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600 dark:text-amber-400" />
+                    <div className="flex-1 text-amber-900 dark:text-amber-100">
+                      <p className="font-medium">Önerilen aralık dolmadı</p>
+                      <p className="mt-0.5 text-xs opacity-90">{intervalWarning.message}</p>
+                    </div>
+                  </div>
+                )}
               </div>
               <div>
                 <label className="label">Personel</label>

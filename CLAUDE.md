@@ -317,6 +317,8 @@ Aşağıdaki migration'lar Supabase SQL Editor'de manuel olarak çalıştırılm
 - `040b_staff_write_permissions.sql` → **✅ Uygulandı (2026-04-15)** — `staff_members.write_permissions` JSONB kolonu (granüler Düzenle yetkisi)
 - `053b_rewards_feature_flag.sql` → **✅ Uygulandı (2026-04-18)** — `businesses.settings.rewards_enabled` varsayılan değeri
 - `054b_reviews_anonymous.sql` → **✅ Uygulandı (2026-04-18)** — `reviews.is_anonymous` kolonu + partial index
+- `057_follow_up_reform.sql` → **✅ Uygulandı (2026-04-19)** — follow_up_queue status enum genişletme (in_progress, no_response, done, rescheduled), notes + status_history JSONB
+- `058_shift_requests.sql` → **✅ Uygulandı (2026-04-21)** — `shift_requests` tablosu + 4 RLS politikası (personel talep → yönetici onay akışı)
 
 ### Migration Numaralandırma Kuralı (2026-04-18'den itibaren)
 Aynı numaraya denk gelen migration'lar `a/b/c` harf suffix'i ile ayrılır. Alfabetik sıralama doğru çalışma sırasını korur.
@@ -324,4 +326,4 @@ Aynı numaraya denk gelen migration'lar `a/b/c` harf suffix'i ile ayrılır. Alf
 
 Mevcut a/b çiftleri: `036a/036b`, `037a/037b`, `040a/040b`, `049a/049b`, `050a/050b`, `053a/053b`, `054a/054b`.
 
-Son migration numarası: `055_waitlist_auto_book.sql`.
+Son migration numarası: `058_shift_requests.sql`.

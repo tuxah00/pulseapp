@@ -58,7 +58,7 @@ export default function ServicesPage() {
     if (data) setServices(data)
     if (error) console.error('Hizmet çekme hatası:', error)
     setLoading(false)
-  }, [businessId])
+  }, [businessId, supabase])
 
   const fetchContraindications = useCallback(async (serviceId: string) => {
     if (!businessId) return
@@ -69,7 +69,7 @@ export default function ServicesPage() {
       .eq('service_id', serviceId)
       .order('created_at', { ascending: false })
     setContraindications(data || [])
-  }, [businessId])
+  }, [businessId, supabase])
 
   useEffect(() => {
     if (!ctxLoading) fetchServices()

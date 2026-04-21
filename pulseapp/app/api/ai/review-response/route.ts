@@ -61,10 +61,11 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ draft: draft.trim() })
-  } catch (error: any) {
+  } catch (error) {
     console.error('AI review response hatası:', error)
+    const message = error instanceof Error ? error.message : String(error)
     return NextResponse.json(
-      { error: 'AI yanıt oluşturma hatası', details: error.message },
+      { error: 'AI yanıt oluşturma hatası', details: message },
       { status: 500 }
     )
   }

@@ -117,7 +117,7 @@ export default function OrdersPage() {
       .eq('is_active', true)
       .order('name')
     setProducts(data || [])
-  }, [businessId])
+  }, [businessId, supabase])
 
   useEffect(() => {
     if (!ctxLoading && businessId) {

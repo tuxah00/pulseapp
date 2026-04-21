@@ -172,7 +172,7 @@ export default function BusinessSettingsPage() {
       setSavedSettings(loadedSettings)
     }
     setLoading(false)
-  }, [businessId])
+  }, [businessId, supabase])
 
   useEffect(() => {
     if (!ctxLoading) fetchBusiness()

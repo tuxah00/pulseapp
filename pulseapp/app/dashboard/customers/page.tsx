@@ -166,7 +166,7 @@ export default function CustomersPage() {
     if (count !== null) setTotalCount(count)
     if (error) console.error('Müşteri çekme hatası:', error)
     setLoading(false)
-  }, [businessId, filterSegment, debouncedSearch, page])
+  }, [businessId, filterSegment, debouncedSearch, page, supabase])
 
   useEffect(() => { if (!ctxLoading) fetchCustomers() }, [fetchCustomers, ctxLoading])
 
@@ -383,7 +383,7 @@ export default function CustomersPage() {
     } finally {
       setTimelineLoading(false)
     }
-  }, [businessId])
+  }, [businessId, supabase])
 
   // Alerji verisi çekme
   const fetchAllergies = useCallback(async (customerId: string) => {
@@ -457,7 +457,7 @@ export default function CustomersPage() {
     } finally {
       setDetailLoading(false)
     }
-  }, [businessId])
+  }, [businessId, supabase])
 
   // Ödül verme
   async function handleGiveReward() {
@@ -524,7 +524,7 @@ export default function CustomersPage() {
     if (panelTab === 'history' && selectedCustomer) {
       fetchTimeline(selectedCustomer.id)
     }
-  }, [panelTab, selectedCustomer?.id])
+  }, [panelTab, selectedCustomer, fetchTimeline])
 
   // Müşteri değiştiğinde tab'ı sıfırla + detay verilerini çek
   useEffect(() => {
@@ -543,7 +543,7 @@ export default function CustomersPage() {
     } else {
       setAllergies([])
     }
-  }, [selectedCustomer?.id])
+  }, [selectedCustomer, fetchAllergies, fetchCustomerDetail])
 
   useEffect(() => {
     if (!showModal) return

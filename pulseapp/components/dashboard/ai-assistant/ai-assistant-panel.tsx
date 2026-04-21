@@ -63,6 +63,9 @@ export default function AIAssistantPanel({ businessName, sector, plan, permissio
   const abortCtrlRef = useRef<AbortController | null>(null)
 
   // Saate göre yeniden hesaplanır; panel yeniden açıldığında güncellenir.
+  // isOpen bilerek dep listesinde: getSmartPrompts içinde kullanılmasa da
+  // panel her yeniden açıldığında saate göre prompt setini tazelemek için.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const smartPrompts = useMemo(() => getSmartPrompts({ sector }), [sector, isOpen])
 
   const toggleDictation = useCallback(async () => {
