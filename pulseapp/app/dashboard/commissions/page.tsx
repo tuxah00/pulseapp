@@ -292,7 +292,7 @@ export default function CommissionsPage() {
             <BadgePercent className="h-5 w-5 text-pulse-900 dark:text-pulse-300" />
             <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">Prim Geçmişi</h2>
             {filtered.length > 0 && (
-              <span className="badge bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+              <span className="badge-neutral">
                 {filtered.length} kayıt
               </span>
             )}
@@ -396,10 +396,10 @@ export default function CommissionsPage() {
                         <button
                           onClick={() => handleTogglePaid(earning)}
                           className={cn(
-                            'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors cursor-pointer',
+                            'px-3 py-1.5 cursor-pointer',
                             earning.status === 'paid'
-                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50'
-                              : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-900/50'
+                              ? 'badge-success hover:bg-green-200 dark:hover:bg-green-900/50'
+                              : 'badge-warning hover:bg-amber-200 dark:hover:bg-amber-900/50'
                           )}
                         >
                           {earning.status === 'paid'

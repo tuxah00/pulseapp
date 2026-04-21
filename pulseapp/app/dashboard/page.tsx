@@ -16,7 +16,7 @@ import {
   ArrowRight,
 } from 'lucide-react'
 import { addDays, format } from 'date-fns'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, cn } from '@/lib/utils'
 import { SEGMENT_LABELS } from '@/types'
 import { getCustomerLabel, getCustomerLabelSingular } from '@/lib/config/sector-modules'
 import type { SectorType } from '@/types'
@@ -307,7 +307,7 @@ export default async function DashboardPage() {
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{notif.title}</p>
                           {isNew && (
-                            <span className="inline-flex items-center rounded-full bg-blue-100 dark:bg-blue-900/40 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 dark:text-blue-300 flex-shrink-0">
+                            <span className="badge-info text-[10px] font-semibold flex-shrink-0">
                               YENİ
                             </span>
                           )}
@@ -392,11 +392,7 @@ export default async function DashboardPage() {
                 {riskCustomers.map((customer) => (
                   <div key={customer.id} className="flex items-center justify-between gap-2">
                     <span className="text-sm text-gray-700 dark:text-gray-300 truncate">{customer.name}</span>
-                    <span className={`badge flex-shrink-0 text-xs ${
-                      customer.segment === 'lost'
-                        ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
-                        : 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300'
-                    }`}>
+                    <span className={cn('flex-shrink-0 text-xs', customer.segment === 'lost' ? 'badge-danger' : 'badge-warning')}>
                       {SEGMENT_LABELS[customer.segment as keyof typeof SEGMENT_LABELS]}
                     </span>
                   </div>

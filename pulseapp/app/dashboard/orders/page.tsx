@@ -41,13 +41,13 @@ interface Product {
   stock_count: number
 }
 
-const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; icon: LucideIcon }> = {
-  pending: { label: 'Bekliyor', color: 'text-amber-700 dark:text-amber-300', bg: 'bg-amber-100 dark:bg-amber-900/30', icon: Clock },
-  preparing: { label: 'Hazırlanıyor', color: 'text-blue-700 dark:text-blue-300', bg: 'bg-blue-100 dark:bg-blue-900/30', icon: ChefHat },
-  ready: { label: 'Hazır', color: 'text-green-700 dark:text-green-300', bg: 'bg-green-100 dark:bg-green-900/30', icon: CheckCircle },
-  served: { label: 'Servis Edildi', color: 'text-purple-700 dark:text-purple-300', bg: 'bg-purple-100 dark:bg-purple-900/30', icon: ClipboardList },
-  paid: { label: 'Ödendi', color: 'text-gray-600 dark:text-gray-400', bg: 'bg-gray-100 dark:bg-gray-700', icon: CreditCard },
-  cancelled: { label: 'İptal', color: 'text-red-700 dark:text-red-300', bg: 'bg-red-100 dark:bg-red-900/30', icon: XCircle },
+const STATUS_CONFIG: Record<string, { label: string; badge: string; icon: LucideIcon }> = {
+  pending: { label: 'Bekliyor', badge: 'badge-warning', icon: Clock },
+  preparing: { label: 'Hazırlanıyor', badge: 'badge-info', icon: ChefHat },
+  ready: { label: 'Hazır', badge: 'badge-success', icon: CheckCircle },
+  served: { label: 'Servis Edildi', badge: 'badge bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300', icon: ClipboardList },
+  paid: { label: 'Ödendi', badge: 'badge-neutral', icon: CreditCard },
+  cancelled: { label: 'İptal', badge: 'badge-danger', icon: XCircle },
 }
 
 const STATUS_FLOW: Record<string, string> = {
@@ -276,7 +276,7 @@ export default function OrdersPage() {
                 </div>
 
                 {/* Status */}
-                <div className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium', config.bg, config.color)}>
+                <div className={cn(config.badge, 'gap-1.5')}>
                   <StatusIcon className="h-3.5 w-3.5" />
                   {config.label}
                 </div>

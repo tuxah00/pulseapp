@@ -48,10 +48,10 @@ const STATUS_LABELS: Record<string, string> = {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  active: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-  expired: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-  frozen: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  cancelled: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400',
+  active: 'badge-success',
+  expired: 'badge-danger',
+  frozen: 'badge-info',
+  cancelled: 'badge-neutral',
 }
 
 const FILTER_TABS: { key: StatusFilter; label: string }[] = [
@@ -447,7 +447,7 @@ export default function MembershipsPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium text-gray-900 dark:text-gray-100">{m.customer_name}</span>
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_COLORS[m.status]}`}>{STATUS_LABELS[m.status]}</span>
+                      <span className={STATUS_COLORS[m.status]}>{STATUS_LABELS[m.status]}</span>
                     </div>
                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{m.plan_name}</p>
                     {m.end_date && <p className="text-xs text-gray-400">Bitiş: {formatDate(m.end_date)}</p>}

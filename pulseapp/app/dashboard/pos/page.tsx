@@ -533,7 +533,7 @@ export default function KasaPage() {
           <Wallet className="h-6 w-6 text-pulse-900" />
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Kasa</h1>
           {session && (
-            <span className="badge bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+            <span className="badge-success">
               Açık
             </span>
           )}
@@ -1012,11 +1012,11 @@ export default function KasaPage() {
                       </td>
                       <td className="py-2 text-gray-500">{methodLabels}</td>
                       <td className="py-2">
-                        <span className={cn('badge text-xs',
-                          tx.payment_status === 'paid' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                          tx.payment_status === 'partial' ? 'bg-orange-100 text-orange-700' :
-                          'bg-gray-100 text-gray-600'
-                        )}>
+                        <span className={
+                          tx.payment_status === 'paid' ? 'badge-success' :
+                          tx.payment_status === 'partial' ? 'badge-warning' :
+                          'badge-neutral'
+                        }>
                           {tx.payment_status === 'paid' ? 'Ödendi' : tx.payment_status === 'partial' ? 'Kısmi' : 'Bekliyor'}
                         </span>
                       </td>

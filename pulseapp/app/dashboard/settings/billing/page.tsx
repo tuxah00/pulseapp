@@ -272,11 +272,11 @@ export default function BillingPage() {
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-semibold text-gray-900">{formatCurrency(p.amount)}</p>
-                  <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
-                    p.status === 'paid' ? 'bg-green-100 text-green-700' :
-                    p.status === 'pending' ? 'bg-amber-100 text-amber-700' :
-                    'bg-red-100 text-red-700'
-                  }`}>
+                  <span className={
+                    p.status === 'paid' ? 'badge-success' :
+                    p.status === 'pending' ? 'badge-warning' :
+                    'badge-danger'
+                  }>
                     {p.status === 'paid' ? 'Ödendi' : p.status === 'pending' ? 'Bekliyor' : 'Başarısız'}
                   </span>
                 </div>

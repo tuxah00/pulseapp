@@ -61,10 +61,10 @@ const STATUS_LABELS: Record<string, string> = {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  pending: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
-  processing: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
-  completed: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
-  rejected: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+  pending: 'badge-warning',
+  processing: 'badge-info',
+  completed: 'badge-success',
+  rejected: 'badge-danger',
 }
 
 export default function KvkkPage() {
@@ -231,7 +231,7 @@ export default function KvkkPage() {
           <Trash2 className="h-4 w-4" />
           Veri Silme Talepleri
           {pendingDeletions > 0 && (
-            <span className="badge bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 text-xs">
+            <span className="badge-warning">
               {pendingDeletions}
             </span>
           )}
@@ -293,7 +293,7 @@ export default function KvkkPage() {
                           {consent.customer_phone}
                         </td>
                         <td className="px-4 py-3">
-                          <span className="badge bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                          <span className="badge-info">
                             {CONSENT_TYPE_LABELS[consent.consent_type] ?? consent.consent_type}
                           </span>
                         </td>
@@ -305,12 +305,12 @@ export default function KvkkPage() {
                         </td>
                         <td className="px-4 py-3">
                           {consent.revoked_at ? (
-                            <span className="badge bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">
+                            <span className="badge-danger">
                               <X className="h-3 w-3 mr-1" />
                               İptal Edildi
                             </span>
                           ) : (
-                            <span className="badge bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                            <span className="badge-success">
                               <CheckCircle className="h-3 w-3 mr-1" />
                               Aktif
                             </span>
@@ -389,7 +389,7 @@ export default function KvkkPage() {
                           {new Date(request.requested_at).toLocaleString('tr-TR')}
                         </td>
                         <td className="px-4 py-3">
-                          <span className={cn('badge text-xs', STATUS_COLORS[request.status])}>
+                          <span className={STATUS_COLORS[request.status]}>
                             {request.status === 'pending' && <Clock className="h-3 w-3 mr-1" />}
                             {request.status === 'completed' && <CheckCircle className="h-3 w-3 mr-1" />}
                             {request.status === 'rejected' && <AlertTriangle className="h-3 w-3 mr-1" />}

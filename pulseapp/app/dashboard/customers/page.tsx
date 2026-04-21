@@ -1149,12 +1149,7 @@ export default function CustomersPage() {
                                 {ref.reward_value ? ` (${ref.reward_value})` : ''}
                               </p>
                             </div>
-                            <span className={cn(
-                              'badge text-xs',
-                              ref.reward_claimed
-                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
-                                : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300'
-                            )}>
+                            <span className={ref.reward_claimed ? 'badge-success' : 'badge-warning'}>
                               {ref.reward_claimed ? 'Alındı' : 'Bekliyor'}
                             </span>
                           </div>

@@ -466,7 +466,7 @@ export default function StaffPage() {
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-medium text-gray-900 dark:text-gray-100">{member.name}</span>
                 <span className={cn('badge', ROLE_COLORS[member.role])}>{ROLE_LABELS[member.role]}</span>
-                {isMe && <span className="badge bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">Siz</span>}
+                {isMe && <span className="badge-info">Siz</span>}
                 {member.role !== 'owner' && (
                   <span className="text-xs text-gray-400">{permCount}/{totalPerms} yetki</span>
                 )}

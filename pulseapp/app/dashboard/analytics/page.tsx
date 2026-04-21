@@ -996,7 +996,7 @@ export default function AnalyticsPage() {
                       </td>
                       <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
                         {expense.category}
-                        {expense.is_recurring && <span className="ml-1.5 badge bg-blue-100 text-blue-700 text-[10px]">Tekrar</span>}
+                        {expense.is_recurring && <span className="ml-1.5 badge-info text-[10px]">Tekrar</span>}
                       </td>
                       <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{expense.description || '—'}</td>
                       <td className="px-4 py-3 text-right font-medium text-red-600">{formatCurrency(expense.amount)}</td>
@@ -1044,7 +1044,7 @@ export default function AnalyticsPage() {
                         </td>
                         <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
                           {income.category}
-                          {income.is_recurring && <span className="ml-1.5 badge bg-green-100 text-green-700 text-[10px]">Tekrar</span>}
+                          {income.is_recurring && <span className="ml-1.5 badge-success text-[10px]">Tekrar</span>}
                         </td>
                         <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{income.description || '—'}</td>
                         <td className="px-4 py-3 text-right font-medium text-green-600">{formatCurrency(income.amount)}</td>

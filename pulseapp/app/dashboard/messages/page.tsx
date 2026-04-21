@@ -335,7 +335,7 @@ export default function MessagesPage() {
           <div className="flex-shrink-0 border-b border-gray-200 dark:border-gray-700 p-4">
             <div className="flex items-center justify-between mb-3">
               <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Mesajlar</h1>
-              <span className="badge bg-pulse-100 text-pulse-900">
+              <span className="badge-brand">
                 {conversations.length} konuşma
               </span>
             </div>

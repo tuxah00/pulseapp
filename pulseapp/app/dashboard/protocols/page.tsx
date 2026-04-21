@@ -23,11 +23,11 @@ import { Portal } from '@/components/ui/portal'
 import { Pagination } from '@/components/ui/pagination'
 import { FollowUpQuickModal } from '@/components/dashboard/follow-up-quick-modal'
 
-const STATUS_CONFIG: Record<ProtocolStatus, { bg: string; text: string }> = {
-  active: { bg: 'bg-blue-50 dark:bg-blue-900/20', text: 'text-blue-600 dark:text-blue-400' },
-  completed: { bg: 'bg-green-50 dark:bg-green-900/20', text: 'text-green-600 dark:text-green-400' },
-  cancelled: { bg: 'bg-red-50 dark:bg-red-900/20', text: 'text-red-600 dark:text-red-400' },
-  paused: { bg: 'bg-yellow-50 dark:bg-yellow-900/20', text: 'text-yellow-600 dark:text-yellow-400' },
+const STATUS_BADGE: Record<ProtocolStatus, string> = {
+  active: 'badge-info',
+  completed: 'badge-success',
+  cancelled: 'badge-danger',
+  paused: 'badge-warning',
 }
 
 const SESSION_STATUS_CONFIG: Record<SessionStatus, { bg: string; text: string; icon: typeof CheckCircle }> = {
@@ -317,7 +317,7 @@ export default function ProtocolsPage() {
             const customer = Array.isArray(p.customer) ? p.customer[0] : p.customer
             const service = Array.isArray(p.service) ? p.service[0] : p.service
             const progress = p.total_sessions > 0 ? (p.completed_sessions / p.total_sessions) * 100 : 0
-            const sc = STATUS_CONFIG[p.status]
+            const statusBadge = STATUS_BADGE[p.status]
             const isSelected = selectedProtocol?.id === p.id
 
             return (
@@ -334,7 +334,7 @@ export default function ProtocolsPage() {
                       <User className="h-3 w-3" /> {customer?.name || '—'}
                     </p>
                   </div>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${sc.bg} ${sc.text}`}>
+                  <span className={statusBadge}>
                     {PROTOCOL_STATUS_LABELS[p.status]}
                   </span>
                 </div>
@@ -494,7 +494,7 @@ function DetailPanel({
   const service = Array.isArray(protocol.service) ? protocol.service[0] : protocol.service
   const sessions = (protocol.sessions || []).sort((a, b) => a.session_number - b.session_number)
   const progress = protocol.total_sessions > 0 ? (protocol.completed_sessions / protocol.total_sessions) * 100 : 0
-  const sc = STATUS_CONFIG[protocol.status]
+  const statusBadge = STATUS_BADGE[protocol.status]
 
   function triggerPhotoUpload(sessionId: string, type: 'before' | 'after') {
     pendingUpload.current = { sessionId, type }
@@ -576,7 +576,7 @@ function DetailPanel({
                 <Activity className="h-3.5 w-3.5" /> {service.name}
               </span>
             )}
-            <span className={`text-xs px-2.5 py-0.5 rounded-full ${sc.bg} ${sc.text}`}>
+            <span className={statusBadge}>
               {PROTOCOL_STATUS_LABELS[protocol.status]}
             </span>
           </div>

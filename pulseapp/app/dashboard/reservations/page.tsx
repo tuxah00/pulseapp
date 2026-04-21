@@ -54,12 +54,12 @@ const STATUS_LABELS: Record<ReservationStatus, string> = {
 }
 
 const STATUS_COLORS: Record<ReservationStatus, string> = {
-  pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
-  confirmed: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+  pending: 'badge-warning',
+  confirmed: 'badge-info',
   seated: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
-  completed: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-  cancelled: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400',
-  no_show: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+  completed: 'badge-success',
+  cancelled: 'badge-neutral',
+  no_show: 'badge-danger',
 }
 
 function formatDateTR(dateStr: string) {
@@ -297,7 +297,7 @@ export default function ReservationsPage() {
         <div className="flex-1 text-center">
           <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{formatDateTR(selectedDate)}</span>
           {isToday && (
-            <span className="ml-2 inline-flex items-center rounded-full bg-pulse-100 px-2 py-0.5 text-xs font-medium text-pulse-900 dark:bg-pulse-900/30 dark:text-pulse-300">
+            <span className="ml-2 badge-brand">
               Bugün
             </span>
           )}
@@ -368,7 +368,7 @@ export default function ReservationsPage() {
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-medium text-gray-900 dark:text-gray-100">{r.customer_name}</span>
-                            <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium', STATUS_COLORS[r.status])}>
+                            <span className={cn('badge', STATUS_COLORS[r.status])}>
                               {STATUS_LABELS[r.status]}
                             </span>
                           </div>

@@ -32,11 +32,11 @@ interface SimpleCustomer {
 }
 
 const STATUS_CONFIG: Record<InvoiceStatus, { label: string; color: string; icon: React.ElementType }> = {
-  pending:   { label: 'Bekliyor',       color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',  icon: Clock },
-  paid:      { label: 'Ödendi',         color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',  icon: CheckCircle },
-  partial:   { label: 'Kısmi Ödeme',   color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',      icon: ChevronDown },
-  overdue:   { label: 'Vadesi Geçmiş', color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',          icon: AlertCircle },
-  cancelled: { label: 'İptal',          color: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400',         icon: XCircle },
+  pending:   { label: 'Bekliyor',       color: 'badge-warning',  icon: Clock },
+  paid:      { label: 'Ödendi',         color: 'badge-success',  icon: CheckCircle },
+  partial:   { label: 'Kısmi Ödeme',   color: 'badge-info',     icon: ChevronDown },
+  overdue:   { label: 'Vadesi Geçmiş', color: 'badge-danger',   icon: AlertCircle },
+  cancelled: { label: 'İptal',          color: 'badge-neutral',  icon: XCircle },
 }
 
 const PAYMENT_METHODS: { value: PaymentMethod; label: string; icon: React.ElementType }[] = [
@@ -674,7 +674,7 @@ export default function InvoicesPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium text-gray-700 dark:text-gray-300">{invoice.invoice_number}</span>
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                      <span className="badge-danger">
                         <Trash2 className="h-3 w-3" />Silinmiş
                       </span>
                     </div>
@@ -727,7 +727,7 @@ export default function InvoicesPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-medium text-gray-900 dark:text-gray-100">{invoice.invoice_number}</span>
-                    <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium', cfg.color)}>
+                    <span className={cfg.color}>
                       <Icon className="h-3 w-3" />{cfg.label}
                     </span>
                     {invoice.payment_type === 'installment' && (
@@ -796,7 +796,7 @@ export default function InvoicesPage() {
                   const cfg = STATUS_CONFIG[selectedInvoice.status]
                   const Icon = cfg.icon
                   return (
-                    <span className={cn('inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium', cfg.color)}>
+                    <span className={cn(cfg.color, 'px-3 py-1.5 text-sm')}>
                       <Icon className="h-4 w-4" />{cfg.label}
                     </span>
                   )

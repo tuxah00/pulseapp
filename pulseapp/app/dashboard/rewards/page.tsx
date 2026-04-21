@@ -19,11 +19,11 @@ import { useConfirm } from '@/lib/hooks/use-confirm'
 import { requirePermission, requireSectorModule } from '@/lib/hooks/use-require-permission'
 import EmptyState from '@/components/ui/empty-state'
 
-const STATUS_CONFIG: Record<ReferralStatus, { bg: string; text: string; icon: typeof CheckCircle }> = {
-  pending: { bg: 'bg-yellow-50 dark:bg-yellow-900/20', text: 'text-yellow-600 dark:text-yellow-400', icon: Clock },
-  converted: { bg: 'bg-blue-50 dark:bg-blue-900/20', text: 'text-blue-600 dark:text-blue-400', icon: ArrowRight },
-  expired: { bg: 'bg-gray-50 dark:bg-gray-800', text: 'text-gray-500 dark:text-gray-400', icon: X },
-  rewarded: { bg: 'bg-green-50 dark:bg-green-900/20', text: 'text-green-600 dark:text-green-400', icon: CheckCircle },
+const STATUS_CONFIG: Record<ReferralStatus, { badge: string; icon: typeof CheckCircle }> = {
+  pending: { badge: 'badge-warning', icon: Clock },
+  converted: { badge: 'badge-info', icon: ArrowRight },
+  expired: { badge: 'badge-neutral', icon: X },
+  rewarded: { badge: 'badge-success', icon: CheckCircle },
 }
 
 const REWARD_TYPE_OPTIONS = [
@@ -549,7 +549,7 @@ export default function RewardsPage() {
                           <p className="text-xs text-gray-300 dark:text-gray-600">—</p>
                         )}
                         <div className="flex items-center gap-2">
-                          <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${sc.bg} ${sc.text}`}>
+                          <span className={sc.badge}>
                             <Icon className="h-3 w-3" /> {REFERRAL_STATUS_LABELS[r.status]}
                           </span>
                           {r.status === 'pending' ? (
@@ -631,11 +631,11 @@ export default function RewardsPage() {
                         <p className="text-xs text-gray-500">{cr.rewards?.name || '—'} — {REWARD_TYPE_OPTIONS.find(o => o.value === cr.rewards?.type)?.label || ''}</p>
                       </div>
                       <div className="text-right flex-shrink-0">
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${
-                          cr.status === 'pending' ? 'bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400'
-                          : cr.status === 'used' ? 'bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400'
-                          : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
-                        }`}>
+                        <span className={
+                          cr.status === 'pending' ? 'badge-warning'
+                          : cr.status === 'used' ? 'badge-success'
+                          : 'badge-neutral'
+                        }>
                           {REWARD_STATUS_LABELS[cr.status] || cr.status}
                         </span>
                         {cr.expires_at && <p className="text-[10px] text-gray-400 mt-0.5">Son: {new Date(cr.expires_at).toLocaleDateString('tr-TR')}</p>}

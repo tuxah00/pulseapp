@@ -355,7 +355,7 @@ export default function ClassesPage() {
                 <div className="flex flex-col items-end gap-1">
                   <button
                     onClick={() => handleToggleActive(cls)}
-                    className={`text-xs px-2 py-0.5 rounded-full font-medium ${cls.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}
+                    className={cls.is_active ? 'badge-success' : 'badge-neutral'}
                   >
                     {cls.is_active ? 'Aktif' : 'Pasif'}
                   </button>

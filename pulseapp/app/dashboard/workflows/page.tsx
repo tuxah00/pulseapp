@@ -38,11 +38,11 @@ const TRIGGER_LABELS: Record<string, string> = {
 const TRIGGER_OPTIONS = Object.entries(TRIGGER_LABELS).map(([value, label]) => ({ value, label }))
 
 const TRIGGER_COLORS: Record<string, string> = {
-  appointment_completed: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-  appointment_cancelled: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-  customer_created: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  no_show: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
-  birthday: 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400',
+  appointment_completed: 'badge-success',
+  appointment_cancelled: 'badge-danger',
+  customer_created: 'badge-info',
+  no_show: 'badge-warning',
+  birthday: 'badge bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400',
 }
 
 function formatDelay(hours: number): string {
@@ -296,11 +296,11 @@ export default function WorkflowsPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-2">
                     <h3 className="font-semibold text-gray-900 dark:text-gray-100">{workflow.name}</h3>
-                    <span className={cn('badge text-xs', TRIGGER_COLORS[workflow.trigger_type])}>
+                    <span className={cn('text-xs', TRIGGER_COLORS[workflow.trigger_type])}>
                       {TRIGGER_LABELS[workflow.trigger_type] || workflow.trigger_type}
                     </span>
                     {workflow.runs_this_month > 0 && (
-                      <span className="badge bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 text-xs">
+                      <span className="badge-neutral text-xs">
                         {workflow.runs_this_month} bu ay
                       </span>
                     )}

@@ -38,9 +38,9 @@ const ROLE_ORDER: Record<StaffRole, number> = {
 }
 
 const ROLE_COLORS: Record<StaffRole, string> = {
-  owner: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
-  manager: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
-  staff: 'bg-pulse-100 text-pulse-900 dark:bg-pulse-900/30 dark:text-pulse-300',
+  owner: 'badge-warning',
+  manager: 'badge bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
+  staff: 'badge-brand',
 }
 
 const PERMISSION_LABELS: Record<keyof StaffPermissions, string> = {
@@ -395,8 +395,8 @@ export default function StaffPage() {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-medium text-gray-900 dark:text-gray-100">{member.name}</span>
-                <span className={cn('badge', ROLE_COLORS[member.role])}>{ROLE_LABELS[member.role]}</span>
-                {isMe && <span className="badge bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">Siz</span>}
+                <span className={ROLE_COLORS[member.role]}>{ROLE_LABELS[member.role]}</span>
+                {isMe && <span className="badge-info">Siz</span>}
                 {member.role !== 'owner' && (
                   <span className="text-xs text-gray-400">{permCount}/{totalPerms} yetki</span>
                 )}
@@ -512,7 +512,7 @@ export default function StaffPage() {
                   {selectedStaff.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                 </div>
                 <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{selectedStaff.name}</h4>
-                <span className={cn('badge mt-1', ROLE_COLORS[selectedStaff.role])}>{ROLE_LABELS[selectedStaff.role]}</span>
+                <span className={cn('mt-1', ROLE_COLORS[selectedStaff.role])}>{ROLE_LABELS[selectedStaff.role]}</span>
               </div>
 
               {/* İletişim */}

@@ -383,7 +383,7 @@ export default function PortfolioPage() {
               <div className="p-3">
                 <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">{item.title}</p>
                 {item.category && (
-                  <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full">
+                  <span className="badge-info mt-1 gap-1">
                     <Tag className="w-3 h-3" />
                     {item.category}
                   </span>

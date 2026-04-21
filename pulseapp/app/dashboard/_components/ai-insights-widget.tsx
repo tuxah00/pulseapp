@@ -8,11 +8,11 @@ import type { CampaignSuggestion } from '@/app/api/ai/campaign-suggest/route'
 import { cn } from '@/lib/utils'
 
 const CAMPAIGN_TYPE_CONFIG: Record<string, { label: string; color: string }> = {
-  winback: { label: 'Geri Kazanım', color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
-  upsell: { label: 'Üst Satış', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
-  loyalty: { label: 'Sadakat', color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' },
-  birthday: { label: 'Doğum Günü', color: 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400' },
-  seasonal: { label: 'Sezonsal', color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
+  winback: { label: 'Geri Kazanım', color: 'badge-warning' },
+  upsell: { label: 'Üst Satış', color: 'badge-info' },
+  loyalty: { label: 'Sadakat', color: 'badge bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' },
+  birthday: { label: 'Doğum Günü', color: 'badge bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400' },
+  seasonal: { label: 'Sezonsal', color: 'badge-success' },
 }
 
 export default function AiInsightsWidget() {
@@ -131,7 +131,7 @@ export default function AiInsightsWidget() {
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className={cn('text-[10px] font-medium px-1.5 py-0.5 rounded-full', typeCfg.color)}>
+                      <span className={cn('text-[10px]', typeCfg.color)}>
                         {typeCfg.label}
                       </span>
                       <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{s.segmentLabel}</span>

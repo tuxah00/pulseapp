@@ -381,10 +381,10 @@ export default function StoklarPage() {
 
   function stockBadge(product: Product) {
     if (product.stock_count === 0)
-      return <span className="badge bg-red-100 text-red-700">Stok Yok</span>
+      return <span className="badge-danger">Stok Yok</span>
     if (product.stock_count <= product.min_stock_level)
-      return <span className="badge bg-amber-100 text-amber-700">Az Stok</span>
-    return <span className="badge bg-green-100 text-green-700">Stokta Var</span>
+      return <span className="badge-warning">Az Stok</span>
+    return <span className="badge-success">Stokta Var</span>
   }
 
   function movementTypeLabel(type: string) {
@@ -608,7 +608,7 @@ export default function StoklarPage() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium text-gray-900 dark:text-gray-100 truncate">{product.name}</span>
                       {stockBadge(product)}
-                      {product.category && <span className="badge bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{product.category}</span>}
+                      {product.category && <span className="badge-neutral">{product.category}</span>}
                     </div>
                     <div className="mt-0.5 flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
                       <span>{product.stock_count} {product.unit}</span>

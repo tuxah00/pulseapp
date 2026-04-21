@@ -337,7 +337,7 @@ export default function FollowUpsPage() {
                     )}
                   </div>
                   <div className="flex-shrink-0">
-                    <span className="text-xs px-2 py-1 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
+                    <span className="badge-info">
                       {FOLLOW_UP_TYPE_LABELS[f.type] || f.type}
                     </span>
                   </div>
@@ -440,7 +440,7 @@ export default function FollowUpsPage() {
                         </span>
                       )
                     })()}
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
+                    <span className="badge-info">
                       {FOLLOW_UP_TYPE_LABELS[detailItem.type] || detailItem.type}
                     </span>
                   </div>

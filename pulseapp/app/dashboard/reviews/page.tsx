@@ -456,10 +456,10 @@ export default function ReviewsPage() {
                     </span>
                     {renderStars(review.rating)}
                     {review.rating <= 3 && review.status !== 'responded' && (
-                      <span className="badge bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"><AlertTriangle className="h-3 w-3 mr-1" />Dikkat</span>
+                      <span className="badge-danger"><AlertTriangle className="h-3 w-3 mr-1" />Dikkat</span>
                     )}
                     {review.status === 'responded' && (
-                      <span className="badge bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">Yanıtlandı</span>
+                      <span className="badge-success">Yanıtlandı</span>
                     )}
                   </div>
 
@@ -651,7 +651,7 @@ export default function ReviewsPage() {
                             {FEEDBACK_TYPE_LABELS[item.type]}
                           </span>
                           {isUrgent && (
-                            <span className="badge bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">
+                            <span className="badge-danger">
                               <AlertTriangle className="h-3 w-3 mr-1" />Acil
                             </span>
                           )}
