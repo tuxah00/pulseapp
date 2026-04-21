@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { requirePermission, requireSectorModule } from '@/lib/hooks/use-require-permission'
+import { getTreatmentNotesPlaceholder } from '@/lib/config/sector-labels'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { createClient } from '@/lib/supabase/client'
 import {
@@ -109,6 +110,13 @@ export default function ProtocolsPage() {
     document.addEventListener('keydown', h)
     return () => document.removeEventListener('keydown', h)
   }, [showCreate])
+
+  useEffect(() => {
+    if (!selectedProtocol) return
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape' && !showCreate) closeDetail() }
+    document.addEventListener('keydown', h)
+    return () => document.removeEventListener('keydown', h)
+  }, [selectedProtocol, showCreate])
 
   // Create protocol
   const handleCreate = async () => {
@@ -429,7 +437,7 @@ export default function ProtocolsPage() {
               </div>
               <div>
                 <label className="label">Notlar</label>
-                <textarea className="input w-full" rows={3} placeholder="Tedavi notları..." value={formNotes} onChange={e => setFormNotes(e.target.value)} />
+                <textarea className="input w-full" rows={3} placeholder={getTreatmentNotesPlaceholder(sector)} value={formNotes} onChange={e => setFormNotes(e.target.value)} />
               </div>
             </div>
             <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">

@@ -886,7 +886,20 @@ export interface PackageUsage {
   staff_id: string | null
 }
 
-export type ShiftType = 'regular' | 'off'
+export type ShiftType = 'regular' | 'off' | 'part_time'
+export type ShiftRequestStatus = 'pending' | 'approved' | 'rejected'
+
+export const SHIFT_TYPE_LABELS: Record<ShiftType, string> = {
+  regular: 'Normal Vardiya',
+  off: 'İzin / Kapalı',
+  part_time: 'Yarı Zamanlı',
+}
+
+export const SHIFT_REQUEST_STATUS_LABELS: Record<ShiftRequestStatus, string> = {
+  pending: 'Bekliyor',
+  approved: 'Onaylandı',
+  rejected: 'Reddedildi',
+}
 
 export interface Shift {
   id: string
@@ -1180,25 +1193,48 @@ export interface Referral {
 
 // ── Takip Kuyruğu ──
 
-export type FollowUpType = 'post_session' | 'next_session_reminder' | 'protocol_completion'
-export type FollowUpStatus = 'pending' | 'sent' | 'cancelled'
+export type FollowUpType = 'post_session' | 'next_session_reminder' | 'protocol_completion' | 'package_sold' | 'manual'
+export type FollowUpStatus = 'pending' | 'in_progress' | 'sent' | 'no_response' | 'done' | 'rescheduled' | 'cancelled'
 
 export const FOLLOW_UP_TYPE_LABELS: Record<FollowUpType, string> = {
-  post_session: 'Seans Sonrası Kontrol',
+  post_session: 'Seans Sonrası',
   next_session_reminder: 'Sonraki Seans Hatırlatma',
-  protocol_completion: 'Protokol Tamamlama',
+  protocol_completion: 'Protokol Tamamlandı',
+  package_sold: 'Paket Satıldı',
+  manual: 'Özel Takip',
+}
+
+export const FOLLOW_UP_STATUS_LABELS: Record<FollowUpStatus, string> = {
+  pending: 'Bekliyor',
+  in_progress: 'Görüşülüyor',
+  sent: 'Gönderildi',
+  no_response: 'Yanıtsız',
+  done: 'Tamamlandı',
+  rescheduled: 'Ertelendi',
+  cancelled: 'İptal',
+}
+
+export interface FollowUpStatusHistoryEntry {
+  status: FollowUpStatus
+  changed_at: string
+  staff_id: string | null
+  staff_name: string | null
+  note?: string
 }
 
 export interface FollowUpJob {
   id: string
   business_id: string
-  appointment_id: string
+  appointment_id: string | null
   customer_id: string
   protocol_id: string | null
+  customer_package_id: string | null
   type: FollowUpType
   scheduled_for: string
   status: FollowUpStatus
   message: string | null
+  notes: string | null
+  status_history: FollowUpStatusHistoryEntry[]
   created_at: string
   // JOINs
   customer?: Customer

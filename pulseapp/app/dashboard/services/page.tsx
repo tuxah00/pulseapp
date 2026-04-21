@@ -11,7 +11,7 @@ import { Portal } from '@/components/ui/portal'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
 import type { Service } from '@/types'
 import { logAudit } from '@/lib/utils/audit'
-import { getContraindicationLabel, isMedicalSector } from '@/lib/config/sector-labels'
+import { getContraindicationLabel, isMedicalSector, getServiceNamePlaceholder, getServiceDescriptionPlaceholder } from '@/lib/config/sector-labels'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import { ToolbarPopover, SortPopoverContent } from '@/components/ui/toolbar-popover'
 import { CustomSelect } from '@/components/ui/custom-select'
@@ -58,7 +58,7 @@ export default function ServicesPage() {
     if (data) setServices(data)
     if (error) console.error('Hizmet çekme hatası:', error)
     setLoading(false)
-  }, [businessId])
+  }, [businessId, supabase])
 
   const fetchContraindications = useCallback(async (serviceId: string) => {
     if (!businessId) return
@@ -69,7 +69,7 @@ export default function ServicesPage() {
       .eq('service_id', serviceId)
       .order('created_at', { ascending: false })
     setContraindications(data || [])
-  }, [businessId])
+  }, [businessId, supabase])
 
   useEffect(() => {
     if (!ctxLoading) fetchServices()
@@ -342,7 +342,7 @@ export default function ServicesPage() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="input"
-                  placeholder="Saç Kesimi"
+                  placeholder={getServiceNamePlaceholder(sector)}
                   required
                   autoFocus
                 />
@@ -356,7 +356,7 @@ export default function ServicesPage() {
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   className="input"
-                  placeholder="Yıkama dahil"
+                  placeholder={getServiceDescriptionPlaceholder(sector)}
                 />
               </div>
 

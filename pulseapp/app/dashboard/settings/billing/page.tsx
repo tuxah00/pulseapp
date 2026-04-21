@@ -82,7 +82,7 @@ export default function BillingPage() {
     if (bizRes.data) setBusiness(bizRes.data as typeof business)
     if (payRes.data) setPayments(payRes.data)
     setLoading(false)
-  }, [businessId])
+  }, [businessId, supabase])
 
   useEffect(() => { fetchData() }, [fetchData])
 

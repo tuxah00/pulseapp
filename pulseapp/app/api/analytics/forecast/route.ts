@@ -73,14 +73,15 @@ export async function GET(request: NextRequest) {
     const monthKey = apt.appointment_date?.slice(0, 7)
     if (!monthKey) continue
 
-    const revenue = ((apt.services as any)?.price ?? 0) as number
+    const aptSvc = (apt.services as { price?: number | null; name?: string } | null) ?? null
+    const revenue = Number(aptSvc?.price ?? 0)
 
     if (monthlyRevenue.has(monthKey)) {
       monthlyRevenue.set(monthKey, (monthlyRevenue.get(monthKey) || 0) + revenue)
     }
 
     // Hizmet bazlı
-    const serviceName = (apt.services as any)?.name || 'Diğer'
+    const serviceName = aptSvc?.name || 'Diğer'
     const svc = serviceRevenue.get(serviceName) || { name: serviceName, revenue: 0, count: 0 }
     svc.revenue += revenue
     svc.count += 1
@@ -162,7 +163,14 @@ export async function GET(request: NextRequest) {
     return s && s.revenue > 0 ? s.revenue : null
   }
 
-  const forecast: any[] = []
+  const forecast: Array<{
+    month: string
+    label: string
+    revenue: number
+    lower: number
+    upper: number
+    demand: 'peak' | 'high' | 'normal' | 'low'
+  }> = []
   for (let i = 0; i < forecastMonths; i++) {
     const xVal = n + i
     const trendValue = intercept + slope * xVal

@@ -33,3 +33,16 @@ export function isBirthdayToday(birthday: string | null | undefined, today: Date
 export function isLeapYear(year: number): boolean {
   return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0
 }
+
+/**
+ * Müşterinin geçerli bir doğum tarihi olup olmadığını kontrol eder.
+ * En az `minYears` yaşında olmalı (varsayılan: 2).
+ * @param birthday YYYY-MM-DD formatında tarih string'i
+ */
+export function isValidCustomerBirthday(birthday: string, minYears = 2): boolean {
+  const cutoff = new Date()
+  cutoff.setFullYear(cutoff.getFullYear() - minYears)
+  const cutoffStr = `${cutoff.getFullYear()}-${String(cutoff.getMonth() + 1).padStart(2, '0')}-${String(cutoff.getDate()).padStart(2, '0')}`
+  const year = parseInt(birthday.slice(0, 4), 10)
+  return birthday <= cutoffStr && year >= 1900 && year <= new Date().getFullYear()
+}

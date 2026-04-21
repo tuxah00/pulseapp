@@ -41,6 +41,7 @@ import EmptyState from '@/components/ui/empty-state'
 
 import { useRouter, useSearchParams } from 'next/navigation'
 import { getCustomerLabel, getCustomerLabelSingular } from '@/lib/config/sector-modules'
+import { getCustomerNotesPlaceholder } from '@/lib/config/sector-labels'
 import dynamic from 'next/dynamic'
 const ToothChart = dynamic(() => import('@/components/dashboard/tooth-chart'), {
   loading: () => <div className="h-40 w-full animate-pulse bg-gray-100 dark:bg-gray-800 rounded-lg" />
@@ -165,7 +166,7 @@ export default function CustomersPage() {
     if (count !== null) setTotalCount(count)
     if (error) console.error('Müşteri çekme hatası:', error)
     setLoading(false)
-  }, [businessId, filterSegment, debouncedSearch, page])
+  }, [businessId, filterSegment, debouncedSearch, page, supabase])
 
   useEffect(() => { if (!ctxLoading) fetchCustomers() }, [fetchCustomers, ctxLoading])
 
@@ -193,23 +194,12 @@ export default function CustomersPage() {
   }
 
   const onValidSubmit = async (values: CustomerCreateInput) => {
-    // Belt-and-suspenders: Zod schema bunu zaten kontrol ediyor ama
-    // mutlak garanti için inline doğrulama (müşteri en az 2 yaşında olmalı).
-    if (values.birthday && values.birthday.trim() !== '') {
-      const minAge = new Date()
-      minAge.setFullYear(minAge.getFullYear() - 2)
-      const maxAllowed = minAge.toISOString().slice(0, 10)
-      if (values.birthday > maxAllowed) {
-        setError('Lütfen geçerli bir doğum tarihi girin. Müşteri en az 2 yaşında olmalı.')
-        return
-      }
-    }
     setSaving(true); setError(null)
     const customerData = {
       name: values.name,
       phone: values.phone, // schema 10 haneli "5XXXXXXXXX" formatına normalize etti
       email: values.email ?? null,
-      birthday: values.birthday && values.birthday.trim() !== '' ? values.birthday : null,
+      birthday: values.birthday ?? null,
       notes: values.notes ?? null,
       segment,
       business_id: businessId,
@@ -393,7 +383,7 @@ export default function CustomersPage() {
     } finally {
       setTimelineLoading(false)
     }
-  }, [businessId])
+  }, [businessId, supabase])
 
   // Alerji verisi çekme
   const fetchAllergies = useCallback(async (customerId: string) => {
@@ -467,7 +457,7 @@ export default function CustomersPage() {
     } finally {
       setDetailLoading(false)
     }
-  }, [businessId])
+  }, [businessId, supabase])
 
   // Ödül verme
   async function handleGiveReward() {
@@ -534,7 +524,7 @@ export default function CustomersPage() {
     if (panelTab === 'history' && selectedCustomer) {
       fetchTimeline(selectedCustomer.id)
     }
-  }, [panelTab, selectedCustomer?.id])
+  }, [panelTab, selectedCustomer, fetchTimeline])
 
   // Müşteri değiştiğinde tab'ı sıfırla + detay verilerini çek
   useEffect(() => {
@@ -553,7 +543,7 @@ export default function CustomersPage() {
     } else {
       setAllergies([])
     }
-  }, [selectedCustomer?.id])
+  }, [selectedCustomer, fetchAllergies, fetchCustomerDetail])
 
   useEffect(() => {
     if (!showModal) return
@@ -561,6 +551,27 @@ export default function CustomersPage() {
     document.addEventListener('keydown', h)
     return () => document.removeEventListener('keydown', h)
   }, [showModal])
+
+  useEffect(() => {
+    if (!selectedCustomer) return
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape' && !showModal && !showRewardModal && !showRedeemModal) closePanelAnimated() }
+    document.addEventListener('keydown', h)
+    return () => document.removeEventListener('keydown', h)
+  }, [selectedCustomer, showModal, showRewardModal, showRedeemModal, closePanelAnimated])
+
+  useEffect(() => {
+    if (!showRewardModal) return
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') closeRewardModal() }
+    document.addEventListener('keydown', h)
+    return () => document.removeEventListener('keydown', h)
+  }, [showRewardModal])
+
+  useEffect(() => {
+    if (!showRedeemModal) return
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowRedeemModal(false) }
+    document.addEventListener('keydown', h)
+    return () => document.removeEventListener('keydown', h)
+  }, [showRedeemModal])
 
   function getStatusIcon(status: string) {
     switch (status) {
@@ -1215,7 +1226,7 @@ export default function CustomersPage() {
                   )}
 
                   <div className="border-t border-gray-200 dark:border-gray-700 pt-4 flex gap-2">
-                    <button onClick={() => { openEditModal(selectedCustomer); setSelectedCustomer(null) }} className="btn-secondary flex-1 text-sm">
+                    <button onClick={() => openEditModal(selectedCustomer)} className="btn-secondary flex-1 text-sm">
                       <Pencil className="mr-1.5 h-3.5 w-3.5" />Düzenle
                     </button>
                     <button onClick={() => handleDelete(selectedCustomer)} className="btn-danger flex-1 text-sm">
@@ -1274,7 +1285,7 @@ export default function CustomersPage() {
       {/* Modal */}
       {(showModal || isClosingModal) && (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
+        <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
           <div className={`modal-content card w-full max-w-md dark:bg-gray-900 ${isClosingModal ? 'closing' : ''}`}>
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
               {editingCustomer ? `${singularLabel} Düzenle` : `Yeni ${singularLabel} Ekle`}
@@ -1303,14 +1314,13 @@ export default function CustomersPage() {
                   {...register('birthday')}
                   className="input"
                   min={(() => { const d = new Date(); d.setFullYear(d.getFullYear() - 120); return formatDateISO(d) })()}
-                  max={(() => { const d = new Date(); d.setFullYear(d.getFullYear() - 2); return formatDateISO(d) })()}
                 />
 
                 {errors.birthday && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.birthday.message}</p>}
               </div>
               <div>
                 <label htmlFor="custNotes" className="label">Notlar (opsiyonel)</label>
-                <textarea id="custNotes" {...register('notes')} className="input" rows={3} placeholder="Tercihler, alerjiler, vb." />
+                <textarea id="custNotes" {...register('notes')} className="input" rows={3} placeholder={getCustomerNotesPlaceholder(sector)} />
                 {errors.notes && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.notes.message}</p>}
               </div>
               <div>

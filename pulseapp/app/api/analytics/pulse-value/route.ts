@@ -206,8 +206,15 @@ export async function GET(request: NextRequest) {
   const savedMoneyEstimate = Math.round((totalSavedMinutes / 60) * ASSUMPTIONS.hourly_rate_try)
 
   // ═══ Dijital Kanal Geliri ═══
-  const sumAptPrices = (list: any[]): number =>
-    list.reduce((sum, a) => sum + (Number((a.services as any)?.price) || 0), 0)
+  // Supabase join tek obje veya dizi dönebilir (types'da dizi olarak infer edilir)
+  type SvcRef = { price?: number | null } | Array<{ price?: number | null }> | null | undefined
+  const extractPrice = (svc: SvcRef): number => {
+    if (!svc) return 0
+    const single = Array.isArray(svc) ? svc[0] : svc
+    return Number(single?.price) || 0
+  }
+  const sumAptPrices = (list: Array<{ services?: SvcRef }>): number =>
+    list.reduce((sum, a) => sum + extractPrice(a.services), 0)
 
   const webApts = webAptsRes.data || []
   const aiApts = aiAptsRes.data || []
@@ -216,8 +223,9 @@ export async function GET(request: NextRequest) {
   const webRevenue = sumAptPrices(webApts)
   const aiRevenue = sumAptPrices(aiApts)
   const gapFillRevenue = gapFillList.reduce((sum, g) => {
-    const price = Number((g.appointments as any)?.services?.price) || 0
-    return sum + price
+    const nestedApt = (g as { appointments?: { services?: SvcRef } | Array<{ services?: SvcRef }> | null }).appointments
+    const apt = Array.isArray(nestedApt) ? nestedApt[0] : nestedApt
+    return sum + extractPrice(apt?.services)
   }, 0)
 
   // Kampanya attribution: sent_at'ten sonraki X gün içinde alınan randevu (indirect)
@@ -260,7 +268,7 @@ export async function GET(request: NextRequest) {
         const diff = aptTime - sentTime
         if (diff >= 0 && diff <= windowMs) {
           campaignSourcedCount += 1
-          campaignRevenue += Number((apt.services as any)?.price) || 0
+          campaignRevenue += extractPrice(apt.services as SvcRef)
         }
       }
     }

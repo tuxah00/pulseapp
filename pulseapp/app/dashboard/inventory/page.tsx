@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Portal } from '@/components/ui/portal'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
+import { getInventoryItemPlaceholder, getInventoryCategoryPlaceholder } from '@/lib/config/sector-labels'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { useDebounce } from '@/lib/hooks/use-debounce'
 import { requirePermission, requireSectorModule } from '@/lib/hooks/use-require-permission'
@@ -127,7 +128,7 @@ export default function StoklarPage() {
       setDbError(null)
     }
     setLoading(false)
-  }, [businessId, page])
+  }, [businessId, page, supabase])
 
   const fetchSuppliers = useCallback(async () => {
     if (!businessId) return
@@ -139,7 +140,7 @@ export default function StoklarPage() {
       .order('name')
     setSuppliers(data || [])
     setSuppliersLoading(false)
-  }, [businessId])
+  }, [businessId, supabase])
 
   useEffect(() => {
     if (!ctxLoading) {
@@ -156,6 +157,20 @@ export default function StoklarPage() {
     document.addEventListener('keydown', h)
     return () => document.removeEventListener('keydown', h)
   }, [showModal])
+
+  useEffect(() => {
+    if (!showSupplierModal) return
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') closeSupplierModal() }
+    document.addEventListener('keydown', h)
+    return () => document.removeEventListener('keydown', h)
+  }, [showSupplierModal])
+
+  useEffect(() => {
+    if (!selectedProduct) return
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape' && !showModal && !showSupplierModal) closePanelAnimated() }
+    document.addEventListener('keydown', h)
+    return () => document.removeEventListener('keydown', h)
+  }, [selectedProduct, showModal, showSupplierModal, closePanelAnimated])
 
   const fetchMovements = useCallback(async (productId: string) => {
     setMovementsLoading(true)
@@ -829,13 +844,13 @@ export default function StoklarPage() {
             <form onSubmit={handleSave} className="space-y-4">
               <div>
                 <label className="label">Ürün Adı</label>
-                <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="input" placeholder="Saç Boyası No.5" required autoFocus />
+                <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="input" placeholder={getInventoryItemPlaceholder(sector)} required autoFocus />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="label">Kategori (opsiyonel)</label>
-                  <input type="text" value={category} onChange={(e) => setCategory(e.target.value)} className="input" placeholder="Boya" />
+                  <input type="text" value={category} onChange={(e) => setCategory(e.target.value)} className="input" placeholder={getInventoryCategoryPlaceholder(sector)} />
                 </div>
                 <div>
                   <label className="label">Birim</label>

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Portal } from '@/components/ui/portal'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { getCustomerLabelSingular } from '@/lib/config/sector-modules'
+import { getAppointmentNotesPlaceholder, getMembershipPlanPlaceholder } from '@/lib/config/sector-labels'
 import { useDebounce } from '@/lib/hooks/use-debounce'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { requirePermission, requireSectorModule } from '@/lib/hooks/use-require-permission'
@@ -524,7 +525,7 @@ export default function MembershipsPage() {
                   value={planName}
                   onChange={e => setPlanName(e.target.value)}
                   className="input"
-                  placeholder="örn. Aylık Fitness Üyeliği"
+                  placeholder={getMembershipPlanPlaceholder(sector)}
                   required
                 />
               </div>
@@ -584,7 +585,7 @@ export default function MembershipsPage() {
                   onChange={e => setNotes(e.target.value)}
                   className="input"
                   rows={2}
-                  placeholder="Ek bilgi..."
+                  placeholder={getAppointmentNotesPlaceholder(sector)}
                 />
               </div>
 

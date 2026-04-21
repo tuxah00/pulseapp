@@ -2,16 +2,11 @@
 
 import { useEffect } from 'react'
 import { ThemeProvider as NextThemesProvider, useTheme as useNextTheme } from 'next-themes'
-import { createBrowserClient } from '@supabase/ssr'
+import { createClient } from '@/lib/supabase/client'
 
-// Supabase theme sync — runs inside ThemeProvider tree
 function ThemeSyncProvider({ children }: { children: React.ReactNode }) {
   const { resolvedTheme, setTheme } = useNextTheme()
-
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  const supabase = createClient()
 
   // On mount: sync theme from Supabase user_metadata
   useEffect(() => {

@@ -167,7 +167,7 @@ export default function StaffPage() {
     if (data) setStaff(data)
     if (err) console.error('Personel çekme hatası:', err)
     setLoading(false)
-  }, [businessId])
+  }, [businessId, supabase])
 
   useEffect(() => { if (!ctxLoading) fetchStaff() }, [fetchStaff, ctxLoading])
 

@@ -17,6 +17,13 @@ import { createClient } from '@/lib/supabase/client'
 import { logAudit } from '@/lib/utils/audit'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { requirePermission, requireSectorModule } from '@/lib/hooks/use-require-permission'
+import {
+  getRecordDescriptionPlaceholder,
+  getDiagnosisPlaceholder,
+  getTreatmentPlanPlaceholder,
+  getAllergiesPlaceholder,
+  getTreatmentNotesPlaceholder,
+} from '@/lib/config/sector-labels'
 import type { Customer } from '@/types'
 import CompactBoxCard from '@/components/ui/compact-box-card'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
@@ -376,7 +383,21 @@ function RecordsPageInner() {
 
   const { businessId, staffId, staffName, sector, loading: ctxLoading, permissions } = useBusinessContext()
   const { confirm } = useConfirm()
-  const config = TYPE_CONFIG[recordType]
+  const config = useMemo(() => {
+    const base = TYPE_CONFIG[recordType]
+    if (recordType !== 'patient_file') return base
+    // patient_file alanlarında sektöre göre placeholder override
+    return {
+      ...base,
+      fields: base.fields.map(f => {
+        if (f.key === 'diagnosis') return { ...f, placeholder: getDiagnosisPlaceholder(sector) }
+        if (f.key === 'treatment_plan') return { ...f, placeholder: getTreatmentPlanPlaceholder(sector) }
+        if (f.key === 'treatment_notes') return { ...f, placeholder: getTreatmentNotesPlaceholder(sector) }
+        if (f.key === 'allergies') return { ...f, placeholder: getAllergiesPlaceholder(sector) }
+        return f
+      }),
+    }
+  }, [recordType, sector])
 
   const [records, setRecords] = useState<BusinessRecord[]>([])
   const [selectedCustomerName, setSelectedCustomerName] = useState<string>('')
@@ -387,10 +408,17 @@ function RecordsPageInner() {
   const [showModal, setShowModal] = useState(false)
   const [isClosingModal, setIsClosingModal] = useState(false)
   const closeModal = () => setIsClosingModal(true)
+  function handleEditModalAnimationEnd() {
+    if (!isClosingModal) return
+    setShowModal(false)
+    setIsClosingModal(false)
+    setEditingFromDetail(false)
+  }
   const [isClosingRecord, setIsClosingRecord] = useState(false)
   const closeRecord = () => setIsClosingRecord(true)
   const [editingRecord, setEditingRecord] = useState<BusinessRecord | null>(null)
   const [selectedRecord, setSelectedRecord] = useState<BusinessRecord | null>(null)
+  const [editingFromDetail, setEditingFromDetail] = useState(false)
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [viewMode, setViewMode] = useViewMode('records', 'list')
@@ -456,22 +484,24 @@ function RecordsPageInner() {
     }
   }, [fetchRecords, ctxLoading])
 
-  // ESC tuşu ile detay modalını kapat (lightbox açıksa önce lightbox kapanır)
+  // ESC: lightbox > edit modal > detay modal sıralamasıyla kapat
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         if (lightbox) {
           setLightbox(null)
+        } else if (showModal || isClosingModal) {
+          closeModal()
         } else {
           closeRecord()
         }
       }
     }
-    if (selectedRecord || lightbox) {
+    if (selectedRecord || lightbox || showModal) {
       document.addEventListener('keydown', handleEsc)
       return () => document.removeEventListener('keydown', handleEsc)
     }
-  }, [selectedRecord, lightbox])
+  }, [selectedRecord, lightbox, showModal, isClosingModal])
 
   // ── File upload helpers ────────────────────────────────────────────────────
 
@@ -533,6 +563,11 @@ function RecordsPageInner() {
     setUploadFiles([])
     setFileDescriptions([])
     setShowModal(true)
+  }
+
+  function openEditModalFromDetail(record: BusinessRecord) {
+    setEditingFromDetail(true)
+    openEditModal(record)
   }
 
   // ── Save ──────────────────────────────────────────────────────────────────
@@ -1209,7 +1244,7 @@ function RecordsPageInner() {
                 {/* ── Section 4: Footer ── */}
                 <div className="border-t border-gray-200 dark:border-gray-700 px-6 py-4 flex gap-3 flex-shrink-0">
                   <button
-                    onClick={() => { openEditModal(selectedRecord); setSelectedRecord(null) }}
+                    onClick={() => openEditModalFromDetail(selectedRecord)}
                     className="btn-secondary flex-1 text-sm"
                   >
                     <Pencil className="mr-1.5 h-3.5 w-3.5" />Düzenle
@@ -1353,7 +1388,7 @@ function RecordsPageInner() {
                 <textarea
                   className="input text-sm w-full resize-none"
                   rows={3}
-                  placeholder="Dosya açıklaması..."
+                  placeholder={getRecordDescriptionPlaceholder(sector)}
                   value={fileDescPopup.value}
                   onChange={e => setFileDescPopup({ ...fileDescPopup, value: e.target.value })}
                   onKeyDown={e => { if (e.key === 'Escape') setFileDescPopup(null) }}
@@ -1384,7 +1419,7 @@ function RecordsPageInner() {
       {/* ── Create / Edit Modal ── */}
       {(showModal || isClosingModal) && (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
+        <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center p-4 bg-black/60 dark:bg-black/70 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={handleEditModalAnimationEnd}>
           <div className={`modal-content card w-full max-w-lg max-h-[90vh] overflow-y-auto ${isClosingModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">

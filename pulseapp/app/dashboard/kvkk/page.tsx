@@ -102,7 +102,7 @@ export default function KvkkPage() {
     const { data } = await query
     if (data) setConsents(data)
     setConsentsLoading(false)
-  }, [businessId, consentTypeFilter])
+  }, [businessId, consentTypeFilter, supabase])
 
   const fetchDeletions = useCallback(async () => {
     if (!businessId) return
@@ -116,7 +116,7 @@ export default function KvkkPage() {
 
     if (data) setDeletions(data)
     setDeletionsLoading(false)
-  }, [businessId])
+  }, [businessId, supabase])
 
   useEffect(() => {
     if (!ctxLoading) {

@@ -25,7 +25,7 @@ export default function PerformanceStats() {
 
     if (aptRes.data) setAppointments(aptRes.data)
     setLoading(false)
-  }, [businessId])
+  }, [businessId, supabase])
 
   useEffect(() => { if (!ctxLoading) fetchData() }, [fetchData, ctxLoading])
 

@@ -22,4 +22,6 @@ export const MSG = {
   MIN_ITEMS: (min: number) => `En az ${min} öğe olmalı`,
   INVALID_DATE_FORMAT: 'Geçerli bir tarih girin (YYYY-AA-GG)',
   INVALID_TIME_FORMAT: 'Geçerli bir saat girin (SS:DD)',
+  BIRTHDAY_MIN_AGE: 'Lütfen geçerli bir doğum tarihi girin. Müşteri en az 2 yaşında olmalı.',
+  BIRTHDAY_INVALID_YEAR: 'Geçersiz doğum yılı',
 } as const

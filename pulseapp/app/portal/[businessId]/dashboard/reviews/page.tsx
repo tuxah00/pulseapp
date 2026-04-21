@@ -187,19 +187,9 @@ export default function PortalReviewsPage() {
 
   useEffect(() => {
     loadMy()
-  }, [loadMy])
-
-  useEffect(() => {
-    if (tab === 'business' && !bizLoaded && !loadingBiz) {
-      loadBusiness()
-    }
-  }, [tab, loadBusiness, bizLoaded, loadingBiz])
-
-  useEffect(() => {
-    if (tab === 'feedback' && !fbLoaded && !loadingFb) {
-      loadFeedback()
-    }
-  }, [tab, loadFeedback, fbLoaded, loadingFb])
+    loadBusiness()
+    loadFeedback()
+  }, [loadMy, loadBusiness, loadFeedback])
 
   function openModal(apt: PendingAppointmentForReview | null) {
     setModalAppt(apt)

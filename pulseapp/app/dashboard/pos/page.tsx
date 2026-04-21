@@ -128,7 +128,7 @@ export default function KasaPage() {
     setTransactions(txRes.transactions || [])
     setSession(sessRes.openSession || null)
     setLoading(false)
-  }, [businessId])
+  }, [businessId, supabase])
 
   useEffect(() => { fetchData() }, [fetchData])
 
@@ -555,31 +555,31 @@ export default function KasaPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
 
         {/* ── SOL: Ürün/Hizmet Seçici ── */}
-        <div className="lg:col-span-3 card p-4 space-y-3">
-          <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 overflow-x-auto scrollbar-thin">
+        <div className="lg:col-span-4 card p-4 flex flex-col gap-3 h-[calc(100vh-14rem)]">
+          <div className="flex gap-0.5 bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
             <button
               onClick={() => setItemTab('services')}
-              className={cn('flex-shrink-0 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap',
+              className={cn('flex-1 flex items-center justify-center gap-1 px-1.5 py-1 rounded-md text-xs font-medium transition-colors',
                 itemTab === 'services' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
               )}
             >
-              <Scissors className="h-3.5 w-3.5" /> Hizmetler
+              <Scissors className="h-3 w-3 shrink-0" /> Hizmet
             </button>
             <button
               onClick={() => setItemTab('products')}
-              className={cn('flex-shrink-0 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap',
+              className={cn('flex-1 flex items-center justify-center gap-1 px-1.5 py-1 rounded-md text-xs font-medium transition-colors',
                 itemTab === 'products' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 hover:text-gray-700'
               )}
             >
-              <Package className="h-3.5 w-3.5" /> Ürünler
+              <Package className="h-3 w-3 shrink-0" /> Ürün
             </button>
             <button
               onClick={() => setItemTab('packages')}
-              className={cn('flex-shrink-0 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap',
+              className={cn('flex-1 flex items-center justify-center gap-1 px-1.5 py-1 rounded-md text-xs font-medium transition-colors',
                 itemTab === 'packages' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 hover:text-gray-700'
               )}
             >
-              <Gift className="h-3.5 w-3.5" /> Paketler
+              <Gift className="h-3 w-3 shrink-0" /> Paket
             </button>
           </div>
 
@@ -594,7 +594,7 @@ export default function KasaPage() {
             />
           </div>
 
-          <div className="max-h-[calc(100vh-320px)] overflow-y-auto space-y-1">
+          <div className="flex-1 min-h-0 overflow-y-auto space-y-1">
             {itemTab === 'services' ? (
               filteredServices.length === 0 ? (
                 <p className="text-sm text-gray-400 text-center py-4">Hizmet bulunamadı</p>
@@ -608,7 +608,7 @@ export default function KasaPage() {
                       service_id: svc.id,
                     })}
                     disabled={!svc.price}
-                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left disabled:opacity-40"
+                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left disabled:opacity-40 focus:outline-none"
                   >
                     <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{svc.name}</span>
                     <span className="text-sm text-pulse-900 font-semibold flex-shrink-0 ml-2">
@@ -630,7 +630,7 @@ export default function KasaPage() {
                       product_id: prod.id,
                     })}
                     disabled={!prod.price || prod.stock_count <= 0}
-                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left disabled:opacity-40"
+                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left disabled:opacity-40 focus:outline-none"
                   >
                     <div className="min-w-0">
                       <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate block">{prod.name}</span>
@@ -657,7 +657,7 @@ export default function KasaPage() {
                       sessions_total: pkg.sessions_total,
                     })}
                     disabled={!pkg.price}
-                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left disabled:opacity-40"
+                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left disabled:opacity-40 focus:outline-none"
                   >
                     <div className="min-w-0">
                       <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate block">{pkg.name}</span>
@@ -674,7 +674,7 @@ export default function KasaPage() {
         </div>
 
         {/* ── ORTA: Adisyon ── */}
-        <div className="lg:col-span-5 card p-4 space-y-4">
+        <div className="lg:col-span-4 card p-4 flex flex-col gap-4 h-[calc(100vh-14rem)]">
           <div className="flex items-center justify-between">
             <h2 className="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
               <ShoppingBag className="h-5 w-5" /> Adisyon
@@ -792,13 +792,13 @@ export default function KasaPage() {
 
           {/* Sepet kalemleri */}
           {cart.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+            <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
               <ShoppingBag className="h-10 w-10 mb-2 opacity-30" />
               <p className="text-sm">Sepet boş</p>
               <p className="text-xs">Soldan hizmet veya ürün ekleyin</p>
             </div>
           ) : (
-            <div className="space-y-2 max-h-[40vh] overflow-y-auto">
+            <div className="flex-1 min-h-0 overflow-y-auto space-y-2">
               {cart.map(item => (
                 <div key={item._key} className="flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
                   <div className="flex-1 min-w-0">
@@ -827,18 +827,19 @@ export default function KasaPage() {
             </div>
           )}
 
-          {/* İndirim + KDV */}
+          {/* İndirim + KDV + Toplamlar */}
           {cart.length > 0 && (
-            <div className="border-t border-gray-200 dark:border-gray-700 pt-3 space-y-2">
-              <div className="flex items-center gap-2">
-                <label className="text-sm text-gray-500 w-16">İndirim</label>
-                <div className="flex items-center gap-1 flex-1">
+            <div className="flex-shrink-0 border-t border-gray-200 dark:border-gray-700 pt-3 space-y-2">
+              {/* İndirim ve KDV — sağa hizalı tek satır */}
+              <div className="flex items-center justify-end gap-3">
+                <div className="flex items-center gap-1">
+                  <label className="text-xs text-gray-500 whitespace-nowrap">İndirim</label>
                   <input
                     type="number"
                     min="0"
                     value={discountAmount || ''}
                     onChange={(e) => setDiscountAmount(parseFloat(e.target.value) || 0)}
-                    className="input w-24 text-sm"
+                    className="input w-16 text-xs py-1 px-2"
                     placeholder="0"
                   />
                   <CustomSelect
@@ -850,26 +851,19 @@ export default function KasaPage() {
                     ]}
                   />
                 </div>
-                {discountCalc > 0 && (
-                  <span className="text-sm text-red-500">-{formatCurrency(discountCalc)}</span>
-                )}
-              </div>
-
-              <div className="flex items-center gap-2">
-                <label className="text-sm text-gray-500 w-16">KDV</label>
-                <CustomSelect
-                  value={String(taxRate)}
-                  onChange={v => setTaxRate(Number(v))}
-                  options={[
-                    { value: '0', label: '%0' },
-                    { value: '1', label: '%1' },
-                    { value: '10', label: '%10' },
-                    { value: '20', label: '%20' },
-                  ]}
-                />
-                {taxCalc > 0 && (
-                  <span className="text-sm text-gray-500">+{formatCurrency(taxCalc)}</span>
-                )}
+                <div className="flex items-center gap-1">
+                  <label className="text-xs text-gray-500 whitespace-nowrap">KDV</label>
+                  <CustomSelect
+                    value={String(taxRate)}
+                    onChange={v => setTaxRate(Number(v))}
+                    options={[
+                      { value: '0', label: '%0' },
+                      { value: '1', label: '%1' },
+                      { value: '10', label: '%10' },
+                      { value: '20', label: '%20' },
+                    ]}
+                  />
+                </div>
               </div>
 
               {/* Toplamlar */}
@@ -900,7 +894,7 @@ export default function KasaPage() {
         </div>
 
         {/* ── SAĞ: Ödeme Paneli ── */}
-        <div className="lg:col-span-4 card p-4 space-y-4">
+        <div className="lg:col-span-4 card p-4 flex flex-col gap-4 h-[calc(100vh-14rem)]">
           <h2 className="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
             <Wallet className="h-5 w-5" /> Ödeme
           </h2>
@@ -926,45 +920,47 @@ export default function KasaPage() {
           </div>
 
           {/* Ödeme satırları */}
-          {paymentRows.length > 0 && (
-            <div className="space-y-2">
-              {paymentRows.map((row, i) => {
-                const pm = PAYMENT_METHODS.find(m => m.key === row.method)
-                return (
-                  <div key={i} className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1.5 w-20">
-                      {pm?.icon} {pm?.label}
-                    </span>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={row.amount || ''}
-                      onChange={(e) => updatePaymentAmount(i, parseFloat(e.target.value) || 0)}
-                      className="input flex-1 text-sm text-right"
-                    />
-                    <span className="text-sm text-gray-400">₺</span>
-                    <button onClick={() => removePaymentRow(i)} className="text-red-400 hover:text-red-600">
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                )
-              })}
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            {paymentRows.length > 0 && (
+              <div className="space-y-2">
+                {paymentRows.map((row, i) => {
+                  const pm = PAYMENT_METHODS.find(m => m.key === row.method)
+                  return (
+                    <div key={i} className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1.5 w-20">
+                        {pm?.icon} {pm?.label}
+                      </span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={row.amount || ''}
+                        onChange={(e) => updatePaymentAmount(i, parseFloat(e.target.value) || 0)}
+                        className="input flex-1 text-sm text-right"
+                      />
+                      <span className="text-sm text-gray-400">₺</span>
+                      <button onClick={() => removePaymentRow(i)} className="text-red-400 hover:text-red-600">
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )
+                })}
 
-              {remaining > 0.01 && (
-                <div className="flex justify-between text-sm px-1">
-                  <span className="text-orange-500 font-medium">Kalan</span>
-                  <span className="text-orange-500 font-bold">{formatCurrency(remaining)}</span>
-                </div>
-              )}
-            </div>
-          )}
+                {remaining > 0.01 && (
+                  <div className="flex justify-between text-sm px-1">
+                    <span className="text-orange-500 font-medium">Kalan</span>
+                    <span className="text-orange-500 font-bold">{formatCurrency(remaining)}</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* Tahsilat Al butonu */}
           <button
             onClick={handleCheckout}
             disabled={cart.length === 0 || remaining > 0.01 || processing}
-            className="w-full btn-primary py-3 text-base font-semibold flex items-center justify-center gap-2 disabled:opacity-40"
+            className="flex-shrink-0 w-full btn-primary py-3 text-base font-semibold flex items-center justify-center gap-2 disabled:opacity-40"
           >
             {processing ? (
               <Loader2 className="h-5 w-5 animate-spin" />
