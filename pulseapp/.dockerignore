@@ -18,9 +18,11 @@ dist
 .git
 .github
 .gitignore
+.gitattributes
 
 # Vercel
 .vercel
+vercel.json
 
 # Local env dosyaları (Coolify env vars kullanır)
 .env
@@ -28,10 +30,17 @@ dist
 .env.*.local
 .env.development
 .env.development.local
+.env.example
 
 # Claude / worktree
 .claude
 .claude-*
+CLAUDE.md
+
+# Dokümantasyon (runtime'da gerekmez)
+README.md
+VERCEL_PRODUCTION.md
+*.md
 
 # IDE / editor
 .vscode
@@ -41,18 +50,28 @@ dist
 .DS_Store
 Thumbs.db
 
-# Test çıktıları
+# Test altyapısı (build sırasında gerekmez)
+tests
 coverage
 .nyc_output
 playwright-report
+playwright.config.ts
 test-results
+vitest.config.ts
 
-# TypeScript derleme
+# TypeScript derleme artefactleri
 *.tsbuildinfo
+tsconfig.tsbuildinfo
 
 # Log dosyaları
 *.log
 logs
+
+# Supabase migration dosyaları (runtime'da gerekmez)
+supabase
+
+# Yerel script'ler (runtime'da gerekmez)
+scripts
 
 # Opsiyonel / geçici
 tmp
