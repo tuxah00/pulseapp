@@ -197,6 +197,13 @@ export default function InvoicesPage() {
     return () => document.removeEventListener('keydown', h)
   }, [showCreateModal])
 
+  useEffect(() => {
+    if (!selectedInvoice) return
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape' && !showCreateModal) closePanelAnimated() }
+    document.addEventListener('keydown', h)
+    return () => document.removeEventListener('keydown', h)
+  }, [selectedInvoice, showCreateModal, closePanelAnimated])
+
   function addItem() {
     setFormItems(prev => [...prev, { service_name: '', quantity: 1, unit_price: 0, total: 0 }])
   }

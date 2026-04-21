@@ -29,7 +29,6 @@ import type {
 import TodayAppointments from './_components/today-appointments'
 import WeeklyInsights from './_components/weekly-insights'
 import PerformanceStats from './_components/performance-stats'
-import SectorKPIBlock from './_components/sector-kpi-block'
 import { Sparkline } from '@/components/ui/sparkline'
 
 type TodayAppointmentRow = AppointmentRow & {
@@ -256,9 +255,6 @@ export default async function DashboardPage() {
           iconColor={riskCustomers.length > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-gray-500 dark:text-gray-400'}
         />
       </div>
-
-      {/* ── Sektör özel KPI bloku (dental & medical aesthetic) ── */}
-      <SectorKPIBlock businessId={businessId} sector={sector} />
 
       {/* ── Onboarding (yeni işletme) ── */}
       {s.total_customers === 0 && s.today_appointments === 0 && (

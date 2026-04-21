@@ -552,6 +552,27 @@ export default function CustomersPage() {
     return () => document.removeEventListener('keydown', h)
   }, [showModal])
 
+  useEffect(() => {
+    if (!selectedCustomer) return
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape' && !showModal && !showRewardModal && !showRedeemModal) closePanelAnimated() }
+    document.addEventListener('keydown', h)
+    return () => document.removeEventListener('keydown', h)
+  }, [selectedCustomer, showModal, showRewardModal, showRedeemModal, closePanelAnimated])
+
+  useEffect(() => {
+    if (!showRewardModal) return
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') closeRewardModal() }
+    document.addEventListener('keydown', h)
+    return () => document.removeEventListener('keydown', h)
+  }, [showRewardModal])
+
+  useEffect(() => {
+    if (!showRedeemModal) return
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowRedeemModal(false) }
+    document.addEventListener('keydown', h)
+    return () => document.removeEventListener('keydown', h)
+  }, [showRedeemModal])
+
   function getStatusIcon(status: string) {
     switch (status) {
       case 'completed': return <CheckCircle className="h-4 w-4 text-green-500" />

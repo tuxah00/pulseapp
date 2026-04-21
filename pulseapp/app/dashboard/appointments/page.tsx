@@ -311,6 +311,13 @@ export default function AppointmentsPage() {
     return () => document.removeEventListener('keydown', h)
   }, [showModal])
 
+  useEffect(() => {
+    if (!selectedAppointment) return
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape' && !showModal) closePanelAnimated() }
+    document.addEventListener('keydown', h)
+    return () => document.removeEventListener('keydown', h)
+  }, [selectedAppointment, showModal, closePanelAnimated])
+
   function changeDate(days: number) {
     let d = new Date(selectedDate + 'T12:00:00')
     if (viewMode === 'month') {
@@ -2629,10 +2636,10 @@ export default function AppointmentsPage() {
               <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-2">
                 {(selectedAppointment.status === 'confirmed' || selectedAppointment.status === 'pending') && (
                   <>
-                    <button onClick={(e) => { openEditModal(selectedAppointment, e); setSelectedAppointment(null) }} className="btn-secondary w-full justify-start gap-2">
+                    <button onClick={(e) => { openEditModal(selectedAppointment, e) }} className="btn-secondary w-full justify-start gap-2">
                       <Pencil className="h-4 w-4" /> Düzenle
                     </button>
-                    <button onClick={(e) => { openRescheduleModal(selectedAppointment, e); setSelectedAppointment(null) }} className="w-full flex items-center gap-2 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 px-4 py-2.5 text-sm font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-800/30 transition-colors">
+                    <button onClick={(e) => { openRescheduleModal(selectedAppointment, e) }} className="w-full flex items-center gap-2 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 px-4 py-2.5 text-sm font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-800/30 transition-colors">
                       <CalendarClock className="h-4 w-4" /> Ertele
                     </button>
                   </>
@@ -2719,7 +2726,7 @@ export default function AppointmentsPage() {
       {/* Yeni / Düzenleme Randevu Modal */}
       {showModal && (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
+        <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
           <div className={`modal-content card w-full max-w-md max-h-[90vh] overflow-y-auto ${isClosingModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -2906,7 +2913,7 @@ export default function AppointmentsPage() {
       {/* Erteleme Modal */}
       {(rescheduleAppointment || isClosingReschedule) && (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4 ${isClosingReschedule ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingReschedule) { setRescheduleAppointment(null); setIsClosingReschedule(false) } }}>
+        <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4 ${isClosingReschedule ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingReschedule) { setRescheduleAppointment(null); setIsClosingReschedule(false) } }}>
           <div className={`modal-content card w-full max-w-sm ${isClosingReschedule ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Randevuyu Ertele</h2>

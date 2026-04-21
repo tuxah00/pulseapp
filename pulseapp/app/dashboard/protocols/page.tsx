@@ -111,6 +111,13 @@ export default function ProtocolsPage() {
     return () => document.removeEventListener('keydown', h)
   }, [showCreate])
 
+  useEffect(() => {
+    if (!selectedProtocol) return
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape' && !showCreate) closeDetail() }
+    document.addEventListener('keydown', h)
+    return () => document.removeEventListener('keydown', h)
+  }, [selectedProtocol, showCreate])
+
   // Create protocol
   const handleCreate = async () => {
     if (!businessId || !formCustomerId || !formName || formSessions < 1) return
