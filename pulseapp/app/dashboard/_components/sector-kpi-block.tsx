@@ -19,61 +19,42 @@ export default async function SectorKPIBlock({
   const supabase = createServerSupabaseClient()
   const now = new Date()
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
+  const monthStartISO = monthStart + 'T00:00:00'
 
-  // Ortak: aktif tedavi protokolü sayısı
-  const { count: activeProtocols } = await supabase
-    .from('treatment_protocols')
-    .select('id', { count: 'exact', head: true })
-    .eq('business_id', businessId)
-    .eq('status', 'active')
+  const countQuery = (table: string) =>
+    supabase.from(table).select('id', { count: 'exact', head: true }).eq('business_id', businessId)
 
-  // Ortak: bu ay tamamlanan seans sayısı
-  const { count: completedSessionsThisMonth } = await supabase
-    .from('protocol_sessions')
-    .select('id', { count: 'exact', head: true })
-    .eq('business_id', businessId)
-    .eq('status', 'completed')
-    .gte('completed_date', monthStart)
+  const thirdQuery = sector === 'medical_aesthetic'
+    ? countQuery('customer_photos').gte('created_at', monthStartISO)
+    : countQuery('appointments').not('manage_token', 'is', null).gte('created_at', monthStartISO).is('deleted_at', null)
 
-  let thirdCard: React.ReactNode
+  const [
+    { count: activeProtocols },
+    { count: completedSessionsThisMonth },
+    { count: thirdCount },
+  ] = await Promise.all([
+    countQuery('treatment_protocols').eq('status', 'active'),
+    countQuery('protocol_sessions').eq('status', 'completed').gte('completed_date', monthStart),
+    thirdQuery,
+  ])
 
-  if (sector === 'medical_aesthetic') {
-    // Estetik: bu ay eklenen öncesi/sonrası fotoğraf sayısı
-    const { count: photosThisMonth } = await supabase
-      .from('customer_photos')
-      .select('id', { count: 'exact', head: true })
-      .eq('business_id', businessId)
-      .gte('created_at', monthStart + 'T00:00:00')
-
-    thirdCard = (
-      <KpiCard
-        title="Bu Ay Fotoğraf"
-        value={photosThisMonth ?? 0}
-        subtitle="öncesi/sonrası eklendi"
-        icon={<Camera className="h-5 w-5" />}
-        color="violet"
-      />
-    )
-  } else {
-    // Dental: bu ay online randevu ile gelen hasta (online_booked = true proxy: manage_token set + created_at in month)
-    const { count: onlineBookedThisMonth } = await supabase
-      .from('appointments')
-      .select('id', { count: 'exact', head: true })
-      .eq('business_id', businessId)
-      .not('manage_token', 'is', null)
-      .gte('created_at', monthStart + 'T00:00:00')
-      .is('deleted_at', null)
-
-    thirdCard = (
-      <KpiCard
-        title="Online Randevu"
-        value={onlineBookedThisMonth ?? 0}
-        subtitle="bu ay link üzerinden"
-        icon={<CalendarCheck className="h-5 w-5" />}
-        color="emerald"
-      />
-    )
-  }
+  const thirdCard = sector === 'medical_aesthetic' ? (
+    <KpiCard
+      title="Bu Ay Fotoğraf"
+      value={thirdCount ?? 0}
+      subtitle="öncesi/sonrası eklendi"
+      icon={<Camera className="h-5 w-5" />}
+      color="violet"
+    />
+  ) : (
+    <KpiCard
+      title="Link Üzerinden Randevu"
+      value={thirdCount ?? 0}
+      subtitle="bu ay bağlantılı randevular"
+      icon={<CalendarCheck className="h-5 w-5" />}
+      color="emerald"
+    />
+  )
 
   const isAesthetic = sector === 'medical_aesthetic'
 

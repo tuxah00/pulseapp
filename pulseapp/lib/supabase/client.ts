@@ -1,10 +1,7 @@
 import { createBrowserClient } from '@supabase/ssr'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-// Singleton browser client — client componentlerde ve hook'larda
-// her render'da yeni bir instance yaratmak yerine tek bir örnek kullanılır.
-// Bu, useCallback/useEffect bağımlılık listelerinde `supabase` referansının
-// stabil kalmasını sağlar ve gereksiz re-fetch'leri engeller.
+// Singleton browser client — stable reference across renders/hooks.
 let browserClient: SupabaseClient | null = null
 
 export function createClient() {

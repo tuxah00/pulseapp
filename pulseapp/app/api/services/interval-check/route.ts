@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { daysBetween } from '@/lib/portal/date-helpers'
 
 // GET: Müşteri bir hizmeti son ne zaman almış ve önerilen tekrar aralığından önce mi?
 // Kullanım: /api/services/interval-check?businessId=X&customerId=Y&serviceId=Z
@@ -63,11 +64,7 @@ export async function GET(request: NextRequest) {
   }
 
   const lastDate = new Date(lastAppointment.appointment_date as string)
-  const now = new Date()
-  // Sadece gün farkını hesapla (saat dikkate alınmasın)
-  const lastDay = new Date(lastDate.getFullYear(), lastDate.getMonth(), lastDate.getDate())
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const daysSince = Math.floor((today.getTime() - lastDay.getTime()) / (1000 * 60 * 60 * 24))
+  const daysSince = daysBetween(new Date(), lastDate)
   const intervalDays = service.recommended_interval_days
 
   if (daysSince >= intervalDays) {

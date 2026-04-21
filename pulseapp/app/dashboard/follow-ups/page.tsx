@@ -16,7 +16,7 @@ import { getCustomerLabelSingular } from '@/lib/config/sector-modules'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import { Portal } from '@/components/ui/portal'
 import { Pagination } from '@/components/ui/pagination'
-import type { FollowUpStatus, FollowUpStatusHistoryEntry } from '@/types'
+import { FOLLOW_UP_TYPE_LABELS, FOLLOW_UP_STATUS_LABELS, type FollowUpType, type FollowUpStatus, type FollowUpStatusHistoryEntry } from '@/types'
 
 interface FollowUp {
   id: string
@@ -25,7 +25,7 @@ interface FollowUp {
   customer_id: string
   protocol_id: string | null
   customer_package_id: string | null
-  type: 'post_session' | 'next_session_reminder' | 'protocol_completion' | 'package_sold' | 'manual'
+  type: FollowUpType
   scheduled_for: string
   status: FollowUpStatus
   message: string | null
@@ -35,24 +35,6 @@ interface FollowUp {
   customers?: { id: string; name: string; phone: string } | null
   appointments?: { id: string; appointment_date: string; start_time: string } | null
   treatment_protocols?: { id: string; name: string } | null
-}
-
-const TYPE_LABELS: Record<string, string> = {
-  post_session: 'Seans Sonrası',
-  next_session_reminder: 'Sonraki Seans Hatırlatma',
-  protocol_completion: 'Protokol Tamamlandı',
-  package_sold: 'Paket Satıldı',
-  manual: 'Özel Takip',
-}
-
-const STATUS_LABELS: Record<FollowUpStatus, string> = {
-  pending: 'Bekliyor',
-  in_progress: 'Görüşülüyor',
-  sent: 'Gönderildi',
-  no_response: 'Yanıtsız',
-  done: 'Tamamlandı',
-  rescheduled: 'Ertelendi',
-  cancelled: 'İptal',
 }
 
 const STATUS_CONFIG: Record<FollowUpStatus, { bg: string; text: string; icon: typeof Clock }> = {
@@ -94,7 +76,7 @@ export default function FollowUpsPage() {
   const [closingCreate, setClosingCreate] = useState(false)
   const [saving, setSaving] = useState(false)
   const [formCustomerId, setFormCustomerId] = useState('')
-  const [formType, setFormType] = useState<string>('post_session')
+  const [formType, setFormType] = useState<FollowUpType>('post_session')
   const [formDate, setFormDate] = useState('')
   const [formMessage, setFormMessage] = useState('')
 
@@ -104,7 +86,7 @@ export default function FollowUpsPage() {
   const [editMode, setEditMode] = useState(false)
   const [editDate, setEditDate] = useState('')
   const [editMessage, setEditMessage] = useState('')
-  const [editType, setEditType] = useState<string>('manual')
+  const [editType, setEditType] = useState<FollowUpType>('manual')
   const [editNotes, setEditNotes] = useState('')
   const [statusNote, setStatusNote] = useState('')
   const [savingDetail, setSavingDetail] = useState(false)
@@ -225,7 +207,7 @@ export default function FollowUpsPage() {
         .update({ status: newStatus, status_history: nextHistory })
         .eq('id', detailItem.id)
       if (error) throw error
-      toast.success(`Durum: ${STATUS_LABELS[newStatus]}`)
+      toast.success(`Durum: ${FOLLOW_UP_STATUS_LABELS[newStatus]}`)
       setDetailItem({ ...detailItem, status: newStatus, status_history: nextHistory })
       setStatusNote('')
       fetchFollowUps()
@@ -255,7 +237,7 @@ export default function FollowUpsPage() {
         ...detailItem,
         scheduled_for: new Date(editDate).toISOString(),
         message: editMessage || null,
-        type: editType as FollowUp['type'],
+        type: editType,
         notes: editNotes || null,
       })
       setEditMode(false)
@@ -324,7 +306,7 @@ export default function FollowUpsPage() {
                   ? 'bg-gray-900 dark:bg-gray-700 text-white'
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}>
-              {s === 'all' ? 'Tümü' : STATUS_LABELS[s as FollowUpStatus]}
+              {s === 'all' ? 'Tümü' : FOLLOW_UP_STATUS_LABELS[s as FollowUpStatus]}
             </button>
           ))}
         </div>
@@ -356,7 +338,7 @@ export default function FollowUpsPage() {
                   </div>
                   <div className="flex-shrink-0">
                     <span className="text-xs px-2 py-1 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
-                      {TYPE_LABELS[f.type] || f.type}
+                      {FOLLOW_UP_TYPE_LABELS[f.type] || f.type}
                     </span>
                   </div>
                   <div className="flex-shrink-0 text-right flex flex-col justify-center leading-tight">
@@ -370,7 +352,7 @@ export default function FollowUpsPage() {
                   </div>
                   <div className="flex-shrink-0">
                     <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${sc.bg} ${sc.text}`}>
-                      <Icon className="h-3 w-3" /> {STATUS_LABELS[f.status]}
+                      <Icon className="h-3 w-3" /> {FOLLOW_UP_STATUS_LABELS[f.status]}
                     </span>
                   </div>
                 </div>
@@ -411,9 +393,9 @@ export default function FollowUpsPage() {
                 <div>
                   <label className="label label-required">Takip Tipi</label>
                   <CustomSelect
-                    options={Object.entries(TYPE_LABELS).map(([k, v]) => ({ value: k, label: v }))}
+                    options={Object.entries(FOLLOW_UP_TYPE_LABELS).map(([k, v]) => ({ value: k, label: v }))}
                     value={formType}
-                    onChange={v => setFormType(v)}
+                    onChange={v => setFormType(v as FollowUpType)}
                     placeholder="Tip seçin"
                   />
                 </div>
@@ -454,12 +436,12 @@ export default function FollowUpsPage() {
                       const Icon = sc.icon
                       return (
                         <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${sc.bg} ${sc.text}`}>
-                          <Icon className="h-3 w-3" /> {STATUS_LABELS[detailItem.status]}
+                          <Icon className="h-3 w-3" /> {FOLLOW_UP_STATUS_LABELS[detailItem.status]}
                         </span>
                       )
                     })()}
                     <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
-                      {TYPE_LABELS[detailItem.type] || detailItem.type}
+                      {FOLLOW_UP_TYPE_LABELS[detailItem.type] || detailItem.type}
                     </span>
                   </div>
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">{detailItem.customers?.name || 'Bilinmeyen'}</h3>
@@ -531,7 +513,7 @@ export default function FollowUpsPage() {
                         return (
                           <button key={s} onClick={() => changeStatus(s)} disabled={savingDetail}
                             className={`text-xs px-3 py-1.5 rounded-lg ${sc.bg} ${sc.text} hover:opacity-80 transition-opacity inline-flex items-center gap-1.5 disabled:opacity-40`}>
-                            <Icon className="h-3.5 w-3.5" /> {STATUS_LABELS[s]}
+                            <Icon className="h-3.5 w-3.5" /> {FOLLOW_UP_STATUS_LABELS[s]}
                           </button>
                         )
                       })}
@@ -550,7 +532,7 @@ export default function FollowUpsPage() {
                           return (
                             <div key={i} className="text-xs">
                               <div className="flex items-center gap-2">
-                                <span className={`px-2 py-0.5 rounded-full ${sc.bg} ${sc.text}`}>{STATUS_LABELS[h.status]}</span>
+                                <span className={`px-2 py-0.5 rounded-full ${sc.bg} ${sc.text}`}>{FOLLOW_UP_STATUS_LABELS[h.status]}</span>
                                 <span className="text-gray-500 dark:text-gray-400">{formatDateTime(h.changed_at)}</span>
                                 {h.staff_name && <span className="text-gray-400">· {h.staff_name}</span>}
                               </div>
@@ -567,9 +549,9 @@ export default function FollowUpsPage() {
                   <div>
                     <label className="label">Takip Tipi</label>
                     <CustomSelect
-                      options={Object.entries(TYPE_LABELS).map(([k, v]) => ({ value: k, label: v }))}
+                      options={Object.entries(FOLLOW_UP_TYPE_LABELS).map(([k, v]) => ({ value: k, label: v }))}
                       value={editType}
-                      onChange={v => setEditType(v)}
+                      onChange={v => setEditType(v as FollowUpType)}
                       placeholder="Tip seçin"
                     />
                   </div>

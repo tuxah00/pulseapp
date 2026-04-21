@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isValidUUID } from '@/lib/utils/validate'
+import { normalizePhone, phoneOrFilter } from '@/lib/utils/phone'
+import { daysBetween } from '@/lib/portal/date-helpers'
 
 // Public: Müşteri randevu alırken son kez aldığı hizmete bakıp uyarı üretir.
 // Kullanım: POST /api/public/business/[id]/interval-check
@@ -38,9 +40,8 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     return NextResponse.json({ hasWarning: false })
   }
 
-  // Telefondan müşteri bul (aynı işletme için)
-  const phoneDigits = body.phone.replace(/\D/g, '')
-  if (phoneDigits.length < 6) {
+  const normalized = normalizePhone(body.phone)
+  if (normalized.length < 10) {
     return NextResponse.json({ hasWarning: false })
   }
 
@@ -48,7 +49,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     .from('customers')
     .select('id')
     .eq('business_id', params.id)
-    .ilike('phone', `%${phoneDigits.slice(-10)}%`)
+    .or(phoneOrFilter(normalized))
     .limit(1)
     .maybeSingle()
 
@@ -73,10 +74,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   }
 
   const lastDate = new Date(lastAppointment.appointment_date as string)
-  const now = new Date()
-  const lastDay = new Date(lastDate.getFullYear(), lastDate.getMonth(), lastDate.getDate())
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const daysSince = Math.floor((today.getTime() - lastDay.getTime()) / (1000 * 60 * 60 * 24))
+  const daysSince = daysBetween(new Date(), lastDate)
   const intervalDays = service.recommended_interval_days
 
   if (daysSince >= intervalDays) {

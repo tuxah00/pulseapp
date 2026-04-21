@@ -5,9 +5,9 @@ import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { requirePermission } from '@/lib/hooks/use-require-permission'
 import { createClient } from '@/lib/supabase/client'
 import { logAudit } from '@/lib/utils/audit'
-import type { WorkingHours, ShiftDefinition } from '@/types'
+import { SHIFT_TYPE_LABELS, SHIFT_REQUEST_STATUS_LABELS, type WorkingHours, type ShiftDefinition, type ShiftType, type ShiftRequestStatus } from '@/types'
 import { cn } from '@/lib/utils'
-import { ChevronLeft, ChevronRight, Plus, Trash2, Zap, Loader2, X, Save, Clock, CalendarDays, Download, Share2, RotateCcw, ImageIcon, ClipboardList, CheckCircle, XCircle, MessageSquare } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Trash2, Zap, Loader2, X, Save, Clock, CalendarDays, Download, Share2, RotateCcw, ClipboardList, CheckCircle, XCircle, MessageSquare } from 'lucide-react'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { Portal } from '@/components/ui/portal'
 
@@ -74,11 +74,10 @@ interface Shift {
   shift_date: string
   start_time: string | null
   end_time: string | null
-  shift_type: 'regular' | 'off' | 'part_time'
+  shift_type: ShiftType
   notes: string | null
 }
 
-// ── Shift Request Types ────────────────────────────────────────────────────────
 interface ShiftRequest {
   id: string
   staff_id: string
@@ -86,23 +85,17 @@ interface ShiftRequest {
   requested_date: string
   requested_start: string | null
   requested_end: string | null
-  shift_type: 'regular' | 'off' | 'part_time'
+  shift_type: ShiftType
   notes: string | null
-  status: 'pending' | 'approved' | 'rejected'
+  status: ShiftRequestStatus
   review_note: string | null
   created_at: string
 }
 
-const SHIFT_TYPE_LABELS: Record<string, string> = {
-  regular: 'Normal Vardiya',
-  off: 'İzin / Kapalı',
-  part_time: 'Yarı Zamanlı',
-}
-
-const REQUEST_STATUS_CONFIG: Record<string, { bg: string; text: string; label: string }> = {
-  pending:  { bg: 'bg-yellow-50 dark:bg-yellow-900/20', text: 'text-yellow-700 dark:text-yellow-400', label: 'Bekliyor' },
-  approved: { bg: 'bg-green-50 dark:bg-green-900/20',  text: 'text-green-700 dark:text-green-400',  label: 'Onaylandı' },
-  rejected: { bg: 'bg-red-50 dark:bg-red-900/20',      text: 'text-red-700 dark:text-red-400',      label: 'Reddedildi' },
+const REQUEST_STATUS_STYLES: Record<ShiftRequestStatus, { bg: string; text: string }> = {
+  pending:  { bg: 'bg-yellow-50 dark:bg-yellow-900/20', text: 'text-yellow-700 dark:text-yellow-400' },
+  approved: { bg: 'bg-green-50 dark:bg-green-900/20',  text: 'text-green-700 dark:text-green-400' },
+  rejected: { bg: 'bg-red-50 dark:bg-red-900/20',      text: 'text-red-700 dark:text-red-400' },
 }
 
 export default function VardiyePage() {
@@ -121,7 +114,7 @@ export default function VardiyePage() {
   const [modal, setModal] = useState<{ staffId: string; date: string } | null>(null)
   const [isClosingModal, setIsClosingModal] = useState(false)
   const closeModal = () => setIsClosingModal(true)
-  const [modalType, setModalType] = useState<'regular' | 'off' | 'part_time'>('regular')
+  const [modalType, setModalType] = useState<ShiftType>('regular')
   const [modalStart, setModalStart] = useState('09:00')
   const [modalEnd, setModalEnd] = useState('18:00')
   const [modalNotes, setModalNotes] = useState('')
@@ -142,7 +135,7 @@ export default function VardiyePage() {
   const [reqDate, setReqDate] = useState('')
   const [reqStart, setReqStart] = useState('09:00')
   const [reqEnd, setReqEnd] = useState('18:00')
-  const [reqType, setReqType] = useState<'regular' | 'off' | 'part_time'>('regular')
+  const [reqType, setReqType] = useState<ShiftType>('regular')
   const [reqNotes, setReqNotes] = useState('')
   const [reqSaving, setReqSaving] = useState(false)
   // Review modal
@@ -259,7 +252,7 @@ export default function VardiyePage() {
       await fetchData()
       window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Vardiya kaydedildi' } }))
       logAudit({ businessId: businessId!, staffId: currentStaffId, staffName: currentStaffName, action: 'create', resource: 'shift', details: { staff_id: modal.staffId, date: modal.date, type: modalType } })
-    } catch (err) {
+    } catch {
       setSaveError('Bağlantı hatası. Lütfen tekrar deneyin.')
     } finally {
       setSaving(false)
@@ -1090,13 +1083,13 @@ export default function VardiyePage() {
           ) : (
             <div className="space-y-3">
               {requests.map(req => {
-                const sc = REQUEST_STATUS_CONFIG[req.status]
+                const sc = REQUEST_STATUS_STYLES[req.status]
                 return (
                   <div key={req.id} className="card p-4 flex flex-col sm:flex-row sm:items-center gap-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="font-medium text-gray-900 dark:text-white text-sm">{req.staff_name}</p>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${sc.bg} ${sc.text}`}>{sc.label}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${sc.bg} ${sc.text}`}>{SHIFT_REQUEST_STATUS_LABELS[req.status]}</span>
                         <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
                           {SHIFT_TYPE_LABELS[req.shift_type]}
                         </span>
@@ -1159,7 +1152,7 @@ export default function VardiyePage() {
                   <CustomSelect
                     options={Object.entries(SHIFT_TYPE_LABELS).map(([k, v]) => ({ value: k, label: v }))}
                     value={reqType}
-                    onChange={v => setReqType(v as 'regular' | 'off' | 'part_time')}
+                    onChange={v => setReqType(v as ShiftType)}
                     placeholder="Tip seçin"
                   />
                 </div>
