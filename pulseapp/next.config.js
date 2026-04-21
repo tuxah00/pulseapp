@@ -1,5 +1,17 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Coolify/Docker deploy için standalone çıktı — image %70 küçülür,
+  // sadece gerekli node_modules paketlenir, soğuk başlangıç hızlanır.
+  output: 'standalone',
+  swcMinify: true,
+  // Build hızını düşürmemek için ESLint build sırasında atlanır; CI'da ayrı koşar.
+  eslint: { ignoreDuringBuilds: true },
+  // Tip hataları build'i durdurmaya devam etsin — runtime bug'larını yakalar.
+  typescript: { ignoreBuildErrors: false },
+  // Supabase Storage ve harici CDN'lerden görsel çekilebilsin
+  images: {
+    remotePatterns: [{ protocol: 'https', hostname: '**' }],
+  },
   // Webhook route'ları sunucu-sunucu iletişim kullanır, CORS gerekli değil
   async headers() {
     return []
