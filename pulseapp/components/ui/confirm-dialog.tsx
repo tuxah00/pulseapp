@@ -48,12 +48,12 @@ export default function ConfirmDialog({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
-            className="fixed inset-0 z-[110] bg-black/50 backdrop-blur-sm"
+            className="fixed inset-0 z-[120] bg-black/50 dark:bg-black/70 backdrop-blur-sm"
             onClick={handleClose}
           />
 
           {/* Dialog */}
-          <div className="fixed inset-0 z-[111] flex items-center justify-center p-4 pointer-events-none">
+          <div className="fixed inset-0 z-[121] flex items-center justify-center p-4 pointer-events-none">
             <motion.div
               key="dialog"
               initial={{ opacity: 0, scale: 0.92, y: 12 }}

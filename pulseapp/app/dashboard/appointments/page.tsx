@@ -2342,9 +2342,9 @@ export default function AppointmentsPage() {
       {/* Saat dilimi popup (çakışan randevular) */}
       {slotPopup && (
         <Portal>
-        <div className="fixed inset-0 z-[100]" onClick={() => setSlotPopup(null)}>
+        <div className="fixed inset-0 z-[60]" onClick={() => setSlotPopup(null)}>
           <div
-            className="absolute z-[101] bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 p-3 w-72 modal-content"
+            className="absolute z-[60] bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 p-3 w-72 modal-content"
             style={{
               top: typeof window !== 'undefined' ? Math.min(slotPopup.y - 10, window.innerHeight - 300) : slotPopup.y - 10,
               left: typeof window !== 'undefined' ? Math.min(slotPopup.x - 10, window.innerWidth - 300) : slotPopup.x - 10,
@@ -2381,9 +2381,9 @@ export default function AppointmentsPage() {
       {/* Seçim sonrası aksiyon menüsü */}
       {actionMenu && (
         <Portal>
-          <div className="fixed inset-0 z-[100]" onClick={clearSelection}>
+          <div className="fixed inset-0 z-[60]" onClick={clearSelection}>
             <div
-              className="absolute z-[101] bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 p-3 w-56 modal-content"
+              className="absolute z-[60] bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 p-3 w-56 modal-content"
               style={{
                 top: typeof window !== 'undefined' ? Math.min(actionMenu.y - 10, window.innerHeight - 200) : actionMenu.y - 10,
                 left: typeof window !== 'undefined' ? Math.min(actionMenu.x - 10, window.innerWidth - 260) : actionMenu.x - 10,
@@ -2573,7 +2573,7 @@ export default function AppointmentsPage() {
       {/* ── Detay Slide-Over Paneli ── */}
       {selectedAppointment && (
         <Portal>
-          <div className="fixed inset-0 z-[100] bg-black/50 dark:bg-black/70" onClick={closePanelAnimated} />
+          <div className="fixed inset-0 z-[60] bg-black/50 dark:bg-black/70" onClick={closePanelAnimated} />
           <div
             className={`slide-panel border-l border-gray-200 dark:border-gray-700 ${panelClosing ? 'closing' : ''}`}
             onAnimationEnd={() => { if (panelClosing) { setSelectedAppointment(null); setPanelClosing(false) } }}
@@ -2726,7 +2726,7 @@ export default function AppointmentsPage() {
       {/* Yeni / Düzenleme Randevu Modal */}
       {showModal && (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
+        <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
           <div className={`modal-content card w-full max-w-md max-h-[90vh] overflow-y-auto ${isClosingModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -2913,7 +2913,7 @@ export default function AppointmentsPage() {
       {/* Erteleme Modal */}
       {(rescheduleAppointment || isClosingReschedule) && (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4 ${isClosingReschedule ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingReschedule) { setRescheduleAppointment(null); setIsClosingReschedule(false) } }}>
+        <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${isClosingReschedule ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingReschedule) { setRescheduleAppointment(null); setIsClosingReschedule(false) } }}>
           <div className={`modal-content card w-full max-w-sm ${isClosingReschedule ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Randevuyu Ertele</h2>
@@ -2960,7 +2960,7 @@ export default function AppointmentsPage() {
       {/* İptal Onay Modal */}
       {(cancelConfirmAppointment || isClosingCancelConfirm) && (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4 ${isClosingCancelConfirm ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingCancelConfirm) { setCancelConfirmAppointment(null); setIsClosingCancelConfirm(false) } }}>
+        <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${isClosingCancelConfirm ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingCancelConfirm) { setCancelConfirmAppointment(null); setIsClosingCancelConfirm(false) } }}>
           <div className={`modal-content card w-full max-w-sm ${isClosingCancelConfirm ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Randevuyu İptal Et</h2>

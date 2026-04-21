@@ -697,7 +697,7 @@ export default function StoklarPage() {
       {/* ── Ürün Detay Slide-Over Paneli ── */}
       {selectedProduct && (
         <>
-          <div className="fixed inset-x-0 bottom-0 top-14 z-[54] bg-black/30 dark:bg-black/50" onClick={closePanelAnimated} />
+          <div className="fixed inset-x-0 bottom-0 top-14 z-[60] bg-black/50 dark:bg-black/70" onClick={closePanelAnimated} />
           <div
             className={`slide-panel !top-14 border-l border-gray-200 dark:border-gray-700 ${panelClosing ? 'closing' : ''}`}
             onAnimationEnd={() => { if (panelClosing) { setSelectedProduct(null); setPanelClosing(false) } }}
@@ -832,7 +832,7 @@ export default function StoklarPage() {
       {/* Ürün Ekle / Düzenleme Modal */}
       {showModal && (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
+        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
           <div className={`modal-content card w-full max-w-md max-h-[90vh] overflow-y-auto dark:bg-gray-900 ${isClosingModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -950,7 +950,7 @@ export default function StoklarPage() {
       {/* Tedarikçi Ekle / Düzenle Modal */}
       {showSupplierModal && (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 ${isClosingSupplierModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingSupplierModal) { setShowSupplierModal(false); setIsClosingSupplierModal(false) } }}>
+        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${isClosingSupplierModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingSupplierModal) { setShowSupplierModal(false); setIsClosingSupplierModal(false) } }}>
           <div className={`modal-content card w-full max-w-md ${isClosingSupplierModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
