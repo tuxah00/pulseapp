@@ -1,8 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Coolify/Docker deploy için standalone çıktı — image %70 küçülür,
-  // sadece gerekli node_modules paketlenir, soğuk başlangıç hızlanır.
-  output: 'standalone',
   swcMinify: true,
   // Build hızını düşürmemek için ESLint build sırasında atlanır; CI'da ayrı koşar.
   eslint: { ignoreDuringBuilds: true },
