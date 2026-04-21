@@ -13,7 +13,9 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 ENV NPM_CONFIG_UPDATE_NOTIFIER=false
 ENV NPM_CONFIG_FUND=false
-RUN npm ci --no-audit
+# npm install — lockfile'daki cross-platform version mismatch'leri tolere eder.
+# npm ci daha sıkı ama Docker alpine/local npm version farkları EUSAGE hatası veriyor.
+RUN npm install --no-audit --prefer-offline
 
 ########################################
 # Stage 2 — build
