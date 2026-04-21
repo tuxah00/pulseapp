@@ -10,8 +10,10 @@ RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 # Sadece package dosyalarını kopyala → kod değişikliği bu katmanı invalidate etmesin
-COPY package.json package-lock.json* ./
-RUN npm ci --prefer-offline --no-audit --progress=false
+COPY package.json package-lock.json ./
+ENV NPM_CONFIG_UPDATE_NOTIFIER=false
+ENV NPM_CONFIG_FUND=false
+RUN npm ci --no-audit
 
 ########################################
 # Stage 2 — build
