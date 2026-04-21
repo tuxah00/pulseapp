@@ -60,7 +60,11 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 USER nextjs
 EXPOSE 3000
 
-# HEALTHCHECK Coolify UI'da yapılandırılır (start-period 90s, daha esnek)
-# Dockerfile-level healthcheck container boot süresi (80s+) için çok agresif.
+# Coolify rolling update '.State.Health.Status' alanını bekliyor — bu yüzden
+# Dockerfile-level HEALTHCHECK zorunlu. Çok esnek ayarlandı:
+# - 180s start period (container boot + Next.js ready)
+# - 10 retries (toplam tolerans ~5 dk)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=180s --retries=10 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1
 
 CMD ["node", "server.js"]
