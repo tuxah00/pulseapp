@@ -30,16 +30,21 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Sync main into every claude/* branch
+      - name: Sync main into every claude/* branch + develop + claude-develop
         run: |
           set -e
           git fetch origin --prune
 
-          # main ile başlayan dallar HARIÇ, origin/claude/* dallarını listele
-          branches=$(git for-each-ref --format='%(refname:short)' refs/remotes/origin/claude/ | sed 's|^origin/||')
+          # Sabit hedef branch'ler (her zaman sync edilir)
+          fixed_branches="develop claude-develop"
 
-          if [ -z "$branches" ]; then
-            echo "Senkronize edilecek claude/* dalı yok."
+          # Dinamik: origin/claude/* dalları (claude/ prefix'li worktree branch'leri)
+          dynamic_branches=$(git for-each-ref --format='%(refname:short)' refs/remotes/origin/claude/ | sed 's|^origin/||')
+
+          branches=$(echo "$fixed_branches $dynamic_branches" | tr ' ' '\n' | sort -u | tr '\n' ' ')
+
+          if [ -z "$(echo $branches | tr -d ' ')" ]; then
+            echo "Senkronize edilecek dal yok."
             exit 0
           fi
 
