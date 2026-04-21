@@ -977,30 +977,30 @@ export default function AnalyticsPage() {
               <p className="text-sm text-gray-500 dark:text-gray-400">Bu dönem için gider kaydı bulunmuyor</p>
             </div>
           ) : (
-            <div className="card p-0 overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 dark:bg-gray-700/50">
+            <div className="table-wrapper">
+              <table className="table-base">
+                <thead className="table-head-row">
                   <tr>
-                    <th className="px-4 py-3 text-left font-medium text-gray-500">Tarih</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-500">Kategori</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-500">Açıklama</th>
-                    <th className="px-4 py-3 text-right font-medium text-gray-500">Tutar</th>
-                    <th className="px-4 py-3 w-10"></th>
+                    <th className="table-head-cell">Tarih</th>
+                    <th className="table-head-cell">Kategori</th>
+                    <th className="table-head-cell">Açıklama</th>
+                    <th className="table-head-cell text-right">Tutar</th>
+                    <th className="table-head-cell w-10"></th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                <tbody>
                   {expenses.map(expense => (
-                    <tr key={expense.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                      <td className="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                    <tr key={expense.id} className="table-row">
+                      <td className="table-cell text-gray-500 dark:text-gray-400 whitespace-nowrap">
                         {new Date(expense.expense_date).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' })}
                       </td>
-                      <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
+                      <td className="table-cell font-medium text-gray-900 dark:text-gray-100">
                         {expense.category}
                         {expense.is_recurring && <span className="ml-1.5 badge-info text-[10px]">Tekrar</span>}
                       </td>
-                      <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{expense.description || '—'}</td>
-                      <td className="px-4 py-3 text-right font-medium text-red-600">{formatCurrency(expense.amount)}</td>
-                      <td className="px-4 py-3">
+                      <td className="table-cell text-gray-500 dark:text-gray-400">{expense.description || '—'}</td>
+                      <td className="table-cell text-right font-medium text-red-600">{formatCurrency(expense.amount)}</td>
+                      <td className="table-cell">
                         <button onClick={() => handleDeleteExpense(expense.id)} className="text-gray-400 hover:text-red-500 transition-colors">
                           <X className="h-4 w-4" />
                         </button>
@@ -1008,10 +1008,10 @@ export default function AnalyticsPage() {
                     </tr>
                   ))}
                 </tbody>
-                <tfoot className="bg-gray-50 dark:bg-gray-700/50">
+                <tfoot className="table-head-row">
                   <tr>
-                    <td colSpan={3} className="px-4 py-3 font-semibold text-gray-700 dark:text-gray-300 text-right">Toplam Gider</td>
-                    <td className="px-4 py-3 text-right font-bold text-red-600">{formatCurrency(totalExpenses)}</td>
+                    <td colSpan={3} className="table-cell font-semibold text-gray-700 dark:text-gray-300 text-right">Toplam Gider</td>
+                    <td className="table-cell text-right font-bold text-red-600">{formatCurrency(totalExpenses)}</td>
                     <td></td>
                   </tr>
                 </tfoot>
@@ -1025,30 +1025,30 @@ export default function AnalyticsPage() {
           ) : incomes.length > 0 && (
             <div>
               <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">{periodLabel} Gelirleri</h3>
-              <div className="card p-0 overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-50 dark:bg-gray-700/50">
+              <div className="table-wrapper">
+                <table className="table-base">
+                  <thead className="table-head-row">
                     <tr>
-                      <th className="px-4 py-3 text-left font-medium text-gray-500">Tarih</th>
-                      <th className="px-4 py-3 text-left font-medium text-gray-500">Kategori</th>
-                      <th className="px-4 py-3 text-left font-medium text-gray-500">Açıklama</th>
-                      <th className="px-4 py-3 text-right font-medium text-gray-500">Tutar</th>
-                      <th className="px-4 py-3 w-10"></th>
+                      <th className="table-head-cell">Tarih</th>
+                      <th className="table-head-cell">Kategori</th>
+                      <th className="table-head-cell">Açıklama</th>
+                      <th className="table-head-cell text-right">Tutar</th>
+                      <th className="table-head-cell w-10"></th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                  <tbody>
                     {incomes.map(income => (
-                      <tr key={income.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                        <td className="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                      <tr key={income.id} className="table-row">
+                        <td className="table-cell text-gray-500 dark:text-gray-400 whitespace-nowrap">
                           {new Date(income.income_date).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' })}
                         </td>
-                        <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
+                        <td className="table-cell font-medium text-gray-900 dark:text-gray-100">
                           {income.category}
                           {income.is_recurring && <span className="ml-1.5 badge-success text-[10px]">Tekrar</span>}
                         </td>
-                        <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{income.description || '—'}</td>
-                        <td className="px-4 py-3 text-right font-medium text-green-600">{formatCurrency(income.amount)}</td>
-                        <td className="px-4 py-3">
+                        <td className="table-cell text-gray-500 dark:text-gray-400">{income.description || '—'}</td>
+                        <td className="table-cell text-right font-medium text-green-600">{formatCurrency(income.amount)}</td>
+                        <td className="table-cell">
                           <button onClick={() => handleDeleteIncome(income.id)} className="text-gray-400 hover:text-red-500 transition-colors">
                             <X className="h-4 w-4" />
                           </button>
@@ -1056,10 +1056,10 @@ export default function AnalyticsPage() {
                       </tr>
                     ))}
                   </tbody>
-                  <tfoot className="bg-gray-50 dark:bg-gray-700/50">
+                  <tfoot className="table-head-row">
                     <tr>
-                      <td colSpan={3} className="px-4 py-3 font-semibold text-gray-700 dark:text-gray-300 text-right">Toplam Gelir (Manuel)</td>
-                      <td className="px-4 py-3 text-right font-bold text-green-600">{formatCurrency(manualIncome)}</td>
+                      <td colSpan={3} className="table-cell font-semibold text-gray-700 dark:text-gray-300 text-right">Toplam Gelir (Manuel)</td>
+                      <td className="table-cell text-right font-bold text-green-600">{formatCurrency(manualIncome)}</td>
                       <td></td>
                     </tr>
                   </tfoot>

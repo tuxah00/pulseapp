@@ -974,23 +974,23 @@ export default function KasaPage() {
 
       {/* ── Bugünün İşlemleri ── */}
       {transactions.length > 0 && (
-        <div className="card p-4">
-          <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
+        <section className="space-y-3">
+          <h3 className="h-section flex items-center gap-2">
             <Clock className="h-5 w-5" /> Bugünün İşlemleri
           </h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-gray-500 border-b border-gray-200 dark:border-gray-700">
-                  <th className="pb-2 font-medium">Saat</th>
-                  <th className="pb-2 font-medium">Fiş No</th>
-                  <th className="pb-2 font-medium">Müşteri</th>
-                  <th className="pb-2 font-medium text-right">Tutar</th>
-                  <th className="pb-2 font-medium">Ödeme</th>
-                  <th className="pb-2 font-medium">Durum</th>
+          <div className="table-wrapper">
+            <table className="table-base">
+              <thead className="table-head-row">
+                <tr>
+                  <th className="table-head-cell">Saat</th>
+                  <th className="table-head-cell">Fiş No</th>
+                  <th className="table-head-cell">Müşteri</th>
+                  <th className="table-head-cell text-right">Tutar</th>
+                  <th className="table-head-cell">Ödeme</th>
+                  <th className="table-head-cell">Durum</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+              <tbody>
                 {transactions.map(tx => {
                   const payments = (tx.payments || []) as POSPayment[]
                   const methodLabels = payments.map(p => {
@@ -999,19 +999,19 @@ export default function KasaPage() {
                   }).join(' + ')
 
                   return (
-                    <tr key={tx.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                      <td className="py-2 text-gray-700 dark:text-gray-300">
+                    <tr key={tx.id} className="table-row">
+                      <td className="table-cell">
                         {new Date(tx.created_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
                       </td>
-                      <td className="py-2 text-gray-500 font-mono text-xs">{tx.receipt_number}</td>
-                      <td className="py-2 text-gray-700 dark:text-gray-300">
+                      <td className="table-cell text-gray-500 font-mono text-xs">{tx.receipt_number}</td>
+                      <td className="table-cell">
                         {tx.customers?.name || '—'}
                       </td>
-                      <td className="py-2 text-right font-semibold text-gray-900 dark:text-gray-100">
+                      <td className="table-cell text-right font-semibold text-gray-900 dark:text-gray-100">
                         {formatCurrency(tx.total)}
                       </td>
-                      <td className="py-2 text-gray-500">{methodLabels}</td>
-                      <td className="py-2">
+                      <td className="table-cell text-gray-500">{methodLabels}</td>
+                      <td className="table-cell">
                         <span className={
                           tx.payment_status === 'paid' ? 'badge-success' :
                           tx.payment_status === 'partial' ? 'badge-warning' :
@@ -1026,7 +1026,7 @@ export default function KasaPage() {
               </tbody>
             </table>
           </div>
-        </div>
+        </section>
       )}
 
       {/* ── Kasa Oturumu Modal ── */}

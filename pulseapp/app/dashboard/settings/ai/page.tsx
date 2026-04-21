@@ -434,31 +434,31 @@ export default function AISettingsPage() {
             </div>
           </div>
 
-          <div className="overflow-x-auto -mx-2">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-100 dark:border-gray-700">
-                  <th className="text-left py-2 px-2 font-medium text-gray-500 dark:text-gray-400 text-xs">Kategori</th>
-                  <th className="text-center py-2 px-2 font-medium text-gray-500 dark:text-gray-400 text-xs w-20">Okuma</th>
-                  <th className="text-center py-2 px-2 font-medium text-gray-500 dark:text-gray-400 text-xs w-20">Eylem</th>
+          <div className="table-wrapper">
+            <table className="table-base">
+              <thead className="table-head-row">
+                <tr>
+                  <th className="table-head-cell">Kategori</th>
+                  <th className="table-head-cell text-center w-20">Okuma</th>
+                  <th className="table-head-cell text-center w-20">Eylem</th>
                 </tr>
               </thead>
               <tbody>
                 {PERMISSION_CATEGORIES.map((cat) => (
                   <React.Fragment key={cat.category}>
                     <tr className="bg-gray-50 dark:bg-gray-800/40">
-                      <td colSpan={3} className="py-2 px-2">
+                      <td colSpan={3} className="table-cell">
                         <div className="text-xs font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wider">{cat.category}</div>
                         <div className="text-[11px] text-gray-500 dark:text-gray-400">{cat.subtitle}</div>
                       </td>
                     </tr>
                     {cat.groups.map((g) => (
-                      <tr key={g.label} className="border-b border-gray-50 dark:border-gray-800 last:border-0">
-                        <td className="py-2 px-2 pl-4">
+                      <tr key={g.label} className="table-row">
+                        <td className="table-cell pl-8">
                           <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{g.label}</div>
                           <div className="text-[11px] text-gray-500 dark:text-gray-400">{g.description}</div>
                         </td>
-                        <td className="py-2 px-2 text-center">
+                        <td className="table-cell text-center">
                           {g.read ? (
                             <label className="inline-flex items-center cursor-pointer">
                               <input
@@ -473,7 +473,7 @@ export default function AISettingsPage() {
                             <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>
                           )}
                         </td>
-                        <td className="py-2 px-2 text-center">
+                        <td className="table-cell text-center">
                           {g.write ? (
                             <label className="inline-flex items-center cursor-pointer">
                               <input

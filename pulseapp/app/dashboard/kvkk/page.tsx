@@ -273,75 +273,73 @@ export default function KvkkPage() {
               </p>
             </div>
           ) : (
-            <div className="card overflow-hidden p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
-                      <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Telefon</th>
-                      <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Onay Türü</th>
-                      <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Yöntem</th>
-                      <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Verilme Tarihi</th>
-                      <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Durum</th>
-                      <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">İşlem</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {consents.map((consent) => (
-                      <tr key={consent.id} className="border-b border-gray-100 dark:border-gray-800 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/30">
-                        <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
-                          {consent.customer_phone}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="badge-info">
-                            {CONSENT_TYPE_LABELS[consent.consent_type] ?? consent.consent_type}
+            <div className="table-wrapper">
+              <table className="table-base">
+                <thead className="table-head-row">
+                  <tr>
+                    <th className="table-head-cell">Telefon</th>
+                    <th className="table-head-cell">Onay Türü</th>
+                    <th className="table-head-cell">Yöntem</th>
+                    <th className="table-head-cell">Verilme Tarihi</th>
+                    <th className="table-head-cell">Durum</th>
+                    <th className="table-head-cell">İşlem</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {consents.map((consent) => (
+                    <tr key={consent.id} className="table-row">
+                      <td className="table-cell font-medium text-gray-900 dark:text-gray-100">
+                        {consent.customer_phone}
+                      </td>
+                      <td className="table-cell">
+                        <span className="badge-info">
+                          {CONSENT_TYPE_LABELS[consent.consent_type] ?? consent.consent_type}
+                        </span>
+                      </td>
+                      <td className="table-cell text-gray-600 dark:text-gray-400">
+                        {METHOD_LABELS[consent.method] ?? consent.method}
+                      </td>
+                      <td className="table-cell text-gray-500 whitespace-nowrap">
+                        {new Date(consent.given_at).toLocaleString('tr-TR')}
+                      </td>
+                      <td className="table-cell">
+                        {consent.revoked_at ? (
+                          <span className="badge-danger">
+                            <X className="h-3 w-3 mr-1" />
+                            İptal Edildi
                           </span>
-                        </td>
-                        <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
-                          {METHOD_LABELS[consent.method] ?? consent.method}
-                        </td>
-                        <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
-                          {new Date(consent.given_at).toLocaleString('tr-TR')}
-                        </td>
-                        <td className="px-4 py-3">
-                          {consent.revoked_at ? (
-                            <span className="badge-danger">
-                              <X className="h-3 w-3 mr-1" />
-                              İptal Edildi
-                            </span>
-                          ) : (
-                            <span className="badge-success">
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              Aktif
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          {!consent.revoked_at && (
-                            <button
-                              onClick={() => handleRevokeConsent(consent.id)}
-                              disabled={revokingId === consent.id}
-                              className="text-xs text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 font-medium flex items-center gap-1 disabled:opacity-50"
-                            >
-                              {revokingId === consent.id ? (
-                                <Loader2 className="h-3 w-3 animate-spin" />
-                              ) : (
-                                <AlertTriangle className="h-3 w-3" />
-                              )}
-                              İptal Et
-                            </button>
-                          )}
-                          {consent.revoked_at && (
-                            <span className="text-xs text-gray-400">
-                              {new Date(consent.revoked_at).toLocaleDateString('tr-TR')}
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                        ) : (
+                          <span className="badge-success">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Aktif
+                          </span>
+                        )}
+                      </td>
+                      <td className="table-cell">
+                        {!consent.revoked_at && (
+                          <button
+                            onClick={() => handleRevokeConsent(consent.id)}
+                            disabled={revokingId === consent.id}
+                            className="text-xs text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 font-medium flex items-center gap-1 disabled:opacity-50"
+                          >
+                            {revokingId === consent.id ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <AlertTriangle className="h-3 w-3" />
+                            )}
+                            İptal Et
+                          </button>
+                        )}
+                        {consent.revoked_at && (
+                          <span className="text-xs text-gray-400">
+                            {new Date(consent.revoked_at).toLocaleDateString('tr-TR')}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
@@ -360,86 +358,84 @@ export default function KvkkPage() {
               <p className="text-gray-500">Henüz veri silme talebi yok</p>
             </div>
           ) : (
-            <div className="card overflow-hidden p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
-                      <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Müşteri</th>
-                      <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Telefon</th>
-                      <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Talep Tarihi</th>
-                      <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Durum</th>
-                      <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400 hidden md:table-cell">İşlenme Tarihi</th>
-                      <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">İşlem</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {deletions.map((request) => (
-                      <tr key={request.id} className={cn(
-                        'border-b border-gray-100 dark:border-gray-800 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/30',
-                        request.status === 'pending' && 'bg-amber-50/30 dark:bg-amber-900/10'
-                      )}>
-                        <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
-                          {request.customer_name}
-                        </td>
-                        <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
-                          {request.customer_phone}
-                        </td>
-                        <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
-                          {new Date(request.requested_at).toLocaleString('tr-TR')}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className={STATUS_COLORS[request.status]}>
-                            {request.status === 'pending' && <Clock className="h-3 w-3 mr-1" />}
-                            {request.status === 'completed' && <CheckCircle className="h-3 w-3 mr-1" />}
-                            {request.status === 'rejected' && <AlertTriangle className="h-3 w-3 mr-1" />}
-                            {request.status === 'processing' && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
-                            {STATUS_LABELS[request.status]}
+            <div className="table-wrapper">
+              <table className="table-base">
+                <thead className="table-head-row">
+                  <tr>
+                    <th className="table-head-cell">Müşteri</th>
+                    <th className="table-head-cell">Telefon</th>
+                    <th className="table-head-cell">Talep Tarihi</th>
+                    <th className="table-head-cell">Durum</th>
+                    <th className="table-head-cell hidden md:table-cell">İşlenme Tarihi</th>
+                    <th className="table-head-cell">İşlem</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {deletions.map((request) => (
+                    <tr key={request.id} className={cn(
+                      'table-row',
+                      request.status === 'pending' && 'bg-amber-50/30 dark:bg-amber-900/10'
+                    )}>
+                      <td className="table-cell font-medium text-gray-900 dark:text-gray-100">
+                        {request.customer_name}
+                      </td>
+                      <td className="table-cell text-gray-600 dark:text-gray-400">
+                        {request.customer_phone}
+                      </td>
+                      <td className="table-cell text-gray-500 whitespace-nowrap">
+                        {new Date(request.requested_at).toLocaleString('tr-TR')}
+                      </td>
+                      <td className="table-cell">
+                        <span className={STATUS_COLORS[request.status]}>
+                          {request.status === 'pending' && <Clock className="h-3 w-3 mr-1" />}
+                          {request.status === 'completed' && <CheckCircle className="h-3 w-3 mr-1" />}
+                          {request.status === 'rejected' && <AlertTriangle className="h-3 w-3 mr-1" />}
+                          {request.status === 'processing' && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
+                          {STATUS_LABELS[request.status]}
+                        </span>
+                      </td>
+                      <td className="table-cell text-gray-500 text-xs hidden md:table-cell">
+                        {request.processed_at
+                          ? new Date(request.processed_at).toLocaleString('tr-TR')
+                          : '—'}
+                      </td>
+                      <td className="table-cell">
+                        {(request.status === 'pending' || request.status === 'processing') && (
+                          <div className="relative">
+                            <CustomSelect
+                              options={[
+                                ...(request.status === 'pending' ? [{ value: 'processing', label: 'İşleniyor' }] : []),
+                                { value: 'completed', label: 'Tamamlandı' },
+                                { value: 'rejected', label: 'Reddedildi' },
+                              ]}
+                              value=""
+                              onChange={(v) => {
+                                if (v) handleUpdateDeletionStatus(request.id, v)
+                              }}
+                              placeholder="Durum Değiştir"
+                              disabled={updatingId === request.id}
+                              className="min-w-[130px]"
+                            />
+                            {updatingId === request.id && (
+                              <Loader2 className="absolute right-8 top-1/2 -translate-y-1/2 h-3 w-3 animate-spin text-gray-400" />
+                            )}
+                          </div>
+                        )}
+                        {request.status === 'completed' && (
+                          <span className="text-xs text-green-600 dark:text-green-400 font-medium flex items-center gap-1">
+                            <CheckCircle className="h-3 w-3" /> İşlendi
                           </span>
-                        </td>
-                        <td className="px-4 py-3 text-gray-500 text-xs hidden md:table-cell">
-                          {request.processed_at
-                            ? new Date(request.processed_at).toLocaleString('tr-TR')
-                            : '—'}
-                        </td>
-                        <td className="px-4 py-3">
-                          {(request.status === 'pending' || request.status === 'processing') && (
-                            <div className="relative">
-                              <CustomSelect
-                                options={[
-                                  ...(request.status === 'pending' ? [{ value: 'processing', label: 'İşleniyor' }] : []),
-                                  { value: 'completed', label: 'Tamamlandı' },
-                                  { value: 'rejected', label: 'Reddedildi' },
-                                ]}
-                                value=""
-                                onChange={(v) => {
-                                  if (v) handleUpdateDeletionStatus(request.id, v)
-                                }}
-                                placeholder="Durum Değiştir"
-                                disabled={updatingId === request.id}
-                                className="min-w-[130px]"
-                              />
-                              {updatingId === request.id && (
-                                <Loader2 className="absolute right-8 top-1/2 -translate-y-1/2 h-3 w-3 animate-spin text-gray-400" />
-                              )}
-                            </div>
-                          )}
-                          {request.status === 'completed' && (
-                            <span className="text-xs text-green-600 dark:text-green-400 font-medium flex items-center gap-1">
-                              <CheckCircle className="h-3 w-3" /> İşlendi
-                            </span>
-                          )}
-                          {request.status === 'rejected' && (
-                            <span className="text-xs text-red-600 dark:text-red-400 font-medium flex items-center gap-1">
-                              <AlertTriangle className="h-3 w-3" /> Reddedildi
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                        )}
+                        {request.status === 'rejected' && (
+                          <span className="text-xs text-red-600 dark:text-red-400 font-medium flex items-center gap-1">
+                            <AlertTriangle className="h-3 w-3" /> Reddedildi
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>

@@ -309,35 +309,35 @@ export default function CommissionsPage() {
                 Bu dönem için tamamlanmış randevu bulunamadı.
               </p>
             ) : (
-              <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-                      <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Personel</th>
-                      <th className="text-right px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Randevu</th>
-                      <th className="text-right px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Ciro</th>
-                      <th className="text-right px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Prim</th>
-                      <th className="text-center px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Durum</th>
+              <div className="table-wrapper">
+                <table className="table-base">
+                  <thead className="table-head-row">
+                    <tr>
+                      <th className="table-head-cell">Personel</th>
+                      <th className="table-head-cell text-right">Randevu</th>
+                      <th className="table-head-cell text-right">Ciro</th>
+                      <th className="table-head-cell text-right">Prim</th>
+                      <th className="table-head-cell text-center">Durum</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                  <tbody>
                     {earnings.map((earning) => (
-                      <tr key={earning.id} className="bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                        <td className="px-4 py-3">
+                      <tr key={earning.id} className="table-row">
+                        <td className="table-cell">
                           <span className="font-medium text-gray-900 dark:text-gray-100">
                             {(earning.staff_members as any)?.name || '—'}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-300">
+                        <td className="table-cell text-right">
                           {earning.appointment_count}
                         </td>
-                        <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-300">
+                        <td className="table-cell text-right">
                           {formatCurrency(earning.total_revenue)}
                         </td>
-                        <td className="px-4 py-3 text-right font-semibold text-pulse-900 dark:text-pulse-300">
+                        <td className="table-cell text-right font-semibold text-pulse-900 dark:text-pulse-300">
                           {formatCurrency(earning.commission_total)}
                         </td>
-                        <td className="px-4 py-3 text-center">
+                        <td className="table-cell text-center">
                           <button
                             onClick={() => handleTogglePaid(earning)}
                             className={cn(
@@ -356,16 +356,16 @@ export default function CommissionsPage() {
                       </tr>
                     ))}
                   </tbody>
-                  <tfoot>
-                    <tr className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-                      <td className="px-4 py-3 font-semibold text-gray-900 dark:text-gray-100">Toplam</td>
-                      <td className="px-4 py-3 text-right font-semibold text-gray-900 dark:text-gray-100">
+                  <tfoot className="table-head-row">
+                    <tr>
+                      <td className="table-cell font-semibold text-gray-900 dark:text-gray-100">Toplam</td>
+                      <td className="table-cell text-right font-semibold text-gray-900 dark:text-gray-100">
                         {earnings.reduce((s, e) => s + e.appointment_count, 0)}
                       </td>
-                      <td className="px-4 py-3 text-right font-semibold text-gray-900 dark:text-gray-100">
+                      <td className="table-cell text-right font-semibold text-gray-900 dark:text-gray-100">
                         {formatCurrency(earnings.reduce((s, e) => s + e.total_revenue, 0))}
                       </td>
-                      <td className="px-4 py-3 text-right font-semibold text-pulse-900 dark:text-pulse-300">
+                      <td className="table-cell text-right font-semibold text-pulse-900 dark:text-pulse-300">
                         {formatCurrency(earnings.reduce((s, e) => s + e.commission_total, 0))}
                       </td>
                       <td />
