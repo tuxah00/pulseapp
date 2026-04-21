@@ -55,7 +55,7 @@ RUN addgroup --system --gid 1001 nodejs \
 # Standalone çıktı: kendi minimum node_modules'ü + server.js'i
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+# NOT: public/ klasörü yok; varsa bile standalone'a next build tarafından kopyalanır
 
 USER nextjs
 EXPOSE 3000
