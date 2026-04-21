@@ -65,6 +65,6 @@ EXPOSE 3000
 # - 180s start period (container boot + Next.js ready)
 # - 10 retries (toplam tolerans ~5 dk)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=180s --retries=10 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/api/health || exit 1
 
 CMD ["node", "server.js"]
