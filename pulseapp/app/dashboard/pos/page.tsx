@@ -555,8 +555,8 @@ export default function KasaPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
 
         {/* ── SOL: Ürün/Hizmet Seçici ── */}
-        <div className="lg:col-span-4 card p-4 space-y-3">
-          <div className="flex gap-0.5 bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
+        <div className="lg:col-span-4 card p-4 flex flex-col h-[calc(100vh-11rem)]">
+          <div className="flex-shrink-0 flex gap-0.5 bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
             <button
               onClick={() => setItemTab('services')}
               className={cn('flex-1 flex items-center justify-center gap-1 px-1.5 py-1 rounded-md text-xs font-medium transition-colors',
@@ -583,7 +583,7 @@ export default function KasaPage() {
             </button>
           </div>
 
-          <div className="relative">
+          <div className="flex-shrink-0 relative mt-3">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
               type="text"
@@ -594,7 +594,7 @@ export default function KasaPage() {
             />
           </div>
 
-          <div className="max-h-[calc(100vh-320px)] overflow-y-auto space-y-1">
+          <div className="flex-1 min-h-0 overflow-y-auto space-y-1 mt-3">
             {itemTab === 'services' ? (
               filteredServices.length === 0 ? (
                 <p className="text-sm text-gray-400 text-center py-4">Hizmet bulunamadı</p>
