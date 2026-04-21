@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getEffectivePermissions, getEffectiveWritePermissions, type StaffRole } from '@/types'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
 import { getOpenAIClient, ASSISTANT_MODEL, ASSISTANT_MAX_TOKENS } from '@/lib/ai/openai-client'
+import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions'
 import { buildAssistantSystemPrompt, buildOnboardingSystemPrompt, buildPageTutorialPrompt } from '@/lib/ai/assistant-prompts'
 import { findTopicByKey } from '@/lib/ai/tutorial-content'
 import { ASSISTANT_TOOLS, TOOL_LABELS, executeAssistantTool } from '@/lib/ai/assistant-tools'
@@ -138,7 +139,7 @@ export async function POST(req: NextRequest) {
     .order('created_at', { ascending: true })
     .limit(limits.maxHistory)
 
-  const history: Array<any> = (historyRows || []).map(row => {
+  const history: ChatCompletionMessageParam[] = (historyRows || []).map(row => {
     if (row.role === 'user') {
       return { role: 'user', content: row.content }
     }
@@ -148,7 +149,7 @@ export async function POST(req: NextRequest) {
     if (row.role === 'tool') {
       return { role: 'tool', tool_call_id: row.tool_call_id, content: JSON.stringify(row.tool_result) }
     }
-    return { role: row.role, content: row.content }
+    return { role: 'assistant', content: row.content }
   })
 
   // 7. Build system prompt
@@ -205,10 +206,10 @@ export async function POST(req: NextRequest) {
     biz?.settings?.ai_permissions ?? null,
     permissions,
   )
-  const messages = [
-    { role: 'system' as const, content: systemPrompt },
+  const messages: ChatCompletionMessageParam[] = [
+    { role: 'system', content: systemPrompt },
     ...history,
-    { role: 'user' as const, content: message },
+    { role: 'user', content: message },
   ]
 
   const encoder = new TextEncoder()
@@ -306,7 +307,7 @@ export async function POST(req: NextRequest) {
             // Save assistant message with tool_calls
             const toolCallsFormatted = accumulatedToolCalls.map(tc => ({
               id: tc.id,
-              type: 'function',
+              type: 'function' as const,
               function: { name: tc.name, arguments: tc.arguments },
             }))
 
@@ -319,10 +320,10 @@ export async function POST(req: NextRequest) {
 
             // Add assistant message to context
             currentMessages.push({
-              role: 'assistant' as any,
+              role: 'assistant',
               content: accumulatedContent || null,
               tool_calls: toolCallsFormatted,
-            } as any)
+            })
 
             // Execute each tool
             for (const tc of accumulatedToolCalls) {
@@ -370,10 +371,10 @@ export async function POST(req: NextRequest) {
 
               // Add tool result to context
               currentMessages.push({
-                role: 'tool' as any,
+                role: 'tool',
                 tool_call_id: tc.id,
                 content: JSON.stringify(result),
-              } as any)
+              })
             }
 
             // Continue the loop to get the final text response
@@ -394,9 +395,9 @@ export async function POST(req: NextRequest) {
         // 10. Update usage (usage row fetched in step 4 — sequential per user)
         if (usage) {
           await admin.from('ai_usage').update({
-            message_count: (usage as any).message_count + 1,
-            total_input_tokens: ((usage as any).total_input_tokens || 0) + totalInputTokens,
-            total_output_tokens: ((usage as any).total_output_tokens || 0) + totalOutputTokens,
+            message_count: (usage.message_count || 0) + 1,
+            total_input_tokens: (usage.total_input_tokens || 0) + totalInputTokens,
+            total_output_tokens: (usage.total_output_tokens || 0) + totalOutputTokens,
             updated_at: new Date().toISOString(),
           })
             .eq('business_id', staff.business_id)
@@ -454,78 +455,80 @@ async function getBusinessServices(admin: ReturnType<typeof createAdminClient>, 
   return (data || []) as Array<{ name: string; duration_minutes: number; price: number | null }>
 }
 
-function summarizeToolResult(toolName: string, data: Record<string, any> | null | undefined): string {
+// Tool sonuçlarının şekli araçtan araca değişir; burada yalnızca özet string'i için esnek erişim yapılır.
+function summarizeToolResult(toolName: string, data: Record<string, unknown> | null | undefined): string {
   if (!data) return 'Veri bulunamadı'
+  const d = data as Record<string, any>
 
   switch (toolName) {
     case 'list_appointments':
-      return `${data.toplam || 0} randevu bulundu`
+      return `${d.toplam || 0} randevu bulundu`
     case 'get_available_slots':
-      return `${(data.musait_saatler || []).length} müsait saat bulundu`
+      return `${(d.musait_saatler || []).length} müsait saat bulundu`
     case 'search_customers':
-      return `${data.toplam || 0} müşteri bulundu`
+      return `${d.toplam || 0} müşteri bulundu`
     case 'get_customer_details':
-      return `${data.isim} bilgileri getirildi`
+      return `${d.isim} bilgileri getirildi`
     case 'list_services':
       return `${data.toplam || 0} hizmet listelendi`
     case 'list_packages':
-      return `${data.toplam || 0} paket listelendi`
+      return `${d.toplam || 0} paket listelendi`
     case 'list_staff':
-      return `${data.toplam || 0} personel listelendi`
+      return `${d.toplam || 0} personel listelendi`
     case 'get_staff_schedule':
-      return `${data.personel} programı getirildi`
+      return `${d.personel} programı getirildi`
     case 'get_appointment_stats':
-      return `${data.toplam || 0} randevu analiz edildi`
+      return `${d.toplam || 0} randevu analiz edildi`
     case 'get_revenue_stats':
       return 'Gelir istatistikleri hesaplandı'
     case 'get_customer_stats':
-      return `${data.toplam_musteri || 0} müşteri analiz edildi`
+      return `${d.toplam_musteri || 0} müşteri analiz edildi`
     case 'get_business_info':
       return 'İşletme bilgileri getirildi'
     case 'get_working_hours':
       return 'Çalışma saatleri getirildi'
     case 'list_pending_messages':
-      return `${data.toplam || 0} bekleyen mesaj`
+      return `${d.toplam || 0} bekleyen mesaj`
     case 'get_recent_messages':
-      return `${data.toplam || 0} mesaj getirildi`
+      return `${d.toplam || 0} mesaj getirildi`
     case 'search_audit_logs':
-      return `${data.toplam || 0} kayıt bulundu`
+      return `${d.toplam || 0} kayıt bulundu`
     case 'get_revenue_breakdown':
-      return `${(data.breakdown || []).length} kalem, toplam ${data.totals?.revenue ?? 0}₺`
+      return `${(d.breakdown || []).length} kalem, toplam ${d.totals?.revenue ?? 0}₺`
     case 'get_customer_lifetime_value':
-      return `${(data.clv || []).length} müşteri analiz edildi`
+      return `${(d.clv || []).length} müşteri analiz edildi`
     case 'get_occupancy_stats':
-      return `Doluluk: %${data.overall_occupancy ?? 0}`
+      return `Doluluk: %${d.overall_occupancy ?? 0}`
     case 'get_staff_performance':
-      return `${(data.performance || []).length} personel analiz edildi`
+      return `${(d.performance || []).length} personel analiz edildi`
     case 'get_expense_breakdown':
-      return `${(data.breakdown || []).length} kategori, toplam ${data.total ?? 0}₺`
+      return `${(d.breakdown || []).length} kategori, toplam ${d.total ?? 0}₺`
     case 'get_profit_loss':
-      return `Net kâr: ${data.net_profit ?? 0}₺ (%${data.margin_percentage ?? 0})`
+      return `Net kâr: ${d.net_profit ?? 0}₺ (%${d.margin_percentage ?? 0})`
     case 'compare_periods':
       return `Dönem karşılaştırması hazırlandı`
     case 'detect_risk_customers':
-      return `${data.toplam || 0} risk altında müşteri bulundu`
+      return `${d.toplam || 0} risk altında müşteri bulundu`
     case 'detect_anomalies':
-      return `${(data.anomalies || []).length} anomali tespit edildi`
+      return `${(d.anomalies || []).length} anomali tespit edildi`
     case 'schedule_action':
-      return data.message || '✓ Planlandı'
+      return d.message || '✓ Planlandı'
     case 'list_scheduled_actions':
-      return `${data.count || 0} planlı eylem`
+      return `${d.count || 0} planlı eylem`
     case 'cancel_scheduled_action':
-      return data.message || '✓ İptal edildi'
+      return d.message || '✓ İptal edildi'
     case 'list_campaigns':
-      return `${data.toplam || 0} kampanya listelendi`
+      return `${d.toplam || 0} kampanya listelendi`
     case 'estimate_campaign_audience':
-      return `Tahmini hedef kitle: ${data.count || 0} kişi`
+      return `Tahmini hedef kitle: ${d.count || 0} kişi`
     case 'list_workflows':
-      return `${data.toplam || 0} iş akışı listelendi`
+      return `${d.toplam || 0} iş akışı listelendi`
     case 'list_blocked_slots':
-      return `${data.toplam || 0} bloklu zaman dilimi`
+      return `${d.toplam || 0} bloklu zaman dilimi`
     case 'list_shifts':
-      return `${data.toplam || 0} vardiya listelendi`
+      return `${d.toplam || 0} vardiya listelendi`
     case 'list_unpaid_invoices':
-      return `${data.toplam || 0} ödenmemiş fatura (toplam ${data.toplam_bakiye || 0}₺)`
+      return `${d.toplam || 0} ödenmemiş fatura (toplam ${d.toplam_bakiye || 0}₺)`
     default:
       return 'İşlem tamamlandı'
   }

@@ -886,7 +886,20 @@ export interface PackageUsage {
   staff_id: string | null
 }
 
-export type ShiftType = 'regular' | 'off'
+export type ShiftType = 'regular' | 'off' | 'part_time'
+export type ShiftRequestStatus = 'pending' | 'approved' | 'rejected'
+
+export const SHIFT_TYPE_LABELS: Record<ShiftType, string> = {
+  regular: 'Normal Vardiya',
+  off: 'İzin / Kapalı',
+  part_time: 'Yarı Zamanlı',
+}
+
+export const SHIFT_REQUEST_STATUS_LABELS: Record<ShiftRequestStatus, string> = {
+  pending: 'Bekliyor',
+  approved: 'Onaylandı',
+  rejected: 'Reddedildi',
+}
 
 export interface Shift {
   id: string
@@ -1184,9 +1197,9 @@ export type FollowUpType = 'post_session' | 'next_session_reminder' | 'protocol_
 export type FollowUpStatus = 'pending' | 'in_progress' | 'sent' | 'no_response' | 'done' | 'rescheduled' | 'cancelled'
 
 export const FOLLOW_UP_TYPE_LABELS: Record<FollowUpType, string> = {
-  post_session: 'Seans Sonrası Kontrol',
+  post_session: 'Seans Sonrası',
   next_session_reminder: 'Sonraki Seans Hatırlatma',
-  protocol_completion: 'Protokol Tamamlama',
+  protocol_completion: 'Protokol Tamamlandı',
   package_sold: 'Paket Satıldı',
   manual: 'Özel Takip',
 }
