@@ -608,7 +608,7 @@ export default function KasaPage() {
                       service_id: svc.id,
                     })}
                     disabled={!svc.price}
-                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left disabled:opacity-40"
+                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left disabled:opacity-40 focus:outline-none"
                   >
                     <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{svc.name}</span>
                     <span className="text-sm text-pulse-900 font-semibold flex-shrink-0 ml-2">
@@ -630,7 +630,7 @@ export default function KasaPage() {
                       product_id: prod.id,
                     })}
                     disabled={!prod.price || prod.stock_count <= 0}
-                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left disabled:opacity-40"
+                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left disabled:opacity-40 focus:outline-none"
                   >
                     <div className="min-w-0">
                       <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate block">{prod.name}</span>
@@ -657,7 +657,7 @@ export default function KasaPage() {
                       sessions_total: pkg.sessions_total,
                     })}
                     disabled={!pkg.price}
-                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left disabled:opacity-40"
+                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left disabled:opacity-40 focus:outline-none"
                   >
                     <div className="min-w-0">
                       <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate block">{pkg.name}</span>
