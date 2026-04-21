@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { useAIAssistant } from '@/lib/hooks/use-ai-assistant'
 import { useTutorial } from '@/lib/hooks/use-tutorial'
+import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { getSmartPrompts } from '@/lib/ai/quick-prompts'
 import AIMessageBubble from './ai-message-bubble'
 import AIToolIndicator from './ai-tool-indicator'
@@ -24,6 +25,7 @@ interface Props {
 }
 
 export default function AIAssistantPanel({ businessName, sector, plan, permissions }: Props) {
+  const { staffRole } = useBusinessContext()
   const [isOpen, setIsOpen] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
   const [input, setInput] = useState('')
@@ -125,8 +127,10 @@ export default function AIAssistantPanel({ businessName, sector, plan, permissio
     }
   }, [isOpen, recorderState])
 
-  // Yeni personel için kurulum sihirbazını otomatik başlat (dashboard'da, ilk kez)
+  // Yeni işletme sahibi için kurulum sihirbazını otomatik başlat (dashboard'da, ilk kez).
+  // Sadece owner rolündeki kullanıcılara gösterilir — diğer personele kurulum mesajı gitmez.
   useEffect(() => {
+    if (staffRole !== 'owner') return
     if (shouldRunSetup && !setupTriggered && !isOpen) {
       setSetupTriggered(true)
       setIsOpen(true)
@@ -134,7 +138,7 @@ export default function AIAssistantPanel({ businessName, sector, plan, permissio
       sendMessage('PulseApp kurulumuna yardım et', true)
       markSetupDone()
     }
-  }, [shouldRunSetup, setupTriggered, isOpen, newConversation, sendMessage, markSetupDone])
+  }, [staffRole, shouldRunSetup, setupTriggered, isOpen, newConversation, sendMessage, markSetupDone])
 
   const handleOpenTutorial = useCallback(() => {
     if (!currentTopic) return

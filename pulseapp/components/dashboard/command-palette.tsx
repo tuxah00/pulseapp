@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -13,26 +13,41 @@ import {
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { formatCurrency } from '@/lib/utils'
-import { STATUS_LABELS } from '@/types'
-import type { AppointmentStatus, InvoiceStatus } from '@/types'
+import { STATUS_LABELS, canView } from '@/types'
+import type { AppointmentStatus, InvoiceStatus, StaffPermissions } from '@/types'
 
 // ── Sayfa listesi ──────────────────────────────────────────────
-const PAGES = [
-  { id: 'dashboard', label: 'Genel Bakış', icon: <LayoutDashboard className="h-4 w-4" />, href: '/dashboard' },
-  { id: 'appointments', label: 'Randevular', icon: <Calendar className="h-4 w-4" />, href: '/dashboard/appointments' },
-  { id: 'customers', label: 'Müşteriler', icon: <Users className="h-4 w-4" />, href: '/dashboard/customers' },
-  { id: 'messages', label: 'Mesajlar', icon: <MessageSquare className="h-4 w-4" />, href: '/dashboard/messages' },
-  { id: 'analytics', label: 'Gelir-Gider', icon: <BarChart3 className="h-4 w-4" />, href: '/dashboard/analytics' },
-  { id: 'reviews', label: 'Yorumlar', icon: <Star className="h-4 w-4" />, href: '/dashboard/reviews' },
-  { id: 'invoices', label: 'Faturalar', icon: <Receipt className="h-4 w-4" />, href: '/dashboard/invoices' },
-  { id: 'pos', label: 'Kasa', icon: <Wallet className="h-4 w-4" />, href: '/dashboard/pos' },
-  { id: 'inventory', label: 'Stoklar', icon: <Package className="h-4 w-4" />, href: '/dashboard/inventory' },
-  { id: 'services', label: 'Hizmetler', icon: <Scissors className="h-4 w-4" />, href: '/dashboard/services' },
-  { id: 'records', label: 'Dosyalar', icon: <FolderOpen className="h-4 w-4" />, href: '/dashboard/records' },
-  { id: 'notifications', label: 'Bildirimler', icon: <Bell className="h-4 w-4" />, href: '/dashboard/notifications' },
-  { id: 'audit', label: 'Denetim Kaydı', icon: <ClipboardList className="h-4 w-4" />, href: '/dashboard/audit' },
-  { id: 'settings', label: 'Ayarlar', icon: <Settings className="h-4 w-4" />, href: '/dashboard/settings/business' },
+// permKey: bu sayfayı görebilmek için gereken izin. null = herkese açık (Bildirimler, Ayarlar-ana vb.)
+interface PageItem {
+  id: string
+  label: string
+  icon: React.ReactNode
+  href: string
+  permKey: keyof StaffPermissions | null
+}
+
+const PAGES: PageItem[] = [
+  { id: 'dashboard', label: 'Genel Bakış', icon: <LayoutDashboard className="h-4 w-4" />, href: '/dashboard', permKey: 'dashboard' },
+  { id: 'appointments', label: 'Randevular', icon: <Calendar className="h-4 w-4" />, href: '/dashboard/appointments', permKey: 'appointments' },
+  { id: 'customers', label: 'Müşteriler', icon: <Users className="h-4 w-4" />, href: '/dashboard/customers', permKey: 'customers' },
+  { id: 'messages', label: 'Mesajlar', icon: <MessageSquare className="h-4 w-4" />, href: '/dashboard/messages', permKey: 'messages' },
+  { id: 'analytics', label: 'Gelir-Gider', icon: <BarChart3 className="h-4 w-4" />, href: '/dashboard/analytics', permKey: 'analytics' },
+  { id: 'reviews', label: 'Yorumlar', icon: <Star className="h-4 w-4" />, href: '/dashboard/reviews', permKey: 'reviews' },
+  { id: 'invoices', label: 'Faturalar', icon: <Receipt className="h-4 w-4" />, href: '/dashboard/invoices', permKey: 'invoices' },
+  { id: 'pos', label: 'Kasa', icon: <Wallet className="h-4 w-4" />, href: '/dashboard/pos', permKey: 'pos' },
+  { id: 'inventory', label: 'Stoklar', icon: <Package className="h-4 w-4" />, href: '/dashboard/inventory', permKey: 'inventory' },
+  { id: 'services', label: 'Hizmetler', icon: <Scissors className="h-4 w-4" />, href: '/dashboard/services', permKey: 'services' },
+  { id: 'records', label: 'Dosyalar', icon: <FolderOpen className="h-4 w-4" />, href: '/dashboard/records', permKey: 'records' },
+  { id: 'notifications', label: 'Bildirimler', icon: <Bell className="h-4 w-4" />, href: '/dashboard/notifications', permKey: null },
+  { id: 'audit', label: 'Denetim Kaydı', icon: <ClipboardList className="h-4 w-4" />, href: '/dashboard/audit', permKey: 'audit' },
+  { id: 'settings', label: 'Ayarlar', icon: <Settings className="h-4 w-4" />, href: '/dashboard/settings/business', permKey: null },
 ]
+
+// permKey null = herkese açık sayfa; aksi halde sidebar ile aynı mantık (canView: loading=permissive).
+function pageVisible(permissions: StaffPermissions | null, key: keyof StaffPermissions | null): boolean {
+  if (key === null) return true
+  return canView(permissions, key)
+}
 
 const STATUS_ICON: Record<string, React.ReactNode> = {
   confirmed:  <CheckCircle className="h-3 w-3 text-blue-500" />,
@@ -70,8 +85,16 @@ interface CommandPaletteProps {
 
 export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
   const router = useRouter()
-  const { businessId } = useBusinessContext()
+  const { businessId, permissions } = useBusinessContext()
   const supabase = createClient()
+  // Kullanıcının erişebildiği sayfalar — yetkisi olmayan modüller arama sonuçlarında hiç görünmez
+  const visiblePages = useMemo(
+    () => PAGES.filter(p => pageVisible(permissions, p.permKey)),
+    [permissions]
+  )
+  const canSearchCustomers = canView(permissions, 'customers')
+  const canSearchAppointments = canView(permissions, 'appointments')
+  const canSearchInvoices = canView(permissions, 'invoices')
   const [query, setQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [results, setResults] = useState<SearchResult[]>([])
@@ -84,17 +107,23 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
   const search = useCallback(async (q: string) => {
     const trimmed = q.trim()
 
-    // Boş sorgu → sayfa listesi
+    // Boş sorgu → yalnızca yetkili sayfaların listesi
     if (!trimmed) {
-      setResults(PAGES.map(p => ({ ...p, group: 'Sayfalar' as const })))
+      setResults(visiblePages.map(p => ({
+        id: p.id, label: p.label, icon: p.icon, href: p.href,
+        group: 'Sayfalar' as const,
+      })))
       setLoading(false)
       return
     }
 
-    // Sayfa filtrele (anlık)
-    const pageMatches: SearchResult[] = PAGES
+    // Sayfa filtrele (anlık, yetki bazlı)
+    const pageMatches: SearchResult[] = visiblePages
       .filter(p => p.label.toLowerCase().includes(trimmed.toLowerCase()))
-      .map(p => ({ ...p, group: 'Sayfalar' as const }))
+      .map(p => ({
+        id: p.id, label: p.label, icon: p.icon, href: p.href,
+        group: 'Sayfalar' as const,
+      }))
 
     setResults(pageMatches)
 
@@ -103,34 +132,38 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
 
     const lower = trimmed.toLowerCase()
 
+    // Yetkisi olmayan kaynaklar için sorgu hiç atılmaz
     const [customersRes, appointmentsRes, invoicesRes] = await Promise.all([
-      // Müşteriler
-      supabase
-        .from('customers')
-        .select('id, name, phone, segment')
-        .eq('business_id', businessId)
-        .eq('is_active', true)
-        .or(`name.ilike.%${lower}%,phone.ilike.%${lower}%`)
-        .limit(5),
+      canSearchCustomers
+        ? supabase
+            .from('customers')
+            .select('id, name, phone, segment')
+            .eq('business_id', businessId)
+            .eq('is_active', true)
+            .or(`name.ilike.%${lower}%,phone.ilike.%${lower}%`)
+            .limit(5)
+        : Promise.resolve({ data: [] as any[] }),
 
-      // Randevular — hizmet adı veya müşteri adına göre
-      supabase
-        .from('appointments')
-        .select('id, start_time, service_name, status, customers!inner(name, phone)')
-        .eq('business_id', businessId)
-        .is('deleted_at', null)
-        .or(`service_name.ilike.%${lower}%,customers.name.ilike.%${lower}%`)
-        .order('start_time', { ascending: false })
-        .limit(5),
+      canSearchAppointments
+        ? supabase
+            .from('appointments')
+            .select('id, start_time, service_name, status, customers!inner(name, phone)')
+            .eq('business_id', businessId)
+            .is('deleted_at', null)
+            .or(`service_name.ilike.%${lower}%,customers.name.ilike.%${lower}%`)
+            .order('start_time', { ascending: false })
+            .limit(5)
+        : Promise.resolve({ data: [] as any[] }),
 
-      // Faturalar
-      supabase
-        .from('invoices')
-        .select('id, invoice_number, total, status, customers(name)')
-        .eq('business_id', businessId)
-        .or(`invoice_number.ilike.%${lower}%`)
-        .order('created_at', { ascending: false })
-        .limit(5),
+      canSearchInvoices
+        ? supabase
+            .from('invoices')
+            .select('id, invoice_number, total, status, customers(name)')
+            .eq('business_id', businessId)
+            .or(`invoice_number.ilike.%${lower}%`)
+            .order('created_at', { ascending: false })
+            .limit(5)
+        : Promise.resolve({ data: [] as any[] }),
     ])
 
     const customerResults: SearchResult[] = (customersRes.data || []).map(c => ({
@@ -191,7 +224,7 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
     setResults([...pageMatches, ...customerResults, ...appointmentResults, ...invoiceResults])
     setLoading(false)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [businessId])
+  }, [businessId, canSearchCustomers, canSearchAppointments, canSearchInvoices, visiblePages])
 
   // Debounce
   useEffect(() => {
