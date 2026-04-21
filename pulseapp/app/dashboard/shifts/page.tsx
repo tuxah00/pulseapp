@@ -394,6 +394,21 @@ export default function VardiyePage() {
 
   useEffect(() => { if (activeTab === 'requests') fetchRequests() }, [activeTab, fetchRequests])
 
+  useEffect(() => {
+    const anyOpen = !!(modal || showRequestModal || reviewTarget || noteDetail || resetConfirm)
+    if (!anyOpen) return
+    const h = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      if (noteDetail) { setIsClosingNoteDetail(true); return }
+      if (resetConfirm) { closeResetConfirm(); return }
+      if (reviewTarget) { setIsClosingReviewModal(true); return }
+      if (showRequestModal) { setIsClosingRequestModal(true); return }
+      if (modal) { closeModal(); return }
+    }
+    document.addEventListener('keydown', h)
+    return () => document.removeEventListener('keydown', h)
+  }, [modal, showRequestModal, reviewTarget, noteDetail, resetConfirm])
+
   async function handleSubmitRequest() {
     if (!businessId || !currentStaffId || !currentStaffName || !reqDate) return
     setReqSaving(true)

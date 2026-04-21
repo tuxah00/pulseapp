@@ -158,6 +158,20 @@ export default function StoklarPage() {
     return () => document.removeEventListener('keydown', h)
   }, [showModal])
 
+  useEffect(() => {
+    if (!showSupplierModal) return
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') closeSupplierModal() }
+    document.addEventListener('keydown', h)
+    return () => document.removeEventListener('keydown', h)
+  }, [showSupplierModal])
+
+  useEffect(() => {
+    if (!selectedProduct) return
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape' && !showModal && !showSupplierModal) closePanelAnimated() }
+    document.addEventListener('keydown', h)
+    return () => document.removeEventListener('keydown', h)
+  }, [selectedProduct, showModal, showSupplierModal, closePanelAnimated])
+
   const fetchMovements = useCallback(async (productId: string) => {
     setMovementsLoading(true)
     try {
