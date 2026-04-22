@@ -1297,64 +1297,54 @@ export default function AppointmentsPage() {
         </button>
       </div>
 
-      {/* Tarih Navigasyonu + Saat */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="flex-1 card !p-0 overflow-hidden">
-          <div className="flex items-center">
-            <button onClick={() => changeDate(-1)} className="flex h-12 w-12 flex-shrink-0 items-center justify-center text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-600 transition-colors">
-              <ChevronLeft className="h-5 w-5" />
+      {/* Tarih Navigasyonu */}
+      <div className="flex items-center rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden">
+        <button onClick={() => changeDate(-1)} aria-label="Önceki" className="flex h-11 w-11 flex-shrink-0 items-center justify-center text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+        <div className="flex-1 min-w-0 flex items-center justify-center gap-3 px-3">
+          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate tabular-nums">
+            {viewMode === 'week' ? formatWeekRange() :
+             viewMode === 'month' ? formatMonthLabel() :
+             viewMode === 'staff' ? `${formatSelectedDate()} — Personel` :
+             viewMode === 'room' ? `${formatSelectedDate()} — Odalar` :
+             formatSelectedDate()}
+          </p>
+          {(viewMode === 'week' || viewMode === 'month' || !isToday) && (
+            <button
+              onClick={goToday}
+              className="text-xs font-medium text-pulse-900 dark:text-pulse-400 hover:underline whitespace-nowrap"
+            >
+              {viewMode === 'week' ? 'Bu hafta' :
+               viewMode === 'month' ? 'Bu ay' :
+               'Bugün'}
             </button>
-            <div className="flex-1 text-center py-2.5 min-w-0 min-h-[48px] flex flex-col items-center justify-center">
-              {viewMode === 'week' ? (
-                <>
-                  <p className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">{formatWeekRange()}</p>
-                  <button onClick={goToday} className="text-xs text-pulse-900 dark:text-pulse-400 hover:underline mt-0.5">Bu Haftaya Dön</button>
-                </>
-              ) : viewMode === 'month' ? (
-                <>
-                  <p className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">{formatMonthLabel()}</p>
-                  <button onClick={goToday} className="text-xs text-pulse-900 dark:text-pulse-400 hover:underline mt-0.5">Bu Aya Dön</button>
-                </>
-              ) : viewMode === 'staff' ? (
-                <>
-                  <p className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">{formatSelectedDate()} — Personel</p>
-                  <button onClick={goToday} className={`text-xs text-pulse-900 dark:text-pulse-400 hover:underline mt-0.5 ${isToday ? 'invisible' : ''}`}>Bugüne Dön</button>
-                </>
-              ) : viewMode === 'room' ? (
-                <>
-                  <p className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">{formatSelectedDate()} — Odalar</p>
-                  <button onClick={goToday} className={`text-xs text-pulse-900 dark:text-pulse-400 hover:underline mt-0.5 ${isToday ? 'invisible' : ''}`}>Bugüne Dön</button>
-                </>
-              ) : (
-                <>
-                  <p className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">{formatSelectedDate()}</p>
-                  <button onClick={goToday} className={`text-xs text-pulse-900 dark:text-pulse-400 hover:underline mt-0.5 ${isToday ? 'invisible' : ''}`}>{isToday ? 'Bugün' : 'Bugüne Dön'}</button>
-                </>
-              )}
-            </div>
-            <button onClick={() => changeDate(1)} className="flex h-12 w-12 flex-shrink-0 items-center justify-center text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-600 transition-colors">
-              <ChevronRight className="h-5 w-5" />
-            </button>
-          </div>
+          )}
         </div>
-        {/* Current time pill */}
-        <div className="flex items-center gap-2 rounded-xl bg-gray-900 dark:bg-gray-800 px-4 py-2.5 shadow-sm self-center">
-          <Clock className="h-4 w-4 text-gray-400 flex-shrink-0" />
-          <span className="text-base font-bold tabular-nums text-white">
-            {now ? now.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '--:--:--'}
-          </span>
-        </div>
+        <button onClick={() => changeDate(1)} aria-label="Sonraki" className="flex h-11 w-11 flex-shrink-0 items-center justify-center text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
+          <ChevronRight className="h-5 w-5" />
+        </button>
       </div>
 
-      {/* Mini İstatistik + Görünüm butonları */}
+      {/* Durum chip'leri + Görünüm & Filtre araçları */}
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className="grid flex-1 grid-cols-5 gap-2">
-          <button onClick={() => setStatusFilter(null)} className={cn('rounded-2xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 p-3 text-center transition-all hover:shadow-sm', statusFilter === null && 'ring-2 ring-gray-400 dark:ring-gray-500')}><p className="text-xl font-bold text-gray-900 dark:text-gray-100">{totalCount}</p><p className="text-xs text-gray-500 mt-0.5">Toplam</p></button>
-          <button onClick={() => setStatusFilter(statusFilter === 'confirmed' ? null : 'confirmed')} className={cn('rounded-2xl border border-blue-100 dark:border-blue-900/40 bg-blue-50 dark:bg-blue-950/30 p-3 text-center transition-all hover:shadow-sm', statusFilter === 'confirmed' && 'ring-2 ring-blue-500')}><p className="text-xl font-bold text-blue-600 dark:text-blue-400">{confirmedCount}</p><p className="text-xs text-blue-700 dark:text-blue-400 mt-0.5">Onaylı</p></button>
-          <button onClick={() => setStatusFilter(statusFilter === 'completed' ? null : 'completed')} className={cn('rounded-2xl border border-green-100 dark:border-green-900/40 bg-green-50 dark:bg-green-950/30 p-3 text-center transition-all hover:shadow-sm', statusFilter === 'completed' && 'ring-2 ring-green-500')}><p className="text-xl font-bold text-green-600 dark:text-green-400">{completedCount}</p><p className="text-xs text-green-700 dark:text-green-400 mt-0.5">Tamamlandı</p></button>
-          <button onClick={() => setStatusFilter(statusFilter === 'no_show' ? null : 'no_show')} className={cn('rounded-2xl border border-red-100 dark:border-red-900/40 bg-red-50 dark:bg-red-950/30 p-3 text-center transition-all hover:shadow-sm', statusFilter === 'no_show' && 'ring-2 ring-red-500')}><p className="text-xl font-bold text-red-600 dark:text-red-400">{noShowCount}</p><p className="text-xs text-red-700 dark:text-red-400 mt-0.5">Gelmedi</p></button>
-          <button onClick={() => setStatusFilter(statusFilter === 'unresolved' ? null : 'unresolved')} className={cn('rounded-2xl border border-amber-100 dark:border-amber-900/40 bg-amber-50 dark:bg-amber-950/30 p-3 text-center transition-all hover:shadow-sm', statusFilter === 'unresolved' && 'ring-2 ring-amber-500')}><p className="text-xl font-bold text-amber-600 dark:text-amber-400">{unresolvedCount}</p><p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">Belirsiz</p></button>
+        {/* Durum filtre chip'leri — kompakt, tek satır */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <StatusChip label="Onaylı" count={confirmedCount} active={statusFilter === 'confirmed'} tone="info" onClick={() => setStatusFilter(statusFilter === 'confirmed' ? null : 'confirmed')} />
+          <StatusChip label="Tamamlandı" count={completedCount} active={statusFilter === 'completed'} tone="success" onClick={() => setStatusFilter(statusFilter === 'completed' ? null : 'completed')} />
+          <StatusChip label="Gelmedi" count={noShowCount} active={statusFilter === 'no_show'} tone="danger" onClick={() => setStatusFilter(statusFilter === 'no_show' ? null : 'no_show')} />
+          <StatusChip label="Sonuçlanmamış" count={unresolvedCount} active={statusFilter === 'unresolved'} tone="warning" onClick={() => setStatusFilter(statusFilter === 'unresolved' ? null : 'unresolved')} />
+          {statusFilter && (
+            <button
+              onClick={() => setStatusFilter(null)}
+              className="inline-flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-2 py-1"
+            >
+              <X className="h-3 w-3" /> Temizle
+            </button>
+          )}
         </div>
+
+        {/* Sağ: Filtre / Sıralama / Görünüm */}
         <div className="flex justify-end">
           <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
             <ToolbarPopover icon={<Filter className="h-4 w-4" />} label="Filtre" active={hasActiveFilters}>
@@ -1372,28 +1362,9 @@ export default function AppointmentsPage() {
                   value={serviceIdFilter}
                   onChange={setServiceIdFilter}
                 />
-                <div className="border-t border-gray-100 dark:border-gray-700" />
-                <div>
-                  <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Durum</p>
-                  <div className="space-y-0.5">
-                    <button
-                      onClick={() => setStatusFilter(statusFilter === 'unresolved' ? null : 'unresolved')}
-                      className={cn(
-                        'w-full text-left px-3 py-1.5 rounded-lg text-sm transition-colors flex items-center gap-2',
-                        statusFilter === 'unresolved'
-                          ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 font-medium'
-                          : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                      )}
-                    >
-                      <span className="h-2 w-2 rounded-full bg-red-500 flex-shrink-0" />
-                      Sonuçlandırılmamış
-                      {unresolvedCount > 0 && <span className="ml-auto text-xs text-gray-400">{unresolvedCount}</span>}
-                    </button>
-                  </div>
-                </div>
-                {(hasActiveFilters || statusFilter === 'unresolved') && (
+                {hasActiveFilters && (
                   <div className="border-t border-gray-100 dark:border-gray-700 pt-2">
-                    <button onClick={() => { setStaffIdFilter(''); setServiceIdFilter(''); setStatusFilter(null) }}
+                    <button onClick={() => { setStaffIdFilter(''); setServiceIdFilter('') }}
                       className="w-full text-xs text-center py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-center gap-1">
                       <X className="h-3 w-3" /> Temizle
                     </button>
@@ -3017,5 +2988,41 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
       <span className="text-xs font-medium text-gray-500 dark:text-gray-400 mt-0.5 flex-shrink-0">{label}</span>
       <span className="text-sm text-gray-900 dark:text-gray-100 text-right">{value}</span>
     </div>
+  )
+}
+
+// ── Durum filtre chip'i — kompakt, tek satır ──
+function StatusChip({
+  label,
+  count,
+  active,
+  tone,
+  onClick,
+}: {
+  label: string
+  count: number
+  active: boolean
+  tone: 'info' | 'success' | 'danger' | 'warning'
+  onClick: () => void
+}) {
+  const activeClasses = {
+    info: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800',
+    success: 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800',
+    danger: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800',
+    warning: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800',
+  }
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors',
+        active
+          ? activeClasses[tone]
+          : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800',
+      )}
+    >
+      <span>{label}</span>
+      <span className="tabular-nums text-[11px] font-semibold opacity-80">{count}</span>
+    </button>
   )
 }
