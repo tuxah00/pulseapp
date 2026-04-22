@@ -187,7 +187,8 @@
            transition-all duration-200 cursor-default
            dark:bg-gray-900 dark:border-gray-800;
   }
-  .card:hover {
+  /* Hover yalnızca .card-interactive modifier ile aktif olur */
+  .card-interactive:hover {
     @apply shadow-md dark:border-gray-700;
   }
 
