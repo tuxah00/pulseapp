@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { getAnthropicClient, AI_MODEL } from '@/lib/ai/client'
+import { getOpenAIClient, ASSISTANT_MODEL } from '@/lib/ai/openai-client'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
 import { createLogger } from '@/lib/utils/logger'
 
@@ -50,9 +50,9 @@ export async function GET(req: NextRequest) {
     if (!staff) return NextResponse.json({ error: 'İşletme bulunamadı' }, { status: 404 })
     const businessId = staff.business_id
 
-    if (!process.env.ANTHROPIC_API_KEY) {
+    if (!process.env.OPENAI_API_KEY) {
       // Return stats without AI if API key is missing
-      log.error({}, 'ANTHROPIC_API_KEY is not configured')
+      log.error({}, 'OPENAI_API_KEY is not configured')
     }
 
     const { data: business } = await supabase
@@ -132,9 +132,9 @@ export async function GET(req: NextRequest) {
       actions: [],
     }
 
-    if (process.env.ANTHROPIC_API_KEY) {
+    if (process.env.OPENAI_API_KEY) {
       try {
-        // Claude'a gönder
+        // OpenAI 4o Mini'ye gönder
         const prompt = `
 İşletme: ${business?.name} (${business?.sector})
 Dönem: ${weekAgoStr} - ${nowStr} (son 7 gün)
@@ -169,24 +169,23 @@ Yanıtı SADECE JSON formatında ver, başka hiçbir şey yazma:
 }
 `
 
-        const anthropic = getAnthropicClient()
-        const message = await anthropic.messages.create({
-          model: AI_MODEL,
+        const openai = getOpenAIClient()
+        const completion = await openai.chat.completions.create({
+          model: ASSISTANT_MODEL,
           max_tokens: 512,
           messages: [{ role: 'user', content: prompt }],
+          response_format: { type: 'json_object' },
         })
 
-        const content = message.content[0]
-        if (content.type === 'text') {
-          try {
-            const jsonMatch = content.text.match(/\{[\s\S]*\}/)
-            if (jsonMatch) aiData = JSON.parse(jsonMatch[0])
-          } catch (parseErr) {
-            log.error({ err: parseErr, raw: content.text }, 'AI JSON parse hatası')
-          }
+        const text = completion.choices[0]?.message?.content || ''
+        try {
+          const jsonMatch = text.match(/\{[\s\S]*\}/)
+          if (jsonMatch) aiData = JSON.parse(jsonMatch[0])
+        } catch (parseErr) {
+          log.error({ err: parseErr, raw: text }, 'AI JSON parse hatası')
         }
       } catch (aiErr) {
-        log.error({ err: aiErr }, 'Anthropic API hatası')
+        log.error({ err: aiErr }, 'OpenAI API hatası')
         // AI fails but we still return stats
       }
     }

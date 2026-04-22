@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { getAnthropicClient, AI_MODEL, MAX_TOKENS } from '@/lib/ai/client'
+import { getOpenAIClient, ASSISTANT_MODEL, DEFAULT_MAX_TOKENS } from '@/lib/ai/openai-client'
 import { getReviewResponseSystemPrompt } from '@/lib/ai/prompts'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
 import { createLogger } from '@/lib/utils/logger'
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'İşletme bulunamadı' }, { status: 404 })
     }
 
-    const client = getAnthropicClient()
+    const client = getOpenAIClient()
     const systemPrompt = getReviewResponseSystemPrompt(business.sector, business.name)
 
     const userContent = [
@@ -47,14 +47,16 @@ export async function POST(request: NextRequest) {
       'Bu yoruma profesyonel bir yanıt yaz.',
     ].join('\n')
 
-    const response = await client.messages.create({
-      model: AI_MODEL,
-      max_tokens: MAX_TOKENS,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userContent }],
+    const response = await client.chat.completions.create({
+      model: ASSISTANT_MODEL,
+      max_tokens: DEFAULT_MAX_TOKENS,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userContent },
+      ],
     })
 
-    const draft = response.content[0].type === 'text' ? response.content[0].text : ''
+    const draft = response.choices[0]?.message?.content || ''
 
     if (reviewId) {
       await supabase

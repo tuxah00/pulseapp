@@ -26,7 +26,7 @@ PulseApp, çok sektörlü SaaS işletme yönetim platformu. Next.js 14, Supabase
 ```
 <type>: <Türkçe açıklama>
 
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+Co-Authored-By: Claude Code <noreply@anthropic.com>
 ```
 **type değerleri:** `feat` (yeni özellik) | `fix` (hata düzeltme) | `refactor` (yapısal değişiklik) | `chore` (config/bağımlılık) | `docs` (dokümantasyon)
 
@@ -52,8 +52,8 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 - **Frontend:** Next.js 14 (App Router), React, Tailwind CSS, TypeScript
 - **Backend:** Supabase (PostgreSQL + RLS + Realtime)
 - **Auth:** Supabase Auth → staff_members tablosu ile işletmeye bağlı
-- **AI:** Anthropic Claude API (`claude-sonnet-4-20250514`) via `@anthropic-ai/sdk`
-- **Model:** `lib/ai/client.ts` → `getAnthropicClient()`, `AI_MODEL`, `MAX_TOKENS`
+- **AI:** OpenAI API (`gpt-4o-mini`) via `openai` SDK (tek motor — maliyet optimizasyonu)
+- **Model:** `lib/ai/openai-client.ts` → `getOpenAIClient()`, `ASSISTANT_MODEL`, `CLASSIFY_MODEL`, `REPLY_MODEL`, `VISION_MODEL`, `EMBEDDING_MODEL`
 
 ## Supabase Patterns
 ```ts
@@ -431,11 +431,6 @@ ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'tutoring';
 `PUT /api/contraindications` — auth gerektiren, body: `{ businessId, customerId, serviceId }`
 Response: `{ warnings: [...], hasRisk: boolean }`
 Randevu oluştururken müşteri + hizmet seçilince bu endpoint çağrılmalı.
-
-### AI Tedavi Önerisi
-`POST /api/ai/treatment-suggestion` — body: `{ businessId, customerId, complaint?, additionalNotes? }`
-Claude'a müşteri geçmişi (alerjiler, protokoller, randevular, mevcut hizmetler) gönderir.
-Model: `claude-sonnet-4-20250514` — yanıt Türkçe, markdown formatında.
 
 ### Public Randevu Yönetimi (manage_token)
 `GET/PATCH/DELETE /api/public/appointments/[token]` — auth GEREKTİRMEZ (public endpoint)
