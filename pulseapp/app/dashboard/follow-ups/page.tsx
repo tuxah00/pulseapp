@@ -513,7 +513,7 @@ export default function FollowUpsPage() {
                         const Icon = sc.icon
                         return (
                           <button key={s} onClick={() => changeStatus(s)} disabled={savingDetail}
-                            className={`text-xs px-3 py-1.5 rounded-lg ${sc.bg} ${sc.text} hover:opacity-80 transition-opacity inline-flex items-center gap-1.5 disabled:opacity-40`}>
+                            className={`text-xs px-3 py-1.5 rounded-lg ${sc.bg} ${sc.text} hover:opacity-80 transition-opacity inline-flex items-center gap-1.5 disabled:opacity-50`}>
                             <Icon className="h-3.5 w-3.5" /> {FOLLOW_UP_STATUS_LABELS[s]}
                           </button>
                         )

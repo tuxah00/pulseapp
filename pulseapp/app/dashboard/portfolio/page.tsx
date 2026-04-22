@@ -336,7 +336,7 @@ export default function PortfolioPage() {
                       onClick={() => handleAnalyze(item)}
                       disabled={analyzingId === item.id}
                       title="AI Analiz"
-                      className="p-2 bg-white/90 rounded-full hover:bg-white transition-colors disabled:opacity-60"
+                      className="p-2 bg-white/90 rounded-full hover:bg-white transition-colors disabled:opacity-50"
                     >
                       {analyzingId === item.id ? (
                         <Loader2 className="w-4 h-4 text-pulse-900 animate-spin" />

@@ -262,7 +262,7 @@ function ActionCard({
             type="button"
             onClick={() => onDecide(action, 'confirm')}
             disabled={busy}
-            className="btn-primary text-xs px-3 py-1.5 flex items-center gap-1 disabled:opacity-60"
+            className="btn-primary text-xs px-3 py-1.5 flex items-center gap-1 disabled:opacity-50"
           >
             {busy ? (
               <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Çalıştırılıyor</>
@@ -274,7 +274,7 @@ function ActionCard({
             type="button"
             onClick={() => onDecide(action, 'cancel')}
             disabled={busy}
-            className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-1 disabled:opacity-60"
+            className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-1 disabled:opacity-50"
           >
             <XCircle className="w-3.5 h-3.5" /> İptal
           </button>

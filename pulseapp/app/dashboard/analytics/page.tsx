@@ -805,7 +805,7 @@ export default function AnalyticsPage() {
                   <Download className="h-3.5 w-3.5" />Dışa Aktar
                 </button>
               )}
-              <button onClick={() => setShowIncomeForm(v => !v)} className="btn-primary text-sm bg-green-500 hover:bg-green-600">
+              <button onClick={() => setShowIncomeForm(v => !v)} className="btn-success text-sm">
                 <Plus className="mr-1.5 h-4 w-4" />Gelir Ekle
               </button>
               <button onClick={() => setShowExpenseForm(v => !v)} className="btn-primary text-sm">

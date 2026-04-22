@@ -860,14 +860,14 @@ export default function CustomersPage() {
             <button
               onClick={() => setPage(p => Math.max(0, p - 1))}
               disabled={page === 0}
-              className="btn-secondary text-sm px-3 py-1.5 disabled:opacity-40"
+              className="btn-secondary text-sm px-3 py-1.5 disabled:opacity-50"
             >
               Önceki
             </button>
             <button
               onClick={() => setPage(p => p + 1)}
               disabled={(page + 1) * PAGE_SIZE >= totalCount}
-              className="btn-secondary text-sm px-3 py-1.5 disabled:opacity-40"
+              className="btn-secondary text-sm px-3 py-1.5 disabled:opacity-50"
             >
               Sonraki
             </button>

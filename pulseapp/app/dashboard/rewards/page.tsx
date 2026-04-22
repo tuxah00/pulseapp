@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
@@ -410,7 +410,7 @@ export default function RewardsPage() {
           <button
             onClick={handleActivate}
             disabled={activating}
-            className="btn-primary inline-flex items-center gap-2 px-8 py-3 text-base disabled:opacity-60"
+            className="btn-primary inline-flex items-center gap-2 px-8 py-3 text-base disabled:opacity-50"
           >
             {activating ? <Loader2 className="h-5 w-5 animate-spin" /> : <Zap className="h-5 w-5" />}
             {activating ? 'Aktifleştiriliyor...' : 'Ödülleri Aktifleştir'}

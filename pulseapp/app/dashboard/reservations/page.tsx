@@ -595,7 +595,7 @@ export default function ReservationsPage() {
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="flex items-center gap-2 rounded-lg bg-pulse-800 px-4 py-2 text-sm font-medium text-white hover:bg-pulse-800 disabled:opacity-60 transition-colors"
+                className="flex items-center gap-2 rounded-lg bg-pulse-800 px-4 py-2 text-sm font-medium text-white hover:bg-pulse-800 disabled:opacity-50 transition-colors"
               >
                 {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                 {editingReservation ? 'Kaydet' : 'Rezervasyon Ekle'}

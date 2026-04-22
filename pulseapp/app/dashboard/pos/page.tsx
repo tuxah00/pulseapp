@@ -608,7 +608,7 @@ export default function KasaPage() {
                       service_id: svc.id,
                     })}
                     disabled={!svc.price}
-                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left disabled:opacity-40 focus:outline-none"
+                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left disabled:opacity-50 focus:outline-none"
                   >
                     <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{svc.name}</span>
                     <span className="text-sm text-pulse-900 font-semibold flex-shrink-0 ml-2">
@@ -630,7 +630,7 @@ export default function KasaPage() {
                       product_id: prod.id,
                     })}
                     disabled={!prod.price || prod.stock_count <= 0}
-                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left disabled:opacity-40 focus:outline-none"
+                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left disabled:opacity-50 focus:outline-none"
                   >
                     <div className="min-w-0">
                       <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate block">{prod.name}</span>
@@ -657,7 +657,7 @@ export default function KasaPage() {
                       sessions_total: pkg.sessions_total,
                     })}
                     disabled={!pkg.price}
-                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left disabled:opacity-40 focus:outline-none"
+                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left disabled:opacity-50 focus:outline-none"
                   >
                     <div className="min-w-0">
                       <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate block">{pkg.name}</span>
@@ -781,7 +781,7 @@ export default function KasaPage() {
                   <button
                     onClick={applyLoyaltyPoints}
                     disabled={!loyaltyPointsInput || parseInt(loyaltyPointsInput) <= 0 || parseInt(loyaltyPointsInput) > loyaltyBalance}
-                    className="text-xs px-3 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-40 transition-colors whitespace-nowrap"
+                    className="text-xs px-3 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50 transition-colors whitespace-nowrap"
                   >
                     Uygula
                   </button>
@@ -912,7 +912,7 @@ export default function KasaPage() {
                 key={pm.key}
                 onClick={() => addPaymentRow(pm.key)}
                 disabled={cart.length === 0}
-                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-40 text-sm font-medium"
+                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50 text-sm font-medium"
               >
                 {pm.icon} {pm.label}
               </button>
@@ -960,7 +960,7 @@ export default function KasaPage() {
           <button
             onClick={handleCheckout}
             disabled={cart.length === 0 || remaining > 0.01 || processing}
-            className="flex-shrink-0 w-full btn-primary py-3 text-base font-semibold flex items-center justify-center gap-2 disabled:opacity-40"
+            className="flex-shrink-0 w-full btn-primary py-3 text-base font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {processing ? (
               <Loader2 className="h-5 w-5 animate-spin" />
@@ -1088,7 +1088,7 @@ export default function KasaPage() {
                   </div>
                   <div className="flex gap-3">
                     <button onClick={() => closeSessionModal()} className="btn-secondary flex-1">İptal</button>
-                    <button onClick={closeSession} className="btn-primary flex-1 bg-orange-500 hover:bg-orange-600">Kasayı Kapat</button>
+                    <button onClick={closeSession} className="btn-primary flex-1">Kasayı Kapat</button>
                   </div>
                 </div>
               )}
