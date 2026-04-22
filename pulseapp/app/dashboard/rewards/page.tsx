@@ -375,11 +375,8 @@ export default function RewardsPage() {
         {/* Hero */}
         <div className="text-center mb-10">
           <div className="relative inline-flex mb-6">
-            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-pulse-900 to-indigo-600 flex items-center justify-center shadow-xl">
+            <div className="w-20 h-20 rounded-2xl bg-pulse-900 flex items-center justify-center">
               <Gift className="h-10 w-10 text-white" />
-            </div>
-            <div className="absolute -top-1 -right-1 w-7 h-7 rounded-full bg-amber-400 flex items-center justify-center shadow">
-              <Sparkles className="h-4 w-4 text-white" />
             </div>
           </div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Ödüller Sistemi</h1>

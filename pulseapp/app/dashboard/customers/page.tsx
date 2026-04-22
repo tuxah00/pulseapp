@@ -1202,7 +1202,7 @@ export default function CustomersPage() {
                       <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-1.5">
                         <Gift className="h-3.5 w-3.5" /> Toplam Getiri
                       </p>
-                      <div className="rounded-lg bg-gradient-to-r from-pulse-50 to-blue-50 dark:from-pulse-900/20 dark:to-blue-900/20 p-4">
+                      <div className="rounded-lg bg-pulse-50 dark:bg-pulse-900/20 p-4">
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-2xl font-bold text-pulse-900 dark:text-pulse-300">{formatCurrency(selectedCustomer.total_revenue)}</p>

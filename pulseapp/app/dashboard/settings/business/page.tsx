@@ -1005,7 +1005,7 @@ export default function BusinessSettingsPage() {
             </div>
 
             {/* WhatsApp */}
-            <div className="card border-green-200 bg-gradient-to-br from-green-50/40 to-white dark:from-gray-800 dark:to-gray-800 dark:border-gray-700">
+            <div className="card">
               <div className="flex items-center gap-3 mb-1">
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-green-100">
                   <Smartphone className="h-5 w-5 text-green-600" />
@@ -1066,7 +1066,7 @@ export default function BusinessSettingsPage() {
               </div>
             </div>
 
-            <div className="card border-purple-200 bg-gradient-to-br from-purple-50/50 to-white dark:from-gray-800 dark:to-gray-800 dark:border-gray-700">
+            <div className="card">
               <div className="flex items-center gap-3 mb-1">
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-100">
                   <Sparkles className="h-5 w-5 text-purple-600" />

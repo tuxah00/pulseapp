@@ -677,7 +677,7 @@ export default function MessagesPage() {
 
               {/* AI Öneri Paneli */}
               {aiSuggestion && (
-                <div className="flex-shrink-0 border-t border-purple-200 bg-gradient-to-r from-purple-50 to-white px-4 py-3">
+                <div className="flex-shrink-0 border-t border-purple-200 dark:border-purple-900/40 bg-purple-50 dark:bg-purple-900/20 px-4 py-3">
                   <div className="flex items-start gap-3">
                     <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-purple-100 flex-shrink-0 mt-0.5">
                       <Sparkles className="h-4 w-4 text-purple-600" />
@@ -769,7 +769,7 @@ export default function MessagesPage() {
           ) : (
             /* Boş durum — henüz konuşma seçilmedi */
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
-              <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-pulse-100 to-purple-100 dark:from-pulse-900/40 dark:to-purple-900/30">
+              <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-pulse-100 dark:bg-pulse-900/30">
                 <MessageSquare className="h-10 w-10 text-pulse-900 dark:text-pulse-400" />
               </div>
               <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Mesajlarınız</h2>

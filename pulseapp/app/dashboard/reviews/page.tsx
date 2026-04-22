@@ -630,7 +630,7 @@ export default function ReviewsPage() {
                   >
                     <div className="flex items-start gap-4">
                       {/* Avatar */}
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full font-semibold text-sm flex-shrink-0 bg-gradient-to-br from-pulse-700 to-indigo-600 text-white">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full font-semibold text-sm flex-shrink-0 bg-pulse-900 text-white">
                         {fbInitials(item.customer_name)}
                       </div>
 

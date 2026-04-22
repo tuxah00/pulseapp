@@ -66,8 +66,7 @@ export default function ErrorFallback({
     <div
       className={
         (fullScreen ? 'min-h-screen ' : 'min-h-[60vh] ') +
-        'flex items-center justify-center bg-gradient-to-br from-pulse-50 via-white to-pulse-100 ' +
-        'dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 p-4'
+        'flex items-center justify-center bg-gray-50 dark:bg-gray-950 p-4'
       }
     >
       <div className="w-full max-w-lg">

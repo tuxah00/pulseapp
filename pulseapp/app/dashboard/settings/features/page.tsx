@@ -103,7 +103,7 @@ export default function FeaturesSettingsPage() {
     <div className="max-w-3xl mx-auto p-4 sm:p-6 space-y-6">
       <header>
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-cyan-500 to-sky-600 flex items-center justify-center text-white shadow-sm">
+          <div className="w-11 h-11 rounded-xl bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300 flex items-center justify-center">
             <ToggleRight className="w-5 h-5" />
           </div>
           <div>
