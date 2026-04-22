@@ -3,20 +3,16 @@ import { redirect } from 'next/navigation'
 import { resolveActiveStaff } from '@/lib/auth/active-business'
 import {
   Calendar,
-  Star,
   AlertTriangle,
   Bell,
-  TrendingUp,
-  TrendingDown,
-  Minus,
   ExternalLink,
   Scissors,
   CreditCard,
   UserPlus,
   ArrowRight,
+  Star,
 } from 'lucide-react'
-import { addDays, format } from 'date-fns'
-import { formatCurrency, cn } from '@/lib/utils'
+import { cn, formatTime } from '@/lib/utils'
 import { SEGMENT_LABELS } from '@/types'
 import { getCustomerLabel, getCustomerLabelSingular } from '@/lib/config/sector-modules'
 import type { SectorType } from '@/types'
@@ -29,7 +25,6 @@ import type {
 import TodayAppointments from './_components/today-appointments'
 import WeeklyInsights from './_components/weekly-insights'
 import PerformanceStats from './_components/performance-stats'
-import { Sparkline } from '@/components/ui/sparkline'
 
 type TodayAppointmentRow = AppointmentRow & {
   customers: { name: string; phone: string | null } | null
@@ -39,8 +34,6 @@ type TodayAppointmentRow = AppointmentRow & {
 
 type RiskCustomerRow = Pick<CustomerRow, 'id' | 'name' | 'segment' | 'last_visit_at'>
 type WeekAppointmentRow = Pick<AppointmentRow, 'appointment_date' | 'status'>
-type DateOnlyAppointment = Pick<AppointmentRow, 'appointment_date'>
-type ReviewSummary = { rating: number | null; created_at: string | null }
 
 export default async function DashboardPage() {
   const supabase = createServerSupabaseClient()
@@ -59,9 +52,6 @@ export default async function DashboardPage() {
   const customerLabel = getCustomerLabelSingular(sector)
 
   const today = new Date().toISOString().split('T')[0]
-  const d7 = new Date(); d7.setDate(d7.getDate() - 6)
-  const sevenAgo = d7.toISOString().split('T')[0]
-  const sevenAgoISO = d7.toISOString()
 
   // Haftalık randevu için tarih aralığı (Pzt-Paz)
   const nowDate = new Date()
@@ -76,8 +66,6 @@ export default async function DashboardPage() {
   let stats: BusinessStatsView | null = null
   let notifications: NotificationRow[] = []
   let riskCustomers: RiskCustomerRow[] = []
-  let aptTrend: number[] = []
-  let ratingTrend: number[] = []
   let weeklyAppointments: WeekAppointmentRow[] = []
 
   try {
@@ -113,20 +101,6 @@ export default async function DashboardPage() {
         .order('last_visit_at', { ascending: true })
         .limit(5),
 
-      supabase
-        .from('appointments')
-        .select('appointment_date, start_time')
-        .eq('business_id', businessId)
-        .gte('appointment_date', sevenAgo)
-        .lte('appointment_date', today)
-        .is('deleted_at', null),
-
-      supabase
-        .from('reviews')
-        .select('rating, created_at')
-        .eq('business_id', businessId)
-        .gte('created_at', sevenAgoISO),
-
       // Haftalık randevular
       supabase
         .from('appointments')
@@ -142,40 +116,10 @@ export default async function DashboardPage() {
     stats = (results[1].data ?? null) as BusinessStatsView | null
     notifications = (results[2].data ?? []) as NotificationRow[]
     riskCustomers = (results[3].data ?? []) as RiskCustomerRow[]
-
-    const dateRows = (results[4].data ?? []) as DateOnlyAppointment[]
-    const reviewRows = (results[5].data ?? []) as ReviewSummary[]
-    aptTrend = dailyCounts(dateRows.map((r) => r.appointment_date), d7)
-    ratingTrend = dailyAverages(
-      reviewRows.map((r) => ({
-        day: r.created_at?.split('T')[0],
-        value: r.rating ?? 0,
-      })),
-      d7,
-    )
-    weeklyAppointments = (results[6].data ?? []) as WeekAppointmentRow[]
+    weeklyAppointments = (results[4].data ?? []) as WeekAppointmentRow[]
   } catch (err) {
     console.error('Dashboard veri çekme hatası:', err)
   }
-
-  // Saatlik yoğunluk (bugünkü randevular)
-  const hourlyDensity: number[] = Array.from({ length: 12 }, (_, i) => {
-    const hour = i + 8 // 08:00 - 19:00
-    return todayAppointments.filter(a => {
-      const h = parseInt(a.start_time?.split(':')[0] || '0')
-      return h === hour
-    }).length
-  })
-  const hourLabels = Array.from({ length: 12 }, (_, i) => `${String(i + 8).padStart(2, '0')}:00`)
-
-  // Haftalık gün bazlı dağılım
-  const weekDayNames = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz']
-  const weeklyByDay: number[] = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(weekStart)
-    d.setDate(weekStart.getDate() + i)
-    const ds = d.toISOString().split('T')[0]
-    return weeklyAppointments.filter((a) => a.appointment_date === ds).length
-  })
 
   const s = {
     total_customers: stats?.total_customers ?? 0,
@@ -187,6 +131,16 @@ export default async function DashboardPage() {
     unread_notifications: stats?.unread_notifications ?? 0,
   }
 
+  // ── Crew briefing — bir sonraki upcoming randevu ──
+  const nowMinutes = nowDate.getHours() * 60 + nowDate.getMinutes()
+  const upcoming = todayAppointments.find((a) => {
+    if (!a.start_time) return false
+    if (a.status === 'completed' || a.status === 'cancelled' || a.status === 'no_show') return false
+    const [h, m] = a.start_time.split(':').map(Number)
+    return h * 60 + m >= nowMinutes
+  })
+  const pendingConfirm = todayAppointments.filter((a) => a.status === 'pending').length
+
   const bookingUrl = `${process.env.NEXT_PUBLIC_APP_URL}/book/${businessId}`
   const portalUrl = `${process.env.NEXT_PUBLIC_APP_URL}/portal/${businessId}`
   // İşletme sahibi/personeli için önizleme linki — OTP/telefon girişi atlanır,
@@ -196,59 +150,45 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* ── Page header ── */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="h-page">
-            Merhaba, {firstName} 👋
-          </h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            {new Date().toLocaleDateString('tr-TR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-          </p>
+      {/* ── Crew briefing header ── */}
+      <header className="flex flex-col gap-3 border-b border-gray-200 dark:border-gray-800 pb-5 sm:flex-row sm:items-baseline sm:justify-between">
+        <div className="flex items-baseline gap-3">
+          <h1 className="h-page">{firstName}</h1>
+          <span className="text-sm text-gray-500 dark:text-gray-400">
+            {new Date().toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long' })}
+          </span>
         </div>
-      </div>
+        <BriefingLine
+          todayCount={s.today_appointments}
+          completed={s.today_completed}
+          upcoming={upcoming}
+          pendingConfirm={pendingConfirm}
+        />
+      </header>
 
-      {/* ── Stat cards ── */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Bugünkü Randevu"
+      {/* ── Dense KPI strip (Linear/Stripe tarzı) ── */}
+      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-200 dark:bg-gray-800 sm:grid-cols-4">
+        <KPIItem
+          label="Bugün"
           value={s.today_appointments}
-          subtitle={`${s.today_completed} tamamlandı`}
-          icon={<Calendar className="h-5 w-5" />}
-          bgLight="bg-blue-50 dark:bg-blue-950/40"
-          iconBg="bg-blue-500/10 dark:bg-blue-500/20"
-          iconColor="text-blue-600 dark:text-blue-400"
-          sparkline={<Sparkline data={hourlyDensity} color="#3b82f6" height={44} labels={hourLabels} unit=" randevu" />}
+          meta={`${s.today_completed} tamam · ${s.today_no_shows} gelmedi`}
         />
-        <StatCard
-          title="Haftalık Randevu"
+        <KPIItem
+          label="Bu Hafta"
           value={weeklyAppointments.length}
-          subtitle={`${weekDayNames[0]}–${weekDayNames[6]} aktif`}
-          icon={<Calendar className="h-5 w-5" />}
-          bgLight="bg-emerald-50 dark:bg-emerald-950/40"
-          iconBg="bg-emerald-500/10 dark:bg-emerald-500/20"
-          iconColor="text-emerald-600 dark:text-emerald-400"
-          sparkline={<Sparkline data={weeklyByDay} color="#10b981" height={44} labels={weekDayNames} unit=" randevu" />}
+          meta="randevu"
         />
-        <StatCard
-          title="Ortalama Puan"
-          value={s.avg_rating ? `${Number(s.avg_rating).toFixed(1)} ★` : '—'}
-          subtitle={`${s.total_reviews} yorum`}
-          icon={<Star className="h-5 w-5" />}
-          bgLight="bg-amber-50 dark:bg-amber-950/40"
-          iconBg="bg-amber-500/10 dark:bg-amber-500/20"
-          iconColor="text-amber-600 dark:text-amber-400"
-          sparkline={<Sparkline data={ratingTrend} color="#f59e0b" height={44} labels={dayKeys(d7).map(d => format(new Date(d), 'dd MMM'))} />}
-          trend={getTrend(ratingTrend)}
+        <KPIItem
+          label="Puan"
+          value={s.avg_rating ? Number(s.avg_rating).toFixed(1) : '—'}
+          meta={`${s.total_reviews} yorum`}
+          icon={s.avg_rating ? <Star className="h-3 w-3 fill-amber-400 text-amber-400" /> : null}
         />
-        <StatCard
-          title={`Riskli ${customerLabelPlural}`}
+        <KPIItem
+          label={`Riskli ${customerLabelPlural}`}
           value={riskCustomers.length}
-          subtitle={riskCustomers.length > 0 ? 'dikkat gerektiren' : 'sorun yok'}
-          icon={<AlertTriangle className="h-5 w-5" />}
-          bgLight={riskCustomers.length > 0 ? 'bg-rose-50 dark:bg-rose-950/40' : 'bg-gray-50 dark:bg-gray-900/40'}
-          iconBg={riskCustomers.length > 0 ? 'bg-rose-500/10 dark:bg-rose-500/20' : 'bg-gray-500/10 dark:bg-gray-500/20'}
-          iconColor={riskCustomers.length > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-gray-500 dark:text-gray-400'}
+          meta={riskCustomers.length > 0 ? 'dikkat gerektiren' : 'sorun yok'}
+          tone={riskCustomers.length > 0 ? 'warn' : 'muted'}
         />
       </div>
 
@@ -257,22 +197,22 @@ export default async function DashboardPage() {
         <OnboardingCard bookingUrl={bookingUrl} customerLabel={customerLabel} customerLabelPlural={customerLabelPlural} />
       )}
 
-      {/* ── Ana içerik (sade varsayılan görünüm) ── */}
+      {/* ── Ana içerik — 2/3 randevular + 1/3 bildirim/risk ── */}
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Bugünkü randevular */}
+        {/* Sol: Bugünkü randevular */}
         <div className="lg:col-span-2">
           <TodayAppointments appointments={todayAppointments} />
         </div>
 
-        {/* Sağ sütun: bildirim + AI günlük özeti */}
+        {/* Sağ: bildirim + riskli müşteri (flat, gradient'siz) */}
         <div className="space-y-5">
           {/* Bildirimler */}
           <div className="card">
             <div className="mb-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">Bildirimler</h2>
+                <h2 className="h-sub">Bildirimler</h2>
                 {notifications.length > 0 && (
-                  <span className="inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 rounded-full bg-red-500 text-white text-[10px] font-bold">
+                  <span className="inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 rounded-full bg-red-500 text-white text-[10px] font-bold tabular-nums">
                     {notifications.length}
                   </span>
                 )}
@@ -317,64 +257,12 @@ export default async function DashboardPage() {
             )}
           </div>
 
-        </div>
-      </div>
-
-      {/* Link kartları — Online Randevu + Müşteri Portalı */}
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="flex items-center gap-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-3">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-pulse-50 dark:bg-pulse-900/20">
-            <Calendar className="h-4 w-4 text-pulse-900 dark:text-pulse-400" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-0.5">Online Randevu</p>
-            <p className="text-xs text-gray-700 dark:text-gray-300 truncate font-mono">{bookingUrl}</p>
-          </div>
-          <a
-            href={bookingUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex-shrink-0 flex items-center gap-1 rounded-lg border border-gray-200 dark:border-gray-700 px-2.5 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-          >
-            <ExternalLink className="h-3 w-3" />
-            Aç
-          </a>
-        </div>
-        <div className="flex items-center gap-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-3">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-50 dark:bg-gray-800">
-            <UserPlus className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-0.5">Müşteri Portalı</p>
-            <p className="text-xs text-gray-700 dark:text-gray-300 truncate font-mono">{portalUrl}</p>
-            <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">Önizle — mevcut müşteri olarak açar</p>
-          </div>
-          <a
-            href={portalPreviewUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex-shrink-0 flex items-center gap-1 rounded-lg border border-gray-200 dark:border-gray-700 px-2.5 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-          >
-            <ExternalLink className="h-3 w-3" />
-            Aç
-          </a>
-        </div>
-      </div>
-
-      {/* Performans + haftalık + AI kampanya + risk */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-5">
-          <PerformanceStats />
-          <WeeklyInsights />
-        </div>
-        <div className="space-y-5">
+          {/* Riskli müşteriler — flat kart (gradient kaldırıldı) */}
           {riskCustomers && riskCustomers.length > 0 && (
-            <div className="relative overflow-hidden rounded-2xl border border-amber-200 dark:border-amber-900/50 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/20 p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/15">
-                  <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                </div>
-                <h2 className="text-sm font-semibold text-amber-900 dark:text-amber-300">
+            <div className="card">
+              <div className="mb-3 flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                <h2 className="h-sub">
                   Riskli {customerLabelPlural}
                 </h2>
               </div>
@@ -390,7 +278,7 @@ export default async function DashboardPage() {
               </div>
               <a
                 href="/dashboard/customers"
-                className="mt-3 block text-center text-xs font-medium text-amber-700 dark:text-amber-400 hover:underline"
+                className="mt-3 block text-center text-xs font-medium text-pulse-900 dark:text-pulse-400 hover:underline"
               >
                 {customerLabelPlural} sayfasına git →
               </a>
@@ -398,6 +286,162 @@ export default async function DashboardPage() {
           )}
         </div>
       </div>
+
+      {/* Performans + haftalık */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2 space-y-5">
+          <PerformanceStats />
+          <WeeklyInsights />
+        </div>
+        <div className="space-y-5" />
+      </div>
+
+      {/* Link kartları — footer (kompakt paylaşım) */}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <ShareLink
+          label="Online Randevu"
+          url={bookingUrl}
+          openHref={bookingUrl}
+          icon={<Calendar className="h-4 w-4 text-pulse-900 dark:text-pulse-400" />}
+          iconBg="bg-pulse-50 dark:bg-pulse-900/20"
+        />
+        <ShareLink
+          label="Müşteri Portalı"
+          url={portalUrl}
+          openHref={portalPreviewUrl}
+          icon={<UserPlus className="h-4 w-4 text-gray-600 dark:text-gray-400" />}
+          iconBg="bg-gray-50 dark:bg-gray-800"
+          hint="Önizle — mevcut müşteri olarak açar"
+        />
+      </div>
+    </div>
+  )
+}
+
+// ── Crew briefing status line ──
+function BriefingLine({
+  todayCount,
+  completed,
+  upcoming,
+  pendingConfirm,
+}: {
+  todayCount: number
+  completed: number
+  upcoming: TodayAppointmentRow | undefined
+  pendingConfirm: number
+}) {
+  if (todayCount === 0) {
+    return (
+      <p className="text-sm text-gray-500 dark:text-gray-400">
+        Bugün randevu yok · <a href="/dashboard/appointments" className="font-medium text-pulse-900 dark:text-pulse-400 hover:underline">yeni randevu oluştur</a>
+      </p>
+    )
+  }
+  const remaining = todayCount - completed
+  const parts: React.ReactNode[] = []
+  parts.push(
+    <span key="count" className="tabular-nums">
+      <strong className="font-semibold text-gray-900 dark:text-gray-100">{remaining}</strong> randevu kaldı
+    </span>,
+  )
+  if (upcoming) {
+    parts.push(
+      <span key="next" className="tabular-nums">
+        Sonraki: <strong className="font-semibold text-gray-900 dark:text-gray-100">{formatTime(upcoming.start_time)}</strong> {upcoming.customers?.name || ''}
+      </span>,
+    )
+  }
+  if (pendingConfirm > 0) {
+    parts.push(
+      <span key="pending" className="tabular-nums text-amber-700 dark:text-amber-400">
+        {pendingConfirm} onay bekliyor
+      </span>,
+    )
+  }
+  return (
+    <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
+      {parts.map((p, i) => (
+        <span key={i} className="flex items-center gap-x-3">
+          {i > 0 && <span className="text-gray-300 dark:text-gray-700">·</span>}
+          {p}
+        </span>
+      ))}
+    </p>
+  )
+}
+
+// ── Dense KPI item (Linear/Stripe tarzı) ──
+function KPIItem({
+  label,
+  value,
+  meta,
+  icon,
+  tone = 'default',
+}: {
+  label: string
+  value: string | number
+  meta?: string
+  icon?: React.ReactNode
+  tone?: 'default' | 'warn' | 'muted'
+}) {
+  return (
+    <div className="bg-white dark:bg-gray-900 px-4 py-3.5">
+      <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400 truncate">
+        {label}
+      </p>
+      <div className="mt-1 flex items-baseline gap-1.5">
+        <span className={cn(
+          'text-2xl font-semibold tabular-nums',
+          tone === 'warn' ? 'text-amber-700 dark:text-amber-400' :
+          tone === 'muted' ? 'text-gray-400 dark:text-gray-500' :
+          'text-gray-900 dark:text-gray-50',
+        )}>
+          {value}
+        </span>
+        {icon}
+      </div>
+      {meta && (
+        <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500 truncate">{meta}</p>
+      )}
+    </div>
+  )
+}
+
+// ── Paylaşım linki satırı ──
+function ShareLink({
+  label,
+  url,
+  openHref,
+  icon,
+  iconBg,
+  hint,
+}: {
+  label: string
+  url: string
+  openHref: string
+  icon: React.ReactNode
+  iconBg: string
+  hint?: string
+}) {
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-3">
+      <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${iconBg}`}>
+        {icon}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-0.5">{label}</p>
+        <p className="text-xs text-gray-700 dark:text-gray-300 truncate font-mono">{url}</p>
+        {hint && <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">{hint}</p>}
+      </div>
+      <a
+        href={openHref}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex-shrink-0 flex items-center gap-1 rounded-lg border border-gray-200 dark:border-gray-700 px-2.5 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+      >
+        <ExternalLink className="h-3 w-3" />
+        Aç
+      </a>
     </div>
   )
 }
@@ -441,9 +485,9 @@ function OnboardingCard({ bookingUrl, customerLabel, customerLabelPlural }: { bo
   ]
 
   return (
-    <div className="rounded-2xl border border-pulse-200/60 dark:border-pulse-900/40 bg-gradient-to-br from-pulse-50 to-indigo-50 dark:from-pulse-950/20 dark:to-indigo-950/20 p-5">
+    <div className="card">
       <div className="mb-4">
-        <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">Başlamak için 4 adım</h2>
+        <h2 className="h-sub">Başlamak için 4 adım</h2>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">PulseApp&apos;i tam kapasite kullanmak için şu adımları tamamla</p>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
@@ -453,7 +497,7 @@ function OnboardingCard({ bookingUrl, customerLabel, customerLabelPlural }: { bo
             href={step.href}
             target={step.external ? '_blank' : undefined}
             rel={step.external ? 'noopener noreferrer' : undefined}
-            className="group flex items-center gap-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-3.5 hover:border-pulse-300 dark:hover:border-pulse-700 hover:shadow-sm transition-all duration-150"
+            className="group flex items-center gap-3 rounded-xl border border-gray-100 dark:border-gray-800 p-3.5 hover:border-pulse-300 dark:hover:border-pulse-700 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-all duration-150"
           >
             <div className={`flex-shrink-0 flex h-9 w-9 items-center justify-center rounded-xl ${step.iconBg}`}>
               <span className={step.iconColor}>{step.icon}</span>
@@ -475,93 +519,4 @@ const NOTIF_CONFIG = {
   appointment: { Icon: Calendar, bg: 'bg-blue-50 dark:bg-blue-900/30', color: 'text-blue-500' },
   review:      { Icon: Star,     bg: 'bg-amber-50 dark:bg-amber-900/30', color: 'text-amber-500' },
   system:      { Icon: Bell,     bg: 'bg-gray-100 dark:bg-gray-800', color: 'text-gray-500' },
-}
-
-// ── Stat Card ──
-function StatCard({
-  title,
-  value,
-  subtitle,
-  icon,
-  bgLight,
-  iconBg,
-  iconColor,
-  sparkline,
-  trend,
-}: {
-  title: string
-  value: string | number
-  subtitle?: string
-  icon: React.ReactNode
-  bgLight: string
-  iconBg: string
-  iconColor: string
-  sparkline?: React.ReactNode
-  trend?: 'up' | 'down' | 'flat'
-}) {
-  return (
-    <div className={`relative overflow-visible rounded-2xl border border-gray-100 dark:border-gray-800 ${bgLight} p-5 transition-all duration-200 hover:shadow-md cursor-default`}>
-      <div className="flex items-start justify-between mb-3">
-        <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${iconBg}`}>
-          <span className={iconColor}>{icon}</span>
-        </div>
-        {trend && (
-          <div className={`flex items-center gap-1 text-xs font-medium ${
-            trend === 'up' ? 'text-emerald-600 dark:text-emerald-400' :
-            trend === 'down' ? 'text-red-500 dark:text-red-400' :
-            'text-gray-400'
-          }`}>
-            {trend === 'up' ? <TrendingUp className="h-3.5 w-3.5" /> :
-             trend === 'down' ? <TrendingDown className="h-3.5 w-3.5" /> :
-             <Minus className="h-3.5 w-3.5" />}
-          </div>
-        )}
-      </div>
-
-      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{title}</p>
-      <p className="text-3xl font-bold text-gray-900 dark:text-gray-50">
-        {value}
-      </p>
-      {subtitle && (
-        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{subtitle}</p>
-      )}
-
-      {sparkline && (
-        <div className="mt-3">
-          {sparkline}
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ── Helpers ──
-function getTrend(data: number[]): 'up' | 'down' | 'flat' {
-  if (!data || data.length < 2) return 'flat'
-  const last = data.at(-1) ?? 0
-  const prev = data.at(-2) ?? 0
-  if (last > prev) return 'up'
-  if (last < prev) return 'down'
-  return 'flat'
-}
-
-function dayKeys(start: Date, days = 7): string[] {
-  return Array.from({ length: days }, (_, i) => format(addDays(start, i), 'yyyy-MM-dd'))
-}
-
-function dailyCounts(dates: (string | undefined)[], start: Date): number[] {
-  const counts: Record<string, number> = {}
-  dates.forEach(d => { if (d) counts[d] = (counts[d] || 0) + 1 })
-  return dayKeys(start).map(k => counts[k] || 0)
-}
-
-function dailyAverages(items: { day: string | undefined; value: number }[], start: Date): number[] {
-  const grouped: Record<string, number[]> = {}
-  items.forEach(({ day, value }) => {
-    if (day) { grouped[day] = grouped[day] || []; grouped[day].push(value) }
-  })
-  return dayKeys(start).map(k => {
-    const vals = grouped[k]
-    return vals ? vals.reduce((a, b) => a + b, 0) / vals.length : 0
-  })
 }
