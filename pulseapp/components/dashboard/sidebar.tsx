@@ -364,7 +364,7 @@ export default function Sidebar({ businessName, userName, sector, plan, permissi
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden"
+            className="fixed inset-0 z-40 bg-black/50 dark:bg-black/70 backdrop-blur-sm lg:hidden"
             onClick={() => setMobileOpen(false)}
           />
         )}

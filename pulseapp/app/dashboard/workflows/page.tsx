@@ -362,7 +362,7 @@ export default function WorkflowsPage() {
       {showModal && (
         <Portal>
           <div
-            className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 ${isClosingModal ? 'closing' : ''}`}
+            className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${isClosingModal ? 'closing' : ''}`}
             onClick={closeModal}
             onAnimationEnd={() => {
               if (isClosingModal) { setShowModal(false); setIsClosingModal(false) }
