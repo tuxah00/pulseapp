@@ -1071,7 +1071,7 @@ function RecordsPageInner() {
 
         return (
           <Portal>
-            <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 dark:bg-black/70 ${isClosingRecord ? 'closing' : ''}`} onClick={() => closeRecord()} onAnimationEnd={() => { if (isClosingRecord) { setSelectedRecord(null); setIsClosingRecord(false) } }}>
+            <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 ${isClosingRecord ? 'closing' : ''}`} onClick={() => closeRecord()} onAnimationEnd={() => { if (isClosingRecord) { setSelectedRecord(null); setIsClosingRecord(false) } }}>
               <div
                 className={`modal-content bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden ${isClosingRecord ? 'closing' : ''}`}
                 onClick={(e) => e.stopPropagation()}
@@ -1293,7 +1293,7 @@ function RecordsPageInner() {
           ? new Date(meta.uploadedAt).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
           : null
         return (
-          <div className="modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4" onClick={() => setFileInfoPopup(null)}>
+          <div className="modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={() => setFileInfoPopup(null)}>
             <div className="modal-content card w-full max-w-sm dark:bg-gray-900" onClick={e => e.stopPropagation()}>
               {/* Header */}
               <div className="flex items-start justify-between mb-4">
@@ -1384,7 +1384,7 @@ function RecordsPageInner() {
       {/* ── File Description Popup ── */}
       {fileDescPopup && (
         <Portal>
-        <div className="modal-overlay fixed inset-0 z-[65] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4" onClick={() => setFileDescPopup(null)}>
+        <div className="modal-overlay fixed inset-0 z-[65] flex items-center justify-center p-4" onClick={() => setFileDescPopup(null)}>
           <div className="modal-content card w-full max-w-sm dark:bg-gray-900" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-1">
               <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate pr-4">{fileDescPopup.fileName}</h3>
@@ -1429,7 +1429,7 @@ function RecordsPageInner() {
       {/* ── Create / Edit Modal ── */}
       {(showModal || isClosingModal) && (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center p-4 bg-black/50 dark:bg-black/70 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={handleEditModalAnimationEnd}>
+        <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={handleEditModalAnimationEnd}>
           <div className={`modal-content card w-full max-w-lg max-h-[90vh] overflow-y-auto ${isClosingModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="h-section">

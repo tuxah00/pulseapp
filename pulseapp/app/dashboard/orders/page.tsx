@@ -337,7 +337,7 @@ export default function OrdersPage() {
       {/* New Order Modal */}
       {showModal && (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 dark:bg-black/70 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
+        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
           <div className={`modal-content bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 space-y-4 ${isClosingModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between">
               <h3 className="h-section">Yeni Sipariş</h3>

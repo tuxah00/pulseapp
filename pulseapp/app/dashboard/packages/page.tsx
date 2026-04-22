@@ -1104,7 +1104,7 @@ export default function PaketlerPage() {
       {/* ── Template Modal ── */}
       {(showTemplateModal || isClosingTemplateModal) && (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 dark:bg-black/70 ${isClosingTemplateModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingTemplateModal) { setShowTemplateModal(false); setIsClosingTemplateModal(false) } }}>
+        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 ${isClosingTemplateModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingTemplateModal) { setShowTemplateModal(false); setIsClosingTemplateModal(false) } }}>
           <div className={`modal-content w-full max-w-md card space-y-4 ${isClosingTemplateModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between">
               <h2 className="h-section">
@@ -1209,7 +1209,7 @@ export default function PaketlerPage() {
       {/* ── Sell Package Modal ── */}
       {(showSellModal || isClosingSellModal) && (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 dark:bg-black/70 ${isClosingSellModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingSellModal) { setShowSellModal(false); setIsClosingSellModal(false) } }}>
+        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 ${isClosingSellModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingSellModal) { setShowSellModal(false); setIsClosingSellModal(false) } }}>
           <div className={`modal-content w-full max-w-md card space-y-4 max-h-[90vh] overflow-y-auto ${isClosingSellModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between">
               <h2 className="h-section">Paket Sat</h2>
@@ -1357,7 +1357,7 @@ export default function PaketlerPage() {
       {/* ── Use Session Modal ── */}
       {(showUseModal || isClosingUseModal) && selectedCp && (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center p-4 bg-black/50 dark:bg-black/70 ${isClosingUseModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingUseModal) { setShowUseModal(false); setIsClosingUseModal(false) } }}>
+        <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center p-4 ${isClosingUseModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingUseModal) { setShowUseModal(false); setIsClosingUseModal(false) } }}>
           <div className={`modal-content w-full max-w-sm card space-y-4 ${isClosingUseModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between">
               <h2 className="h-section">Seans Düş</h2>
@@ -1405,7 +1405,7 @@ export default function PaketlerPage() {
       {/* ── Randevu Oluştur Modal ── */}
       {(showAptModal || isClosingAptModal) && (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center p-4 bg-black/50 dark:bg-black/70 ${isClosingAptModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingAptModal) { setShowAptModal(false); setIsClosingAptModal(false); setAptPreview(null) } }}>
+        <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center p-4 ${isClosingAptModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingAptModal) { setShowAptModal(false); setIsClosingAptModal(false); setAptPreview(null) } }}>
           <div className={`modal-content w-full max-w-md card space-y-4 max-h-[90vh] overflow-y-auto ${isClosingAptModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between">
               <h2 className="h-section">

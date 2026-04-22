@@ -657,7 +657,7 @@ export default function RewardsPage() {
       {/* Referans Oluştur */}
       {(showRefCreate || closingRefCreate) && (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${closingRefCreate ? 'closing' : ''}`} onClick={() => { setClosingRefCreate(true) }} onAnimationEnd={() => { if (closingRefCreate) { setShowRefCreate(false); setClosingRefCreate(false); resetRefForm() } }}>
+        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 ${closingRefCreate ? 'closing' : ''}`} onClick={() => { setClosingRefCreate(true) }} onAnimationEnd={() => { if (closingRefCreate) { setShowRefCreate(false); setClosingRefCreate(false); resetRefForm() } }}>
           <div className={`modal-content card w-full max-w-lg dark:bg-gray-900 ${closingRefCreate ? 'closing' : ''}`} onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-base font-medium">Yeni Referans</h3>
@@ -694,7 +694,7 @@ export default function RewardsPage() {
       {/* Ödül Şablonu Oluştur */}
       {(showTemplateCreate || closingTemplateCreate) && (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${closingTemplateCreate ? 'closing' : ''}`} onClick={() => setClosingTemplateCreate(true)} onAnimationEnd={() => { if (closingTemplateCreate) { setShowTemplateCreate(false); setClosingTemplateCreate(false) } }}>
+        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 ${closingTemplateCreate ? 'closing' : ''}`} onClick={() => setClosingTemplateCreate(true)} onAnimationEnd={() => { if (closingTemplateCreate) { setShowTemplateCreate(false); setClosingTemplateCreate(false) } }}>
           <div className={`modal-content card w-full max-w-md dark:bg-gray-900 ${closingTemplateCreate ? 'closing' : ''}`} onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-base font-medium">Yeni Ödül Şablonu</h3>
@@ -723,7 +723,7 @@ export default function RewardsPage() {
       {/* Ödül Ata */}
       {(showAssign || closingAssign) && (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${closingAssign ? 'closing' : ''}`} onClick={() => { setClosingAssign(true) }} onAnimationEnd={() => { if (closingAssign) { setShowAssign(false); setClosingAssign(false); setACustomerId(''); setARewardId(''); setANotes('') } }}>
+        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 ${closingAssign ? 'closing' : ''}`} onClick={() => { setClosingAssign(true) }} onAnimationEnd={() => { if (closingAssign) { setShowAssign(false); setClosingAssign(false); setACustomerId(''); setARewardId(''); setANotes('') } }}>
           <div className={`modal-content card w-full max-w-md dark:bg-gray-900 ${closingAssign ? 'closing' : ''}`} onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-base font-medium">{customerLabel} Ödül Ver</h3>

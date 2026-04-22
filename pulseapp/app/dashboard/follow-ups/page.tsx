@@ -373,7 +373,7 @@ export default function FollowUpsPage() {
       {/* Create Modal */}
       {(showCreate || closingCreate) && (
         <Portal>
-          <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${closingCreate ? 'closing' : ''}`}
+          <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 ${closingCreate ? 'closing' : ''}`}
             onClick={() => setClosingCreate(true)}
             onAnimationEnd={() => { if (closingCreate) { setShowCreate(false); setClosingCreate(false); resetForm() } }}>
             <div className={`modal-content card w-full max-w-lg dark:bg-gray-900 ${closingCreate ? 'closing' : ''}`} onClick={e => e.stopPropagation()}>
@@ -424,7 +424,7 @@ export default function FollowUpsPage() {
       {/* Detail Modal */}
       {detailItem && (
         <Portal>
-          <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${closingDetail ? 'closing' : ''}`}
+          <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 ${closingDetail ? 'closing' : ''}`}
             onClick={() => setClosingDetail(true)}
             onAnimationEnd={() => { if (closingDetail) { setDetailItem(null); setClosingDetail(false); setEditMode(false) } }}>
             <div className={`modal-content card w-full max-w-2xl max-h-[90vh] overflow-y-auto dark:bg-gray-900 ${closingDetail ? 'closing' : ''}`} onClick={e => e.stopPropagation()}>

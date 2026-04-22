@@ -125,7 +125,7 @@ export function BeforeAfterUpload({ customerId, open, onClose, onUploaded }: Bef
 
   return (
     <div
-      className={cn('modal-overlay fixed inset-0 z-[120] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4', closing && 'closing')}
+      className={cn('modal-overlay fixed inset-0 z-[120] flex items-center justify-center p-4', closing && 'closing')}
       onClick={requestClose}
       onAnimationEnd={handleAnimationEnd}
     >

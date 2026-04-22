@@ -1076,7 +1076,7 @@ export default function InvoicesPage() {
       {/* Fatura Oluştur Modal */}
       {(showCreateModal || isClosingCreateModal) && (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${isClosingCreateModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingCreateModal) { setShowCreateModal(false); setIsClosingCreateModal(false) } }}>
+        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 ${isClosingCreateModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingCreateModal) { setShowCreateModal(false); setIsClosingCreateModal(false) } }}>
           <div className={`modal-content card w-full max-w-lg max-h-[90vh] overflow-y-auto dark:bg-gray-900 ${isClosingCreateModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="h-section">Yeni Fatura Oluştur</h2>

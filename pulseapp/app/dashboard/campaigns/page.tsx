@@ -423,7 +423,7 @@ export default function CampaignsPage() {
       {(showModal || closingModal) && (
         <Portal>
         <div
-          className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${closingModal ? 'closing' : ''}`}
+          className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 ${closingModal ? 'closing' : ''}`}
           onClick={closeModal}
           onAnimationEnd={onAnimEnd}
         >

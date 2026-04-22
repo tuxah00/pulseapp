@@ -513,7 +513,7 @@
   100% { background-position:  200% 0; }
 }
 
-.modal-overlay                   { animation: fadeIn       0.2s  ease-out; }
+.modal-overlay                   { @apply bg-black/50 dark:bg-black/70; animation: fadeIn 0.2s ease-out; }
 .modal-content                   { animation: scaleIn      0.2s  ease-out; }
 .slide-panel                     { animation: slideInRight 0.2s  ease-out; }
 .modal-overlay.closing,
