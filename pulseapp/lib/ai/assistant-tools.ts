@@ -13,6 +13,9 @@ import {
   computeSeasonalTrend,
   computeCohortRetention,
 } from '@/lib/analytics/insights'
+import { semanticSearch } from '@/lib/ai/memory/embed'
+import { upsertMemory, deleteMemory } from '@/lib/ai/memory/write'
+import type { MemoryScope, EmbeddingContentType } from '@/lib/ai/memory/types'
 import type { SectorType } from '@/types'
 
 type SupabaseAdmin = ReturnType<typeof createAdminClient>
@@ -1078,6 +1081,67 @@ export const ASSISTANT_TOOLS: ChatCompletionTool[] = [
       },
     },
   },
+
+  // Grup 14: Hafıza ve Anlamsal Arama (Faz 2)
+  {
+    type: 'function',
+    function: {
+      name: 'semantic_search_history',
+      description: 'Geçmiş AI sohbetleri, müşteri notları, tedavi protokol notları ve hasta dosyaları arasında anlamsal (semantic) arama yapar. Örnek: "Ayşe Hanıma geçen ay ne demiştik?" veya "botoks sonrası şişlik şikayeti".',
+      parameters: {
+        type: 'object',
+        properties: {
+          query: { type: 'string', description: 'Arama sorgusu (Türkçe, serbest metin). Ne aradığını açık ifade et.' },
+          customer_id: { type: 'string', description: 'Opsiyonel: sadece belirli bir müşteriye ait içerikleri ara.' },
+          content_type: {
+            type: 'string',
+            enum: ['ai_message', 'customer_note', 'business_record', 'protocol_note', 'protocol_session_note'],
+            description: 'Opsiyonel: arama türünü kısıtla. Boş bırakılırsa tüm tiplerde arar.',
+          },
+          limit: { type: 'number', description: 'En fazla kaç sonuç dönsün (varsayılan 10).' },
+        },
+        required: ['query'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'remember_preference',
+      description: 'Uzun vadeli hafızaya bir tercih/kural/bilgi kaydet. Kullanıcı "bu müşteriye sayın diye hitap et", "21:00 sonrası otomatik mesaj yollama" gibi şeyler söylediğinde bunu hatırla. Sohbetler arası kalıcıdır.',
+      parameters: {
+        type: 'object',
+        properties: {
+          scope: {
+            type: 'string',
+            enum: ['business', 'customer', 'staff'],
+            description: 'Kapsam: business (işletme geneli), customer (belirli müşteri), staff (belirli personel).',
+          },
+          scope_id: { type: 'string', description: 'Eğer scope=customer veya staff ise ilgili kaydın ID\'si. Scope=business ise boş bırak.' },
+          key: { type: 'string', description: 'Tercih anahtarı (kısa İngilizce snake_case). Örn: tone_preference, off_hours_messaging, vip_status, triggers_negative, loves.' },
+          value: { type: 'object', description: 'Tercih değeri (JSON objesi). Örn: {"text": "Sayın diye hitap et", "note": "müşteri istedi"}' },
+          expires_in_days: { type: 'number', description: 'Opsiyonel: kaç gün sonra unutulsun. Boş bırakılırsa kalıcı.' },
+        },
+        required: ['scope', 'key', 'value'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'forget_preference',
+      description: 'Hafızadan bir tercihi sil. Kullanıcı "artık o kuralı unut", "x tercihini kaldır" gibi şeyler dediğinde kullan.',
+      parameters: {
+        type: 'object',
+        properties: {
+          scope: { type: 'string', enum: ['business', 'customer', 'staff'] },
+          scope_id: { type: 'string', description: 'Scope=customer/staff ise ilgili ID.' },
+          key: { type: 'string', description: 'Silinecek hafıza anahtarı.' },
+        },
+        required: ['scope', 'key'],
+      },
+    },
+  },
 ]
 
 // ── Tool Label Map (UI göstergesi için) ──
@@ -1179,6 +1243,9 @@ export const ACTION_TYPE_LABELS: Record<string, string> = {
   create_pos_transaction: 'Kasa işlemi',
   record_expense: 'Gider kaydı',
   record_manual_income: 'Gelir kaydı',
+  semantic_search_history: 'Geçmiş aranıyor...',
+  remember_preference: 'Tercih hatırlanıyor...',
+  forget_preference: 'Tercih siliniyor...',
 }
 
 // ── Permission Map ──
@@ -1248,6 +1315,9 @@ const TOOL_PERMISSIONS: Record<string, keyof StaffPermissions> = {
   create_pos_transaction: 'pos',
   record_expense: 'analytics',
   record_manual_income: 'analytics',
+  semantic_search_history: 'dashboard',
+  remember_preference: 'dashboard',
+  forget_preference: 'dashboard',
 }
 
 // ── Tool Executor ──
@@ -1397,6 +1467,12 @@ export async function executeAssistantTool(
         return await handleRecordExpense(admin, ctx, args)
       case 'record_manual_income':
         return await handleRecordManualIncome(admin, ctx, args)
+      case 'semantic_search_history':
+        return await handleSemanticSearchHistory(admin, ctx, args)
+      case 'remember_preference':
+        return await handleRememberPreference(admin, ctx, args)
+      case 'forget_preference':
+        return await handleForgetPreference(admin, ctx, args)
       default:
         return { success: false, error: `Bilinmeyen araç: ${toolName}` }
     }
@@ -3891,4 +3967,137 @@ async function handleRecordManualIncome(
   admin: SupabaseAdmin, ctx: ToolCtx, args: Record<string, any>,
 ) {
   return handleLedgerEntry(admin, ctx, args, 'income')
+}
+
+// ── Hafıza ve Anlamsal Arama Handler'ları (Faz 2) ──
+
+async function handleSemanticSearchHistory(
+  admin: SupabaseAdmin,
+  ctx: ToolCtx,
+  args: Record<string, any>,
+) {
+  const query = String(args.query ?? '').trim()
+  if (!query) {
+    return { success: false, error: 'query parametresi zorunludur' }
+  }
+
+  const results = await semanticSearch(admin, ctx.businessId, query, {
+    limit: Math.min(Number(args.limit ?? 10), 20),
+    contentType: args.content_type as EmbeddingContentType | undefined,
+    customerId: args.customer_id,
+  })
+
+  if (!results || results.length === 0) {
+    return {
+      success: true,
+      data: {
+        results: [],
+        message: 'Arama kriterine uyan geçmiş kayıt bulunamadı.',
+      },
+    }
+  }
+
+  // Kullanıcıya gösterilecek özet
+  const formatted = results.map(r => ({
+    type: r.content_type,
+    customer_id: r.customer_id,
+    similarity: Math.round(r.similarity * 100) / 100,
+    date: r.created_at,
+    text: r.text.length > 400 ? r.text.slice(0, 400) + '…' : r.text,
+    metadata: r.metadata,
+  }))
+
+  return {
+    success: true,
+    data: {
+      query,
+      count: formatted.length,
+      results: formatted,
+    },
+  }
+}
+
+async function handleRememberPreference(
+  admin: SupabaseAdmin,
+  ctx: ToolCtx,
+  args: Record<string, any>,
+) {
+  const scope = args.scope as MemoryScope
+  const key = String(args.key ?? '').trim()
+  const value = args.value
+
+  if (!scope || !['business', 'customer', 'staff'].includes(scope)) {
+    return { success: false, error: 'scope business/customer/staff olmalı' }
+  }
+  if (!key) {
+    return { success: false, error: 'key parametresi zorunludur' }
+  }
+  if (!value || typeof value !== 'object') {
+    return { success: false, error: 'value bir JSON objesi olmalı' }
+  }
+  if ((scope === 'customer' || scope === 'staff') && !args.scope_id) {
+    return { success: false, error: `scope=${scope} için scope_id zorunludur` }
+  }
+
+  // expires_in_days varsa expires_at hesapla
+  let expiresAt: string | null = null
+  if (args.expires_in_days && Number(args.expires_in_days) > 0) {
+    const d = new Date()
+    d.setDate(d.getDate() + Number(args.expires_in_days))
+    expiresAt = d.toISOString()
+  }
+
+  const row = await upsertMemory(admin, {
+    businessId: ctx.businessId,
+    scope,
+    scopeId: args.scope_id ?? null,
+    key,
+    value,
+    confidence: 1.0, // Explicit user kaynaklı → tam güven
+    source: 'explicit_user',
+    createdByStaffId: ctx.staffId ?? null,
+    expiresAt,
+  })
+
+  if (!row) {
+    return { success: false, error: 'Tercih kaydedilemedi' }
+  }
+
+  return {
+    success: true,
+    data: {
+      message: 'Hatırladım.',
+      scope,
+      key,
+      expires_at: expiresAt,
+    },
+  }
+}
+
+async function handleForgetPreference(
+  admin: SupabaseAdmin,
+  ctx: ToolCtx,
+  args: Record<string, any>,
+) {
+  const scope = args.scope as MemoryScope
+  const key = String(args.key ?? '').trim()
+
+  if (!scope || !['business', 'customer', 'staff'].includes(scope)) {
+    return { success: false, error: 'scope business/customer/staff olmalı' }
+  }
+  if (!key) {
+    return { success: false, error: 'key parametresi zorunludur' }
+  }
+
+  const ok = await deleteMemory(admin, ctx.businessId, scope, args.scope_id ?? null, key)
+  if (!ok) {
+    return { success: false, error: 'Tercih silinemedi' }
+  }
+
+  return {
+    success: true,
+    data: {
+      message: `Unuttum: ${scope} / ${key}`,
+    },
+  }
 }

@@ -121,7 +121,7 @@ Geliştirme ve doğrulama sırasında kullanılabilecek test hesabı:
 - Sidebar ve özellikler `sector-modules.ts` üzerinden dinamik olarak yükleniyor
 
 ### API Route Yapısı
-- `/api/ai/*` → Claude ile sınıflandırma, yanıt önerisi, haftalık analiz
+- `/api/ai/*` → OpenAI GPT-4o Mini ile sınıflandırma, yanıt önerisi, asistan, haftalık analiz
 - `/api/cron/*` → Hatırlatma SMS'leri, winback kampanyaları, yorum istekleri (CRON_SECRET korumalı)
 - `/api/public/business/[id]/*` → Müşteri randevu sayfası için public endpoint'ler
 - `/api/webhooks/sms` ve `/api/webhooks/twilio` → Twilio gelen mesaj webhook'ları
@@ -197,6 +197,8 @@ Aşağıdaki özellikler **kod tarafında tamamlanmış** ama production'da çal
 | Özellik | Gerekli Abonelik | Durum |
 |---------|------------------|-------|
 | AI zamanlanmış eylemler cron (`/api/cron/ai-scheduled-runner`) | Vercel Pro ($20/ay) | Kod hazır; **taslak cron**: `{ "path": "/api/cron/ai-scheduled-runner", "schedule": "*/5 * * * *" }` — abonelik açılınca `vercel.json`'a eklenecek |
+| AI embedding worker (`/api/cron/ai-embed-worker`) — Faz 2 | Vercel Pro | Kod hazır; **taslak cron**: `{ "path": "/api/cron/ai-embed-worker", "schedule": "0 3 * * *" }` — son 6 ayın yeni içeriklerini nightly embed eder (AI mesajlar, müşteri notları, protokol notları) |
+| AI memory extractor (`/api/cron/ai-memory-extractor`) — Faz 2 | Vercel Pro | Kod hazır; **taslak cron**: `{ "path": "/api/cron/ai-memory-extractor", "schedule": "30 3 * * *" }` — uzun sohbetleri özetler (`ai_conversations.summary` günceller) |
 | Kampanya gönderim cron (`/api/cron/campaigns`) | Vercel Pro | Kod hazır, cron tetiklenmiyor |
 | Günlük AI brief cron (`/api/cron/ai-daily-brief`) | Vercel Pro | Kod hazır (Faz 4); **taslak cron**: `{ "path": "/api/cron/ai-daily-brief", "schedule": "0 5 * * *" }` — abonelik açılınca `vercel.json`'a eklenecek |
 | Hatırlatma / winback / doğum günü / yorum SMS cron'ları | Vercel Pro | Kod hazır, cron tetiklenmiyor |
@@ -273,6 +275,8 @@ Güncel durum (2026-04-18 taraması):
 - `2026-04-18`: Native `<select>` → `CustomSelect` dönüşümü (register, book, book/manage sayfaları)
 - `2026-04-18`: 6 ana dashboard sayfasında (appointments, customers, invoices, reviews, inventory, rewards) tekrarlayan boş-durum JSX'i ortak `EmptyState` bileşenine taşındı
 - `2026-04-18`: Dialog/Sheet `sr-only="Close"` etiketi Türkçeleştirildi (`"Kapat"`)
+- `2026-04-23`: **AI Asistan Faz 1 — Motor Konsolidasyonu** (`b1ef3c8`). Anthropic Claude tamamen kaldırıldı; 7 AI endpoint OpenAI GPT-4o Mini'ye taşındı (classify, reply, review-response, insights, campaign-suggest, photo-analysis, before-after). `@anthropic-ai/sdk` dependency silindi. Tek motor, maliyet optimizasyonu.
+- `2026-04-23`: **AI Asistan Faz 2 — Hafıza ve RAG Altyapısı**. 3 yeni migration (`061`, `062`, `063`), `lib/ai/memory/` modülü (read/write/embed/types), 3 yeni asistan aracı (`semantic_search_history`, `remember_preference`, `forget_preference`), 2 yeni cron (`ai-embed-worker`, `ai-memory-extractor`). Asistan artık sohbetler arası kalıcı tercih hatırlar ve geçmişte anlamsal arama yapar. KVKK uyumlu (customer/staff hard delete olduğunda trigger ile hafıza temizlenir).
 
 ---
 
@@ -309,6 +313,9 @@ Proje tasarım aşamasında. Aşağıdakiler **production'a açılmadan önce** 
 Aşağıdaki migration'lar Supabase SQL Editor'de manuel olarak çalıştırılmalıdır:
 - `008_fix_shifts_trigger.sql` — shifts tablosunun updated_at trigger'ını moddatetime'dan bağımsız hale getirir (vardiye kaydetme için kritik)
 - `035_rewards.sql` — `rewards` ve `customer_rewards` tabloları, RLS politikaları (ödül sistemi için gerekli)
+- `061_ai_business_memory.sql` — **Faz 2**: AI asistan uzun vadeli hafıza (işletme/müşteri/personel tercihleri) + KVKK trigger'ları
+- `062_pgvector_embeddings.sql` — **Faz 2**: `vector` extension + `ai_embeddings` tablosu + `search_embeddings()` RPC (anlamsal arama)
+- `063_ai_conversation_summary.sql` — **Faz 2**: `ai_conversations.summary`, `summary_updated_at`, `message_count_at_summary` kolonları (uzun sohbet bağlam yönetimi)
 
 ### Uygulanan Migration'lar (Supabase'de çalıştırıldı)
 - `006_create_shifts.sql` + `008_fix_shifts_trigger.sql` → **✅ Uygulandı (2026-03-19)**
@@ -326,4 +333,4 @@ Aynı numaraya denk gelen migration'lar `a/b/c` harf suffix'i ile ayrılır. Alf
 
 Mevcut a/b çiftleri: `036a/036b`, `037a/037b`, `040a/040b`, `049a/049b`, `050a/050b`, `053a/053b`, `054a/054b`.
 
-Son migration numarası: `058_shift_requests.sql`.
+Son migration numarası: `063_ai_conversation_summary.sql` (2026-04-23, Faz 2 — kullanıcı tarafından SQL Editor'de çalıştırılacak).
