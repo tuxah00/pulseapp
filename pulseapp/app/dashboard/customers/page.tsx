@@ -11,6 +11,7 @@ import {
   Clock, Star, MessageSquare, CheckCircle, XCircle, AlertTriangle, Info, Download,
   Gift, FileText, ChevronRight,
 } from 'lucide-react'
+import ViewModeToggle from '@/components/ui/view-mode-toggle'
 import { formatPhone, formatDate, formatTime, formatCurrency, getSegmentColor, cn, getInitials, formatDateISO } from '@/lib/utils'
 import { SEGMENT_LABELS, STATUS_LABELS, REFERRAL_STATUS_LABELS, REWARD_TYPE_LABELS, type Customer, type CustomerSegment, type Referral, type RewardType, type LoyaltyPoints } from '@/types'
 import type { AppointmentRow, MessageRow, ReviewRow } from '@/types/db'
@@ -771,9 +772,14 @@ export default function CustomersPage() {
               onSortDir={setSortDir}
             />
           </ToolbarPopover>
-          <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-0.5" />
-          <button onClick={() => setViewMode('list')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'list' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Liste"><LayoutList className="h-4 w-4" /></button>
-          <button onClick={() => setViewMode('box')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'box' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Kutular"><LayoutGrid className="h-4 w-4" /></button>
+          <ViewModeToggle
+            value={viewMode}
+            onChange={setViewMode}
+            modes={[
+              { key: 'list', icon: <LayoutList className="h-4 w-4" />, label: 'Liste' },
+              { key: 'box', icon: <LayoutGrid className="h-4 w-4" />, label: 'Kutular' },
+            ]}
+          />
         </div>
       </div>
 

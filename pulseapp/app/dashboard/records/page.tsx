@@ -10,6 +10,7 @@ import {
   ChevronRight, LayoutList, LayoutGrid, Upload, FileText, Image as ImageIcon, ArrowUpDown,
   Calendar, User, Tag, ChevronLeft, Download, ZoomIn, Info, Clock, UserCircle,
 } from 'lucide-react'
+import ViewModeToggle from '@/components/ui/view-mode-toggle'
 import { cn } from '@/lib/utils'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
 import { ToolbarPopover, SortPopoverContent } from '@/components/ui/toolbar-popover'
@@ -883,9 +884,14 @@ function RecordsPageInner() {
             <ToolbarPopover icon={<ArrowUpDown className="h-4 w-4" />} label="Sırala" active={sortField !== null}>
               <SortPopoverContent options={SORT_OPTIONS} sortField={sortField} sortDir={sortDir} onSortField={setSortField} onSortDir={setSortDir} />
             </ToolbarPopover>
-            <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-0.5" />
-            <button onClick={() => setViewMode('list')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'list' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Liste"><LayoutList className="h-4 w-4" /></button>
-            <button onClick={() => setViewMode('box')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'box' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Kutu"><LayoutGrid className="h-4 w-4" /></button>
+            <ViewModeToggle
+              value={viewMode}
+              onChange={setViewMode}
+              modes={[
+                { key: 'list', icon: <LayoutList className="h-4 w-4" />, label: 'Liste' },
+                { key: 'box', icon: <LayoutGrid className="h-4 w-4" />, label: 'Kutu' },
+              ]}
+            />
           </div>
           <button onClick={openNewModal} className="btn-primary">
             <Plus className="mr-2 h-4 w-4" />{config.addLabel}

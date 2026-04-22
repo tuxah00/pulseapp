@@ -7,6 +7,7 @@ import { useConfirm } from '@/lib/hooks/use-confirm'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
 import { requirePermission } from '@/lib/hooks/use-require-permission'
 import { Plus, Pencil, Trash2, Loader2, UserPlus, X, Mail, Phone, LayoutList, LayoutGrid, Check, ArrowUpDown, BadgePercent } from 'lucide-react'
+import ViewModeToggle from '@/components/ui/view-mode-toggle'
 import { cn } from '@/lib/utils'
 import { Portal } from '@/components/ui/portal'
 import CompactBoxCard from '@/components/ui/compact-box-card'
@@ -443,9 +444,14 @@ export default function StaffPage() {
                 onSortDir={setSortDir}
               />
             </ToolbarPopover>
-            <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-0.5" />
-            <button onClick={() => setViewMode('list')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'list' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Liste"><LayoutList className="h-4 w-4" /></button>
-            <button onClick={() => setViewMode('box')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'box' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Kutular"><LayoutGrid className="h-4 w-4" /></button>
+            <ViewModeToggle
+              value={viewMode}
+              onChange={setViewMode}
+              modes={[
+                { key: 'list', icon: <LayoutList className="h-4 w-4" />, label: 'Liste' },
+                { key: 'box', icon: <LayoutGrid className="h-4 w-4" />, label: 'Kutular' },
+              ]}
+            />
           </div>
           {(currentUserRole === 'owner' || currentUserRole === 'manager') && (
             <button onClick={() => { setShowInviteModal(true); setInviteLink(null); setInviteEmail('') }} className="btn-secondary">

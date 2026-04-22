@@ -25,6 +25,7 @@ import { exportToCSV } from '@/lib/utils/export'
 import { Pagination } from '@/components/ui/pagination'
 import type { StockMovement, Supplier } from '@/types'
 import EmptyState from '@/components/ui/empty-state'
+import ViewModeToggle from '@/components/ui/view-mode-toggle'
 
 interface Product {
   id: string
@@ -473,9 +474,14 @@ export default function StoklarPage() {
                 <ToolbarPopover icon={<ArrowUpDown className="h-4 w-4" />} label="Sırala" active={sortField !== null}>
                   <SortPopoverContent options={SORT_OPTIONS} sortField={sortField} sortDir={sortDir} onSortField={setSortField} onSortDir={setSortDir} />
                 </ToolbarPopover>
-                <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-0.5" />
-                <button onClick={() => setViewMode('list')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'list' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Liste"><LayoutList className="h-4 w-4" /></button>
-                <button onClick={() => setViewMode('box')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'box' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Kutular"><LayoutGrid className="h-4 w-4" /></button>
+                <ViewModeToggle
+                  value={viewMode}
+                  onChange={setViewMode}
+                  modes={[
+                    { key: 'list', icon: <LayoutList className="h-4 w-4" />, label: 'Liste' },
+                    { key: 'box', icon: <LayoutGrid className="h-4 w-4" />, label: 'Kutular' },
+                  ]}
+                />
               </div>
             </>
           )}
