@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+// RLS bypass: public endpoint, kullanıcı session'ı yok — businessId filtresi cross-tenant korumasını sağlar
 import { createAdminClient } from '@/lib/supabase/admin'
 import { WorkingHours } from '@/types'
 import { isValidUUID } from '@/lib/utils/validate'

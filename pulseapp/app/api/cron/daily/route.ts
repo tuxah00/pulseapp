@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+// RLS bypass: arka plan görevi, aktif kullanıcı session'ı yok
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendSMS } from '@/lib/sms/send'
 import type { CustomerSegment } from '@/types'

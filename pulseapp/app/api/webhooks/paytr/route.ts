@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+// RLS bypass: harici webhook, kullanıcı session'ı yok
 import { createAdminClient } from '@/lib/supabase/admin'
 import { verifyPaytrCallback, parseOrderId, getPlanPriceKurus, type PaytrCallbackData } from '@/lib/billing/paytr'
 import { createLogger } from '@/lib/utils/logger'
