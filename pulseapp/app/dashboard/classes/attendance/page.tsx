@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { requireSectorModule } from '@/lib/hooks/use-require-permission'
 import { Users, Plus, Trash2, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
+import EmptyState from '@/components/ui/empty-state'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { formatDateISO } from '@/lib/utils'
 
@@ -287,9 +288,11 @@ function AttendancePage() {
           {loadingAttendance ? (
             <div className="py-10 text-center text-gray-400 text-sm">Yükleniyor...</div>
           ) : attendance.length === 0 ? (
-            <div className="py-10 text-center text-gray-400 text-sm">
-              Henüz katılımcı eklenmemiş.
-            </div>
+            <EmptyState
+              icon={<Users className="h-7 w-7" />}
+              title="Katılımcı yok"
+              description="Henüz bu seans için katılımcı eklenmemiş."
+            />
           ) : (
             <ul className="divide-y divide-gray-100">
               {attendance.map(record => (
@@ -345,10 +348,11 @@ function AttendancePage() {
       )}
 
       {!selectedClassId && !loadingClasses && (
-        <div className="text-center py-16 text-gray-400">
-          <Users className="h-12 w-12 mx-auto mb-3 opacity-30" />
-          <p className="text-sm">Devam takibi yapmak için tarih ve sınıf seçin.</p>
-        </div>
+        <EmptyState
+          icon={<Users className="h-7 w-7" />}
+          title="Sınıf seçilmedi"
+          description="Devam takibi yapmak için tarih ve sınıf seçin."
+        />
       )}
     </div>
   )

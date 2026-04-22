@@ -27,6 +27,7 @@ import type {
   InvoiceRow,
 } from '@/types/db'
 import { CustomSelect } from '@/components/ui/custom-select'
+import EmptyState from '@/components/ui/empty-state'
 import { getCustomerLabelSingular, getCustomerLabel } from '@/lib/config/sector-modules'
 import { addMonthsSafe } from '@/lib/utils/date-range'
 import { PulseValuePanel } from '@/components/dashboard/analytics/pulse-value/pulse-value-panel'
@@ -614,10 +615,11 @@ export default function AnalyticsPage() {
       {activeTab === 'staff' && (
         <div>
           {staffStats.length === 0 ? (
-            <div className="card flex flex-col items-center justify-center py-16 text-center">
-              <Users className="mb-3 h-12 w-12 text-gray-200 dark:text-gray-600" />
-              <p className="text-sm text-gray-500 dark:text-gray-400">Bu dönem için personel randevu verisi yok</p>
-            </div>
+            <EmptyState
+              icon={<Users className="h-7 w-7" />}
+              title="Personel verisi yok"
+              description="Bu dönem için personel randevu verisi bulunmuyor."
+            />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {staffStats.map(s => {
@@ -972,10 +974,11 @@ export default function AnalyticsPage() {
           {expensesLoading ? (
             <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-pulse-900" /></div>
           ) : expenses.length === 0 ? (
-            <div className="card flex flex-col items-center justify-center py-16 text-center">
-              <Wallet className="mb-3 h-12 w-12 text-gray-200 dark:text-gray-600" />
-              <p className="text-sm text-gray-500 dark:text-gray-400">Bu dönem için gider kaydı bulunmuyor</p>
-            </div>
+            <EmptyState
+              icon={<Wallet className="h-7 w-7" />}
+              title="Gider kaydı yok"
+              description="Bu dönem için gider kaydı bulunmuyor."
+            />
           ) : (
             <div className="table-wrapper">
               <table className="table-base">
@@ -1074,10 +1077,11 @@ export default function AnalyticsPage() {
       {activeTab === 'services' && (
         <div className="space-y-5">
           {serviceRevenueWithEstimates.length === 0 ? (
-            <div className="card flex flex-col items-center justify-center py-16 text-center">
-              <Layers className="mb-3 h-12 w-12 text-gray-200 dark:text-gray-600" />
-              <p className="text-sm text-gray-500 dark:text-gray-400">Bu dönem için hizmet verisi bulunmuyor</p>
-            </div>
+            <EmptyState
+              icon={<Layers className="h-7 w-7" />}
+              title="Hizmet verisi yok"
+              description="Bu dönem için hizmet verisi bulunmuyor."
+            />
           ) : (
             <>
               {/* Özet kartları */}

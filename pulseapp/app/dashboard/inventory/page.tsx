@@ -789,10 +789,11 @@ export default function StoklarPage() {
                   {movementsLoading ? (
                     <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-pulse-900" /></div>
                   ) : movements.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-16 text-center">
-                      <History className="mb-3 h-12 w-12 text-gray-200 dark:text-gray-600" />
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Henüz stok hareketi yok</p>
-                    </div>
+                    <EmptyState
+                      icon={<History className="h-7 w-7" />}
+                      title="Stok hareketi yok"
+                      description="Henüz bu ürün için stok hareketi kaydedilmemiş."
+                    />
                   ) : (
                     <div className="space-y-2">
                       {movements.map((movement) => {
