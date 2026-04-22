@@ -9,12 +9,11 @@ import { createLogger } from '@/lib/utils/logger'
 
 const log = createLogger({ route: 'api/public/business/[id]/waitlist' })
 
-const supabase = createAdminClient()
-
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const supabase = createAdminClient()
   if (!isValidUUID(params.id)) {
     return NextResponse.json({ error: 'Geçersiz istek' }, { status: 400 })
   }

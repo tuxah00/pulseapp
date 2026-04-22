@@ -5,10 +5,8 @@ import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
 import { isValidUUID } from '@/lib/utils/validate'
 import { createBooking } from '@/lib/booking/create-booking'
 
-// Modül düzeyinde tek instance — soğuk başlatma maliyetini azaltır
-const supabase = createAdminClient()
-
 export async function GET(req: NextRequest) {
+  const supabase = createAdminClient()
   const businessId = req.nextUrl.searchParams.get('businessId')
   if (!businessId || !isValidUUID(businessId)) {
     return NextResponse.json({ error: 'Geçersiz businessId' }, { status: 400 })
@@ -44,6 +42,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const supabase = createAdminClient()
   const businessId = req.nextUrl.searchParams.get('businessId')
   if (!businessId || !isValidUUID(businessId)) {
     return NextResponse.json({ error: 'Geçersiz businessId' }, { status: 400 })

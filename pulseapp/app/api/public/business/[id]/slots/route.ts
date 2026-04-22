@@ -7,8 +7,6 @@ import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
 import { validateQuery } from '@/lib/api/validate'
 import { slotsQuerySchema } from '@/lib/schemas'
 
-const supabase = createAdminClient()
-
 const DAY_KEYS: Record<number, keyof WorkingHours> = {
   0: 'sun', 1: 'mon', 2: 'tue', 3: 'wed', 4: 'thu', 5: 'fri', 6: 'sat',
 }
@@ -66,6 +64,7 @@ export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const supabase = createAdminClient()
   if (!isValidUUID(params.id)) {
     return NextResponse.json({ error: 'Geçersiz istek' }, { status: 400 })
   }

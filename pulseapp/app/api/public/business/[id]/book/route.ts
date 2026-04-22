@@ -11,13 +11,11 @@ import { createBooking } from '@/lib/booking/create-booking'
 
 const log = createLogger({ route: 'api/public/business/[id]/book' })
 
-// Modül düzeyinde tek instance — soğuk başlatma maliyetini azaltır
-const supabase = createAdminClient()
-
 export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const supabase = createAdminClient()
   if (!isValidUUID(params.id)) {
     return NextResponse.json({ error: 'Geçersiz istek' }, { status: 400 })
   }
