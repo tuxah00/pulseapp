@@ -49,6 +49,7 @@ import { CustomSelect } from '@/components/ui/custom-select'
 import { CustomerSearchSelect } from '@/components/ui/customer-search-select'
 import { Portal } from '@/components/ui/portal'
 import EmptyState from '@/components/ui/empty-state'
+import ViewModeToggle from '@/components/ui/view-mode-toggle'
 
 const UNRESOLVED_BORDER = 'opacity-50 !border-l-[3px] !border-l-red-500'
 const UNRESOLVED_BORDER_ONLY = '!border-l-[3px] !border-l-red-500'
@@ -1410,13 +1411,18 @@ export default function AppointmentsPage() {
                 sortField={sortField} sortDir={sortDir} onSortField={setSortField} onSortDir={setSortDir}
               />
             </ToolbarPopover>
-            <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-0.5" />
-            <button type="button" onClick={() => setViewMode('list')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'list' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Liste görünüm"><LayoutList className="h-4 w-4" /></button>
-            <button type="button" onClick={() => setViewMode('week')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'week' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Haftalık takvim"><CalendarDays className="h-4 w-4" /></button>
-            <button type="button" onClick={() => setViewMode('month')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'month' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Aylık takvim"><CalendarRange className="h-4 w-4" /></button>
-            <button type="button" onClick={() => setViewMode('box')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'box' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Kutu görünüm"><LayoutGrid className="h-4 w-4" /></button>
-            <button type="button" onClick={() => setViewMode('staff')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'staff' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Personel takvimi"><Users className="h-4 w-4" /></button>
-            <button type="button" onClick={() => setViewMode('room')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'room' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Oda takvimi"><Building2 className="h-4 w-4" /></button>
+            <ViewModeToggle
+              value={viewMode}
+              onChange={setViewMode}
+              modes={[
+                { key: 'list' as const, icon: <LayoutList className="h-4 w-4" />, label: 'Liste' },
+                { key: 'week' as const, icon: <CalendarDays className="h-4 w-4" />, label: 'Haftalık Takvim' },
+                { key: 'month' as const, icon: <CalendarRange className="h-4 w-4" />, label: 'Aylık Takvim' },
+                { key: 'box' as const, icon: <LayoutGrid className="h-4 w-4" />, label: 'Kutu Görünüm' },
+                { key: 'staff' as const, icon: <Users className="h-4 w-4" />, label: 'Personel Takvimi' },
+                { key: 'room' as const, icon: <Building2 className="h-4 w-4" />, label: 'Oda Takvimi' },
+              ]}
+            />
           </div>
         </div>
       </div>
