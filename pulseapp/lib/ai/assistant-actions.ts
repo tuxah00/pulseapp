@@ -40,6 +40,7 @@ export type PendingActionType =
   | 'create_pos_transaction'
   | 'record_expense'
   | 'record_manual_income'
+  | 'update_tooth_record'
 
 export interface ConfirmationRequired {
   success: true
@@ -300,6 +301,9 @@ export async function executePendingAction(
         break
       case 'record_manual_income':
         result = await execRecordManualIncome(admin, ctx, payload)
+        break
+      case 'update_tooth_record':
+        result = await execUpdateToothRecord(admin, ctx, payload)
         break
       default:
         result = { ok: false, message: 'Bilinmeyen eylem türü' }
@@ -1340,4 +1344,44 @@ async function execRecordManualIncome(
   p: Record<string, any>,
 ): Promise<ActionExecuteResult> {
   return execLedgerEntry(admin, ctx, p, 'income')
+}
+
+// ── Diş Kliniği Executor'ları (Faz 3 — dental-clinic skill) ──────────────────
+
+async function execUpdateToothRecord(
+  admin: SupabaseAdmin,
+  ctx: ExecutorCtx,
+  p: Record<string, any>,
+): Promise<ActionExecuteResult> {
+  const upsertData: Record<string, any> = {
+    business_id: p.business_id,
+    customer_id: p.customer_id,
+    tooth_number: p.tooth_number,
+  }
+  if (p.condition !== undefined && p.condition !== null) upsertData.condition = p.condition
+  if (p.treatment !== undefined) upsertData.treatment = p.treatment
+  if (p.notes !== undefined) upsertData.notes = p.notes
+  if (p.treated_at) upsertData.treated_at = p.treated_at
+  if (p.treated_by_staff_id) upsertData.treated_by_staff_id = p.treated_by_staff_id
+
+  const { error } = await admin
+    .from('tooth_records')
+    .upsert(upsertData, { onConflict: 'business_id,customer_id,tooth_number' })
+
+  if (error) return { ok: false, message: `Diş kaydı güncellenemedi: ${error.message}` }
+
+  await logAuditServer({
+    businessId: ctx.businessId,
+    staffId: ctx.staffId,
+    staffName: ctx.staffName,
+    action: 'update',
+    resource: 'patient_record',
+    details: { via: 'ai_assistant', tooth_number: p.tooth_number, condition: p.condition },
+  })
+
+  return {
+    ok: true,
+    message: `✓ Diş ${p.tooth_number} kaydı güncellendi.`,
+    data: { tooth_number: p.tooth_number, condition: p.condition },
+  }
 }
