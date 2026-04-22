@@ -1957,11 +1957,11 @@ export default function AppointmentsPage() {
 
           if (columns.length === 0) {
             return (
-              <div className="card flex flex-col items-center justify-center py-16 text-center">
-                <Users className="h-10 w-10 text-gray-300 mb-3" />
-                <p className="text-gray-500 font-medium">Aktif personel bulunamadı</p>
-                <p className="text-xs text-gray-400 mt-1">Personel Ayarları&apos;ndan personel ekleyin</p>
-              </div>
+              <EmptyState
+                icon={<Users className="h-7 w-7" />}
+                title="Aktif personel bulunamadı"
+                description="Personel Ayarları'ndan personel ekleyin."
+              />
             )
           }
 
@@ -2149,11 +2149,11 @@ export default function AppointmentsPage() {
         (() => {
           if (rooms.length === 0) {
             return (
-              <div className="card flex flex-col items-center justify-center py-16 text-center">
-                <Building2 className="h-10 w-10 text-gray-300 mb-3" />
-                <p className="text-gray-500 font-medium">Henüz oda tanımlanmamış</p>
-                <p className="text-xs text-gray-400 mt-1 max-w-xs">Ayarlar → İşletme Bilgileri bölümünden odaları ekleyin.</p>
-              </div>
+              <EmptyState
+                icon={<Building2 className="h-7 w-7" />}
+                title="Henüz oda tanımlanmamış"
+                description="Ayarlar → İşletme Bilgileri bölümünden odaları ekleyin."
+              />
             )
           }
 
