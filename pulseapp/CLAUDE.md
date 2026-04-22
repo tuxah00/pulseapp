@@ -17,7 +17,7 @@ PulseApp, çok sektörlü SaaS işletme yönetim platformu. Next.js 14, Supabase
 ## Supabase Migration Kuralı
 - **Migration dosyası oluşturduktan sonra Supabase Management API ile otomatik olarak çalıştır**
 - Endpoint: `POST https://api.supabase.com/v1/projects/dtahmvtmwtqodgypvopn/database/query`
-- Auth: `Bearer sbp_f95a93d8575418730e6fb00ac813800acd1e2aa6` (30 gün geçerli, yenileme: 2026-05-21)
+- Auth: `Bearer sbp_4ee89a23fa37b76100decb7bee5aecc80186cf20` (30 gün geçerli, yenileme: 2026-05-22)
 - Node.js ile her SQL statement'ı ayrı ayrı gönder (tek request'te birden fazla statement hata verebilir)
 - Başarılı response: HTTP 201, body `[]`
 - Migration çalıştırıldıktan sonra `CLAUDE.md` SQL Migration Gereksinimleri bölümüne ekle
@@ -357,7 +357,7 @@ ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'tutoring';
 -- idx_ai_pending_actions_scheduled partial index (status='scheduled')
 ```
 
-32. **Mesaj şablon metadata** (`059_messages_template_meta.sql`): ⏳ Manuel uygulama gerekli (token süresi dolduğu için otomatik çalıştırılamadı)
+32. **Mesaj şablon metadata** (`059_messages_template_meta.sql`): ✅ Uygulandı (2026-04-22)
 ```sql
 -- messages.template_name TEXT, messages.template_params JSONB kolonları
 -- idx_messages_template_name partial index (business_id, template_name) WHERE template_name IS NOT NULL
