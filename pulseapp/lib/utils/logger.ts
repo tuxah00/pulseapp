@@ -56,12 +56,31 @@ function normalizeContext(ctx: LogContext): LogContext {
   return out
 }
 
+/** Sprint 8: error seviyesindeki logları Sentry'ye köprüler. */
+function captureSentry(message: string, merged: LogContext) {
+  if (process.env.NODE_ENV !== 'production' || !process.env.NEXT_PUBLIC_SENTRY_DSN) return
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const Sentry = require('@sentry/nextjs') as typeof import('@sentry/nextjs')
+    const err = merged.err ?? merged.error
+    if (err instanceof Error) {
+      Sentry.captureException(err, { extra: merged })
+    } else {
+      Sentry.captureMessage(message, { level: 'error', extra: merged })
+    }
+  } catch {
+    // Sentry henüz başlatılmamış — sessizce geç
+  }
+}
+
 function emit(level: LogLevel, base: LogContext, ctxOrMsg: LogContext | string, msg?: string) {
   if (LEVEL_RANK[level] < currentMinLevel()) return
 
   const message = typeof ctxOrMsg === 'string' ? ctxOrMsg : msg || ''
   const extra = typeof ctxOrMsg === 'string' ? {} : normalizeContext(ctxOrMsg)
   const merged = { ...base, ...extra }
+
+  if (level === 'error') captureSentry(message, merged)
 
   if (process.env.NODE_ENV === 'production') {
     const line = JSON.stringify({
