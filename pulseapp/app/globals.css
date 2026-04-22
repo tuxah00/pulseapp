@@ -344,9 +344,14 @@
   .dark .text-pink-700    { color: #f9a8d4 !important; }
 
   /* ── Dark mod: gray text flip ── */
+  /* WCAG AA kontrastı için dark modda gri tonlar bir kademe açıklaştırılır.
+     Light mod #6b7280 = 4.6:1 (OK), dark mod'da aynı renk #111827 üstünde 3.9:1 (FAIL).
+     Boost ile dark'ta gray-500 → gray-400 tonuna, gray-600 → gray-500 tonuna yaklaşır. */
   .dark .text-gray-900  { color: #f9fafb !important; }
   .dark .text-gray-800  { color: #f3f4f6 !important; }
   .dark .text-gray-700  { color: #d1d5db !important; }
+  .dark .text-gray-600  { color: #9ca3af !important; } /* 5.2:1 — meta, alt yazı */
+  .dark .text-gray-500  { color: #9ca3af !important; } /* 5.2:1 — placeholder, label */
 
   /* ── Dark mod: arka plan flip ── */
   .dark .bg-white     { background-color: #111827 !important; }

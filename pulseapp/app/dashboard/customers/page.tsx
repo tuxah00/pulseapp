@@ -626,7 +626,7 @@ export default function CustomersPage() {
             <p className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center gap-1">
               <span className="flex items-center gap-0.5">
                 {Array.from({length: 5}).map((_, i) => (
-                  <Star key={i} className={`h-3 w-3 ${i < rev.rating ? 'fill-amber-400 text-amber-400' : 'text-gray-300 dark:text-gray-600'}`} />
+                  <Star key={i} className={`h-3 w-3 ${i < rev.rating ? 'fill-amber-400 text-amber-400' : 'text-gray-300 dark:text-gray-500'}`} />
                 ))}
               </span>
               <span>Yorum</span>
@@ -1184,7 +1184,7 @@ export default function CustomersPage() {
                             <div className="flex items-center justify-between">
                               <span className="flex items-center gap-0.5">
                                 {Array.from({length: 5}).map((_, i) => (
-                                  <Star key={i} className={`h-3.5 w-3.5 ${i < rev.rating ? 'fill-amber-400 text-amber-400' : 'text-gray-300 dark:text-gray-600'}`} />
+                                  <Star key={i} className={`h-3.5 w-3.5 ${i < rev.rating ? 'fill-amber-400 text-amber-400' : 'text-gray-300 dark:text-gray-500'}`} />
                                 ))}
                               </span>
                               <span className="text-xs text-gray-400">{rev.created_at ? formatDate(rev.created_at) : ''}</span>
