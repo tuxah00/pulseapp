@@ -13,6 +13,7 @@ import {
   MessageCircle, X, Filter, Smartphone,
 } from 'lucide-react'
 import { formatPhone, cn } from '@/lib/utils'
+import EmptyState from '@/components/ui/empty-state'
 import { format, isToday, isYesterday, parseISO } from 'date-fns'
 import { tr } from 'date-fns/locale'
 import type {
@@ -414,19 +415,11 @@ export default function MessagesPage() {
                 <Loader2 className="h-6 w-6 animate-spin text-pulse-900" />
               </div>
             ) : filteredConversations.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
-                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100">
-                  <MessageSquare className="h-8 w-8 text-gray-400" />
-                </div>
-                <p className="text-sm font-medium text-gray-900 mb-1">
-                  {search ? 'Sonuç bulunamadı' : 'Henüz mesaj yok'}
-                </p>
-                <p className="text-xs text-gray-500">
-                  {search
-                    ? 'Farklı bir arama terimi deneyin.'
-                    : 'Müşteri mesajları burada görünecek.'}
-                </p>
-              </div>
+              <EmptyState
+                icon={<MessageSquare className="h-8 w-8" />}
+                title={search ? 'Sonuç bulunamadı' : 'Henüz mesaj yok'}
+                description={search ? 'Farklı bir arama terimi deneyin.' : 'Müşteri mesajları burada görünecek.'}
+              />
             ) : (
               <div>
                 {filteredConversations.map((conv) => (

@@ -17,6 +17,7 @@ import {
   Eye,
   Trash2,
 } from 'lucide-react'
+import EmptyState from '@/components/ui/empty-state'
 
 const DAY_NAMES = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar']
 
@@ -337,7 +338,11 @@ export default function ClassesPage() {
       <div className="mt-8">
         <h2 className="text-lg font-semibold text-gray-900 mb-3">Tüm Sınıflar</h2>
         {classes.length === 0 ? (
-          <p className="text-gray-400 text-sm">Henüz sınıf eklenmemiş.</p>
+          <EmptyState
+            icon={<CalendarDays className="h-8 w-8" />}
+            title="Henüz sınıf eklenmemiş"
+            description="İlk sınıfınızı oluşturmak için Yeni Sınıf butonunu kullanın."
+          />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {classes.map(cls => (
