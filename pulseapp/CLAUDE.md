@@ -363,6 +363,16 @@ ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'tutoring';
 -- idx_messages_template_name partial index (business_id, template_name) WHERE template_name IS NOT NULL
 ```
 
+33. **Fotoğraf AI analizi + portfolio yayımlama** (`060_photo_ai_analysis.sql`): ⏳ Manuel çalıştırılacak (Management API token 401 dönüyor — Supabase SQL Editor'den paste edilmeli)
+```sql
+-- customer_photos.ai_analysis JSONB (AI karşılaştırma cache)
+-- customer_photos.is_public BOOLEAN (portfolio yayım bayrağı)
+-- customer_photos.pair_id UUID (non-FK before/after eşleştirme; session_id protocol_sessions FK'sı olduğu için staff upload'unda kullanılamıyor)
+-- idx_customer_photos_public partial index (business_id) WHERE is_public = true
+-- idx_customer_photos_pair partial index (pair_id) WHERE pair_id IS NOT NULL
+-- customer_photos_public_read RLS policy (anon SELECT — is_public = true)
+```
+
 ## Faz 2: Estetik Klinik Özellik Seti (2026-04-04)
 
 ### Yeni Tablolar
