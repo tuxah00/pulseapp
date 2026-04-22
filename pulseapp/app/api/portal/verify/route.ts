@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { normalizePhone, phoneOrFilter } from '@/lib/utils/phone'
+import { phoneOrFilter } from '@/lib/utils/phone'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
-import { isValidUUID } from '@/lib/utils/validate'
+import { validateBody } from '@/lib/api/validate'
+import { portalVerifySchema } from '@/lib/schemas'
 import { setPortalSessionCookies } from '@/lib/portal/auth'
 import crypto from 'crypto'
 
@@ -12,20 +13,10 @@ export async function POST(request: NextRequest) {
   const rl = checkRateLimit(request, RATE_LIMITS.auth)
   if (rl.limited) return rl.response
 
-  const body = await request.json()
-  const { businessId, phone, otp } = body
-
-  if (!businessId || !phone || !otp || !isValidUUID(businessId)) {
-    return NextResponse.json({ error: 'businessId, telefon ve kod zorunludur' }, { status: 400 })
-  }
-
-  // OTP format kontrolü — 6 haneli sayısal
-  const otpStr = String(otp)
-  if (!/^\d{6}$/.test(otpStr)) {
-    return NextResponse.json({ error: 'Geçersiz kod formatı' }, { status: 400 })
-  }
-
-  const normalizedPhone = normalizePhone(phone)
+  const parsed = await validateBody(request, portalVerifySchema)
+  if (!parsed.ok) return parsed.response
+  // phoneField schema zaten normalize eder
+  const { businessId, phone: normalizedPhone, otp: otpStr } = parsed.data
 
   const admin = createAdminClient()
   const now = new Date().toISOString()

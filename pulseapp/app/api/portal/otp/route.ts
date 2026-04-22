@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendMessage } from '@/lib/messaging/send'
-import { normalizePhone, phoneOrFilter } from '@/lib/utils/phone'
+import { phoneOrFilter } from '@/lib/utils/phone'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
-import { isValidUUID } from '@/lib/utils/validate'
+import { validateBody } from '@/lib/api/validate'
+import { portalPhoneLookupSchema } from '@/lib/schemas'
 import crypto from 'crypto'
 import { createLogger } from '@/lib/utils/logger'
 
@@ -20,14 +21,11 @@ export async function POST(request: NextRequest) {
   const rl = checkRateLimit(request, RATE_LIMITS.auth)
   if (rl.limited) return rl.response
 
-  const body = await request.json()
-  const { businessId, phone } = body
+  const parsed = await validateBody(request, portalPhoneLookupSchema)
+  if (!parsed.ok) return parsed.response
+  // phoneField schema zaten normalize eder
+  const { businessId, phone: normalizedPhone } = parsed.data
 
-  if (!businessId || !phone || !isValidUUID(businessId)) {
-    return NextResponse.json({ error: 'businessId ve telefon numarası zorunludur' }, { status: 400 })
-  }
-
-  const normalizedPhone = normalizePhone(phone)
   const admin = createAdminClient()
 
   // İşletme ve müşteri sorgularını paralel çalıştır
