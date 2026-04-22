@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { getAnthropicClient, AI_MODEL, MAX_TOKENS } from '@/lib/ai/client'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
+import { requirePermission } from '@/lib/api/with-permission'
+import { validateBody } from '@/lib/api/validate'
+import { aiPhotoAnalysisSchema } from '@/lib/schemas'
 import { createLogger } from '@/lib/utils/logger'
 
 const log = createLogger({ route: 'api/ai/photo-analysis' })
@@ -10,26 +12,13 @@ export async function POST(request: NextRequest) {
   const rl = checkRateLimit(request, RATE_LIMITS.ai)
   if (rl.limited) return rl.response
 
-  const supabase = createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
+  // Auth + membership kontrolü (RLS bypass yerine güvenli middleware)
+  const auth = await requirePermission(request, 'records')
+  if (!auth.ok) return auth.response
 
-  const body = await request.json()
-  const { businessId, imageUrl, title, category } = body
-
-  if (!businessId || !imageUrl) {
-    return NextResponse.json({ error: 'businessId ve imageUrl zorunlu' }, { status: 400 })
-  }
-
-  // Verify staff membership
-  const { data: staff } = await supabase
-    .from('staff_members')
-    .select('id')
-    .eq('user_id', user.id)
-    .eq('business_id', businessId)
-    .single()
-
-  if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
+  const parsed = await validateBody(request, aiPhotoAnalysisSchema)
+  if (!parsed.ok) return parsed.response
+  const { imageUrl, title, category } = parsed.data
 
   const prompt = `Sen bir profesyonel görsel analiz uzmanısın. Aşağıdaki görseli analiz et ve değerlendir.
 

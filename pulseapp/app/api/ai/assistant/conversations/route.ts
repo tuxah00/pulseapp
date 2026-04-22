@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { withAuth } from '@/lib/api/with-permission'
+import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
+import { validateBody } from '@/lib/api/validate'
+import { aiConversationCreateSchema } from '@/lib/schemas'
 import { createLogger } from '@/lib/utils/logger'
 
 const log = createLogger({ route: 'api/ai/assistant/conversations' })
@@ -10,6 +13,9 @@ const CONVERSATION_RETENTION_DAYS = 30
 
 // GET — Sohbet listesi
 export const GET = withAuth(async (req: NextRequest, ctx) => {
+  const rl = checkRateLimit(req, RATE_LIMITS.aiAssistant)
+  if (rl.limited) return rl.response
+
   const admin = createAdminClient()
 
   // Eski sohbetleri temizle (fire-and-forget — hata listeyi etkilemesin)
@@ -42,8 +48,12 @@ export const GET = withAuth(async (req: NextRequest, ctx) => {
 
 // POST — Yeni sohbet oluştur
 export const POST = withAuth(async (req: NextRequest, ctx) => {
-  const body = await req.json()
-  const { title, isOnboarding } = body as { title?: string; isOnboarding?: boolean }
+  const rl = checkRateLimit(req, RATE_LIMITS.aiAssistant)
+  if (rl.limited) return rl.response
+
+  const parsed = await validateBody(req, aiConversationCreateSchema)
+  if (!parsed.ok) return parsed.response
+  const { title, isOnboarding } = parsed.data
 
   const admin = createAdminClient()
   const { data, error } = await admin

@@ -4,6 +4,8 @@ import { requirePermission } from '@/lib/api/with-permission'
 import { getAnthropicClient, AI_MODEL } from '@/lib/ai/client'
 import { getPhotoAnalysisPrompt } from '@/lib/ai/photo-prompts'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
+import { validateBody } from '@/lib/api/validate'
+import { aiBeforeAfterSchema } from '@/lib/schemas'
 import type { SectorType } from '@/types'
 import { createLogger } from '@/lib/utils/logger'
 
@@ -18,12 +20,9 @@ export async function POST(req: NextRequest) {
   if (!auth.ok) return auth.response
   const { businessId } = auth.ctx
 
-  const body = await req.json()
-  const { beforeUrl, afterUrl, customerId, protocolId } = body
-
-  if (!beforeUrl || !afterUrl) {
-    return NextResponse.json({ error: 'beforeUrl ve afterUrl zorunlu' }, { status: 400 })
-  }
+  const parsed = await validateBody(req, aiBeforeAfterSchema)
+  if (!parsed.ok) return parsed.response
+  const { beforeUrl, afterUrl, customerId, protocolId } = parsed.data
 
   const supabase = createServerSupabaseClient()
 

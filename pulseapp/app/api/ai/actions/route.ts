@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
+import { createLogger } from '@/lib/utils/logger'
+
+const log = createLogger({ route: 'api/ai/actions' })
 
 export const runtime = 'nodejs'
 
@@ -10,6 +14,9 @@ export const runtime = 'nodejs'
  * countOnly=1 → sadece pending_count döner (top-bar sayacı için hafif yol).
  */
 export async function GET(req: NextRequest) {
+  const rl = checkRateLimit(req, RATE_LIMITS.ai)
+  if (rl.limited) return rl.response
+
   const supabase = createServerSupabaseClient()
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) {
@@ -83,6 +90,7 @@ export async function GET(req: NextRequest) {
   ])
 
   if (listResult.error) {
+    log.error({ err: listResult.error, staffId: staff.id }, 'AI aksiyonları listelenemedi')
     return NextResponse.json({ error: listResult.error.message }, { status: 500 })
   }
 

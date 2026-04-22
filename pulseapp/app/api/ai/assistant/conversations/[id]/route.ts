@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { withAuth } from '@/lib/api/with-permission'
+import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
 
 // GET — Tekil sohbet + mesajları
 export const GET = withAuth(async (req: NextRequest, ctx) => {
+  const rl = checkRateLimit(req, RATE_LIMITS.aiAssistant)
+  if (rl.limited) return rl.response
+
   const id = req.nextUrl.pathname.split('/').pop()
   if (!id) return NextResponse.json({ error: 'ID gerekli' }, { status: 400 })
 
@@ -33,6 +37,9 @@ export const GET = withAuth(async (req: NextRequest, ctx) => {
 
 // DELETE — Sohbeti sil
 export const DELETE = withAuth(async (req: NextRequest, ctx) => {
+  const rl = checkRateLimit(req, RATE_LIMITS.aiAssistant)
+  if (rl.limited) return rl.response
+
   const id = req.nextUrl.pathname.split('/').pop()
   if (!id) return NextResponse.json({ error: 'ID gerekli' }, { status: 400 })
 

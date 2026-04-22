@@ -9,6 +9,9 @@ import {
   type StaffWritePermissions,
   type StaffRole,
 } from '@/types'
+import { createLogger } from '@/lib/utils/logger'
+
+const log = createLogger({ route: 'lib/api/with-permission' })
 
 /**
  * API route permission middleware.
@@ -110,7 +113,7 @@ export function withPermission(
 
       return handler(req, auth.ctx)
     } catch (err: any) {
-      console.error('Permission middleware hatası:', err)
+      log.error({ err }, 'Permission middleware hatası')
       return NextResponse.json(
         { error: 'Sunucu hatası' },
         { status: 500 }
@@ -221,7 +224,7 @@ export function withAuth(handler: PermissionHandler) {
       if (!auth.ok) return auth.response
       return handler(req, auth.ctx)
     } catch (err: any) {
-      console.error('Auth middleware hatası:', err)
+      log.error({ err }, 'Auth middleware hatası')
       return NextResponse.json(
         { error: 'Sunucu hatası' },
         { status: 500 }

@@ -14,6 +14,8 @@ import { AI_LIMITS } from '@/lib/ai/assistant-limits'
 import { fetchMacroContext, macroContextForPrompt } from '@/lib/analytics/macro-context'
 import type { AuthContext } from '@/lib/api/with-permission'
 import type { PlanType } from '@/types'
+import { validateBody } from '@/lib/api/validate'
+import { aiAssistantBodySchema } from '@/lib/schemas'
 import { createLogger } from '@/lib/utils/logger'
 
 const log = createLogger({ route: 'api/ai/assistant' })
@@ -71,19 +73,10 @@ export async function POST(req: NextRequest) {
     writePermissions,
   }
 
-  // 3. Parse request
-  const body = await req.json()
-  const { conversationId, message, isOnboarding, origin, tutorialTopic } = body as {
-    conversationId: string | null
-    message: string
-    isOnboarding?: boolean
-    origin?: string
-    tutorialTopic?: string
-  }
-
-  if (!message || typeof message !== 'string' || message.trim().length === 0) {
-    return Response.json({ error: 'Mesaj boş olamaz' }, { status: 400 })
-  }
+  // 3. Parse + validate request body
+  const parsed = await validateBody(req, aiAssistantBodySchema)
+  if (!parsed.ok) return parsed.response
+  const { conversationId = null, message, isOnboarding, origin, tutorialTopic } = parsed.data
 
   // 4. Plan limit check (parallel: business info + usage)
   const currentMonth = new Date().toISOString().slice(0, 7) // '2026-04'
