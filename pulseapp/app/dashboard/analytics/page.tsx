@@ -492,7 +492,7 @@ export default function AnalyticsPage() {
           <button
             onClick={handleExportPDF}
             disabled={exportingPDF || loading}
-            className="btn-secondary text-sm gap-1.5 disabled:opacity-60"
+            className="btn-secondary text-sm gap-1.5"
           >
             {exportingPDF ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
             PDF İndir
@@ -992,7 +992,7 @@ export default function AnalyticsPage() {
                 </div>
                 <div className="flex gap-2 pt-1">
                   <button type="button" onClick={() => setShowIncomeForm(false)} className="btn-secondary text-sm flex-1">İptal</button>
-                  <button type="submit" disabled={savingIncome} className="flex-1 text-sm px-4 py-2 rounded-lg bg-green-500 text-white hover:bg-green-600 transition-colors font-medium disabled:opacity-50">
+                  <button type="submit" disabled={savingIncome} className="btn-success flex-1 text-sm">
                     {savingIncome && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin inline" />}
                     Kaydet
                   </button>
