@@ -138,7 +138,7 @@ function KpiCard({
       <div className="flex items-start justify-between">
         <div>
           <p className={`text-xs font-medium uppercase tracking-wider ${c.label}`}>{title}</p>
-          <p className={`mt-1 text-2xl font-bold ${c.text}`}>{value}</p>
+          <p className={`mt-1 text-2xl font-semibold tabular-nums ${c.text}`}>{value}</p>
           <p className={`mt-1 text-xs ${c.label}`}>{subtitle}</p>
         </div>
         <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${c.icon}`}>

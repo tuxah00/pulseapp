@@ -268,7 +268,7 @@ export default function FollowUpsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Takipler</h1>
+          <h1 className="h-page">Takipler</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Seans sonrası takip ve hatırlatma kuyruğu</p>
         </div>
         <button onClick={() => setShowCreate(true)} className="btn-primary flex items-center gap-2">

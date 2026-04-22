@@ -185,8 +185,8 @@ function AttendancePage() {
       <div className="flex items-center gap-3 mb-6">
         <Users className="h-7 w-7 text-indigo-600" />
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Devam Takibi</h1>
-          <p className="text-sm text-gray-500">Seans katılım kaydı</p>
+          <h1 className="h-page">Devam Takibi</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Seans katılım kaydı</p>
         </div>
       </div>
 

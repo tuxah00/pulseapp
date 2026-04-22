@@ -45,19 +45,19 @@ export default function PerformanceStats() {
 
   return (
     <div className="card p-4">
-      <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Son 30 Gün Performansı</h3>
+      <h3 className="h-sub mb-3">Son 30 Gün Performansı</h3>
       <div className="grid grid-cols-3 gap-3">
         <div className="text-center">
-          <p className="text-xl font-bold text-green-600 dark:text-green-400">%{completionRate}</p>
-          <p className="text-xs text-gray-500 mt-0.5">Tamamlanma</p>
+          <p className="text-xl font-semibold tabular-nums text-green-600 dark:text-green-400">%{completionRate}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Tamamlanma</p>
         </div>
         <div className="text-center">
-          <p className="text-xl font-bold text-red-600 dark:text-red-400">%{noShowRate}</p>
-          <p className="text-xs text-gray-500 mt-0.5">Gelmeme</p>
+          <p className="text-xl font-semibold tabular-nums text-red-600 dark:text-red-400">%{noShowRate}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Gelmeme</p>
         </div>
         <div className="text-center">
-          <p className="text-xl font-bold text-amber-600 dark:text-amber-400">{cancelled.length}</p>
-          <p className="text-xs text-gray-500 mt-0.5">İptal</p>
+          <p className="text-xl font-semibold tabular-nums text-amber-600 dark:text-amber-400">{cancelled.length}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">İptal</p>
         </div>
       </div>
     </div>

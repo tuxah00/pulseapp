@@ -383,7 +383,7 @@ export default function WaitlistPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Bekleme Listesi</h1>
+          <h1 className="h-page">Bekleme Listesi</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             Randevu bekleyen {customerLabel.toLowerCase()}ları yönetin
           </p>

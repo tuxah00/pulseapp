@@ -272,7 +272,7 @@ export default function ProtocolsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Tedavi Protokolleri</h1>
+          <h1 className="h-page">Tedavi Protokolleri</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Seans bazlı tedavi planları oluşturun ve takip edin</p>
         </div>
         <button onClick={() => setShowCreate(true)} className="btn-primary flex items-center gap-2">
@@ -566,7 +566,7 @@ function DetailPanel({
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">{protocol.name}</h2>
+          <h2 className="h-section">{protocol.name}</h2>
           <div className="flex items-center gap-3 mt-1">
             <span className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1">
               <User className="h-3.5 w-3.5" /> {customer?.name || '—'}

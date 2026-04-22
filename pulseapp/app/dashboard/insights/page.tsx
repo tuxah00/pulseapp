@@ -40,7 +40,7 @@ function StatCard({ icon, label, value, hint, interpretation, tone = 'default' }
         {icon}
         <span>{label}</span>
       </div>
-      <div className={`text-2xl font-semibold ${toneClass}`}>{value}</div>
+      <div className={`text-2xl font-semibold tabular-nums ${toneClass}`}>{value}</div>
       {hint && <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">{hint}</div>}
       {interpretation && (
         <div className="text-[11px] text-gray-600 dark:text-gray-300 mt-1 italic">

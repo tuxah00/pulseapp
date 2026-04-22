@@ -379,7 +379,7 @@ export default function RewardsPage() {
               <Gift className="h-10 w-10 text-white" />
             </div>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Ödüller Sistemi</h1>
+          <h1 className="h-page mb-2">Ödüller Sistemi</h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed max-w-md mx-auto">
             Müşterilerinize özel ödüller, indirimler ve referans kampanyaları oluşturun. Sadakati artırın, geri dönüşü yükseltin.
           </p>
@@ -432,7 +432,7 @@ export default function RewardsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Ödüller</h1>
+          <h1 className="h-page">Ödüller</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Referanslar ve ödül yönetimi</p>
         </div>
         <div className="flex gap-2">
