@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { Portal } from '@/components/ui/portal'
@@ -6,6 +6,7 @@ import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { requirePermission, requireSectorModule } from '@/lib/hooks/use-require-permission'
 import { createClient } from '@/lib/supabase/client'
 import { logAudit } from '@/lib/utils/audit'
+import EmptyState from '@/components/ui/empty-state'
 import {
   Image as ImageIcon,
   Plus,
@@ -262,7 +263,7 @@ export default function PortfolioPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Çalışma Galerisi</h1>
+          <h1 className="h-page">Çalışma Galerisi</h1>
           <p className="text-sm text-gray-500 mt-1">Çalışmalarınızı sergileyin</p>
         </div>
         <button
@@ -300,20 +301,12 @@ export default function PortfolioPage() {
           ))}
         </div>
       ) : items.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
-            <ImageIcon className="w-8 h-8 text-gray-400" />
-          </div>
-          <p className="text-gray-500 text-lg font-medium">Henüz portfolyo görseli eklenmedi.</p>
-          <p className="text-gray-400 text-sm mt-1">İlk görselinizi ekleyin!</p>
-          <button
-            onClick={openModal}
-            className="mt-4 flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Görsel Ekle
-          </button>
-        </div>
+        <EmptyState
+          icon={<ImageIcon className="h-8 w-8" />}
+          title="Henüz portfolyo görseli eklenmedi."
+          description="İlk görselinizi ekleyin!"
+          action={{ label: 'Görsel Ekle', onClick: openModal, icon: <Plus className="h-4 w-4" /> }}
+        />
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {items.map((item) => (
@@ -400,7 +393,7 @@ export default function PortfolioPage() {
         <div className={`fixed inset-0 z-[60] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 modal-overlay ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) onModalClosed() }}>
           <div className={`bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-md modal-content ${isClosingModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Yeni Görsel Ekle</h2>
+              <h2 className="h-section">Yeni Görsel Ekle</h2>
               <button onClick={closeModal} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                 <X className="w-5 h-5" />
               </button>
@@ -548,7 +541,7 @@ export default function PortfolioPage() {
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-pulse-900" />
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">AI Görsel Analizi</h2>
+                <h2 className="h-section">AI Görsel Analizi</h2>
               </div>
               <button onClick={closeAnalysis} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                 <X className="w-5 h-5" />

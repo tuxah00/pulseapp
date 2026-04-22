@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
@@ -209,7 +209,7 @@ export default function CommissionsPage() {
       {/* Başlık */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Prim & Komisyon</h1>
+          <h1 className="h-page">Prim & Komisyon</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Aylık prim hesapla, geçmiş kayıtları görüntüle ve ödemeleri yönet.
           </p>

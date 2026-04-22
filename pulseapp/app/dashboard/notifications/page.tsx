@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
@@ -11,6 +11,7 @@ import {
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getCustomerLabelSingular } from '@/lib/config/sector-modules'
+import EmptyState from '@/components/ui/empty-state'
 
 interface Notification {
   id: string
@@ -153,7 +154,7 @@ export default function NotificationsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Bildirimler</h1>
+          <h1 className="h-page">Bildirimler</h1>
           <p className="text-sm text-gray-500 mt-1">
             {total} bildirim{unreadCount > 0 ? ` · ${unreadCount} okunmamış` : ''}
           </p>
@@ -192,10 +193,10 @@ export default function NotificationsPage() {
           <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
         </div>
       ) : notifications.length === 0 ? (
-        <div className="card text-center py-12 text-gray-400">
-          <Bell className="h-8 w-8 mx-auto mb-3 opacity-50" />
-          <p className="text-sm">Bildirim bulunamadı</p>
-        </div>
+        <EmptyState
+          icon={<Bell className="h-8 w-8" />}
+          title="Bildirim bulunamadı"
+        />
       ) : (
         <div className="space-y-2">
           {notifications.map(notif => {

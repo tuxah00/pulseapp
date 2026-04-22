@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
@@ -531,7 +531,7 @@ export default function KasaPage() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <Wallet className="h-6 w-6 text-pulse-900" />
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Kasa</h1>
+          <h1 className="h-page">Kasa</h1>
           {session && (
             <span className="badge-success">
               Açık
@@ -1035,7 +1035,7 @@ export default function KasaPage() {
           <div className={`modal-overlay fixed inset-0 z-[60] bg-black/50 dark:bg-black/70 ${isClosingSessionModal ? 'closing' : ''}`} onClick={() => closeSessionModal()} onAnimationEnd={() => { if (isClosingSessionModal) { setShowSessionModal(false); setIsClosingSessionModal(false) } }} />
           <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none">
             <div className={`modal-content bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-md p-6 pointer-events-auto ${isClosingSessionModal ? 'closing' : ''}`}>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+              <h3 className="h-section mb-4">
                 {!session ? 'Kasayı Aç' : 'Kasayı Kapat'}
               </h3>
 

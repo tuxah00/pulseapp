@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
@@ -267,7 +267,7 @@ export default function CommissionsPage() {
     <div className="space-y-6">
       {/* Başlık */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Prim & Komisyon</h1>
+        <h1 className="h-page">Prim & Komisyon</h1>
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
           Personel prim kurallarını tanımlayın ve aylık kazanç özetlerini hesaplayın.
         </p>
@@ -462,7 +462,7 @@ export default function CommissionsPage() {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Komisyon Kuralı Ekle</h2>
+                <h2 className="h-section">Komisyon Kuralı Ekle</h2>
                 <button onClick={closeModal} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                   <X className="h-5 w-5" />
                 </button>

@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
@@ -1288,7 +1288,7 @@ export default function AppointmentsPage() {
       {/* Başlık */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Randevular</h1>
+          <h1 className="h-page">Randevular</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{totalCount} randevu</p>
         </div>
         <button onClick={() => openNewModal()} className="btn-primary shrink-0">
@@ -2729,7 +2729,7 @@ export default function AppointmentsPage() {
         <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
           <div className={`modal-content card w-full max-w-md max-h-[90vh] overflow-y-auto ${isClosingModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              <h2 className="h-section">
                 {editingAppointment ? 'Randevu Düzenle' : 'Yeni Randevu'}
               </h2>
               <button onClick={() => { closeModal(); setEditingAppointment(null) }} className="text-gray-400 hover:text-gray-600">
@@ -2916,7 +2916,7 @@ export default function AppointmentsPage() {
         <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${isClosingReschedule ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingReschedule) { setRescheduleAppointment(null); setIsClosingReschedule(false) } }}>
           <div className={`modal-content card w-full max-w-sm ${isClosingReschedule ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Randevuyu Ertele</h2>
+              <h2 className="h-section">Randevuyu Ertele</h2>
               <button onClick={() => closeReschedule()} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
             </div>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
@@ -2963,7 +2963,7 @@ export default function AppointmentsPage() {
         <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${isClosingCancelConfirm ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingCancelConfirm) { setCancelConfirmAppointment(null); setIsClosingCancelConfirm(false) } }}>
           <div className={`modal-content card w-full max-w-sm ${isClosingCancelConfirm ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Randevuyu İptal Et</h2>
+              <h2 className="h-section">Randevuyu İptal Et</h2>
               <button onClick={() => closeCancelConfirm()} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
             </div>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">

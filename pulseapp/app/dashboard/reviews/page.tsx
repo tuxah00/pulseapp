@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -317,7 +317,7 @@ export default function ReviewsPage() {
       {/* Başlık */}
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Yorumlar</h1>
+          <h1 className="h-page">Yorumlar</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             {tab === 'reviews'
               ? `${totalReviews} yorum · Ortalama ${avgRating} ★`

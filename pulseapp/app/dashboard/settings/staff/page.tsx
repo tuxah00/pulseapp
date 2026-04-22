@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -501,7 +501,7 @@ export default function StaffPage() {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Personeller</h1>
+          <h1 className="h-page">Personeller</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Randevu atayabileceğiniz personelleri yönetin.
           </p>
@@ -578,7 +578,7 @@ export default function StaffPage() {
                 )}>
                   {selectedStaff.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                 </div>
-                <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{selectedStaff.name}</h4>
+                <h4 className="h-section">{selectedStaff.name}</h4>
                 <span className={cn('badge mt-1', ROLE_COLORS[selectedStaff.role])}>{ROLE_LABELS[selectedStaff.role]}</span>
               </div>
 
@@ -674,7 +674,7 @@ export default function StaffPage() {
         <Portal>
         <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
           <div className={`modal-content card w-full max-w-md ${isClosingModal ? 'closing' : ''}`}>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+            <h2 className="h-section mb-4">
               {editingStaff ? 'Personeli Düzenle' : 'Yeni Personel Ekle'}
             </h2>
             <form onSubmit={handleSave} className="space-y-4">
@@ -719,7 +719,7 @@ export default function StaffPage() {
           <div className={`modal-content card w-full max-w-md max-h-[85vh] flex flex-col ${permPopupClosing ? 'closing' : ''}`} onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{permPopupStaff.name}</h2>
+                <h2 className="h-section">{permPopupStaff.name}</h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   <span className={cn('badge text-xs mr-2', ROLE_COLORS[permPopupStaff.role])}>{ROLE_LABELS[permPopupStaff.role]}</span>
                   Erişim Yetkileri
@@ -812,7 +812,7 @@ export default function StaffPage() {
           <div className={`modal-content card w-full max-w-sm ${isClosingInviteModal ? 'closing' : ''}`} onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Personel Davet Et</h2>
+                <h2 className="h-section">Personel Davet Et</h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400">Link paylaşarak sisteme katmak için</p>
               </div>
               <button onClick={closeInviteModal} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>

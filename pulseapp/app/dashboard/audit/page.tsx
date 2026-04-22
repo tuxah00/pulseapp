@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -8,6 +8,7 @@ import { Shield, ShieldX, Loader2, Search, Filter, ChevronLeft, ChevronRight, X 
 import { cn } from '@/lib/utils'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { getCustomerLabelSingular } from '@/lib/config/sector-modules'
+import EmptyState from '@/components/ui/empty-state'
 
 interface AuditLog {
   id: string
@@ -389,7 +390,7 @@ export default function AuditPage() {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Denetim Kaydı</h1>
+          <h1 className="h-page">Denetim Kaydı</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">İşletmenizdeki tüm eylemler kayıt altında</p>
         </div>
       </div>
@@ -451,10 +452,10 @@ export default function AuditPage() {
           <Loader2 className="h-8 w-8 animate-spin text-pulse-900" />
         </div>
       ) : logs.length === 0 ? (
-        <div className="card flex flex-col items-center justify-center py-16">
-          <Shield className="mb-4 h-12 w-12 text-gray-300" />
-          <p className="text-gray-500">Henüz kayıt yok</p>
-        </div>
+        <EmptyState
+          icon={<Shield className="h-8 w-8" />}
+          title="Henüz kayıt yok"
+        />
       ) : (
         <>
           <div className="table-wrapper">

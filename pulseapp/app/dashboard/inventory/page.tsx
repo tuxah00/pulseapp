@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import { Portal } from '@/components/ui/portal'
@@ -436,7 +436,7 @@ export default function StoklarPage() {
       {/* Başlık */}
       <div className="mb-6 flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Stoklar</h1>
+          <h1 className="h-page">Stoklar</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             {dbError ? 'Ürün ve stok yönetimi' : `${products.length} ürün`}
           </p>
@@ -731,7 +731,7 @@ export default function StoklarPage() {
                     <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700">
                       <Package className="h-8 w-8 text-gray-500 dark:text-gray-400" />
                     </div>
-                    <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{selectedProduct.name}</h4>
+                    <h4 className="h-section">{selectedProduct.name}</h4>
                     <div className="mt-1">{stockBadge(selectedProduct)}</div>
                   </div>
 
@@ -835,7 +835,7 @@ export default function StoklarPage() {
         <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
           <div className={`modal-content card w-full max-w-md max-h-[90vh] overflow-y-auto dark:bg-gray-900 ${isClosingModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              <h2 className="h-section">
                 {editingProduct ? 'Ürünü Düzenle' : 'Yeni Ürün Ekle'}
               </h2>
               <button onClick={() => closeModal()} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
@@ -953,7 +953,7 @@ export default function StoklarPage() {
         <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${isClosingSupplierModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingSupplierModal) { setShowSupplierModal(false); setIsClosingSupplierModal(false) } }}>
           <div className={`modal-content card w-full max-w-md ${isClosingSupplierModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              <h2 className="h-section">
                 {editingSupplier ? 'Tedarikçiyi Düzenle' : 'Yeni Tedarikçi'}
               </h2>
               <button onClick={() => closeSupplierModal()} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>

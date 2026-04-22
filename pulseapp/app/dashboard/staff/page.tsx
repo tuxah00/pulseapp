@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -24,6 +24,7 @@ import {
 import { CustomSelect } from '@/components/ui/custom-select'
 import { getCustomerLabel, getSectorPermissionKeys } from '@/lib/config/sector-modules'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
+import EmptyState from '@/components/ui/empty-state'
 
 const ROLE_LABELS: Record<StaffRole, string> = {
   owner: 'İşletme Sahibi',
@@ -426,7 +427,7 @@ export default function StaffPage() {
     <div>
       <div className="mb-6 flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Personeller</h1>
+          <h1 className="h-page">Personeller</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Randevu atayabileceğiniz personelleri yönetin.
           </p>
@@ -458,13 +459,11 @@ export default function StaffPage() {
       </div>
 
       {staff.length === 0 ? (
-        <div className="card flex flex-col items-center justify-center py-16">
-          <UserPlus className="mb-4 h-12 w-12 text-gray-300" />
-          <p className="text-gray-500 mb-4">Henüz personel eklenmemiş</p>
-          <button onClick={openNewModal} className="btn-primary">
-            <Plus className="mr-2 h-4 w-4" />İlk Personeli Ekle
-          </button>
-        </div>
+        <EmptyState
+          icon={<UserPlus className="h-8 w-8" />}
+          title="Henüz personel eklenmemiş"
+          action={{ label: 'İlk Personeli Ekle', onClick: openNewModal, icon: <Plus className="h-4 w-4" /> }}
+        />
       ) : (
         <div className="space-y-6">
           {staffGroups.map((group) => (
@@ -511,7 +510,7 @@ export default function StaffPage() {
                 )}>
                   {selectedStaff.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                 </div>
-                <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{selectedStaff.name}</h4>
+                <h4 className="h-section">{selectedStaff.name}</h4>
                 <span className={cn('mt-1', ROLE_COLORS[selectedStaff.role])}>{ROLE_LABELS[selectedStaff.role]}</span>
               </div>
 
@@ -744,7 +743,7 @@ export default function StaffPage() {
         <Portal>
         <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
           <div className={`modal-content card w-full max-w-md ${isClosingModal ? 'closing' : ''}`}>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+            <h2 className="h-section mb-4">
               {editingStaff ? 'Personeli Düzenle' : 'Yeni Personel Ekle'}
             </h2>
             <form onSubmit={handleSave} className="space-y-4">
@@ -789,7 +788,7 @@ export default function StaffPage() {
           <div className={`modal-content card w-full max-w-sm ${isClosingInviteModal ? 'closing' : ''}`} onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Personel Davet Et</h2>
+                <h2 className="h-section">Personel Davet Et</h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400">Link paylaşarak sisteme katmak için</p>
               </div>
               <button onClick={closeInviteModal} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>

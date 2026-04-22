@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import { Portal } from '@/components/ui/portal'
@@ -19,6 +19,7 @@ import { ToolbarPopover, SortPopoverContent } from '@/components/ui/toolbar-popo
 import CompactBoxCard from '@/components/ui/compact-box-card'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import { Pagination } from '@/components/ui/pagination'
+import EmptyState from '@/components/ui/empty-state'
 
 interface Membership {
   id: string
@@ -322,7 +323,7 @@ export default function MembershipsPage() {
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Üyelikler</h1>
+          <h1 className="h-page">Üyelikler</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Üyelik planları, seans takibi ve süreli üyelikler
           </p>
@@ -422,22 +423,12 @@ export default function MembershipsPage() {
 
       {/* List / Grid */}
       {!dbError && memberships.length === 0 ? (
-        <div className="card flex flex-col items-center justify-center py-24 text-center">
-          <CreditCard className="mb-4 h-16 w-16 text-gray-200 dark:text-gray-600" />
-          <h3 className="text-base font-semibold text-gray-700 dark:text-gray-300">
-            {search ? 'Aramanızla eşleşen üyelik bulunamadı' : 'Henüz üyelik eklenmemiş'}
-          </h3>
-          {!search && (
-            <p className="mt-1 mb-4 text-sm text-gray-400">
-              Sağ üstteki butonu kullanarak ilk üyeliği ekleyin.
-            </p>
-          )}
-          {!search && (
-            <button onClick={openNewModal} className="btn-primary">
-              <Plus className="mr-2 h-4 w-4" />İlk Üyeliği Ekle
-            </button>
-          )}
-        </div>
+        <EmptyState
+          icon={<CreditCard className="h-8 w-8" />}
+          title={search ? 'Aramanızla eşleşen üyelik bulunamadı' : 'Henüz üyelik eklenmemiş'}
+          description={!search ? 'Sağ üstteki butonu kullanarak ilk üyeliği ekleyin.' : undefined}
+          action={!search ? { label: 'İlk Üyeliği Ekle', onClick: openNewModal, icon: <Plus className="h-4 w-4" /> } : undefined}
+        />
       ) : !dbError ? (
         <div key={viewMode} className="view-transition">
           {viewMode === 'list' && (
@@ -484,7 +475,7 @@ export default function MembershipsPage() {
         <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
           <div className={`modal-content card w-full max-w-lg max-h-[90vh] overflow-y-auto dark:bg-gray-900 ${isClosingModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              <h2 className="h-section">
                 {editingMembership ? 'Üyeliği Düzenle' : 'Yeni Üyelik Ekle'}
               </h2>
               <button onClick={() => closeModal()} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">

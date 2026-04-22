@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
@@ -221,7 +221,7 @@ export default function WorkflowsPage() {
       {/* Başlık */}
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Otomatik Mesajlar</h1>
+          <h1 className="h-page">Otomatik Mesajlar</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Belirli bir olay sonrası (örn. randevu bitti) otomatik SMS gönderin.
           </p>
@@ -373,7 +373,7 @@ export default function WorkflowsPage() {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                <h2 className="h-section">
                   {editingWorkflow ? 'Düzenle' : 'Yeni Otomatik Mesaj'}
                 </h2>
                 <button onClick={closeModal} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">

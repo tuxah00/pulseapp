@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import { Portal } from '@/components/ui/portal'
@@ -15,6 +15,7 @@ import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatCurrency } from '@/lib/utils'
 import { Pagination } from '@/components/ui/pagination'
+import EmptyState from '@/components/ui/empty-state'
 
 interface OrderItem {
   product_id: string
@@ -212,7 +213,7 @@ export default function OrdersPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Siparişler</h1>
+          <h1 className="h-page">Siparişler</h1>
           <p className="text-sm text-gray-500 mt-1">Sipariş oluşturun ve durumlarını takip edin</p>
         </div>
         <button
@@ -247,10 +248,10 @@ export default function OrdersPage() {
           <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
         </div>
       ) : orders.length === 0 ? (
-        <div className="card text-center py-12 text-gray-400">
-          <ClipboardList className="h-8 w-8 mx-auto mb-3 opacity-50" />
-          <p className="text-sm">Sipariş bulunamadı</p>
-        </div>
+        <EmptyState
+          icon={<ClipboardList className="h-8 w-8" />}
+          title="Sipariş bulunamadı"
+        />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {orders.map(order => {
@@ -339,7 +340,7 @@ export default function OrdersPage() {
         <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 dark:bg-black/70 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
           <div className={`modal-content bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 space-y-4 ${isClosingModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Yeni Sipariş</h3>
+              <h3 className="h-section">Yeni Sipariş</h3>
               <button onClick={() => closeModal()} className="text-gray-400 hover:text-gray-600">
                 <X className="h-5 w-5" />
               </button>

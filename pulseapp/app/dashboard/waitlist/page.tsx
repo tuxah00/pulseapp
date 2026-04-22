@@ -15,6 +15,7 @@ import { Portal } from '@/components/ui/portal'
 import { cn } from '@/lib/utils'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { requirePermission } from '@/lib/hooks/use-require-permission'
+import EmptyState from '@/components/ui/empty-state'
 
 interface WaitlistEntry {
   id: string
@@ -430,11 +431,11 @@ export default function WaitlistPage() {
       {loading ? (
         <div className="flex items-center justify-center h-32"><Loader2 className="h-6 w-6 animate-spin text-pulse-900" /></div>
       ) : filtered.length === 0 ? (
-        <div className="card p-8 text-center">
-          <Clock className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-          <p className="text-gray-500 dark:text-gray-400">Bekleme listesi boş</p>
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Yeni bir kayıt eklemek için butonu kullanın</p>
-        </div>
+        <EmptyState
+          icon={<Clock className="h-8 w-8" />}
+          title="Bekleme listesi boş"
+          description="Yeni bir kayıt eklemek için butonu kullanın"
+        />
       ) : (
         <AnimatedList className="space-y-3">
           {filtered.map(e => (

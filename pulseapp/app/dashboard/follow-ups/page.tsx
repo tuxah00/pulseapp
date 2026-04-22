@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
@@ -17,6 +17,7 @@ import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import { Portal } from '@/components/ui/portal'
 import { Pagination } from '@/components/ui/pagination'
 import { FOLLOW_UP_TYPE_LABELS, FOLLOW_UP_STATUS_LABELS, type FollowUpType, type FollowUpStatus, type FollowUpStatusHistoryEntry } from '@/types'
+import EmptyState from '@/components/ui/empty-state'
 
 interface FollowUp {
   id: string
@@ -316,10 +317,10 @@ export default function FollowUpsPage() {
       {loading ? (
         <div className="flex items-center justify-center h-32"><Loader2 className="h-6 w-6 animate-spin text-pulse-900" /></div>
       ) : filtered.length === 0 ? (
-        <div className="card p-8 text-center">
-          <ClipboardCheck className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-          <p className="text-gray-500 dark:text-gray-400">Henüz takip kaydı yok</p>
-        </div>
+        <EmptyState
+          icon={<ClipboardCheck className="h-8 w-8" />}
+          title="Henüz takip kaydı yok"
+        />
       ) : (
         <AnimatedList className="space-y-3">
           {filtered.map(f => {
@@ -444,7 +445,7 @@ export default function FollowUpsPage() {
                       {FOLLOW_UP_TYPE_LABELS[detailItem.type] || detailItem.type}
                     </span>
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">{detailItem.customers?.name || 'Bilinmeyen'}</h3>
+                  <h3 className="h-section truncate">{detailItem.customers?.name || 'Bilinmeyen'}</h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400">{formatDateTime(detailItem.scheduled_for)}</p>
                 </div>
                 <button onClick={() => setClosingDetail(true)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg flex-shrink-0">

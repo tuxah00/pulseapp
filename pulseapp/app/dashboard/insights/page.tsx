@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useState } from 'react'
 import {
@@ -14,6 +14,7 @@ import SeasonalChart from '@/components/dashboard/insights/seasonal-chart'
 import QuadrantTable from '@/components/dashboard/insights/quadrant-table'
 import CohortHeatmap from '@/components/dashboard/insights/cohort-heatmap'
 import PulseCards from '@/components/dashboard/insights/pulse-cards'
+import EmptyState from '@/components/ui/empty-state'
 
 interface SummaryWithMacro extends InsightsSummary {
   macro: MacroContext | null
@@ -145,7 +146,7 @@ export default function InsightsPage() {
     <div className="space-y-6">
       {/* Başlık */}
       <div>
-        <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+        <h1 className="h-page flex items-center gap-2">
           <TrendingUp className="w-6 h-6 text-pulse-900 dark:text-pulse-300" />
           İş Zekası
         </h1>
@@ -248,12 +249,11 @@ export default function InsightsPage() {
       </section>
 
       {data.recommendations.length === 0 && (
-        <div className="card p-6 text-center cursor-default">
-          <Sparkles className="w-8 h-8 mx-auto text-gray-300 dark:text-gray-600 mb-2" />
-          <div className="text-sm text-gray-600 dark:text-gray-400">
-            Henüz öneri yok. Veri arttıkça içgörüler görünecek.
-          </div>
-        </div>
+        <EmptyState
+          icon={<Sparkles className="h-8 w-8" />}
+          title="Henüz öneri yok"
+          description="Veri arttıkça içgörüler görünecek."
+        />
       )}
 
       {/* Mevsimsel Trend */}

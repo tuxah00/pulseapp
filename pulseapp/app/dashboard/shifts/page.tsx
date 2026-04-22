@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
@@ -537,7 +537,7 @@ export default function VardiyePage() {
       {/* Başlık */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Vardiya Yönetimi</h1>
+          <h1 className="h-page">Vardiya Yönetimi</h1>
           <p className="text-sm text-gray-500 mt-1">Personel vardiyelerini ve çalışma saatlerini yönetin</p>
         </div>
         {activeTab === 'shifts' && (
@@ -1257,7 +1257,7 @@ export default function VardiyePage() {
       {activeTab === 'hours' && (
         <form onSubmit={handleSaveHours}>
           <div className="card">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">Çalışma Saatleri</h2>
+            <h2 className="h-section mb-1">Çalışma Saatleri</h2>
             <p className="text-sm text-gray-500 mb-6">
               İşletmenizin açık olduğu gün ve saatleri belirleyin. Kapalı günlerde vardiya atanamaz.
             </p>

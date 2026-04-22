@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -15,6 +15,7 @@ import { getContraindicationLabel, isMedicalSector, getServiceNamePlaceholder, g
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import { ToolbarPopover, SortPopoverContent } from '@/components/ui/toolbar-popover'
 import { CustomSelect } from '@/components/ui/custom-select'
+import EmptyState from '@/components/ui/empty-state'
 
 export default function ServicesPage() {
   const { businessId, staffId: currentStaffId, staffName: currentStaffName, sector, loading: ctxLoading, permissions } = useBusinessContext()
@@ -232,7 +233,7 @@ export default function ServicesPage() {
       {/* Başlık */}
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Hizmetler</h1>
+          <h1 className="h-page">Hizmetler</h1>
           <p className="mt-1 text-sm text-gray-500">
             İşletmenizin sunduğu hizmetleri tanımlayın.
           </p>
@@ -255,16 +256,11 @@ export default function ServicesPage() {
 
       {/* Hizmet Listesi / Kutular */}
       {services.length === 0 ? (
-        <div className="card flex flex-col items-center justify-center py-16">
-          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-pulse-50">
-            <Banknote className="h-8 w-8 text-pulse-400" />
-          </div>
-          <p className="text-gray-500 mb-4">Henüz hizmet eklenmemiş</p>
-          <button onClick={openNewModal} className="btn-primary">
-            <Plus className="mr-2 h-4 w-4" />
-            İlk Hizmeti Ekle
-          </button>
-        </div>
+        <EmptyState
+          icon={<Banknote className="h-8 w-8" />}
+          title="Henüz hizmet eklenmemiş"
+          action={{ label: 'İlk Hizmeti Ekle', onClick: openNewModal, icon: <Plus className="h-4 w-4" /> }}
+        />
       ) : (
         <div key={viewMode} className="view-transition">
         {viewMode === 'list' ? (
@@ -275,7 +271,7 @@ export default function ServicesPage() {
               className="card flex items-center gap-4 p-4 hover:shadow-md transition-shadow"
             >
               <div className="flex-1 min-w-0">
-                <h3 className="text-lg font-semibold text-gray-900">{service.name}</h3>
+                <h3 className="h-section">{service.name}</h3>
                 {service.description && (
                   <p className="text-sm text-gray-500 mt-0.5 truncate">{service.description}</p>
                 )}
@@ -301,7 +297,7 @@ export default function ServicesPage() {
           {sortedServices.map((service) => (
             <AnimatedItem key={service.id} className="card flex aspect-square flex-col justify-between p-4 hover:shadow-md transition-shadow">
               <div className="flex flex-col items-center gap-1 text-center">
-                <h3 className="text-lg font-semibold text-gray-900 truncate w-full">{service.name}</h3>
+                <h3 className="h-section truncate w-full">{service.name}</h3>
                 {service.description && <p className="text-xs text-gray-500 truncate w-full">{service.description}</p>}
               </div>
               <div className="mt-2 space-y-0.5 text-center text-sm text-gray-600">
@@ -329,7 +325,7 @@ export default function ServicesPage() {
         <Portal>
         <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
           <div className={`modal-content card w-full max-w-md ${isClosingModal ? 'closing' : ''}`}>
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+            <h2 className="h-section mb-4">
               {editingService ? 'Hizmeti Düzenle' : 'Yeni Hizmet Ekle'}
             </h2>
 

@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import { Portal } from '@/components/ui/portal'
@@ -229,7 +229,7 @@ export default function ClassesPage() {
         <div className="flex items-center gap-3">
           <CalendarDays className="h-7 w-7 text-indigo-600" />
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Sınıf Programı</h1>
+            <h1 className="h-page">Sınıf Programı</h1>
             <p className="text-sm text-gray-500">Haftalık grup dersleri</p>
           </div>
         </div>
@@ -336,7 +336,7 @@ export default function ClassesPage() {
 
       {/* All classes list */}
       <div className="mt-8">
-        <h2 className="text-lg font-semibold text-gray-900 mb-3">Tüm Sınıflar</h2>
+        <h2 className="h-section mb-3">Tüm Sınıflar</h2>
         {classes.length === 0 ? (
           <EmptyState
             icon={<CalendarDays className="h-8 w-8" />}

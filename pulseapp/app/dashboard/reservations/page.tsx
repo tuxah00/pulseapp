@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
@@ -25,6 +25,7 @@ import { Portal } from '@/components/ui/portal'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
 import { ToolbarPopover, SortPopoverContent } from '@/components/ui/toolbar-popover'
 import CompactBoxCard from '@/components/ui/compact-box-card'
+import EmptyState from '@/components/ui/empty-state'
 
 type ReservationStatus = 'pending' | 'confirmed' | 'seated' | 'completed' | 'cancelled' | 'no_show'
 
@@ -264,7 +265,7 @@ export default function ReservationsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Rezervasyonlar</h1>
+          <h1 className="h-page">Rezervasyonlar</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Masa rezervasyonlarını yönetin</p>
         </div>
         <div className="flex items-center gap-3">
@@ -346,13 +347,11 @@ export default function ReservationsPage() {
           </div>
         </div>
       ) : reservations.length === 0 ? (
-        <div className="rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <CalendarCheck className="h-10 w-10 text-gray-300 dark:text-gray-600 mb-3" />
-            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Bu tarihte rezervasyon yok</p>
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Yeni rezervasyon eklemek için butona tıklayın</p>
-          </div>
-        </div>
+        <EmptyState
+          icon={<CalendarCheck className="h-8 w-8" />}
+          title="Bu tarihte rezervasyon yok"
+          description="Yeni rezervasyon eklemek için butona tıklayın"
+        />
       ) : (
         <div key={viewMode} className="view-transition">
           {viewMode === 'list' && (
@@ -475,7 +474,7 @@ export default function ReservationsPage() {
         <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 dark:bg-black/70 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
           <div className={`modal-content w-full max-w-md rounded-2xl bg-white dark:bg-gray-900 shadow-2xl ${isClosingModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-6 py-4">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              <h2 className="h-section">
                 {editingReservation ? 'Rezervasyonu Düzenle' : 'Yeni Rezervasyon'}
               </h2>
               <button

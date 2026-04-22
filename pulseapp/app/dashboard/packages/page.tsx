@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -25,6 +25,7 @@ import { CustomSelect } from '@/components/ui/custom-select'
 import { CustomerSearchSelect } from '@/components/ui/customer-search-select'
 import { Portal } from '@/components/ui/portal'
 import { FollowUpQuickModal } from '@/components/dashboard/follow-up-quick-modal'
+import EmptyState from '@/components/ui/empty-state'
 
 type PageTab = 'templates' | 'customer'
 type StatusFilter = PackageStatus | 'all'
@@ -776,7 +777,7 @@ export default function PaketlerPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Paket & Seans Yönetimi</h1>
+          <h1 className="h-page">Paket & Seans Yönetimi</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Paket şablonları oluştur, müşterilere sat ve seans düşümü yap</p>
         </div>
         <div className="flex items-center gap-2">
@@ -856,14 +857,12 @@ export default function PaketlerPage() {
           {templatesLoading ? (
             <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-pulse-900" /></div>
           ) : templates.length === 0 ? (
-            <div className="card flex flex-col items-center justify-center py-16 text-center">
-              <Package className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-3" />
-              <p className="font-medium text-gray-900 dark:text-gray-100">Henüz paket şablonu yok</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-4">{`${getCustomerLabel(sector!)} için satılacak paket tanımlayın`}</p>
-              <button onClick={openNewTemplate} className="btn-primary flex items-center gap-2">
-                <Plus className="h-4 w-4" /> Yeni Paket Şablonu
-              </button>
-            </div>
+            <EmptyState
+              icon={<Package className="h-8 w-8" />}
+              title="Henüz paket şablonu yok"
+              description={`${getCustomerLabel(sector!)} için satılacak paket tanımlayın`}
+              action={{ label: 'Yeni Paket Şablonu', onClick: openNewTemplate, icon: <Plus className="h-4 w-4" /> }}
+            />
           ) : (
             <AnimatedList className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {templates.map(t => (
@@ -951,13 +950,11 @@ export default function PaketlerPage() {
           {cpLoading ? (
             <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-pulse-900" /></div>
           ) : customerPackages.length === 0 ? (
-            <div className="card flex flex-col items-center justify-center py-16 text-center">
-              <Users className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-3" />
-              <p className="font-medium text-gray-900 dark:text-gray-100">{`${getCustomerLabelSingular(sector ?? undefined)} paketi bulunamadı`}</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                {templates.length === 0 ? 'Önce paket şablonu oluşturun' : 'Paket satmak için "Paket Sat" butonunu kullanın'}
-              </p>
-            </div>
+            <EmptyState
+              icon={<Users className="h-8 w-8" />}
+              title={`${getCustomerLabelSingular(sector ?? undefined)} paketi bulunamadı`}
+              description={templates.length === 0 ? 'Önce paket şablonu oluşturun' : 'Paket satmak için "Paket Sat" butonunu kullanın'}
+            />
           ) : (
             <div key={viewMode} className="view-transition">
             {viewMode === 'box' ? (
@@ -1104,7 +1101,7 @@ export default function PaketlerPage() {
         <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 dark:bg-black/70 ${isClosingTemplateModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingTemplateModal) { setShowTemplateModal(false); setIsClosingTemplateModal(false) } }}>
           <div className={`modal-content w-full max-w-md card space-y-4 ${isClosingTemplateModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              <h2 className="h-section">
                 {editingTemplate ? 'Paketi Düzenle' : 'Yeni Paket Şablonu'}
               </h2>
               <button onClick={() => closeTemplateModal()} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400">
@@ -1209,7 +1206,7 @@ export default function PaketlerPage() {
         <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 dark:bg-black/70 ${isClosingSellModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingSellModal) { setShowSellModal(false); setIsClosingSellModal(false) } }}>
           <div className={`modal-content w-full max-w-md card space-y-4 max-h-[90vh] overflow-y-auto ${isClosingSellModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Paket Sat</h2>
+              <h2 className="h-section">Paket Sat</h2>
               <button onClick={() => closeSellModal()} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400">
                 <X className="h-5 w-5" />
               </button>
@@ -1357,7 +1354,7 @@ export default function PaketlerPage() {
         <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center p-4 bg-black/50 dark:bg-black/70 ${isClosingUseModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingUseModal) { setShowUseModal(false); setIsClosingUseModal(false) } }}>
           <div className={`modal-content w-full max-w-sm card space-y-4 ${isClosingUseModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Seans Düş</h2>
+              <h2 className="h-section">Seans Düş</h2>
               <button onClick={() => closeUseModal()} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400">
                 <X className="h-5 w-5" />
               </button>
@@ -1405,7 +1402,7 @@ export default function PaketlerPage() {
         <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center p-4 bg-black/50 dark:bg-black/70 ${isClosingAptModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingAptModal) { setShowAptModal(false); setIsClosingAptModal(false); setAptPreview(null) } }}>
           <div className={`modal-content w-full max-w-md card space-y-4 max-h-[90vh] overflow-y-auto ${isClosingAptModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              <h2 className="h-section">
                 {aptPreview
                   ? 'Çakışma Uyarısı'
                   : selectedCp

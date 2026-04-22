@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { CustomSelect } from '@/components/ui/custom-select'
+import EmptyState from '@/components/ui/empty-state'
 
 interface ConsentRecord {
   id: string
@@ -176,7 +177,7 @@ export default function KvkkPage() {
       {/* Başlık */}
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">KVKK Yönetimi</h1>
+          <h1 className="h-page">KVKK Yönetimi</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Kişisel veri izinleri ve silme talepleri
           </p>
@@ -266,12 +267,10 @@ export default function KvkkPage() {
               <Loader2 className="h-8 w-8 animate-spin text-pulse-900" />
             </div>
           ) : consents.length === 0 ? (
-            <div className="card flex flex-col items-center justify-center py-16">
-              <Shield className="mb-4 h-12 w-12 text-gray-300" />
-              <p className="text-gray-500">
-                {consentTypeFilter ? 'Bu türde onay kaydı bulunamadı' : 'Henüz onay kaydı yok'}
-              </p>
-            </div>
+            <EmptyState
+              icon={<Shield className="h-8 w-8" />}
+              title={consentTypeFilter ? 'Bu türde onay kaydı bulunamadı' : 'Henüz onay kaydı yok'}
+            />
           ) : (
             <div className="table-wrapper">
               <table className="table-base">
@@ -353,10 +352,10 @@ export default function KvkkPage() {
               <Loader2 className="h-8 w-8 animate-spin text-pulse-900" />
             </div>
           ) : deletions.length === 0 ? (
-            <div className="card flex flex-col items-center justify-center py-16">
-              <Trash2 className="mb-4 h-12 w-12 text-gray-300" />
-              <p className="text-gray-500">Henüz veri silme talebi yok</p>
-            </div>
+            <EmptyState
+              icon={<Trash2 className="h-8 w-8" />}
+              title="Henüz veri silme talebi yok"
+            />
           ) : (
             <div className="table-wrapper">
               <table className="table-base">

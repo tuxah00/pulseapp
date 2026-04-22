@@ -22,6 +22,7 @@ import { CustomerSearchSelect } from '@/components/ui/customer-search-select'
 import { Portal } from '@/components/ui/portal'
 import { Pagination } from '@/components/ui/pagination'
 import { FollowUpQuickModal } from '@/components/dashboard/follow-up-quick-modal'
+import EmptyState from '@/components/ui/empty-state'
 
 const STATUS_BADGE: Record<ProtocolStatus, string> = {
   active: 'badge-info',
@@ -305,13 +306,11 @@ export default function ProtocolsPage() {
         {loading ? (
           <div className="flex items-center justify-center h-32"><Loader2 className="h-6 w-6 animate-spin text-pulse-900" /></div>
         ) : filtered.length === 0 ? (
-          <div className="card p-8 text-center">
-            <ClipboardCheck className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-            <p className="text-gray-500 dark:text-gray-400">Henüz tedavi protokolü yok</p>
-            <button onClick={() => setShowCreate(true)} className="btn-primary mt-4 text-sm">
-              <Plus className="h-4 w-4 mr-1 inline" /> İlk Protokolü Oluştur
-            </button>
-          </div>
+          <EmptyState
+            icon={<ClipboardCheck className="h-8 w-8" />}
+            title="Henüz tedavi protokolü yok"
+            action={{ label: 'İlk Protokolü Oluştur', onClick: () => setShowCreate(true), icon: <Plus className="h-4 w-4" /> }}
+          />
         ) : (
           filtered.map(p => {
             const customer = Array.isArray(p.customer) ? p.customer[0] : p.customer

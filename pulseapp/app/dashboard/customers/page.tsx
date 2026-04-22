@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -687,7 +687,7 @@ export default function CustomersPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">{customerLabel}</h1>
+          <h1 className="h-page">{customerLabel}</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{totalCount} {customerLabel.toLowerCase()} kayıtlı</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -937,7 +937,7 @@ export default function CustomersPage() {
                     <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-pulse-50 dark:bg-pulse-900/20 text-pulse-900 dark:text-pulse-400 font-bold text-lg">
                       {getInitials(selectedCustomer.name)}
                     </div>
-                    <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{selectedCustomer.name}</h4>
+                    <h4 className="h-section">{selectedCustomer.name}</h4>
                     <span className={`badge mt-1 ${getSegmentColor(selectedCustomer.segment)}`}>{SEGMENT_LABELS[selectedCustomer.segment]}</span>
                   </div>
 
@@ -1282,7 +1282,7 @@ export default function CustomersPage() {
         <Portal>
         <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
           <div className={`modal-content card w-full max-w-md dark:bg-gray-900 ${isClosingModal ? 'closing' : ''}`}>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+            <h2 className="h-section mb-4">
               {editingCustomer ? `${singularLabel} Düzenle` : `Yeni ${singularLabel} Ekle`}
             </h2>
             <form onSubmit={handleSubmit(onValidSubmit)} className="space-y-4" noValidate>
@@ -1346,7 +1346,7 @@ export default function CustomersPage() {
         <Portal>
           <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${isClosingReward ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingReward) { setShowRewardModal(false); setIsClosingReward(false) } }}>
             <div className={`modal-content card w-full max-w-sm dark:bg-gray-900 ${isClosingReward ? 'closing' : ''}`}>
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+              <h2 className="h-section mb-4 flex items-center gap-2">
                 <Gift className="h-5 w-5 text-pulse-900 dark:text-pulse-300" /> Ödül Ver
               </h2>
               <div className="space-y-4">
@@ -1396,7 +1396,7 @@ export default function CustomersPage() {
             onClick={(e) => { if (e.target === e.currentTarget) setShowRedeemModal(false) }}
           >
             <div className="modal-content card w-full max-w-sm dark:bg-gray-900">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1 flex items-center gap-2">
+              <h2 className="h-section mb-1 flex items-center gap-2">
                 <Gift className="h-5 w-5 text-pulse-900 dark:text-pulse-300" /> Puan Kullan
               </h2>
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
