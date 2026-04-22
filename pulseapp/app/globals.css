@@ -118,6 +118,12 @@
   * {
     @apply border-border;
   }
+
+  /* Tüm interaktif elementlerde smooth geçiş — .btn-* ve component class'ları bunu override eder */
+  button, a {
+    @apply transition-colors;
+    transition-duration: 150ms;
+  }
 }
 
 @layer components {
