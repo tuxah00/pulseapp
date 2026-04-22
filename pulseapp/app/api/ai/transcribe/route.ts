@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withAuth } from '@/lib/api/with-permission'
+import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
 import OpenAI from 'openai'
 
 export const POST = withAuth(async (req: NextRequest) => {
+  const rl = checkRateLimit(req, RATE_LIMITS.ai)
+  if (rl.limited) return rl.response
+
   if (!process.env.OPENAI_API_KEY) {
     return NextResponse.json(
       { error: 'Transkripsiyon servisi yapılandırılmamış' },

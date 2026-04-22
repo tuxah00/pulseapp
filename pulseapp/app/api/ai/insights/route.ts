@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { getAnthropicClient, AI_MODEL } from '@/lib/ai/client'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
+import { createLogger } from '@/lib/utils/logger'
+
+const log = createLogger({ route: 'api/ai/insights' })
 
 interface InsightItem {
   type: 'warning' | 'opportunity' | 'success'
@@ -49,7 +52,7 @@ export async function GET(req: NextRequest) {
 
     if (!process.env.ANTHROPIC_API_KEY) {
       // Return stats without AI if API key is missing
-      console.error('ANTHROPIC_API_KEY is not configured')
+      log.error({}, 'ANTHROPIC_API_KEY is not configured')
     }
 
     const { data: business } = await supabase
@@ -179,11 +182,11 @@ Yanıtı SADECE JSON formatında ver, başka hiçbir şey yazma:
             const jsonMatch = content.text.match(/\{[\s\S]*\}/)
             if (jsonMatch) aiData = JSON.parse(jsonMatch[0])
           } catch (parseErr) {
-            console.error('AI JSON parse hatası:', parseErr, 'Raw:', content.text)
+            log.error({ err: parseErr, raw: content.text }, 'AI JSON parse hatası')
           }
         }
       } catch (aiErr) {
-        console.error('Anthropic API hatası:', aiErr)
+        log.error({ err: aiErr }, 'Anthropic API hatası')
         // AI fails but we still return stats
       }
     }
@@ -208,7 +211,7 @@ Yanıtı SADECE JSON formatında ver, başka hiçbir şey yazma:
 
     return NextResponse.json(response)
   } catch (err) {
-    console.error('Insights error:', err instanceof Error ? err.message : err)
+    log.error({ err }, 'Insights error')
     return NextResponse.json({ error: 'Rapor oluşturulamadı', details: err instanceof Error ? err.message : 'Bilinmeyen hata' }, { status: 500 })
   }
 }

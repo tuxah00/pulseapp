@@ -1,17 +1,24 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendSMS } from '@/lib/sms/send'
 import { sendWhatsApp } from '@/lib/whatsapp/send'
-import type { MessageChannel } from '@/types'
+import { createLogger } from '@/lib/utils/logger'
+import type { MessageChannel, MessageType } from '@/types'
+
+const log = createLogger({ module: 'messaging/send' })
 
 interface SendMessageParams {
   to: string
   body: string
   businessId: string
   customerId?: string
-  messageType?: 'text' | 'template' | 'ai_generated' | 'system'
+  messageType?: MessageType
   /** 'auto' otomatik kanal seçimi yapar, yoksa belirtilen kanalı kullanır */
   channel?: MessageChannel | 'auto'
   mediaUrl?: string
+  staffId?: string
+  staffName?: string
+  templateName?: string
+  templateParams?: Record<string, string>
 }
 
 interface SendMessageResult {
@@ -39,44 +46,51 @@ export async function sendMessage(params: SendMessageParams): Promise<SendMessag
     messageType = 'text',
     channel = 'auto',
     mediaUrl,
+    staffId,
+    staffName,
+    templateName,
+    templateParams,
   } = params
+
+  // Tüm kanallara geçilen ortak metadata
+  const meta = { staffId, staffName, templateName, templateParams }
 
   // Belirli kanal isteniyorsa doğrudan gönder
   if (channel === 'whatsapp') {
-    const result = await sendWhatsApp({ to, body, businessId, customerId, messageType, mediaUrl })
+    const result = await sendWhatsApp({ to, body, businessId, customerId, messageType, mediaUrl, ...meta })
     return { ...result, channel: 'whatsapp' }
   }
 
   if (channel === 'sms') {
-    const result = await sendSMS({ to, body, businessId, customerId, messageType })
+    const result = await sendSMS({ to, body, businessId, customerId, messageType, ...meta })
     return { ...result, channel: 'sms' }
   }
 
   if (channel === 'web') {
-    return saveAsWebMessage({ body, businessId, customerId, messageType })
+    return saveAsWebMessage({ body, businessId, customerId, messageType, ...meta })
   }
 
   // auto kanal seçimi
   const resolvedChannel = await resolveChannel(businessId, customerId)
 
   if (resolvedChannel === 'whatsapp') {
-    const result = await sendWhatsApp({ to, body, businessId, customerId, messageType, mediaUrl })
+    const result = await sendWhatsApp({ to, body, businessId, customerId, messageType, mediaUrl, ...meta })
     if (result.success) return { ...result, channel: 'whatsapp' }
     // WhatsApp başarısız olursa SMS'e fallback
-    console.warn('WhatsApp başarısız, SMS fallback deneniyor')
-    const smsResult = await sendSMS({ to, body, businessId, customerId, messageType })
+    log.warn({ businessId, error: result.error }, 'WhatsApp başarısız, SMS fallback deneniyor')
+    const smsResult = await sendSMS({ to, body, businessId, customerId, messageType, ...meta })
     return { ...smsResult, channel: 'sms' }
   }
 
   if (resolvedChannel === 'sms') {
-    const result = await sendSMS({ to, body, businessId, customerId, messageType })
+    const result = await sendSMS({ to, body, businessId, customerId, messageType, ...meta })
     if (result.success) return { ...result, channel: 'sms' }
     // SMS başarısız olursa web'e kaydet
-    return saveAsWebMessage({ body, businessId, customerId, messageType })
+    return saveAsWebMessage({ body, businessId, customerId, messageType, ...meta })
   }
 
   // Hiçbir kanal yapılandırılmamış
-  return saveAsWebMessage({ body, businessId, customerId, messageType })
+  return saveAsWebMessage({ body, businessId, customerId, messageType, ...meta })
 }
 
 /**
@@ -131,7 +145,11 @@ async function saveAsWebMessage(params: {
   body: string
   businessId: string
   customerId?: string
-  messageType: string
+  messageType: MessageType
+  staffId?: string
+  staffName?: string
+  templateName?: string
+  templateParams?: Record<string, string>
 }): Promise<SendMessageResult> {
   const admin = createAdminClient()
   await admin.from('messages').insert({
@@ -141,6 +159,10 @@ async function saveAsWebMessage(params: {
     channel: 'web',
     message_type: params.messageType,
     content: params.body,
+    staff_id: params.staffId || null,
+    staff_name: params.staffName || null,
+    template_name: params.templateName || null,
+    template_params: params.templateParams || null,
   })
   return { success: true, channel: 'web' }
 }

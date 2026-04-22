@@ -1,25 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logAuditServer } from '@/lib/utils/audit'
+import { validateBody } from '@/lib/api/validate'
+import { consentCreateSchema, consentDeletionRequestSchema } from '@/lib/schemas'
+import { createLogger } from '@/lib/utils/logger'
+
+const log = createLogger({ route: 'api/consent' })
 
 // POST: Rıza kaydı oluştur (public — randevu formu vb. için kimlik doğrulama gerekmez)
 export async function POST(req: NextRequest) {
-  const body = await req.json()
-  const { businessId, customerId, customerPhone, consentType, method, ipAddress, notes } = body
-
-  if (!businessId || !consentType || !method) {
-    return NextResponse.json({ error: 'businessId, consentType, method zorunlu' }, { status: 400 })
-  }
-
-  const validTypes = ['kvkk', 'marketing', 'health_data', 'whatsapp']
-  const validMethods = ['online_form', 'in_person', 'phone', 'whatsapp']
-
-  if (!validTypes.includes(consentType)) {
-    return NextResponse.json({ error: 'Geçersiz consentType' }, { status: 400 })
-  }
-  if (!validMethods.includes(method)) {
-    return NextResponse.json({ error: 'Geçersiz method' }, { status: 400 })
-  }
+  const parsed = await validateBody(req, consentCreateSchema)
+  if (!parsed.ok) return parsed.response
+  const { businessId, customerId, customerPhone, consentType, method, ipAddress, notes } = parsed.data
 
   const admin = createAdminClient()
   const ip = ipAddress || req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || null
@@ -38,7 +30,10 @@ export async function POST(req: NextRequest) {
     .select()
     .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    log.error({ err: error, businessId, consentType }, 'Rıza kaydı oluşturulamadı')
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
 
   await logAuditServer({
     businessId,
@@ -102,12 +97,9 @@ export async function GET(req: NextRequest) {
 
 // DELETE: Veri silme/anonimleştirme talebi oluştur
 export async function DELETE(req: NextRequest) {
-  const body = await req.json()
-  const { businessId, customerId, customerName, customerPhone, notes } = body
-
-  if (!businessId) {
-    return NextResponse.json({ error: 'businessId zorunlu' }, { status: 400 })
-  }
+  const parsed = await validateBody(req, consentDeletionRequestSchema)
+  if (!parsed.ok) return parsed.response
+  const { businessId, customerId, customerName, customerPhone, notes } = parsed.data
 
   const admin = createAdminClient()
 
@@ -123,7 +115,10 @@ export async function DELETE(req: NextRequest) {
     .select()
     .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    log.error({ err: error, businessId }, 'Veri silme talebi oluşturulamadı')
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
 
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req.headers.get('x-real-ip') || null
   await logAuditServer({

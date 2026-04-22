@@ -3,6 +3,9 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { getSeedForSector } from '@/lib/config/sector-seeds'
 import type { SectorType } from '@/types'
 import { NextRequest, NextResponse } from 'next/server'
+import { createLogger } from '@/lib/utils/logger'
+
+const log = createLogger({ route: 'api/onboarding' })
 
 /**
  * Yeni oluşturulan işletmeye sektöre özel örnek içerik (hizmet, paket, otomatik
@@ -39,7 +42,7 @@ async function seedSectorContent(
     .insert(serviceRows)
     .select('id, name')
   if (svcErr) {
-    console.error('[Seed] services ekleme hatası:', svcErr)
+    log.error({ err: svcErr }, '[Seed] services ekleme hatası')
     return
   }
 
@@ -65,7 +68,7 @@ async function seedSectorContent(
       is_active: true,
     }))
     const { error: pkgErr } = await supabase.from('service_packages').insert(pkgRows)
-    if (pkgErr) console.error('[Seed] service_packages ekleme hatası:', pkgErr)
+    if (pkgErr) log.error({ err: pkgErr }, '[Seed] service_packages ekleme hatası')
   }
 
   // 3) Otomatik mesaj akışları
@@ -78,7 +81,7 @@ async function seedSectorContent(
       steps: w.steps,
     }))
     const { error: wfErr } = await supabase.from('workflows').insert(wfRows)
-    if (wfErr) console.error('[Seed] workflows ekleme hatası:', wfErr)
+    if (wfErr) log.error({ err: wfErr }, '[Seed] workflows ekleme hatası')
   }
 }
 
@@ -118,7 +121,7 @@ export async function POST(request: NextRequest) {
     })
 
     if (error) {
-      console.error('İşletme oluşturma hatası:', error)
+      log.error({ err: error }, 'İşletme oluşturma hatası')
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
@@ -128,13 +131,13 @@ export async function POST(request: NextRequest) {
         await seedSectorContent(supabase, data as string, sector as SectorType)
       }
     } catch (seedErr) {
-      console.error('Seed içerik ekleme hatası:', seedErr)
+      log.error({ err: seedErr }, 'Seed içerik ekleme hatası')
       // Seed başarısız olsa da onboarding'i bitir
     }
 
     return NextResponse.json({ business_id: data })
   } catch (err) {
-    console.error('Onboarding hatası:', err)
+    log.error({ err }, 'Onboarding hatası')
     return NextResponse.json(
       { error: 'Sunucu hatası.' },
       { status: 500 }

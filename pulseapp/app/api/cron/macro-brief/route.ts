@@ -4,6 +4,9 @@ import { verifyCronAuth } from '@/lib/api/verify-cron'
 import { getOpenAIClient, ASSISTANT_MODEL } from '@/lib/ai/openai-client'
 import { SECTOR_LABELS } from '@/types'
 import type { SectorType } from '@/types'
+import { createLogger } from '@/lib/utils/logger'
+
+const log = createLogger({ route: 'api/cron/macro-brief' })
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -61,11 +64,11 @@ export async function GET(request: NextRequest) {
         generated_at: now.toISOString(),
         expires_at: expiresAt,
       })
-      if (insertErr) { failures++; console.error(`[macro-brief] insert ${sector}:`, insertErr); continue }
+      if (insertErr) { failures++; log.error({ err: insertErr, sector }, '[macro-brief] insert'); continue }
       written++
     } catch (err) {
       failures++
-      console.error(`[macro-brief] sector ${sector} failed:`, err)
+      log.error({ err, sector }, '[macro-brief] sector failed')
     }
   }
 
@@ -106,7 +109,7 @@ async function generateBrief(sector: SectorType): Promise<BriefJson | null> {
         })),
     }
   } catch (err) {
-    console.error('[macro-brief] openai error:', err)
+    log.error({ err }, '[macro-brief] openai error')
     return null
   }
 }

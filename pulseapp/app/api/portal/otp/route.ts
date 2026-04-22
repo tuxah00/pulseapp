@@ -5,6 +5,9 @@ import { normalizePhone, phoneOrFilter } from '@/lib/utils/phone'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
 import { isValidUUID } from '@/lib/utils/validate'
 import crypto from 'crypto'
+import { createLogger } from '@/lib/utils/logger'
+
+const log = createLogger({ route: 'api/portal/otp' })
 
 function generateOTP(): string {
   // crypto.randomInt kriptografik olarak güvenli
@@ -102,7 +105,7 @@ export async function POST(request: NextRequest) {
       channel: 'sms',
     })
   } catch (err) {
-    console.error('Portal OTP SMS gönderilemedi:', err)
+    log.error({ err }, 'Portal OTP SMS gönderilemedi')
     // SMS gönderilemese bile devam et (geliştirme ortamında)
   }
 

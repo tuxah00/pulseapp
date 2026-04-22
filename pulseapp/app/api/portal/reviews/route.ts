@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requirePortalSession } from '@/lib/portal/guards'
+import { validateBody } from '@/lib/api/validate'
+import { portalReviewCreateSchema } from '@/lib/schemas'
+import { createLogger } from '@/lib/utils/logger'
+
+const log = createLogger({ route: 'api/portal/reviews' })
 
 /**
  * GET — Müşterinin yazdığı yorumlar + yorum bekleyen randevular.
@@ -80,14 +85,11 @@ export async function POST(request: NextRequest) {
   if (guard instanceof NextResponse) return guard
   const { customerId, businessId } = guard
 
-  const body = await request.json().catch(() => null)
-  if (!body || typeof body.rating !== 'number' || body.rating < 1 || body.rating > 5) {
-    return NextResponse.json({ error: 'Geçerli bir puan (1-5) girmelisiniz' }, { status: 400 })
-  }
-
-  const comment: string | null = typeof body.comment === 'string' ? body.comment.trim().slice(0, 2000) : null
-  const appointmentId: string | null = typeof body.appointmentId === 'string' ? body.appointmentId : null
-  const isAnonymous: boolean = body.isAnonymous === false ? false : true
+  const parsed = await validateBody(request, portalReviewCreateSchema)
+  if (!parsed.ok) return parsed.response
+  const { rating, comment = null, appointmentId = null, isAnonymous: isAnonymousRaw } = parsed.data
+  // Varsayılan: anonim. Kullanıcı explicit false geçerse adıyla paylaşılır.
+  const isAnonymous = isAnonymousRaw === false ? false : true
 
   const admin = createAdminClient()
 
@@ -122,7 +124,7 @@ export async function POST(request: NextRequest) {
       business_id: businessId,
       customer_id: customerId,
       appointment_id: appointmentId,
-      rating: body.rating,
+      rating,
       comment,
       status: 'pending',
       google_review_link_sent: false,
@@ -132,7 +134,7 @@ export async function POST(request: NextRequest) {
     .single()
 
   if (error) {
-    console.error('[portal/reviews] insert error', error)
+    log.error({ err: error, businessId, customerId, appointmentId }, 'Yorum kaydedilemedi')
     return NextResponse.json({ error: 'Yorum kaydedilemedi' }, { status: 500 })
   }
 
@@ -141,7 +143,7 @@ export async function POST(request: NextRequest) {
       business_id: businessId,
       type: 'review',
       title: 'Yeni Yorum',
-      body: `${body.rating} yıldız${comment ? ` — "${comment.slice(0, 60)}"` : ''}`,
+      body: `${rating} yıldız${comment ? ` — "${comment.slice(0, 60)}"` : ''}`,
       related_id: created.id,
       related_type: 'review',
       is_read: false,

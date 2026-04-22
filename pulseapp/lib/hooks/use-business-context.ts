@@ -5,6 +5,7 @@ import type { SectorType, StaffRole, StaffPermissions, StaffWritePermissions, Bu
 
 interface BusinessContext {
   businessId: string | null
+  businessName: string | null
   userId: string | null
   staffId: string | null
   staffName: string | null
@@ -21,6 +22,7 @@ export function useBusinessContext(): BusinessContext {
     const data = useBusinessData()
     return {
       businessId: data.businessId,
+      businessName: data.businessName,
       userId: data.userId,
       staffId: data.staffId,
       staffName: data.staffName,
@@ -34,6 +36,7 @@ export function useBusinessContext(): BusinessContext {
   } catch {
     return {
       businessId: null,
+      businessName: null,
       userId: null,
       staffId: null,
       staffName: null,

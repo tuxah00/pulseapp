@@ -14,6 +14,11 @@ import { AI_LIMITS } from '@/lib/ai/assistant-limits'
 import { fetchMacroContext, macroContextForPrompt } from '@/lib/analytics/macro-context'
 import type { AuthContext } from '@/lib/api/with-permission'
 import type { PlanType } from '@/types'
+import { validateBody } from '@/lib/api/validate'
+import { aiAssistantBodySchema } from '@/lib/schemas'
+import { createLogger } from '@/lib/utils/logger'
+
+const log = createLogger({ route: 'api/ai/assistant' })
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -62,25 +67,17 @@ export async function POST(req: NextRequest) {
   const ctx: AuthContext = {
     userId: user.id,
     staffId: staff.id,
+    staffName: staff.name ?? '',
     businessId: staff.business_id,
     role,
     permissions,
     writePermissions,
   }
 
-  // 3. Parse request
-  const body = await req.json()
-  const { conversationId, message, isOnboarding, origin, tutorialTopic } = body as {
-    conversationId: string | null
-    message: string
-    isOnboarding?: boolean
-    origin?: string
-    tutorialTopic?: string
-  }
-
-  if (!message || typeof message !== 'string' || message.trim().length === 0) {
-    return Response.json({ error: 'Mesaj boş olamaz' }, { status: 400 })
-  }
+  // 3. Parse + validate request body
+  const parsed = await validateBody(req, aiAssistantBodySchema)
+  if (!parsed.ok) return parsed.response
+  const { conversationId = null, message, isOnboarding, origin, tutorialTopic } = parsed.data
 
   // 4. Plan limit check (parallel: business info + usage)
   const currentMonth = new Date().toISOString().slice(0, 7) // '2026-04'
@@ -172,7 +169,7 @@ export async function POST(req: NextRequest) {
   } else {
     // Makro bağlam (kur + haftalık sektör brief'i) — best effort, hata durumunda boş
     const macroCtx = await fetchMacroContext(admin, sectorValue).catch(err => {
-      console.error('[assistant] macro context fetch failed:', err)
+      log.error({ err }, '[assistant] macro context fetch failed')
       return { snapshot: null, brief: null }
     })
     const macroSummary = macroContextForPrompt(macroCtx) || undefined
@@ -417,7 +414,7 @@ export async function POST(req: NextRequest) {
         send({ type: 'done', conversationId: convId })
         controller.close()
       } catch (err) {
-        console.error('AI Assistant stream error:', err)
+        log.error({ err }, 'AI Assistant stream error')
         send({ type: 'error', error: 'Bir hata oluştu. Lütfen tekrar deneyin.' })
         controller.close()
       }

@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requirePortalSession } from '@/lib/portal/guards'
+import { validateBody } from '@/lib/api/validate'
+import { portalDataDeletionSchema } from '@/lib/schemas'
+import { createLogger } from '@/lib/utils/logger'
 
-const VALID_REASONS = new Set(['not_using', 'privacy_concern', 'switched_provider', 'dissatisfied', 'other'])
+const log = createLogger({ route: 'api/portal/data-deletion' })
 
 /**
  * Mevcut aktif silme talebini döndür (varsa).
@@ -38,21 +41,9 @@ export async function POST(request: NextRequest) {
   if (guard instanceof NextResponse) return guard
   const { customerId, businessId } = guard
 
-  const body = await request.json().catch(() => null)
-  if (!body || typeof body !== 'object') {
-    return NextResponse.json({ error: 'Geçersiz veri' }, { status: 400 })
-  }
-
-  const reasonCategory: string | null = typeof body.reasonCategory === 'string' && VALID_REASONS.has(body.reasonCategory)
-    ? body.reasonCategory
-    : null
-  const reason: string | null = typeof body.reason === 'string' ? body.reason.trim().slice(0, 2000) || null : null
-  const confirmation: string = typeof body.confirmation === 'string' ? body.confirmation.trim() : ''
-
-  // Güvenlik onayı — kullanıcı "VERİLERİMİ SİL" yazmalı
-  if (confirmation !== 'VERİLERİMİ SİL') {
-    return NextResponse.json({ error: 'Onay metnini doğru yazmalısın' }, { status: 400 })
-  }
+  const parsed = await validateBody(request, portalDataDeletionSchema)
+  if (!parsed.ok) return parsed.response
+  const { reasonCategory = null, reason = null } = parsed.data
 
   const admin = createAdminClient()
 
@@ -97,7 +88,7 @@ export async function POST(request: NextRequest) {
     .single()
 
   if (error) {
-    console.error('[portal/data-deletion] insert error', error)
+    log.error({ err: error, businessId, customerId, phase: 'insert' }, 'Silme talebi oluşturulamadı')
     return NextResponse.json({ error: 'Talep oluşturulamadı' }, { status: 500 })
   }
 
@@ -134,7 +125,7 @@ export async function DELETE(request: NextRequest) {
     .eq('id', existing.id)
 
   if (error) {
-    console.error('[portal/data-deletion] cancel error', error)
+    log.error({ err: error, businessId, customerId, phase: 'cancel' }, 'Silme talebi iptal edilemedi')
     return NextResponse.json({ error: 'Talep iptal edilemedi' }, { status: 500 })
   }
 

@@ -1,4 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { createLogger } from '@/lib/utils/logger'
+
+const log = createLogger({ module: 'sms/send' })
 
 interface SendSMSParams {
   to: string
@@ -6,6 +9,10 @@ interface SendSMSParams {
   businessId: string
   customerId?: string
   messageType?: 'text' | 'template' | 'ai_generated' | 'system'
+  staffId?: string
+  staffName?: string
+  templateName?: string
+  templateParams?: Record<string, string>
 }
 
 interface SendSMSResult {
@@ -19,14 +26,17 @@ interface SendSMSResult {
  * Mesajı Twilio üzerinden gönderir ve messages tablosuna kaydeder.
  */
 export async function sendSMS(params: SendSMSParams): Promise<SendSMSResult> {
-  const { to, body, businessId, customerId, messageType = 'text' } = params
+  const {
+    to, body, businessId, customerId, messageType = 'text',
+    staffId, staffName, templateName, templateParams,
+  } = params
 
   const accountSid = process.env.TWILIO_ACCOUNT_SID
   const authToken = process.env.TWILIO_AUTH_TOKEN
   const fromNumber = process.env.TWILIO_PHONE_NUMBER
 
   if (!accountSid || !authToken || !fromNumber) {
-    console.warn('Twilio credentials eksik, SMS atlanıyor')
+    log.warn({ businessId }, 'Twilio credentials eksik, SMS atlanıyor')
     return { success: false, error: 'Twilio yapılandırılmamış' }
   }
 
@@ -54,7 +64,7 @@ export async function sendSMS(params: SendSMSParams): Promise<SendSMSResult> {
     const data = await response.json()
 
     if (!response.ok) {
-      console.error('Twilio SMS hatası:', data)
+      log.error({ businessId, twilio: data }, 'Twilio SMS hatası')
       return { success: false, error: data.message || 'SMS gönderilemedi' }
     }
 
@@ -69,12 +79,17 @@ export async function sendSMS(params: SendSMSParams): Promise<SendSMSResult> {
       content: body,
       twilio_sid: data.sid,
       twilio_status: data.status,
+      staff_id: staffId || null,
+      staff_name: staffName || null,
+      template_name: templateName || null,
+      template_params: templateParams || null,
     })
 
     return { success: true, messageSid: data.sid }
-  } catch (err: any) {
-    console.error('SMS gönderme hatası:', err)
-    return { success: false, error: err.message }
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'SMS gönderilemedi'
+    log.error({ err, businessId }, 'SMS gönderme hatası')
+    return { success: false, error: message }
   }
 }
 

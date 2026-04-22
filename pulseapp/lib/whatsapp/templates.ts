@@ -19,15 +19,131 @@ export type WhatsAppTemplateType =
   | 'follow_up'
   | 'post_care'
 
-interface TemplateParams {
+export type WhatsAppTemplateCategory = 'randevu' | 'dogum_gunu' | 'follow_up' | 'kampanya'
+
+export interface TemplateParams {
   customerName: string
   businessName: string
   [key: string]: string
 }
 
-interface WhatsAppTemplate {
+/**
+ * Placeholder metadata — UI'da form alanı olarak gösterilir.
+ * `customerName` + `businessName` otomatik doldurulduğu için burada listelenmez.
+ */
+export interface TemplatePlaceholder {
+  key: string
+  label: string
+  required: boolean
+  placeholder?: string
+}
+
+export interface TemplateMeta {
   type: WhatsAppTemplateType
-  generate: (params: TemplateParams) => string
+  label: string
+  category: WhatsAppTemplateCategory
+  placeholders: TemplatePlaceholder[]
+}
+
+export const TEMPLATE_CATEGORY_LABELS: Record<WhatsAppTemplateCategory, string> = {
+  randevu: 'Randevu',
+  dogum_gunu: 'Doğum Günü',
+  follow_up: 'Takip / Bakım',
+  kampanya: 'Kampanya',
+}
+
+/**
+ * Her template'in UI gösterimi için metadata.
+ * Kategori + Türkçe etiket + manuel doldurulacak placeholder listesi.
+ */
+export const TEMPLATE_META: Record<WhatsAppTemplateType, TemplateMeta> = {
+  appointment_reminder: {
+    type: 'appointment_reminder',
+    label: 'Randevu Hatırlatma',
+    category: 'randevu',
+    placeholders: [
+      { key: 'date', label: 'Tarih', required: true, placeholder: 'Örn: 24 Nisan 2026' },
+      { key: 'time', label: 'Saat', required: true, placeholder: 'Örn: 14:30' },
+      { key: 'serviceName', label: 'Hizmet Adı', required: false, placeholder: 'Örn: Lazer Epilasyon' },
+    ],
+  },
+  appointment_confirmation: {
+    type: 'appointment_confirmation',
+    label: 'Randevu Onayı',
+    category: 'randevu',
+    placeholders: [
+      { key: 'date', label: 'Tarih', required: true, placeholder: 'Örn: 24 Nisan 2026' },
+      { key: 'time', label: 'Saat', required: true, placeholder: 'Örn: 14:30' },
+      { key: 'serviceName', label: 'Hizmet Adı', required: false, placeholder: 'Örn: Botoks' },
+    ],
+  },
+  appointment_confirmation_request: {
+    type: 'appointment_confirmation_request',
+    label: 'Randevu Onay Talebi (Evet/Hayır)',
+    category: 'randevu',
+    placeholders: [
+      { key: 'date', label: 'Tarih', required: true, placeholder: 'Örn: 24 Nisan 2026' },
+      { key: 'time', label: 'Saat', required: true, placeholder: 'Örn: 14:30' },
+      { key: 'serviceName', label: 'Hizmet Adı', required: false, placeholder: 'Örn: Dolgu' },
+    ],
+  },
+  booking_confirmation: {
+    type: 'booking_confirmation',
+    label: 'Rezervasyon Oluşturuldu',
+    category: 'randevu',
+    placeholders: [
+      { key: 'date', label: 'Tarih', required: true, placeholder: 'Örn: 24 Nisan 2026' },
+      { key: 'time', label: 'Saat', required: true, placeholder: 'Örn: 14:30' },
+      { key: 'bookingUrl', label: 'Yönetim Linki', required: false, placeholder: 'https://…/book/manage/…' },
+    ],
+  },
+  cancellation_notice: {
+    type: 'cancellation_notice',
+    label: 'Randevu İptali',
+    category: 'randevu',
+    placeholders: [
+      { key: 'date', label: 'Tarih', required: true, placeholder: 'Örn: 24 Nisan 2026' },
+      { key: 'time', label: 'Saat', required: true, placeholder: 'Örn: 14:30' },
+    ],
+  },
+  birthday: {
+    type: 'birthday',
+    label: 'Doğum Günü Kutlaması',
+    category: 'dogum_gunu',
+    placeholders: [],
+  },
+  follow_up: {
+    type: 'follow_up',
+    label: 'Seans Sonrası Takip',
+    category: 'follow_up',
+    placeholders: [
+      { key: 'serviceName', label: 'Hizmet / Tedavi', required: false, placeholder: 'Örn: Botoks' },
+      { key: 'message', label: 'Kişisel Mesaj', required: false, placeholder: 'Nasıl hissediyorsunuz? Herhangi bir şikayetiniz var mı?' },
+    ],
+  },
+  post_care: {
+    type: 'post_care',
+    label: 'Bakım Talimatları',
+    category: 'follow_up',
+    placeholders: [
+      { key: 'serviceName', label: 'Hizmet / Tedavi', required: false, placeholder: 'Örn: Lazer' },
+      { key: 'message', label: 'Talimatlar', required: true, placeholder: '• 24 saat güneşe çıkmayın\n• Sıcak su ile yıkamayın' },
+    ],
+  },
+  review_request: {
+    type: 'review_request',
+    label: 'Yorum / Değerlendirme İsteği',
+    category: 'kampanya',
+    placeholders: [
+      { key: 'reviewUrl', label: 'Değerlendirme Linki', required: false, placeholder: 'https://g.page/r/…' },
+    ],
+  },
+  winback: {
+    type: 'winback',
+    label: 'Geri Kazanım (Winback)',
+    category: 'kampanya',
+    placeholders: [],
+  },
 }
 
 const templates: Record<WhatsAppTemplateType, (params: TemplateParams) => string> = {
@@ -79,3 +195,6 @@ export function generateWhatsAppMessage(
 export function getAvailableTemplates(): WhatsAppTemplateType[] {
   return Object.keys(templates) as WhatsAppTemplateType[]
 }
+
+/** Zod enum / runtime kontrol için tuple biçiminde template tipleri — `WhatsAppTemplateType` ile tek kaynak. */
+export const WA_TEMPLATE_TYPES = Object.keys(TEMPLATE_META) as [WhatsAppTemplateType, ...WhatsAppTemplateType[]]

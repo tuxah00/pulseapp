@@ -1,4 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { createLogger } from '@/lib/utils/logger'
+
+const log = createLogger({ module: 'whatsapp/send' })
 
 interface SendWhatsAppParams {
   to: string
@@ -7,6 +10,10 @@ interface SendWhatsAppParams {
   customerId?: string
   messageType?: 'text' | 'template' | 'ai_generated' | 'system'
   mediaUrl?: string
+  staffId?: string
+  staffName?: string
+  templateName?: string
+  templateParams?: Record<string, string>
 }
 
 interface SendWhatsAppResult {
@@ -23,14 +30,17 @@ interface SendWhatsAppResult {
  * Production: Meta Business onayı + Twilio WA sender ayarı gerekir.
  */
 export async function sendWhatsApp(params: SendWhatsAppParams): Promise<SendWhatsAppResult> {
-  const { to, body, businessId, customerId, messageType = 'text', mediaUrl } = params
+  const {
+    to, body, businessId, customerId, messageType = 'text', mediaUrl,
+    staffId, staffName, templateName, templateParams,
+  } = params
 
   const accountSid = process.env.TWILIO_ACCOUNT_SID
   const authToken = process.env.TWILIO_AUTH_TOKEN
   const waNumber = process.env.TWILIO_WHATSAPP_NUMBER
 
   if (!accountSid || !authToken || !waNumber) {
-    console.warn('Twilio WhatsApp credentials eksik, mesaj atlanıyor')
+    log.warn({ businessId }, 'Twilio WhatsApp credentials eksik, mesaj atlanıyor')
     return { success: false, error: 'WhatsApp yapılandırılmamış' }
   }
 
@@ -63,7 +73,7 @@ export async function sendWhatsApp(params: SendWhatsAppParams): Promise<SendWhat
     const data = await response.json()
 
     if (!response.ok) {
-      console.error('Twilio WhatsApp hatası:', data)
+      log.error({ businessId, twilio: data }, 'Twilio WhatsApp hatası')
       return { success: false, error: data.message || 'WhatsApp mesajı gönderilemedi' }
     }
 
@@ -79,12 +89,17 @@ export async function sendWhatsApp(params: SendWhatsAppParams): Promise<SendWhat
       twilio_sid: data.sid,
       twilio_status: data.status,
       meta_message_id: data.sid,
+      staff_id: staffId || null,
+      staff_name: staffName || null,
+      template_name: templateName || null,
+      template_params: templateParams || null,
     })
 
     return { success: true, messageSid: data.sid }
-  } catch (err: any) {
-    console.error('WhatsApp gönderme hatası:', err)
-    return { success: false, error: err.message }
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'WhatsApp gönderilemedi'
+    log.error({ err, businessId }, 'WhatsApp gönderme hatası')
+    return { success: false, error: message }
   }
 }
 

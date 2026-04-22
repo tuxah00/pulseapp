@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requirePortalSession } from '@/lib/portal/guards'
+import { validateBody } from '@/lib/api/validate'
+import { portalFeedbackCreateSchema } from '@/lib/schemas'
+import { createLogger } from '@/lib/utils/logger'
 
-const VALID_TYPES = new Set(['suggestion', 'complaint', 'praise', 'question'])
+const log = createLogger({ route: 'api/portal/feedback' })
 
 export async function GET(request: NextRequest) {
   const guard = requirePortalSession(request)
@@ -29,15 +32,9 @@ export async function POST(request: NextRequest) {
   if (guard instanceof NextResponse) return guard
   const { customerId, businessId } = guard
 
-  const body = await request.json().catch(() => null)
-  if (!body || typeof body.type !== 'string' || !VALID_TYPES.has(body.type)) {
-    return NextResponse.json({ error: 'Geçerli bir tip seçin' }, { status: 400 })
-  }
-  const message: string = typeof body.message === 'string' ? body.message.trim() : ''
-  if (!message || message.length < 5) {
-    return NextResponse.json({ error: 'Mesaj en az 5 karakter olmalı' }, { status: 400 })
-  }
-  const subject: string | null = typeof body.subject === 'string' ? body.subject.trim().slice(0, 200) || null : null
+  const parsed = await validateBody(request, portalFeedbackCreateSchema)
+  if (!parsed.ok) return parsed.response
+  const { type, message, subject = null } = parsed.data
 
   const admin = createAdminClient()
 
@@ -56,9 +53,9 @@ export async function POST(request: NextRequest) {
       customer_id: customerId,
       customer_name: customer?.name || null,
       customer_phone: customer?.phone || null,
-      type: body.type,
+      type,
       subject,
-      message: message.slice(0, 4000),
+      message,
       status: 'open',
       source: 'portal',
     })
@@ -66,7 +63,7 @@ export async function POST(request: NextRequest) {
     .single()
 
   if (error) {
-    console.error('[portal/feedback] insert error', error)
+    log.error({ err: error, businessId, customerId }, 'Geri bildirim kaydedilemedi')
     return NextResponse.json({ error: 'Geri bildirim kaydedilemedi' }, { status: 500 })
   }
 
@@ -78,7 +75,7 @@ export async function POST(request: NextRequest) {
       business_id: businessId,
       type: 'feedback',
       title: 'Yeni Geri Bildirim',
-      body: `${customer?.name || 'Müşteri'} — ${TYPE_LABELS[body.type] ?? body.type}${subject ? `: ${subject.slice(0, 60)}` : ''}`,
+      body: `${customer?.name || 'Müşteri'} — ${TYPE_LABELS[type] ?? type}${subject ? `: ${subject.slice(0, 60)}` : ''}`,
       related_id: created.id,
       related_type: 'feedback',
       is_read: false,

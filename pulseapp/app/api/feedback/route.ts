@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { logAuditServer } from '@/lib/utils/audit'
+import { validateBody } from '@/lib/api/validate'
+import { feedbackPatchSchema } from '@/lib/schemas'
+import { createLogger } from '@/lib/utils/logger'
 
-const VALID_TYPES = new Set(['suggestion', 'complaint', 'praise', 'question'])
-const VALID_STATUSES = new Set(['open', 'in_progress', 'resolved', 'closed'])
+const log = createLogger({ route: 'api/feedback' })
 
 async function getStaffInfo(
   supabase: ReturnType<typeof createServerSupabaseClient>,
@@ -52,19 +54,9 @@ export async function PATCH(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
 
-  const body = await request.json().catch(() => null)
-  if (!body) return NextResponse.json({ error: 'Geçersiz istek' }, { status: 400 })
-
-  const { businessId, id, response, status } = body as {
-    businessId?: string
-    id?: string
-    response?: string | null
-    status?: string
-  }
-
-  if (!businessId || !id) {
-    return NextResponse.json({ error: 'businessId ve id zorunlu' }, { status: 400 })
-  }
+  const parsed = await validateBody(request, feedbackPatchSchema)
+  if (!parsed.ok) return parsed.response
+  const { businessId, id, response, status } = parsed.data
 
   const staff = await getStaffInfo(supabase, user.id, businessId)
   if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
@@ -72,26 +64,17 @@ export async function PATCH(request: NextRequest) {
   const update: Record<string, unknown> = {}
   const details: Record<string, string | number | boolean | null> = {}
 
-  if (typeof response === 'string') {
-    const trimmed = response.trim()
-    if (!trimmed) {
-      return NextResponse.json({ error: 'Yanıt boş olamaz' }, { status: 400 })
-    }
-    update.response = trimmed.slice(0, 4000)
+  if (response !== undefined) {
+    update.response = response
     update.responded_at = new Date().toISOString()
     update.responded_by_staff_id = staff.id
-    update.status = status && VALID_STATUSES.has(status) ? status : 'resolved'
+    update.status = status ?? 'resolved'
     details.action = 'respond'
     details.status = String(update.status)
   } else if (status) {
-    if (!VALID_STATUSES.has(status)) {
-      return NextResponse.json({ error: 'Geçersiz durum' }, { status: 400 })
-    }
     update.status = status
     details.action = 'status_change'
     details.status = status
-  } else {
-    return NextResponse.json({ error: 'response veya status gerekli' }, { status: 400 })
   }
 
   const { data, error } = await supabase
@@ -102,7 +85,10 @@ export async function PATCH(request: NextRequest) {
     .select()
     .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    log.error({ err: error, businessId, id }, 'Geri bildirim güncellenemedi')
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
 
   await logAuditServer({
     businessId,

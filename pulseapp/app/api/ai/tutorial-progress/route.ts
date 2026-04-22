@@ -1,11 +1,17 @@
 import { NextRequest } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
+import { validateBody } from '@/lib/api/validate'
+import { aiTutorialProgressSchema } from '@/lib/schemas'
+import { createLogger } from '@/lib/utils/logger'
 import type { TutorialProgress } from '@/types'
+
+const log = createLogger({ route: 'api/ai/tutorial-progress' })
 
 export const runtime = 'nodejs'
 
-async function getStaffRow(req: NextRequest) {
+async function getStaffRow() {
   const supabase = createServerSupabaseClient()
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) return { error: 'auth' as const }
@@ -24,14 +30,16 @@ async function getStaffRow(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  const res = await getStaffRow(req)
+  const rl = checkRateLimit(req, RATE_LIMITS.general)
+  if (rl.limited) return rl.response
+
+  const res = await getStaffRow()
   if ('error' in res) {
     const status = res.error === 'auth' ? 401 : 403
     return Response.json({ error: res.error }, { status })
   }
 
   const progress = (res.staff.tutorial_progress as TutorialProgress) || {}
-  // Varsayılan: yeni personel için enabled=true
   const normalized: TutorialProgress = {
     enabled: progress.enabled ?? true,
     setup_completed_at: progress.setup_completed_at ?? null,
@@ -42,26 +50,29 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const res = await getStaffRow(req)
+  const rl = checkRateLimit(req, RATE_LIMITS.general)
+  if (rl.limited) return rl.response
+
+  const res = await getStaffRow()
   if ('error' in res) {
     const status = res.error === 'auth' ? 401 : 403
     return Response.json({ error: res.error }, { status })
   }
 
-  const body = await req.json().catch(() => ({}))
-  const incoming = body as Partial<TutorialProgress> & { resetSeen?: boolean }
+  const parsed = await validateBody(req, aiTutorialProgressSchema)
+  if (!parsed.ok) return parsed.response
+  const { enabled, setup_completed_at, dismissed_at, seen_pages, resetSeen } = parsed.data
 
   const current = (res.staff.tutorial_progress as TutorialProgress) || {}
   const merged: TutorialProgress = { ...current }
 
-  if (typeof incoming.enabled === 'boolean') merged.enabled = incoming.enabled
-  if (incoming.setup_completed_at !== undefined) merged.setup_completed_at = incoming.setup_completed_at
-  if (incoming.dismissed_at !== undefined) merged.dismissed_at = incoming.dismissed_at
+  if (typeof enabled === 'boolean') merged.enabled = enabled
+  if (setup_completed_at !== undefined) merged.setup_completed_at = setup_completed_at
+  if (dismissed_at !== undefined) merged.dismissed_at = dismissed_at
 
-  if (Array.isArray(incoming.seen_pages)) {
-    // Tam seti değiştir (sıfırlama için boş dizi gelebilir)
-    merged.seen_pages = incoming.seen_pages
-  } else if (incoming.resetSeen) {
+  if (Array.isArray(seen_pages)) {
+    merged.seen_pages = seen_pages
+  } else if (resetSeen) {
     merged.seen_pages = []
     merged.setup_completed_at = null
   }
@@ -72,6 +83,7 @@ export async function PATCH(req: NextRequest) {
     .eq('id', res.staff.id)
 
   if (upErr) {
+    log.error({ err: upErr, staffId: res.staff.id }, 'Tutorial progress güncellenemedi')
     return Response.json({ error: upErr.message }, { status: 500 })
   }
 

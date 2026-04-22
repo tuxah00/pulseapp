@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { verifyCronAuth } from '@/lib/api/verify-cron'
 import { executePendingAction } from '@/lib/ai/assistant-actions'
+import { createLogger } from '@/lib/utils/logger'
+
+const log = createLogger({ route: 'api/cron/ai-scheduled-runner' })
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -50,7 +53,7 @@ export async function GET(request: NextRequest) {
       const res = await executePendingAction(admin, action.id, ctx)
       return { id: action.id, ok: res.ok, message: res.message }
     } catch (err: any) {
-      console.error(`[ai-scheduled-runner] ${action.id} failed:`, err)
+      log.error({ err, actionId: action.id }, '[ai-scheduled-runner] action failed')
       await admin
         .from('ai_pending_actions')
         .update({ status: 'failed', result: { ok: false, message: err?.message || 'runner error' } })

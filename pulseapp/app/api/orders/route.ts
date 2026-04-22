@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { parsePaginationParams } from '@/lib/api/validate'
+import { createLogger } from '@/lib/utils/logger'
+
+const log = createLogger({ route: 'api/orders' })
 
 export async function GET(req: NextRequest) {
   try {
@@ -34,7 +37,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ orders: data || [], total: count || 0 })
   } catch (err) {
-    console.error('Orders GET error:', err)
+    log.error({ err }, 'Orders GET error')
     return NextResponse.json({ error: 'Siparişler alınamadı' }, { status: 500 })
   }
 }
@@ -71,30 +74,35 @@ export async function POST(req: NextRequest) {
 
     if (error) throw error
 
-    // Decrease stock for each item
-    for (const item of (items || [])) {
-      if (item.product_id && item.quantity) {
-        try {
-          const { data: product } = await supabase
-            .from('products')
-            .select('stock_count')
-            .eq('id', item.product_id)
-            .single()
-          if (product) {
-            await supabase
+    // Decrease stock for items that have a product_id — single batch SELECT then parallel UPDATEs
+    const stockItems = (items || []).filter((item: { product_id?: string; quantity?: number }) => item.product_id && item.quantity)
+    if (stockItems.length > 0) {
+      const productIds = stockItems.map((item: { product_id: string }) => item.product_id)
+      const { data: products } = await supabase
+        .from('products')
+        .select('id, stock_count')
+        .in('id', productIds)
+        .eq('business_id', staff.business_id)
+
+      if (products && products.length > 0) {
+        const stockMap = new Map(products.map((p: { id: string; stock_count: number }) => [p.id, p.stock_count || 0]))
+        await Promise.all(
+          stockItems.map((item: { product_id: string; quantity: number }) => {
+            const current = stockMap.get(item.product_id)
+            if (current === undefined) return Promise.resolve()
+            return supabase
               .from('products')
-              .update({ stock_count: Math.max(0, (product.stock_count || 0) - item.quantity) })
+              .update({ stock_count: Math.max(0, current - item.quantity) })
               .eq('id', item.product_id)
-          }
-        } catch {
-          // Stock update failed, continue
-        }
+              .eq('business_id', staff.business_id)
+          })
+        )
       }
     }
 
     return NextResponse.json({ order: data })
   } catch (err) {
-    console.error('Orders POST error:', err)
+    log.error({ err }, 'Orders POST error')
     return NextResponse.json({ error: 'Sipariş oluşturulamadı' }, { status: 500 })
   }
 }
@@ -135,7 +143,7 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ order: data })
   } catch (err) {
-    console.error('Orders PATCH error:', err)
+    log.error({ err }, 'Orders PATCH error')
     return NextResponse.json({ error: 'Güncelleme başarısız' }, { status: 500 })
   }
 }
@@ -167,7 +175,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (err) {
-    console.error('Orders DELETE error:', err)
+    log.error({ err }, 'Orders DELETE error')
     return NextResponse.json({ error: 'Silme başarısız' }, { status: 500 })
   }
 }

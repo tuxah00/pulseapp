@@ -3,6 +3,11 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { executePendingAction, cancelPendingAction } from '@/lib/ai/assistant-actions'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
+import { validateBody } from '@/lib/api/validate'
+import { aiActionConfirmSchema } from '@/lib/schemas'
+import { createLogger } from '@/lib/utils/logger'
+
+const log = createLogger({ route: 'api/ai/assistant/confirm' })
 
 export const runtime = 'nodejs'
 
@@ -29,23 +34,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Personel kaydı bulunamadı' }, { status: 403 })
   }
 
-  const body = await req.json()
-  const { action_id, decision } = body as { action_id: string; decision: 'confirm' | 'cancel' }
-
-  if (!action_id || !['confirm', 'cancel'].includes(decision)) {
-    return NextResponse.json({ error: 'Geçersiz istek' }, { status: 400 })
-  }
+  const parsed = await validateBody(req, aiActionConfirmSchema)
+  if (!parsed.ok) return parsed.response
+  const { action_id, decision } = parsed.data
 
   if (decision === 'cancel') {
     const res = await cancelPendingAction(admin, action_id, staff.id)
     return NextResponse.json(res)
   }
 
-  const result = await executePendingAction(admin, action_id, {
-    staffId: staff.id,
-    businessId: staff.business_id,
-    staffName: staff.name,
-  })
-
-  return NextResponse.json(result)
+  try {
+    const result = await executePendingAction(admin, action_id, {
+      staffId: staff.id,
+      businessId: staff.business_id,
+      staffName: staff.name,
+    })
+    return NextResponse.json(result)
+  } catch (err) {
+    log.error({ err, action_id }, 'AI aksiyon yürütme hatası')
+    return NextResponse.json({ error: 'Aksiyon yürütülemedi' }, { status: 500 })
+  }
 }

@@ -4,6 +4,9 @@ import { getAnthropicClient, AI_MODEL, MAX_TOKENS } from '@/lib/ai/client'
 import { getClassifySystemPrompt } from '@/lib/ai/prompts'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
 import type { AiClassification } from '@/types'
+import { createLogger } from '@/lib/utils/logger'
+
+const log = createLogger({ route: 'api/ai/classify' })
 
 const VALID_CLASSIFICATIONS: AiClassification[] = [
   'appointment', 'question', 'complaint', 'cancellation', 'greeting', 'other',
@@ -73,8 +76,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result)
   } catch (error) {
-    console.error('AI classify hatası:', error)
     const message = error instanceof Error ? error.message : String(error)
+    log.error({ err: error }, 'AI classify hatası')
     return NextResponse.json(
       { error: 'AI sınıflandırma hatası', details: message },
       { status: 500 }

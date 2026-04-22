@@ -3,24 +3,28 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { sendMessage } from '@/lib/messaging/send'
 import { withPermission } from '@/lib/api/with-permission'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
-import type { MessageChannel } from '@/types'
+import { validateBody } from '@/lib/api/validate'
+import { messageSendSchema } from '@/lib/schemas'
+import { createLogger } from '@/lib/utils/logger'
+
+const log = createLogger({ route: 'api/messages/send' })
 
 export const POST = withPermission('messages', async (req: NextRequest, ctx) => {
-  // Rate limit kontrolü
   const rl = checkRateLimit(req, RATE_LIMITS.messaging)
   if (rl.limited) return rl.response
 
+  const parsed = await validateBody(req, messageSendSchema)
+  if (!parsed.ok) return parsed.response
+  const {
+    customerId,
+    content,
+    messageType = 'text',
+    channel = 'auto',
+    templateName,
+    templateParams,
+  } = parsed.data
+
   try {
-    const body = await req.json()
-    const { customerId, content, messageType = 'text', channel = 'auto' } = body
-
-    if (!customerId || !content) {
-      return NextResponse.json(
-        { error: 'customerId ve content gerekli' },
-        { status: 400 },
-      )
-    }
-
     const supabase = createServerSupabaseClient()
 
     const { data: customer } = await supabase
@@ -35,22 +39,25 @@ export const POST = withPermission('messages', async (req: NextRequest, ctx) => 
       return NextResponse.json({ error: 'Müşteri bulunamadı' }, { status: 404 })
     }
 
-    // Birleşik mesaj gönderim — kanal otomatik veya manuel seçilebilir
+    // Telefonu olan müşteriler için SMS/WhatsApp kanalı
     if (customer.phone) {
       const result = await sendMessage({
         to: customer.phone,
         body: content,
         businessId: ctx.businessId,
         customerId,
-        messageType: messageType as any,
-        channel: channel as MessageChannel | 'auto',
+        messageType,
+        channel,
+        staffId: ctx.staffId,
+        staffName: ctx.staffName,
+        templateName,
+        templateParams,
       })
 
       return NextResponse.json({
         success: result.success,
         channel: result.channel,
         messageSid: result.messageSid,
-        staffName: ctx.staffId,
         error: result.error,
       })
     }
@@ -64,9 +71,13 @@ export const POST = withPermission('messages', async (req: NextRequest, ctx) => 
       message_type: messageType,
       content,
       staff_id: ctx.staffId,
+      staff_name: ctx.staffName,
+      template_name: templateName ?? null,
+      template_params: templateParams ?? null,
     })
 
     if (dbError) {
+      log.error({ err: dbError, businessId: ctx.businessId }, 'Mesaj DB kaydı hatası')
       return NextResponse.json(
         { error: 'Mesaj kaydetme hatası', details: dbError.message },
         { status: 500 },
@@ -74,10 +85,11 @@ export const POST = withPermission('messages', async (req: NextRequest, ctx) => 
     }
 
     return NextResponse.json({ success: true, channel: 'web' })
-  } catch (error: any) {
-    console.error('Mesaj gönderme API hatası:', error)
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Mesaj gönderilemedi'
+    log.error({ err, businessId: ctx.businessId }, 'Mesaj gönderme API hatası')
     return NextResponse.json(
-      { error: 'Mesaj gönderme hatası', details: error.message },
+      { error: 'Mesaj gönderme hatası', details: message },
       { status: 500 },
     )
   }

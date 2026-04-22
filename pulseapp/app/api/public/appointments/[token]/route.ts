@@ -5,6 +5,9 @@ import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
 import { validateBody } from '@/lib/api/validate'
 import { publicAppointmentPatchSchema, publicAppointmentDeleteSchema } from '@/lib/schemas'
 import { sendSMS } from '@/lib/sms/send'
+import { createLogger } from '@/lib/utils/logger'
+
+const log = createLogger({ route: 'api/public/appointments/[token]' })
 
 // GET: Token ile randevu bilgilerini getir (public — auth gerektirmez)
 export async function GET(_request: NextRequest, { params }: { params: { token: string } }) {
@@ -240,7 +243,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { token
       }
     }
   } catch (err) {
-    console.error('Bekleme listesi bildirim hatası:', err)
+    log.error({ err }, 'Bekleme listesi bildirim hatası')
     // Hata işlemi etkilemez
   }
 

@@ -50,11 +50,14 @@ const ToothChart = dynamic(() => import('@/components/dashboard/tooth-chart'), {
 
 import { isBirthdayToday } from '@/lib/utils/birthday'
 import { useConfirm } from '@/lib/hooks/use-confirm'
+const GalleryTab = dynamic(() => import('@/components/customers/gallery-tab').then(m => m.GalleryTab), {
+  loading: () => <div className="h-40 w-full animate-pulse bg-gray-100 dark:bg-gray-800 rounded-lg" />
+})
 
 const VALID_SEGMENTS: CustomerSegment[] = ['new', 'regular', 'vip', 'risk', 'lost']
 
 export default function CustomersPage() {
-  const { businessId, staffId, staffName, loading: ctxLoading, sector } = useBusinessContext()
+  const { businessId, staffId, staffName, loading: ctxLoading, sector, writePermissions } = useBusinessContext()
   const { confirm } = useConfirm()
   const searchParams = useSearchParams()
   const customerLabel = sector ? getCustomerLabel(sector) : 'Müşteriler'
@@ -102,7 +105,7 @@ export default function CustomersPage() {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
 
   // Timeline state
-  const [panelTab, setPanelTab] = useState<'info' | 'history' | 'teeth'>('info')
+  const [panelTab, setPanelTab] = useState<'info' | 'history' | 'teeth' | 'gallery'>('info')
   const [timeline, setTimeline] = useState<TimelineItem[]>([])
   const [timelineLoading, setTimelineLoading] = useState(false)
 
@@ -925,6 +928,19 @@ export default function CustomersPage() {
                   Diş Haritası
                 </button>
               )}
+              {sector === 'medical_aesthetic' && (
+                <button
+                  onClick={() => setPanelTab('gallery')}
+                  className={cn(
+                    'flex-1 py-2.5 text-sm font-medium text-center transition-colors',
+                    panelTab === 'gallery'
+                      ? 'text-pulse-900 border-b-2 border-pulse-900'
+                      : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                  )}
+                >
+                  Galeri
+                </button>
+              )}
             </div>
 
             <div className="flex-1 overflow-y-auto p-5 space-y-5">
@@ -1238,6 +1254,14 @@ export default function CustomersPage() {
                     businessId={businessId}
                     customerId={selectedCustomer.id}
                     staffId={staffId ?? null}
+                  />
+                ) : null
+              ) : panelTab === 'gallery' && sector === 'medical_aesthetic' ? (
+                /* ── Öncesi/Sonrası Galeri ── */
+                selectedCustomer ? (
+                  <GalleryTab
+                    customerId={selectedCustomer.id}
+                    canWrite={writePermissions?.customers ?? false}
                   />
                 ) : null
               ) : (

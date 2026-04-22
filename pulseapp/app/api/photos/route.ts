@@ -1,33 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-
-async function verifyMembership(supabase: ReturnType<typeof createServerSupabaseClient>, userId: string, businessId: string) {
-  const { data } = await supabase
-    .from('staff_members')
-    .select('id, business_id')
-    .eq('user_id', userId)
-    .eq('business_id', businessId)
-    .single()
-  return data
-}
+import { requirePermission, requireWritePermission } from '@/lib/api/with-permission'
 
 // GET: Fotoğraf listesi (müşteri veya protokol bazlı)
 export async function GET(request: NextRequest) {
-  const supabase = createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
+  const auth = await requirePermission(request, 'customers')
+  if (!auth.ok) return auth.response
+  const { businessId } = auth.ctx
 
   const { searchParams } = new URL(request.url)
-  const businessId = searchParams.get('businessId')
   const customerId = searchParams.get('customerId')
   const protocolId = searchParams.get('protocolId')
   const photoType = searchParams.get('photoType')
 
-  if (!businessId) return NextResponse.json({ error: 'businessId gerekli' }, { status: 400 })
-
-  const staff = await verifyMembership(supabase, user.id, businessId)
-  if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
-
+  const supabase = createServerSupabaseClient()
   let query = supabase
     .from('customer_photos')
     .select('*')
@@ -43,22 +29,20 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ photos: data })
 }
 
-// POST: Fotoğraf yükle (URL kaydı — upload Supabase Storage üzerinden yapılır)
+// POST: Fotoğraf kaydet (upload Supabase Storage üzerinden /api/photos/upload ile yapılır)
 export async function POST(request: NextRequest) {
-  const supabase = createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
+  const auth = await requireWritePermission(request, 'customers')
+  if (!auth.ok) return auth.response
+  const { businessId, staffId } = auth.ctx
 
   const body = await request.json()
-  const { businessId, customerId, protocolId, sessionId, photoUrl, photoType, tags, notes, takenAt } = body
+  const { customerId, protocolId, sessionId, pairId, photoUrl, photoType, tags, notes, takenAt, isPublic, aiAnalysis } = body
 
-  if (!businessId || !customerId || !photoUrl || !photoType) {
-    return NextResponse.json({ error: 'businessId, customerId, photoUrl, photoType zorunlu' }, { status: 400 })
+  if (!customerId || !photoUrl || !photoType) {
+    return NextResponse.json({ error: 'customerId, photoUrl, photoType zorunlu' }, { status: 400 })
   }
 
-  const staff = await verifyMembership(supabase, user.id, businessId)
-  if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
-
+  const supabase = createServerSupabaseClient()
   const { data, error } = await supabase
     .from('customer_photos')
     .insert({
@@ -66,12 +50,15 @@ export async function POST(request: NextRequest) {
       customer_id: customerId,
       protocol_id: protocolId || null,
       session_id: sessionId || null,
+      pair_id: pairId || null,
       photo_url: photoUrl,
       photo_type: photoType,
       tags: tags || [],
       notes: notes || null,
       taken_at: takenAt || new Date().toISOString().split('T')[0],
-      uploaded_by: staff.id,
+      uploaded_by: staffId,
+      is_public: typeof isPublic === 'boolean' ? isPublic : false,
+      ai_analysis: aiAnalysis ?? null,
     })
     .select()
     .single()
