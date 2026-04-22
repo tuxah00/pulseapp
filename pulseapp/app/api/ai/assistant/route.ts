@@ -9,6 +9,7 @@ import { buildAssistantSystemPrompt, buildOnboardingSystemPrompt, buildPageTutor
 import { findTopicByKey } from '@/lib/ai/tutorial-content'
 import { ASSISTANT_TOOLS, TOOL_LABELS, executeAssistantTool } from '@/lib/ai/assistant-tools'
 import { filterAssistantTools } from '@/lib/ai/tool-categories'
+import { loadToolsForSector, getLoadedSkillIds } from '@/lib/ai/skills/loader'
 import { deriveBlocksFromToolResult } from '@/lib/ai/assistant-blocks'
 import { AI_LIMITS } from '@/lib/ai/assistant-limits'
 import { fetchMacroContext, macroContextForPrompt } from '@/lib/analytics/macro-context'
@@ -223,8 +224,13 @@ export async function POST(req: NextRequest) {
 
   // 9. Stream response
   const openai = getOpenAIClient()
+  // Faz 3: Önce sektöre göre ilgili araçları yükle (bağlamı küçültür, token tasarrufu)
+  const sectorTools = loadToolsForSector(sectorValue, ASSISTANT_TOOLS)
+  log.info({ sector: sectorValue, skills: getLoadedSkillIds(sectorValue), total: sectorTools.length }, '[assistant] skill paketleri yüklendi')
+
+  // Sonra yetki kesişim filtresi uygula (business ai_permissions + kullanıcı yetkisi)
   const allowedTools = filterAssistantTools(
-    ASSISTANT_TOOLS,
+    sectorTools,
     biz?.settings?.ai_permissions ?? null,
     permissions,
   )
