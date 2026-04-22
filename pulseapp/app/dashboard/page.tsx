@@ -215,7 +215,6 @@ export default async function DashboardPage() {
           value={s.today_appointments}
           subtitle={`${s.today_completed} tamamlandı`}
           icon={<Calendar className="h-5 w-5" />}
-          gradient="from-blue-500 to-indigo-600"
           bgLight="bg-blue-50 dark:bg-blue-950/40"
           iconBg="bg-blue-500/10 dark:bg-blue-500/20"
           iconColor="text-blue-600 dark:text-blue-400"
@@ -226,7 +225,6 @@ export default async function DashboardPage() {
           value={weeklyAppointments.length}
           subtitle={`${weekDayNames[0]}–${weekDayNames[6]} aktif`}
           icon={<Calendar className="h-5 w-5" />}
-          gradient="from-emerald-500 to-teal-600"
           bgLight="bg-emerald-50 dark:bg-emerald-950/40"
           iconBg="bg-emerald-500/10 dark:bg-emerald-500/20"
           iconColor="text-emerald-600 dark:text-emerald-400"
@@ -237,7 +235,6 @@ export default async function DashboardPage() {
           value={s.avg_rating ? `${Number(s.avg_rating).toFixed(1)} ★` : '—'}
           subtitle={`${s.total_reviews} yorum`}
           icon={<Star className="h-5 w-5" />}
-          gradient="from-amber-500 to-orange-600"
           bgLight="bg-amber-50 dark:bg-amber-950/40"
           iconBg="bg-amber-500/10 dark:bg-amber-500/20"
           iconColor="text-amber-600 dark:text-amber-400"
@@ -249,7 +246,6 @@ export default async function DashboardPage() {
           value={riskCustomers.length}
           subtitle={riskCustomers.length > 0 ? 'dikkat gerektiren' : 'sorun yok'}
           icon={<AlertTriangle className="h-5 w-5" />}
-          gradient={riskCustomers.length > 0 ? 'from-rose-500 to-pink-600' : 'from-gray-400 to-gray-500'}
           bgLight={riskCustomers.length > 0 ? 'bg-rose-50 dark:bg-rose-950/40' : 'bg-gray-50 dark:bg-gray-900/40'}
           iconBg={riskCustomers.length > 0 ? 'bg-rose-500/10 dark:bg-rose-500/20' : 'bg-gray-500/10 dark:bg-gray-500/20'}
           iconColor={riskCustomers.length > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-gray-500 dark:text-gray-400'}
@@ -324,48 +320,42 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Online randevu linki */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-pulse-900 to-indigo-600 px-5 py-4 shadow-lg shadow-pulse-900/20">
-        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
-        <div className="relative flex items-center gap-4">
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-white/70 uppercase tracking-wider mb-0.5">
-              Online Randevu Linkiniz
-            </p>
-            <p className="text-sm text-white/90 truncate font-mono">{bookingUrl}</p>
+      {/* Link kartları — Online Randevu + Müşteri Portalı */}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="flex items-center gap-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-3">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-pulse-50 dark:bg-pulse-900/20">
+            <Calendar className="h-4 w-4 text-pulse-900 dark:text-pulse-400" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-0.5">Online Randevu</p>
+            <p className="text-xs text-gray-700 dark:text-gray-300 truncate font-mono">{bookingUrl}</p>
           </div>
           <a
             href={bookingUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex-shrink-0 flex items-center gap-1.5 rounded-xl bg-white/20 hover:bg-white/30 px-3 py-2 text-xs font-semibold text-white transition-colors backdrop-blur-sm"
+            className="flex-shrink-0 flex items-center gap-1 rounded-lg border border-gray-200 dark:border-gray-700 px-2.5 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
           >
-            <ExternalLink className="h-3.5 w-3.5" />
+            <ExternalLink className="h-3 w-3" />
             Aç
           </a>
         </div>
-      </div>
-
-      {/* Müşteri portalı */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-purple-700 to-fuchsia-600 px-5 py-4 shadow-lg shadow-purple-900/20">
-        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
-        <div className="relative flex items-center gap-4">
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-white/70 uppercase tracking-wider mb-0.5">
-              Müşteri Self-Servis Portal
-            </p>
-            <p className="text-sm text-white/90 truncate font-mono">{portalUrl}</p>
-            <p className="text-[11px] text-white/60 mt-0.5">
-              Aç butonu — portalı mevcut bir müşteri olarak önizler.
-            </p>
+        <div className="flex items-center gap-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-3">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-50 dark:bg-gray-800">
+            <UserPlus className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-0.5">Müşteri Portalı</p>
+            <p className="text-xs text-gray-700 dark:text-gray-300 truncate font-mono">{portalUrl}</p>
+            <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">Önizle — mevcut müşteri olarak açar</p>
           </div>
           <a
             href={portalPreviewUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex-shrink-0 flex items-center gap-1.5 rounded-xl bg-white/20 hover:bg-white/30 px-3 py-2 text-xs font-semibold text-white transition-colors backdrop-blur-sm"
+            className="flex-shrink-0 flex items-center gap-1 rounded-lg border border-gray-200 dark:border-gray-700 px-2.5 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
           >
-            <ExternalLink className="h-3.5 w-3.5" />
+            <ExternalLink className="h-3 w-3" />
             Aç
           </a>
         </div>
@@ -493,7 +483,6 @@ function StatCard({
   value,
   subtitle,
   icon,
-  gradient,
   bgLight,
   iconBg,
   iconColor,
@@ -504,7 +493,6 @@ function StatCard({
   value: string | number
   subtitle?: string
   icon: React.ReactNode
-  gradient: string
   bgLight: string
   iconBg: string
   iconColor: string
@@ -531,7 +519,7 @@ function StatCard({
       </div>
 
       <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{title}</p>
-      <p className={`text-3xl font-bold bg-gradient-to-r ${gradient} bg-clip-text text-transparent`}>
+      <p className="text-3xl font-bold text-gray-900 dark:text-gray-50">
         {value}
       </p>
       {subtitle && (

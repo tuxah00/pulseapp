@@ -208,7 +208,7 @@ export default function NotificationsPage() {
                 onClick={() => handleClick(notif)}
                 className={cn(
                   'card flex items-start gap-3 cursor-pointer hover:border-gray-300 dark:hover:border-gray-500 transition-colors',
-                  !notif.is_read && 'border-l-4 border-l-blue-500 bg-blue-50/50 dark:bg-blue-900/10'
+                  !notif.is_read && 'bg-blue-50/60 dark:bg-blue-900/15 border-blue-100 dark:border-blue-800/40'
                 )}
               >
                 <div className={cn('mt-0.5 flex-shrink-0', config.color)}>

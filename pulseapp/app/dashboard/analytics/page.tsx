@@ -894,7 +894,7 @@ export default function AnalyticsPage() {
 
           {/* Gelir Ekleme Formu */}
           {showIncomeForm && (
-            <div className="card p-4 border-l-4 border-l-green-500">
+            <div className="card p-4 bg-green-50/30 dark:bg-green-950/10">
               <form onSubmit={handleAddIncome} className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -1347,7 +1347,7 @@ export default function AnalyticsPage() {
                   <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 border-t-2 border-dashed border-pulse-900 dark:border-pulse-400 inline-block" />Tahmin</span>
                   <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm inline-block" style={{ background: 'rgba(25,61,143,0.2)' }} />Belirsizlik bandı</span>
                 </div>
-                <div className="mt-3 flex items-start gap-2 text-[11px] text-gray-500 dark:text-gray-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">
+                <div className="mt-3 flex items-start gap-2 text-[11px] text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">
                   <Sparkles className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                   <span>
                     <span className="font-medium text-amber-900 dark:text-amber-200">Tahminler yaklaşıktır.</span>{' '}
@@ -1452,12 +1452,12 @@ function TrendBadge({ value }: { value: number }) {
 function KPICard({ icon, label, value, trend, color, currency }: {
   icon: React.ReactNode; label: string; value: string | number; trend?: number; color: string; currency?: boolean
 }) {
-  const colorMap: Record<string, { icon: string; bg: string; gradient: string }> = {
-    blue:   { icon: 'bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400',   bg: 'bg-blue-50 dark:bg-blue-950/40',   gradient: 'from-blue-500 to-indigo-600' },
-    green:  { icon: 'bg-green-500/10 dark:bg-green-500/20 text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-950/40', gradient: 'from-emerald-500 to-teal-600' },
-    purple: { icon: 'bg-purple-500/10 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-950/40', gradient: 'from-purple-500 to-violet-600' },
-    amber:  { icon: 'bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400',  bg: 'bg-amber-50 dark:bg-amber-950/40',  gradient: 'from-amber-500 to-orange-600' },
-    red:    { icon: 'bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400',        bg: 'bg-red-50 dark:bg-red-950/40',     gradient: 'from-red-500 to-rose-600' },
+  const colorMap: Record<string, { icon: string; bg: string }> = {
+    blue:   { icon: 'bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400',   bg: 'bg-blue-50 dark:bg-blue-950/40' },
+    green:  { icon: 'bg-green-500/10 dark:bg-green-500/20 text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-950/40' },
+    purple: { icon: 'bg-purple-500/10 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-950/40' },
+    amber:  { icon: 'bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400',  bg: 'bg-amber-50 dark:bg-amber-950/40' },
+    red:    { icon: 'bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400',        bg: 'bg-red-50 dark:bg-red-950/40' },
   }
   const cfg = colorMap[color] || colorMap.blue
   return (
@@ -1467,7 +1467,7 @@ function KPICard({ icon, label, value, trend, color, currency }: {
         {trend !== undefined && <TrendBadge value={trend} />}
       </div>
       <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{label}</p>
-      <p className={cn('text-2xl font-bold bg-gradient-to-r bg-clip-text text-transparent', cfg.gradient)}>{value}</p>
+      <p className="text-2xl font-bold text-gray-900 dark:text-gray-50">{value}</p>
     </div>
   )
 }
