@@ -1,6 +1,7 @@
 ﻿'use client'
 
 import { useEffect, useState, useRef, useCallback } from 'react'
+import NextImage from 'next/image'
 import { Portal } from '@/components/ui/portal'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { requirePermission, requireSectorModule } from '@/lib/hooks/use-require-permission'
@@ -317,11 +318,11 @@ export default function PortfolioPage() {
               {/* Image or placeholder */}
               <div className="aspect-square bg-gray-100 dark:bg-gray-700 relative overflow-hidden">
                 {item.image_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
+                  <NextImage
                     src={item.image_url}
                     alt={item.title}
-                    className="w-full h-full object-cover"
+                    fill
+                    className="object-cover"
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
@@ -418,10 +419,12 @@ export default function PortfolioPage() {
                   onChange={onFileChange}
                 />
                 {previewUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
+                  <NextImage
                     src={previewUrl}
                     alt="Önizleme"
+                    width={400}
+                    height={144}
+                    unoptimized
                     className="max-h-36 rounded-lg object-contain"
                   />
                 ) : (
@@ -551,9 +554,8 @@ export default function PortfolioPage() {
             <div className="px-6 py-4 space-y-4">
               {/* Image preview */}
               {analysisItem.image_url && (
-                <div className="rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={analysisItem.image_url} alt={analysisItem.title} className="w-full max-h-48 object-cover" />
+                <div className="rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 relative max-h-48">
+                  <NextImage src={analysisItem.image_url} alt={analysisItem.title} width={800} height={192} className="w-full object-cover" />
                 </div>
               )}
               <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{analysisItem.title}</p>

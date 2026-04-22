@@ -1,6 +1,7 @@
 ﻿'use client'
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
@@ -502,10 +503,12 @@ export default function BusinessSettingsPage() {
               <div className="flex items-center gap-5">
                 <div className="relative flex-shrink-0">
                   {settings.logo_url ? (
-                    <img
+                    <Image
                       src={settings.logo_url}
                       alt="Logo"
-                      className="h-20 w-20 rounded-2xl object-cover border border-gray-200 dark:border-gray-700"
+                      width={80}
+                      height={80}
+                      className="rounded-2xl object-cover border border-gray-200 dark:border-gray-700"
                     />
                   ) : (
                     <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-pulse-100 dark:bg-pulse-900/30 text-pulse-900 dark:text-pulse-400 text-2xl font-bold border-2 border-dashed border-pulse-300 dark:border-pulse-700">

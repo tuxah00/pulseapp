@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import { notFound, redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isValidUUID } from '@/lib/utils/validate'
@@ -62,11 +63,12 @@ export default async function PortalLoginPage({ params, searchParams }: PageProp
         <div className="text-center mb-7">
           {logoUrl ? (
             <div className="relative inline-block">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src={logoUrl}
                 alt={business.name}
-                className="h-20 w-20 rounded-3xl object-cover mx-auto shadow-2xl ring-4 ring-white/20"
+                width={80}
+                height={80}
+                className="rounded-3xl object-cover mx-auto shadow-2xl ring-4 ring-white/20"
               />
             </div>
           ) : (

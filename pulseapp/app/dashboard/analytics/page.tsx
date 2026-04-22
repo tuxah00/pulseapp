@@ -15,7 +15,7 @@ import { formatCurrency, cn, formatDateISO } from '@/lib/utils'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { requirePermission } from '@/lib/hooks/use-require-permission'
 import { SEGMENT_LABELS } from '@/types'
-import { exportToCSV } from '@/lib/utils/export'
+import { exportToCSV, exportAnalyticsPDF } from '@/lib/utils/export'
 import type { Expense, Income } from '@/types'
 import { expandRecurring } from '@/lib/utils/recurring'
 import type {
@@ -88,6 +88,7 @@ export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true)
   const [period, setPeriod] = useState<'week' | 'month' | 'year'>('month')
   const [activeTab, setActiveTab] = useState<AnalyticsTab>('overview')
+  const [exportingPDF, setExportingPDF] = useState(false)
 
   const [appointments, setAppointments] = useState<AnalyticsAppointment[]>([])
   const [prevAppointments, setPrevAppointments] = useState<PrevAppointment[]>([])
@@ -459,6 +460,26 @@ export default function AnalyticsPage() {
 
   const periodLabel = period === 'week' ? 'Son 7 Gün' : period === 'month' ? 'Son 30 Gün' : 'Son 1 Yıl'
 
+  async function handleExportPDF() {
+    setExportingPDF(true)
+    try {
+      const avgRatingNum = reviews.length > 0
+        ? reviews.reduce((s, r) => s + (r.rating || 0), 0) / reviews.length
+        : 0
+      await exportAnalyticsPDF({
+        periodLabel,
+        totalRevenue,
+        totalExpenses,
+        completedCount: completed.length,
+        totalCount: appointments.length,
+        avgRating: avgRatingNum,
+        topServices: serviceRevenueWithEstimates.slice(0, 10),
+      })
+    } finally {
+      setExportingPDF(false)
+    }
+  }
+
   return (
     <div className="space-y-5">
       {/* Başlık */}
@@ -467,15 +488,25 @@ export default function AnalyticsPage() {
           <h1 className="h-page">Gelir-Gider</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{periodLabel} · önceki dönemle karşılaştırmalı</p>
         </div>
-        <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
-          {([['week', '7 Gün'], ['month', '30 Gün'], ['year', '1 Yıl']] as const).map(([key, label]) => (
-            <button key={key} onClick={() => setPeriod(key)}
-              className={cn('px-3 py-1.5 rounded-lg text-sm font-medium transition-all',
-                period === key ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-              )}>
-              {label}
-            </button>
-          ))}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExportPDF}
+            disabled={exportingPDF || loading}
+            className="btn-secondary text-sm gap-1.5 disabled:opacity-60"
+          >
+            {exportingPDF ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+            PDF İndir
+          </button>
+          <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
+            {([['week', '7 Gün'], ['month', '30 Gün'], ['year', '1 Yıl']] as const).map(([key, label]) => (
+              <button key={key} onClick={() => setPeriod(key)}
+                className={cn('px-3 py-1.5 rounded-lg text-sm font-medium transition-all',
+                  period === key ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                )}>
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

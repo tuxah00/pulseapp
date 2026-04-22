@@ -1,6 +1,7 @@
 ﻿'use client'
 
 import { useState, useEffect, useCallback, Suspense, useMemo } from 'react'
+import NextImage from 'next/image'
 import { useSearchParams } from 'next/navigation'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useDebounce } from '@/lib/hooks/use-debounce'
@@ -339,10 +340,13 @@ function ImageLightbox({ images, initialIndex, onClose, metadata }: {
       )}
 
       {/* Image */}
-      <img
+      <NextImage
         src={images[currentIndex]}
         alt=""
+        width={1200}
+        height={900}
         className="max-h-[90vh] max-w-[90vw] object-contain rounded-lg select-none transition-opacity duration-200"
+        style={{ height: 'auto' }}
         onClick={(e) => e.stopPropagation()}
         draggable={false}
       />
@@ -1196,7 +1200,7 @@ function RecordsPageInner() {
                                     }}
                                     className="block w-full aspect-square overflow-hidden hover:opacity-80 transition-opacity relative"
                                   >
-                                    <img src={url} alt="" className="h-full w-full object-cover" />
+                                    <NextImage src={url} alt="" fill className="object-cover" />
                                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
                                       <ZoomIn className="h-5 w-5 text-white drop-shadow-lg" />
                                     </div>

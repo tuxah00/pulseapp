@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import Image from 'next/image'
 import { X, Calendar, Tag } from 'lucide-react'
 
 export interface LightboxPhoto {
@@ -53,11 +54,13 @@ export function PhotoLightbox({ photo, onClose }: PhotoLightboxProps) {
       </button>
 
       <div className="max-w-4xl w-full max-h-[90vh] flex flex-col gap-4" onClick={(e) => e.stopPropagation()}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <Image
           src={photo.photo_url}
           alt={TYPE_LABELS[photo.photo_type] || 'Fotoğraf'}
+          width={1200}
+          height={900}
           className="max-h-[70vh] w-auto mx-auto rounded-xl object-contain shadow-2xl"
+          style={{ height: 'auto' }}
         />
 
         <div className="bg-white/95 dark:bg-gray-900/95 rounded-xl p-4 backdrop-blur">

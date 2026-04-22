@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import Image from 'next/image'
 import { Loader2, Upload, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -225,7 +226,8 @@ interface FileInputProps {
 }
 
 function FileInput({ label, file, onChange, disabled }: FileInputProps) {
-  const previewUrl = file ? URL.createObjectURL(file) : null
+  // useMemo ensures the blob URL is created only when `file` changes (not on every render)
+  const previewUrl = useMemo(() => (file ? URL.createObjectURL(file) : null), [file])
   useEffect(() => {
     return () => { if (previewUrl) URL.revokeObjectURL(previewUrl) }
   }, [previewUrl])
@@ -244,8 +246,7 @@ function FileInput({ label, file, onChange, disabled }: FileInputProps) {
         onChange={(e) => onChange(e.target.files?.[0] || null)}
       />
       {previewUrl ? (
-        /* eslint-disable-next-line @next/next/no-img-element */
-        <img src={previewUrl} alt={label} className="absolute inset-0 w-full h-full object-cover" />
+        <Image src={previewUrl} alt={label} fill unoptimized className="object-cover" />
       ) : (
         <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400 dark:text-gray-500">
           <Upload className="h-6 w-6 mb-1" />

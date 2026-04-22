@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import Image from 'next/image'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { requirePermission, requireSectorModule } from '@/lib/hooks/use-require-permission'
 import { getTreatmentNotesPlaceholder } from '@/lib/config/sector-labels'
@@ -714,8 +715,7 @@ function DetailPanel({
                     <div className="flex flex-col items-center gap-1">
                       {session.before_photo_url ? (
                         <div className="relative group/photo">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={session.before_photo_url} alt="Öncesi" className="w-16 h-16 rounded-lg object-cover border border-gray-200 dark:border-gray-700" />
+                          <Image src={session.before_photo_url} alt="Öncesi" width={64} height={64} className="w-16 h-16 rounded-lg object-cover border border-gray-200 dark:border-gray-700" />
                           <button
                             onClick={() => triggerPhotoUpload(session.id, 'before')}
                             className="absolute inset-0 bg-black/40 rounded-lg opacity-0 group-hover/photo:opacity-100 transition-opacity flex items-center justify-center"
@@ -742,8 +742,7 @@ function DetailPanel({
                     <div className="flex flex-col items-center gap-1">
                       {session.after_photo_url ? (
                         <div className="relative group/photo">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={session.after_photo_url} alt="Sonrası" className="w-16 h-16 rounded-lg object-cover border border-gray-200 dark:border-gray-700" />
+                          <Image src={session.after_photo_url} alt="Sonrası" width={64} height={64} className="w-16 h-16 rounded-lg object-cover border border-gray-200 dark:border-gray-700" />
                           <button
                             onClick={() => triggerPhotoUpload(session.id, 'after')}
                             className="absolute inset-0 bg-black/40 rounded-lg opacity-0 group-hover/photo:opacity-100 transition-opacity flex items-center justify-center"

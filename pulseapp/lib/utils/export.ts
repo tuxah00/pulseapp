@@ -359,6 +359,98 @@ export async function exportInvoiceListPDF(
 }
 
 /**
+ * Analitik özet PDF export — jsPDF ile dönem raporu
+ */
+export async function exportAnalyticsPDF(params: {
+  periodLabel: string
+  totalRevenue: number
+  totalExpenses: number
+  completedCount: number
+  totalCount: number
+  avgRating: number
+  topServices: { name: string; count: number; revenue: number }[]
+  businessName?: string
+}): Promise<void> {
+  const { default: jsPDF } = await import('jspdf')
+  const { default: autoTable } = await import('jspdf-autotable')
+
+  const currencyFmt = new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' })
+  const fmt = (n: number) => currencyFmt.format(n)
+
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+  const netProfit = params.totalRevenue - params.totalExpenses
+
+  // Header
+  doc.setFontSize(20)
+  doc.setTextColor(25, 61, 143) // pulse-900
+  doc.text(params.businessName || 'PulseApp', 14, 18)
+
+  doc.setFontSize(12)
+  doc.setTextColor(107, 114, 128)
+  doc.text(`Analitik Raporu — ${params.periodLabel}`, 14, 26)
+
+  doc.setFontSize(8)
+  doc.text(`Oluşturma tarihi: ${new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}`, 14, 32)
+
+  // KPI boxes
+  const boxY = 38
+  const boxH = 16
+  const boxW = 42
+  const gap = 6
+  const boxes = [
+    { label: 'Toplam Gelir', value: fmt(params.totalRevenue), fill: [209, 250, 229] as [number,number,number], text: [5, 150, 105] as [number,number,number] },
+    { label: 'Toplam Gider', value: fmt(params.totalExpenses), fill: [254, 243, 199] as [number,number,number], text: [217, 119, 6] as [number,number,number] },
+    { label: 'Net Kâr', value: fmt(netProfit), fill: netProfit >= 0 ? [219, 234, 254] as [number,number,number] : [254, 226, 226] as [number,number,number], text: netProfit >= 0 ? [37, 99, 235] as [number,number,number] : [220, 38, 38] as [number,number,number] },
+    { label: 'Tamamlanan', value: `${params.completedCount} / ${params.totalCount}`, fill: [243, 244, 246] as [number,number,number], text: [55, 65, 81] as [number,number,number] },
+  ]
+
+  boxes.forEach((b, i) => {
+    const x = 14 + i * (boxW + gap)
+    doc.setFillColor(...b.fill)
+    doc.roundedRect(x, boxY, boxW, boxH, 2, 2, 'F')
+    doc.setFontSize(7)
+    doc.setTextColor(...b.text)
+    doc.text(b.label, x + 3, boxY + 5)
+    doc.setFontSize(10)
+    doc.text(b.value, x + 3, boxY + 12)
+  })
+
+  if (params.avgRating > 0) {
+    const ratingX = 14
+    const ratingY = boxY + boxH + 6
+    doc.setFontSize(9)
+    doc.setTextColor(107, 114, 128)
+    doc.text(`Ortalama Değerlendirme: ${params.avgRating.toFixed(1)} / 5`, ratingX, ratingY)
+  }
+
+  // Top services table
+  if (params.topServices.length > 0) {
+    const tableY = boxY + boxH + 14
+    doc.setFontSize(11)
+    doc.setTextColor(25, 61, 143)
+    doc.text('En Popüler Hizmetler', 14, tableY)
+
+    autoTable(doc, {
+      startY: tableY + 4,
+      head: [['Hizmet', 'Randevu', 'Gelir']],
+      body: params.topServices.map(s => [s.name, s.count, fmt(s.revenue)]),
+      styles: { fontSize: 9, cellPadding: 3 },
+      headStyles: { fillColor: [25, 61, 143], textColor: 255, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [249, 250, 251] },
+      columnStyles: { 1: { halign: 'center' }, 2: { halign: 'right' } },
+    })
+  }
+
+  // Footer
+  doc.setFontSize(8)
+  doc.setTextColor(156, 163, 175)
+  doc.text('PulseApp ile oluşturuldu', doc.internal.pageSize.getWidth() / 2, doc.internal.pageSize.getHeight() - 8, { align: 'center' })
+
+  const safeLabel = params.periodLabel.replace(/\s/g, '-').toLowerCase()
+  doc.save(`analitik-${safeLabel}.pdf`)
+}
+
+/**
  * Fatura listesi Excel export — xlsx
  */
 export async function exportInvoiceListXLSX(

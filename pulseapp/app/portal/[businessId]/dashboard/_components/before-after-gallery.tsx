@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import Image from 'next/image'
 import { ImageOff } from 'lucide-react'
 import { PhotoLightbox, type LightboxPhoto } from './photo-lightbox'
 
@@ -63,10 +64,9 @@ export function BeforeAfterGallery({ photos }: BeforeAfterGalleryProps) {
             <button
               key={p.id}
               onClick={() => setActive(p)}
-              className="aspect-square rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 hover:ring-2 hover:ring-pulse-900 transition-all"
+              className="relative aspect-square rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 hover:ring-2 hover:ring-pulse-900 transition-all"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={p.photo_url} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
+              <Image src={p.photo_url} alt="" fill className="object-cover" />
             </button>
           ))}
         </div>
@@ -95,9 +95,8 @@ function PairCell({ label, photo, onClick }: PairCellProps) {
     )
   }
   return (
-    <button onClick={() => onClick(photo)} className="relative aspect-square group">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={photo.photo_url} alt={label} loading="lazy" decoding="async" className="w-full h-full object-cover group-hover:opacity-90 transition-opacity" />
+    <button onClick={() => onClick(photo)} className="relative aspect-square group overflow-hidden">
+      <Image src={photo.photo_url} alt={label} fill className="object-cover group-hover:opacity-90 transition-opacity" />
       <span className="absolute top-2 left-2 text-[10px] font-medium px-1.5 py-0.5 rounded bg-black/60 text-white">
         {label}
       </span>
