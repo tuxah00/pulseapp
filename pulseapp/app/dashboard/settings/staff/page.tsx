@@ -7,6 +7,7 @@ import { useConfirm } from '@/lib/hooks/use-confirm'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
 import { requirePermission } from '@/lib/hooks/use-require-permission'
 import { Plus, Pencil, Trash2, Loader2, UserPlus, X, Mail, Phone, Settings, LayoutList, LayoutGrid, Check } from 'lucide-react'
+import ViewModeToggle from '@/components/ui/view-mode-toggle'
 import { cn } from '@/lib/utils'
 import { Portal } from '@/components/ui/portal'
 import CompactBoxCard from '@/components/ui/compact-box-card'
@@ -507,14 +508,6 @@ export default function StaffPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1">
-            <button onClick={() => setViewMode('list')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'list' ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800')} title="Liste">
-              <LayoutList className="h-4 w-4" />
-            </button>
-            <button onClick={() => setViewMode('box')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'box' ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800')} title="Kutular">
-              <LayoutGrid className="h-4 w-4" />
-            </button>
-          </div>
           {(currentUserRole === 'owner' || currentUserRole === 'manager') && (
             <button onClick={() => { setShowInviteModal(true); setInviteLink(null); setInviteEmail('') }} className="btn-secondary">
               <UserPlus className="mr-2 h-4 w-4" />Davet Et
@@ -523,6 +516,14 @@ export default function StaffPage() {
           <button onClick={openNewModal} className="btn-primary">
             <Plus className="mr-2 h-4 w-4" />Yeni Personel
           </button>
+          <ViewModeToggle
+            value={viewMode}
+            onChange={setViewMode}
+            modes={[
+              { key: 'list' as const, icon: <LayoutList className="h-4 w-4" />, label: 'Liste' },
+              { key: 'box' as const, icon: <LayoutGrid className="h-4 w-4" />, label: 'Kutu' },
+            ]}
+          />
         </div>
       </div>
 
