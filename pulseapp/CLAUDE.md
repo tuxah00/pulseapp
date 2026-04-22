@@ -11,32 +11,44 @@ PulseApp, çok sektörlü SaaS işletme yönetim platformu. Next.js 14, Supabase
 
 ## Branch Çalışma Kuralı (KESİNLİKLE UYULMALI)
 
-### Branch İsimlendirme
-Her çalışma bağlamı kendi `feature/[konu]` branch'inde yürür. Aktif branch'ler:
-| Branch | Kapsam |
-|--------|--------|
-| `feature/launch-prep` | Canlıya çıkış hazırlığı (Sentry, PWA, checklist) |
-| `feature/faz3-skill-packages` | Faz 3 — Skill paketleri ve sektör bazlı araç yükleme |
-
-### Commit & Push Kuralı
+### Temel Prensipler
+- Her session'ın **bir planı** vardır (sprint, özellik, düzeltme vb.).
+- O plana göre **bir branch adı** belirlenir: `feature/[plan-konusu]`
+- Session boyunca **yalnızca o branch'e** push yapılır.
 - **HİÇBİR ZAMAN `origin/main`'e doğrudan push yapılmaz.**
-- Her commit sadece o session'ın kendi branch'ine push'lanır:
-  ```
-  git push origin HEAD:refs/heads/feature/[konu]
-  ```
-- Kullanıcı test eder, ardından **"maine aktar"** derse main'e merge edilir.
 
-### Maine Aktarma Akışı (yalnızca kullanıcı onayı sonrası)
-1. `git push origin HEAD:main` (veya PR ile merge)
-2. Diğer tüm aktif branch'leri main ile eşitle:
-   ```
-   git push origin origin/main:refs/heads/feature/[diğer-branch]
-   ```
+### Branch İsimlendirme Kuralı
+Branch adı session'ın planını yansıtır:
+
+| Plan / Konu | Branch Adı |
+|-------------|-----------|
+| Canlıya çıkış hazırlığı | `feature/launch-prep` |
+| Faz 3 — Skill paketleri | `feature/faz3-skill-packages` |
+| Yeni bir özellik | `feature/[özellik-adı]` |
+| Hata düzeltme | `fix/[konu]` |
+| Refactor / temizlik | `refactor/[konu]` |
 
 ### Yeni Session Başlarken
-1. Hangi branch'te çalışılacağını kullanıcıya sor veya CLAUDE.md'deki branch tablosuna bak.
-2. `git checkout feature/[konu]` ile o branch'e geç.
-3. Tüm push'lar o branch'e yapılır.
+1. Kullanıcı planı/konuyu söyler.
+2. O konuya uygun branch adı belirlenir ve kullanıcıya bildirilir.
+3. Branch yoksa oluşturulur (`git checkout -b feature/[konu]`), varsa geçilir.
+4. Tüm commitler ve push'lar **yalnızca o branch'e** yapılır.
+
+### Commit & Push
+```
+git push origin HEAD:refs/heads/feature/[konu]
+```
+
+### Maine Aktarma (yalnızca kullanıcı "maine aktar" dediğinde)
+1. Main'e merge:
+   ```
+   git push origin HEAD:main
+   ```
+2. Diğer aktif branch'leri main ile eşitle:
+   ```
+   git fetch origin
+   git push origin origin/main:refs/heads/feature/[diğer-branch]
+   ```
 
 ## Ertelenen Kurulumlar (Pilot Müşteri Gelince Hatırlat)
 
