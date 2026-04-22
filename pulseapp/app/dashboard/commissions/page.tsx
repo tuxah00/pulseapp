@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
@@ -209,7 +209,7 @@ export default function CommissionsPage() {
       {/* Başlık */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Prim & Komisyon</h1>
+          <h1 className="h-page">Prim & Komisyon</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Aylık prim hesapla, geçmiş kayıtları görüntüle ve ödemeleri yönet.
           </p>
@@ -292,7 +292,7 @@ export default function CommissionsPage() {
             <BadgePercent className="h-5 w-5 text-pulse-900 dark:text-pulse-300" />
             <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">Prim Geçmişi</h2>
             {filtered.length > 0 && (
-              <span className="badge bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+              <span className="badge-neutral">
                 {filtered.length} kayıt
               </span>
             )}
@@ -345,33 +345,30 @@ export default function CommissionsPage() {
               : 'Seçilen filtrelere uygun kayıt yok.'}
           />
         ) : (
-          <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-                  <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Dönem</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Personel</th>
-                  <th className="text-right px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Randevu</th>
-                  <th className="text-right px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Ciro</th>
-                  <th className="text-right px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Prim</th>
-                  <th className="text-center px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Durum</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Ödeme Tarihi</th>
+          <div className="table-wrapper">
+            <table className="table-base">
+              <thead className="table-head-row">
+                <tr>
+                  <th className="table-head-cell">Dönem</th>
+                  <th className="table-head-cell">Personel</th>
+                  <th className="table-head-cell text-right">Randevu</th>
+                  <th className="table-head-cell text-right">Ciro</th>
+                  <th className="table-head-cell text-right">Prim</th>
+                  <th className="table-head-cell text-center">Durum</th>
+                  <th className="table-head-cell">Ödeme Tarihi</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+              <tbody>
                 {filtered.map((earning) => {
                   const staffName = (earning.staff_members as any)?.name || '—'
                   return (
-                    <tr
-                      key={earning.id}
-                      className="bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors"
-                    >
-                      <td className="px-4 py-3">
+                    <tr key={earning.id} className="table-row">
+                      <td className="table-cell">
                         <span className="font-medium text-gray-900 dark:text-gray-100">
                           {formatPeriod(earning.period)}
                         </span>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="table-cell">
                         <div className="flex items-center gap-2">
                           <div className="h-7 w-7 rounded-full bg-pulse-900 flex items-center justify-center flex-shrink-0">
                             <span className="text-xs font-bold text-white">
@@ -381,25 +378,25 @@ export default function CommissionsPage() {
                           <span className="text-gray-900 dark:text-gray-100">{staffName}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-300">
+                      <td className="table-cell text-right">
                         {earning.appointment_count}
                       </td>
-                      <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-300">
+                      <td className="table-cell text-right">
                         {formatCurrency(earning.total_revenue)}
                       </td>
-                      <td className="px-4 py-3 text-right">
+                      <td className="table-cell text-right">
                         <span className="font-semibold text-pulse-900 dark:text-pulse-300">
                           {formatCurrency(earning.commission_total)}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-center">
+                      <td className="table-cell text-center">
                         <button
                           onClick={() => handleTogglePaid(earning)}
                           className={cn(
-                            'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors cursor-pointer',
+                            'px-3 py-1.5 cursor-pointer',
                             earning.status === 'paid'
-                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50'
-                              : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-900/50'
+                              ? 'badge-success hover:bg-green-200 dark:hover:bg-green-900/50'
+                              : 'badge-warning hover:bg-amber-200 dark:hover:bg-amber-900/50'
                           )}
                         >
                           {earning.status === 'paid'
@@ -407,7 +404,7 @@ export default function CommissionsPage() {
                             : <><Clock className="h-3 w-3" />Bekliyor</>}
                         </button>
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                      <td className="table-cell text-gray-500 dark:text-gray-400">
                         {earning.paid_at ? formatDate(earning.paid_at) : '—'}
                       </td>
                     </tr>
@@ -416,18 +413,18 @@ export default function CommissionsPage() {
               </tbody>
               {/* Toplam satırı */}
               {filtered.length > 1 && (
-                <tfoot>
-                  <tr className="border-t-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-                    <td className="px-4 py-3 font-semibold text-gray-900 dark:text-gray-100" colSpan={2}>
+                <tfoot className="table-head-row">
+                  <tr>
+                    <td className="table-cell font-semibold text-gray-900 dark:text-gray-100" colSpan={2}>
                       Toplam
                     </td>
-                    <td className="px-4 py-3 text-right font-semibold text-gray-900 dark:text-gray-100">
+                    <td className="table-cell text-right font-semibold text-gray-900 dark:text-gray-100">
                       {filtered.reduce((s, e) => s + e.appointment_count, 0)}
                     </td>
-                    <td className="px-4 py-3 text-right font-semibold text-gray-900 dark:text-gray-100">
+                    <td className="table-cell text-right font-semibold text-gray-900 dark:text-gray-100">
                       {formatCurrency(filtered.reduce((s, e) => s + e.total_revenue, 0))}
                     </td>
-                    <td className="px-4 py-3 text-right font-semibold text-pulse-900 dark:text-pulse-300">
+                    <td className="table-cell text-right font-semibold text-pulse-900 dark:text-pulse-300">
                       {formatCurrency(filtered.reduce((s, e) => s + e.commission_total, 0))}
                     </td>
                     <td colSpan={2} />

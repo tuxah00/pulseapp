@@ -22,12 +22,13 @@ import { CustomerSearchSelect } from '@/components/ui/customer-search-select'
 import { Portal } from '@/components/ui/portal'
 import { Pagination } from '@/components/ui/pagination'
 import { FollowUpQuickModal } from '@/components/dashboard/follow-up-quick-modal'
+import EmptyState from '@/components/ui/empty-state'
 
-const STATUS_CONFIG: Record<ProtocolStatus, { bg: string; text: string }> = {
-  active: { bg: 'bg-blue-50 dark:bg-blue-900/20', text: 'text-blue-600 dark:text-blue-400' },
-  completed: { bg: 'bg-green-50 dark:bg-green-900/20', text: 'text-green-600 dark:text-green-400' },
-  cancelled: { bg: 'bg-red-50 dark:bg-red-900/20', text: 'text-red-600 dark:text-red-400' },
-  paused: { bg: 'bg-yellow-50 dark:bg-yellow-900/20', text: 'text-yellow-600 dark:text-yellow-400' },
+const STATUS_BADGE: Record<ProtocolStatus, string> = {
+  active: 'badge-info',
+  completed: 'badge-success',
+  cancelled: 'badge-danger',
+  paused: 'badge-warning',
 }
 
 const SESSION_STATUS_CONFIG: Record<SessionStatus, { bg: string; text: string; icon: typeof CheckCircle }> = {
@@ -305,19 +306,17 @@ export default function ProtocolsPage() {
         {loading ? (
           <div className="flex items-center justify-center h-32"><Loader2 className="h-6 w-6 animate-spin text-pulse-900" /></div>
         ) : filtered.length === 0 ? (
-          <div className="card p-8 text-center">
-            <ClipboardCheck className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-            <p className="text-gray-500 dark:text-gray-400">Henüz tedavi protokolü yok</p>
-            <button onClick={() => setShowCreate(true)} className="btn-primary mt-4 text-sm">
-              <Plus className="h-4 w-4 mr-1 inline" /> İlk Protokolü Oluştur
-            </button>
-          </div>
+          <EmptyState
+            icon={<ClipboardCheck className="h-8 w-8" />}
+            title="Henüz tedavi protokolü yok"
+            action={{ label: 'İlk Protokolü Oluştur', onClick: () => setShowCreate(true), icon: <Plus className="h-4 w-4" /> }}
+          />
         ) : (
           filtered.map(p => {
             const customer = Array.isArray(p.customer) ? p.customer[0] : p.customer
             const service = Array.isArray(p.service) ? p.service[0] : p.service
             const progress = p.total_sessions > 0 ? (p.completed_sessions / p.total_sessions) * 100 : 0
-            const sc = STATUS_CONFIG[p.status]
+            const statusBadge = STATUS_BADGE[p.status]
             const isSelected = selectedProtocol?.id === p.id
 
             return (
@@ -334,7 +333,7 @@ export default function ProtocolsPage() {
                       <User className="h-3 w-3" /> {customer?.name || '—'}
                     </p>
                   </div>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${sc.bg} ${sc.text}`}>
+                  <span className={statusBadge}>
                     {PROTOCOL_STATUS_LABELS[p.status]}
                   </span>
                 </div>
@@ -373,7 +372,7 @@ export default function ProtocolsPage() {
       {/* Detail Panel — Slide-over */}
       {(selectedProtocol || isClosingDetail) && selectedProtocol && (
         <Portal>
-          <div className={`modal-overlay fixed inset-0 z-[60] bg-black/40 dark:bg-black/60 ${isClosingDetail ? 'closing' : ''}`} onClick={closeDetail} onAnimationEnd={() => { if (isClosingDetail) { setSelectedProtocol(null); setIsClosingDetail(false) } }} />
+          <div className={`modal-overlay fixed inset-0 z-[60] bg-black/50 dark:bg-black/70 ${isClosingDetail ? 'closing' : ''}`} onClick={closeDetail} onAnimationEnd={() => { if (isClosingDetail) { setSelectedProtocol(null); setIsClosingDetail(false) } }} />
           <div className={`slide-panel fixed inset-y-0 right-0 z-[61] w-full max-w-lg bg-white dark:bg-gray-900 shadow-2xl overflow-y-auto ${isClosingDetail ? 'closing' : ''}`}>
             <div className="p-6 space-y-6">
               <DetailPanel
@@ -393,8 +392,8 @@ export default function ProtocolsPage() {
       {/* Create Modal */}
       {(showCreate || isClosingCreate) && (
         <Portal>
-          <div className={`modal-overlay fixed inset-0 z-[100] bg-black/60 dark:bg-black/70 ${isClosingCreate ? 'closing' : ''}`} onClick={() => { closeCreate(); resetForm() }} onAnimationEnd={() => { if (isClosingCreate) { setShowCreate(false); setIsClosingCreate(false) } }} />
-          <div className="fixed inset-0 z-[101] flex items-center justify-center p-4 pointer-events-none">
+          <div className={`modal-overlay fixed inset-0 z-[60] bg-black/50 dark:bg-black/70 ${isClosingCreate ? 'closing' : ''}`} onClick={() => { closeCreate(); resetForm() }} onAnimationEnd={() => { if (isClosingCreate) { setShowCreate(false); setIsClosingCreate(false) } }} />
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none">
           <div className={`modal-content bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto pointer-events-auto ${isClosingCreate ? 'closing' : ''}`}>
             <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
               <h2 className="text-lg font-bold text-gray-900 dark:text-white">Yeni Tedavi Protokolü</h2>
@@ -494,7 +493,7 @@ function DetailPanel({
   const service = Array.isArray(protocol.service) ? protocol.service[0] : protocol.service
   const sessions = (protocol.sessions || []).sort((a, b) => a.session_number - b.session_number)
   const progress = protocol.total_sessions > 0 ? (protocol.completed_sessions / protocol.total_sessions) * 100 : 0
-  const sc = STATUS_CONFIG[protocol.status]
+  const statusBadge = STATUS_BADGE[protocol.status]
 
   function triggerPhotoUpload(sessionId: string, type: 'before' | 'after') {
     pendingUpload.current = { sessionId, type }
@@ -576,7 +575,7 @@ function DetailPanel({
                 <Activity className="h-3.5 w-3.5" /> {service.name}
               </span>
             )}
-            <span className={`text-xs px-2.5 py-0.5 rounded-full ${sc.bg} ${sc.text}`}>
+            <span className={statusBadge}>
               {PROTOCOL_STATUS_LABELS[protocol.status]}
             </span>
           </div>

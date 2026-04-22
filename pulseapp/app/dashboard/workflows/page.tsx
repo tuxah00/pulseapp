@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
@@ -38,11 +38,11 @@ const TRIGGER_LABELS: Record<string, string> = {
 const TRIGGER_OPTIONS = Object.entries(TRIGGER_LABELS).map(([value, label]) => ({ value, label }))
 
 const TRIGGER_COLORS: Record<string, string> = {
-  appointment_completed: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-  appointment_cancelled: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-  customer_created: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  no_show: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
-  birthday: 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400',
+  appointment_completed: 'badge-success',
+  appointment_cancelled: 'badge-danger',
+  customer_created: 'badge-info',
+  no_show: 'badge-warning',
+  birthday: 'badge bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400',
 }
 
 function formatDelay(hours: number): string {
@@ -221,7 +221,7 @@ export default function WorkflowsPage() {
       {/* Başlık */}
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Otomatik Mesajlar</h1>
+          <h1 className="h-page">Otomatik Mesajlar</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Belirli bir olay sonrası (örn. randevu bitti) otomatik SMS gönderin.
           </p>
@@ -296,11 +296,11 @@ export default function WorkflowsPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-2">
                     <h3 className="font-semibold text-gray-900 dark:text-gray-100">{workflow.name}</h3>
-                    <span className={cn('badge text-xs', TRIGGER_COLORS[workflow.trigger_type])}>
+                    <span className={cn('text-xs', TRIGGER_COLORS[workflow.trigger_type])}>
                       {TRIGGER_LABELS[workflow.trigger_type] || workflow.trigger_type}
                     </span>
                     {workflow.runs_this_month > 0 && (
-                      <span className="badge bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 text-xs">
+                      <span className="badge-neutral text-xs">
                         {workflow.runs_this_month} bu ay
                       </span>
                     )}
@@ -373,7 +373,7 @@ export default function WorkflowsPage() {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                <h2 className="h-section">
                   {editingWorkflow ? 'Düzenle' : 'Yeni Otomatik Mesaj'}
                 </h2>
                 <button onClick={closeModal} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">

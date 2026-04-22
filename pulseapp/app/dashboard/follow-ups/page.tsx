@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
@@ -17,6 +17,7 @@ import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import { Portal } from '@/components/ui/portal'
 import { Pagination } from '@/components/ui/pagination'
 import { FOLLOW_UP_TYPE_LABELS, FOLLOW_UP_STATUS_LABELS, type FollowUpType, type FollowUpStatus, type FollowUpStatusHistoryEntry } from '@/types'
+import EmptyState from '@/components/ui/empty-state'
 
 interface FollowUp {
   id: string
@@ -316,10 +317,10 @@ export default function FollowUpsPage() {
       {loading ? (
         <div className="flex items-center justify-center h-32"><Loader2 className="h-6 w-6 animate-spin text-pulse-900" /></div>
       ) : filtered.length === 0 ? (
-        <div className="card p-8 text-center">
-          <ClipboardCheck className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-          <p className="text-gray-500 dark:text-gray-400">Henüz takip kaydı yok</p>
-        </div>
+        <EmptyState
+          icon={<ClipboardCheck className="h-8 w-8" />}
+          title="Henüz takip kaydı yok"
+        />
       ) : (
         <AnimatedList className="space-y-3">
           {filtered.map(f => {
@@ -337,7 +338,7 @@ export default function FollowUpsPage() {
                     )}
                   </div>
                   <div className="flex-shrink-0">
-                    <span className="text-xs px-2 py-1 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
+                    <span className="badge-info">
                       {FOLLOW_UP_TYPE_LABELS[f.type] || f.type}
                     </span>
                   </div>
@@ -372,7 +373,7 @@ export default function FollowUpsPage() {
       {/* Create Modal */}
       {(showCreate || closingCreate) && (
         <Portal>
-          <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 ${closingCreate ? 'closing' : ''}`}
+          <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${closingCreate ? 'closing' : ''}`}
             onClick={() => setClosingCreate(true)}
             onAnimationEnd={() => { if (closingCreate) { setShowCreate(false); setClosingCreate(false); resetForm() } }}>
             <div className={`modal-content card w-full max-w-lg dark:bg-gray-900 ${closingCreate ? 'closing' : ''}`} onClick={e => e.stopPropagation()}>
@@ -423,7 +424,7 @@ export default function FollowUpsPage() {
       {/* Detail Modal */}
       {detailItem && (
         <Portal>
-          <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 ${closingDetail ? 'closing' : ''}`}
+          <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${closingDetail ? 'closing' : ''}`}
             onClick={() => setClosingDetail(true)}
             onAnimationEnd={() => { if (closingDetail) { setDetailItem(null); setClosingDetail(false); setEditMode(false) } }}>
             <div className={`modal-content card w-full max-w-2xl max-h-[90vh] overflow-y-auto dark:bg-gray-900 ${closingDetail ? 'closing' : ''}`} onClick={e => e.stopPropagation()}>
@@ -440,11 +441,11 @@ export default function FollowUpsPage() {
                         </span>
                       )
                     })()}
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
+                    <span className="badge-info">
                       {FOLLOW_UP_TYPE_LABELS[detailItem.type] || detailItem.type}
                     </span>
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">{detailItem.customers?.name || 'Bilinmeyen'}</h3>
+                  <h3 className="h-section truncate">{detailItem.customers?.name || 'Bilinmeyen'}</h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400">{formatDateTime(detailItem.scheduled_for)}</p>
                 </div>
                 <button onClick={() => setClosingDetail(true)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg flex-shrink-0">
@@ -512,7 +513,7 @@ export default function FollowUpsPage() {
                         const Icon = sc.icon
                         return (
                           <button key={s} onClick={() => changeStatus(s)} disabled={savingDetail}
-                            className={`text-xs px-3 py-1.5 rounded-lg ${sc.bg} ${sc.text} hover:opacity-80 transition-opacity inline-flex items-center gap-1.5 disabled:opacity-40`}>
+                            className={`text-xs px-3 py-1.5 rounded-lg ${sc.bg} ${sc.text} hover:opacity-80 transition-opacity inline-flex items-center gap-1.5 disabled:opacity-50`}>
                             <Icon className="h-3.5 w-3.5" /> {FOLLOW_UP_STATUS_LABELS[s]}
                           </button>
                         )

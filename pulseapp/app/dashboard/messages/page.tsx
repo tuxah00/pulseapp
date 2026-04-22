@@ -13,6 +13,7 @@ import {
   MessageCircle, X, Filter, Smartphone,
 } from 'lucide-react'
 import { formatPhone, cn } from '@/lib/utils'
+import EmptyState from '@/components/ui/empty-state'
 import { format, isToday, isYesterday, parseISO } from 'date-fns'
 import { tr } from 'date-fns/locale'
 import type {
@@ -335,7 +336,7 @@ export default function MessagesPage() {
           <div className="flex-shrink-0 border-b border-gray-200 dark:border-gray-700 p-4">
             <div className="flex items-center justify-between mb-3">
               <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Mesajlar</h1>
-              <span className="badge bg-pulse-100 text-pulse-900">
+              <span className="badge-brand">
                 {conversations.length} konuşma
               </span>
             </div>
@@ -367,7 +368,7 @@ export default function MessagesPage() {
                     'badge px-2.5 py-1 cursor-pointer whitespace-nowrap transition-colors flex items-center gap-1',
                     filterChannel === key
                       ? key === 'whatsapp' ? 'bg-green-600 text-white' : 'bg-gray-900 text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                   )}
                 >
                   {icon}
@@ -384,7 +385,7 @@ export default function MessagesPage() {
                   'badge px-2.5 py-1 cursor-pointer whitespace-nowrap transition-colors',
                   filterClassification === 'all'
                     ? 'bg-gray-900 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                 )}
               >
                 Tümü
@@ -397,7 +398,7 @@ export default function MessagesPage() {
                     'badge px-2.5 py-1 cursor-pointer whitespace-nowrap transition-colors flex items-center gap-1',
                     filterClassification === key
                       ? AI_LABELS[key].color + ' ring-2 ring-offset-1'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                   )}
                 >
                   {AI_LABELS[key].icon}
@@ -414,19 +415,11 @@ export default function MessagesPage() {
                 <Loader2 className="h-6 w-6 animate-spin text-pulse-900" />
               </div>
             ) : filteredConversations.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
-                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100">
-                  <MessageSquare className="h-8 w-8 text-gray-400" />
-                </div>
-                <p className="text-sm font-medium text-gray-900 mb-1">
-                  {search ? 'Sonuç bulunamadı' : 'Henüz mesaj yok'}
-                </p>
-                <p className="text-xs text-gray-500">
-                  {search
-                    ? 'Farklı bir arama terimi deneyin.'
-                    : 'Müşteri mesajları burada görünecek.'}
-                </p>
-              </div>
+              <EmptyState
+                icon={<MessageSquare className="h-8 w-8" />}
+                title={search ? 'Sonuç bulunamadı' : 'Henüz mesaj yok'}
+                description={search ? 'Farklı bir arama terimi deneyin.' : 'Müşteri mesajları burada görünecek.'}
+              />
             ) : (
               <div>
                 {filteredConversations.map((conv) => (
@@ -529,7 +522,7 @@ export default function MessagesPage() {
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <a
                     href={`/dashboard/customers`}
-                    className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+                    className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                     title="Müşteri profili"
                   >
                     <User className="h-4 w-4" />

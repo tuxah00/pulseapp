@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -129,7 +129,7 @@ export default function BillingPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Abonelik & Ödeme</h1>
+        <h1 className="h-page">Abonelik & Ödeme</h1>
         <p className="mt-1 text-sm text-gray-500">Plan yönetimi ve ödeme geçmişi</p>
       </div>
 
@@ -165,7 +165,7 @@ export default function BillingPage() {
 
       {/* Mevcut plan */}
       <div className="card">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Mevcut Plan</h2>
+        <h2 className="h-section mb-4">Mevcut Plan</h2>
         <div className="flex items-center gap-4">
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-pulse-50">
             <CreditCard className="h-6 w-6 text-pulse-900" />
@@ -202,7 +202,7 @@ export default function BillingPage() {
 
       {/* Plan karşılaştırma */}
       <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Planları Karşılaştır</h2>
+        <h2 className="h-section mb-4">Planları Karşılaştır</h2>
         <div className="grid gap-4 md:grid-cols-3">
           {(['starter', 'standard', 'pro'] as PlanType[]).map((plan) => {
             const isCurrent = plan === currentPlan
@@ -259,7 +259,7 @@ export default function BillingPage() {
       {/* Ödeme geçmişi */}
       {payments.length > 0 && (
         <div className="card">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Ödeme Geçmişi</h2>
+          <h2 className="h-section mb-4">Ödeme Geçmişi</h2>
           <div className="space-y-2">
             {payments.map((p) => (
               <div key={p.id} className="flex items-center gap-3 rounded-xl border border-gray-100 px-4 py-3">
@@ -272,11 +272,11 @@ export default function BillingPage() {
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-semibold text-gray-900">{formatCurrency(p.amount)}</p>
-                  <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
-                    p.status === 'paid' ? 'bg-green-100 text-green-700' :
-                    p.status === 'pending' ? 'bg-amber-100 text-amber-700' :
-                    'bg-red-100 text-red-700'
-                  }`}>
+                  <span className={
+                    p.status === 'paid' ? 'badge-success' :
+                    p.status === 'pending' ? 'badge-warning' :
+                    'badge-danger'
+                  }>
                     {p.status === 'paid' ? 'Ödendi' : p.status === 'pending' ? 'Bekliyor' : 'Başarısız'}
                   </span>
                 </div>

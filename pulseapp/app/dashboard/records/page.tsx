@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback, Suspense, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
@@ -10,6 +10,7 @@ import {
   ChevronRight, LayoutList, LayoutGrid, Upload, FileText, Image as ImageIcon, ArrowUpDown,
   Calendar, User, Tag, ChevronLeft, Download, ZoomIn, Info, Clock, UserCircle,
 } from 'lucide-react'
+import ViewModeToggle from '@/components/ui/view-mode-toggle'
 import { cn } from '@/lib/utils'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
 import { ToolbarPopover, SortPopoverContent } from '@/components/ui/toolbar-popover'
@@ -316,7 +317,7 @@ function ImageLightbox({ images, initialIndex, onClose, metadata }: {
 
   return (
     <div
-      className="fixed inset-0 z-[150] bg-black/90 flex items-center justify-center"
+      className="fixed inset-0 z-[70] bg-black/90 flex items-center justify-center"
       onClick={onClose}
     >
       {/* Close button */}
@@ -873,7 +874,7 @@ function RecordsPageInner() {
       {/* ── Header ── */}
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">{config.label}</h1>
+          <h1 className="h-page">{config.label}</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             {dbError ? config.label : `${records.length} kayıt`}
           </p>
@@ -883,9 +884,14 @@ function RecordsPageInner() {
             <ToolbarPopover icon={<ArrowUpDown className="h-4 w-4" />} label="Sırala" active={sortField !== null}>
               <SortPopoverContent options={SORT_OPTIONS} sortField={sortField} sortDir={sortDir} onSortField={setSortField} onSortDir={setSortDir} />
             </ToolbarPopover>
-            <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-0.5" />
-            <button onClick={() => setViewMode('list')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'list' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Liste"><LayoutList className="h-4 w-4" /></button>
-            <button onClick={() => setViewMode('box')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'box' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Kutu"><LayoutGrid className="h-4 w-4" /></button>
+            <ViewModeToggle
+              value={viewMode}
+              onChange={setViewMode}
+              modes={[
+                { key: 'list', icon: <LayoutList className="h-4 w-4" />, label: 'Liste' },
+                { key: 'box', icon: <LayoutGrid className="h-4 w-4" />, label: 'Kutu' },
+              ]}
+            />
           </div>
           <button onClick={openNewModal} className="btn-primary">
             <Plus className="mr-2 h-4 w-4" />{config.addLabel}
@@ -1061,7 +1067,7 @@ function RecordsPageInner() {
 
         return (
           <Portal>
-            <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 dark:bg-black/70 ${isClosingRecord ? 'closing' : ''}`} onClick={() => closeRecord()} onAnimationEnd={() => { if (isClosingRecord) { setSelectedRecord(null); setIsClosingRecord(false) } }}>
+            <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 dark:bg-black/70 ${isClosingRecord ? 'closing' : ''}`} onClick={() => closeRecord()} onAnimationEnd={() => { if (isClosingRecord) { setSelectedRecord(null); setIsClosingRecord(false) } }}>
               <div
                 className={`modal-content bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden ${isClosingRecord ? 'closing' : ''}`}
                 onClick={(e) => e.stopPropagation()}
@@ -1283,7 +1289,7 @@ function RecordsPageInner() {
           ? new Date(meta.uploadedAt).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
           : null
         return (
-          <div className="modal-overlay fixed inset-0 z-[85] flex items-center justify-center bg-black/50 p-4" onClick={() => setFileInfoPopup(null)}>
+          <div className="modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4" onClick={() => setFileInfoPopup(null)}>
             <div className="modal-content card w-full max-w-sm dark:bg-gray-900" onClick={e => e.stopPropagation()}>
               {/* Header */}
               <div className="flex items-start justify-between mb-4">
@@ -1374,7 +1380,7 @@ function RecordsPageInner() {
       {/* ── File Description Popup ── */}
       {fileDescPopup && (
         <Portal>
-        <div className="modal-overlay fixed inset-0 z-[105] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4" onClick={() => setFileDescPopup(null)}>
+        <div className="modal-overlay fixed inset-0 z-[65] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4" onClick={() => setFileDescPopup(null)}>
           <div className="modal-content card w-full max-w-sm dark:bg-gray-900" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-1">
               <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate pr-4">{fileDescPopup.fileName}</h3>
@@ -1419,10 +1425,10 @@ function RecordsPageInner() {
       {/* ── Create / Edit Modal ── */}
       {(showModal || isClosingModal) && (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center p-4 bg-black/60 dark:bg-black/70 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={handleEditModalAnimationEnd}>
+        <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center p-4 bg-black/50 dark:bg-black/70 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={handleEditModalAnimationEnd}>
           <div className={`modal-content card w-full max-w-lg max-h-[90vh] overflow-y-auto ${isClosingModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              <h2 className="h-section">
                 {editingRecord ? 'Kaydı Düzenle' : config.addLabel}
               </h2>
               <button onClick={() => closeModal()} className="text-gray-400 hover:text-gray-600">

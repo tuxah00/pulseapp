@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
@@ -456,7 +456,7 @@ export default function BusinessSettingsPage() {
       )}
 
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">İşletme Ayarları</h1>
+        <h1 className="h-page">İşletme Ayarları</h1>
         <p className="mt-1 text-sm text-gray-500">
           İşletmenizin bilgilerini, çalışma saatlerini ve tercihlerini yönetin.
         </p>
@@ -498,7 +498,7 @@ export default function BusinessSettingsPage() {
           <div className="space-y-6">
             {/* Logo */}
             <div className="card">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">İşletme Logosu</h2>
+              <h2 className="h-section mb-4">İşletme Logosu</h2>
               <div className="flex items-center gap-5">
                 <div className="relative flex-shrink-0">
                   {settings.logo_url ? (
@@ -541,7 +541,7 @@ export default function BusinessSettingsPage() {
             </div>
 
             <div className="card">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Temel Bilgiler</h2>
+              <h2 className="h-section mb-4">Temel Bilgiler</h2>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="sm:col-span-2">
                   <label htmlFor="businessName" className="label">İşletme Adı</label>
@@ -595,7 +595,7 @@ export default function BusinessSettingsPage() {
             </div>
 
             <div className="card">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Adres Bilgileri</h2>
+              <h2 className="h-section mb-4">Adres Bilgileri</h2>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="sm:col-span-2">
                   <label htmlFor="address" className="label">Adres</label>
@@ -671,7 +671,7 @@ export default function BusinessSettingsPage() {
             />
 
             <div className="card">
-              <h2 className="text-lg font-semibold text-gray-900 mb-1">Hatırlatma Bildirimleri</h2>
+              <h2 className="h-section mb-1">Hatırlatma Bildirimleri</h2>
               <p className="text-sm text-gray-500 mb-6">
                 Müşterilerinize otomatik randevu hatırlatmaları gönderin.
               </p>
@@ -693,7 +693,7 @@ export default function BusinessSettingsPage() {
             </div>
 
             <div className="card">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Randevu Onay & No-Show</h2>
+              <h2 className="h-section mb-1">Randevu Onay & No-Show</h2>
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
                 Müşterilerden randevu onayı isteyin ve no-show takibi yapın.
               </p>
@@ -736,7 +736,7 @@ export default function BusinessSettingsPage() {
             />
 
             <div className="card">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Periyodik Kontrol Hatırlatıcı</h2>
+              <h2 className="h-section mb-1">Periyodik Kontrol Hatırlatıcı</h2>
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
                 Hizmetlere tanımlanan tekrar süresine göre müşterilere otomatik hatırlatma gönderin.
               </p>
@@ -767,7 +767,7 @@ export default function BusinessSettingsPage() {
             </div>
 
             <div className="card">
-              <h2 className="text-lg font-semibold text-gray-900 mb-1">Akıllı Boşluk Doldurma</h2>
+              <h2 className="h-section mb-1">Akıllı Boşluk Doldurma</h2>
               <p className="text-sm text-gray-500 mb-6">
                 Randevu iptal edildiğinde boş slota uygun müşterileri otomatik olarak bilgilendirin.
               </p>
@@ -802,7 +802,7 @@ export default function BusinessSettingsPage() {
             />
 
             <div className="card">
-              <h2 className="text-lg font-semibold text-gray-900 mb-1">Sadakat Puan Sistemi</h2>
+              <h2 className="h-section mb-1">Sadakat Puan Sistemi</h2>
               <p className="text-sm text-gray-500 mb-6">
                 Müşteriler randevu tamamladığında otomatik puan kazanır. Belirli eşiklere ulaşınca seviye yükseltilir.
               </p>
@@ -859,7 +859,7 @@ export default function BusinessSettingsPage() {
             </div>
 
             <div className="card">
-              <h2 className="text-lg font-semibold text-gray-900 mb-1">Yorum & Geri Bildirim</h2>
+              <h2 className="h-section mb-1">Yorum & Geri Bildirim</h2>
               <p className="text-sm text-gray-500 mb-6">
                 Randevu sonrası müşteri memnuniyet anketi gönderin.
               </p>
@@ -891,7 +891,7 @@ export default function BusinessSettingsPage() {
             </div>
 
             <div className="card">
-              <h2 className="text-lg font-semibold text-gray-900 mb-1">Müşteri Geri Kazanımı</h2>
+              <h2 className="h-section mb-1">Müşteri Geri Kazanımı</h2>
               <p className="text-sm text-gray-500 mb-6">
                 Uzun süredir gelmeyen müşterileri geri kazanmak için otomatik mesaj gönderin.
               </p>
@@ -927,7 +927,7 @@ export default function BusinessSettingsPage() {
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-pink-100">
                   <Cake className="h-5 w-5 text-pink-600" />
                 </div>
-                <h2 className="text-lg font-semibold text-gray-900">Doğum Günü SMS</h2>
+                <h2 className="h-section">Doğum Günü SMS</h2>
               </div>
               <p className="text-sm text-gray-500 mb-6">
                 Müşterilerinizin doğum günlerinde otomatik kutlama SMS&apos;i gönderin.
@@ -976,7 +976,7 @@ export default function BusinessSettingsPage() {
             </div>
 
             <div className="card">
-              <h2 className="text-lg font-semibold text-gray-900 mb-1">Rezervasyon Ayarları</h2>
+              <h2 className="h-section mb-1">Rezervasyon Ayarları</h2>
               <p className="text-sm text-gray-500 mb-6">
                 Masa rezervasyonu süresini ve çakışma kontrolünü ayarlayın.
               </p>
@@ -1007,7 +1007,7 @@ export default function BusinessSettingsPage() {
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-green-100">
                   <Smartphone className="h-5 w-5 text-green-600" />
                 </div>
-                <h2 className="text-lg font-semibold text-gray-900">WhatsApp Business</h2>
+                <h2 className="h-section">WhatsApp Business</h2>
               </div>
               <p className="text-sm text-gray-500 mb-6">
                 Müşterilerinize SMS yerine WhatsApp üzerinden mesaj gönderin. Açılma oranı %90+.
@@ -1068,7 +1068,7 @@ export default function BusinessSettingsPage() {
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-100">
                   <Sparkles className="h-5 w-5 text-purple-600" />
                 </div>
-                <h2 className="text-lg font-semibold text-gray-900">AI Asistan</h2>
+                <h2 className="h-section">AI Asistan</h2>
               </div>
               <p className="text-sm text-gray-500 mb-6">
                 Claude AI ile gelen mesajlara otomatik yanıt verin.
@@ -1121,7 +1121,7 @@ export default function BusinessSettingsPage() {
           <div className="card">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Tedavi Odaları</h2>
+                <h2 className="h-section">Tedavi Odaları</h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                   İşletmenizin odalarını tanımlayın. Randevu oluştururken oda seçimi yapılabilir.
                 </p>
@@ -1192,7 +1192,7 @@ export default function BusinessSettingsPage() {
       {showRoomModal && (
         <Portal>
         <div
-          className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 ${isClosingRoomModal ? 'closing' : ''}`}
+          className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${isClosingRoomModal ? 'closing' : ''}`}
           onAnimationEnd={() => {
             if (isClosingRoomModal) {
               setShowRoomModal(false)
@@ -1202,7 +1202,7 @@ export default function BusinessSettingsPage() {
         >
           <div className={`modal-content card w-full max-w-md ${isClosingRoomModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              <h3 className="h-section">
                 {editingRoom ? 'Odayı Düzenle' : 'Yeni Oda Ekle'}
               </h3>
               <button
@@ -1291,7 +1291,7 @@ export default function BusinessSettingsPage() {
         <div className="space-y-6">
           {/* Mevcut plan */}
           <div className="card">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Mevcut Abonelik</h2>
+            <h2 className="h-section mb-4">Mevcut Abonelik</h2>
             <div className="flex items-center gap-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-pulse-100 dark:bg-pulse-900/30">
                 <CreditCard className="h-6 w-6 text-pulse-900" />
@@ -1331,7 +1331,7 @@ export default function BusinessSettingsPage() {
 
           {/* Plan karşılaştırma */}
           <div>
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Planları Karşılaştır</h2>
+            <h2 className="h-section mb-4">Planları Karşılaştır</h2>
             <div className="grid gap-4 sm:grid-cols-3">
               <PlanCard
                 name="Başlangıç"

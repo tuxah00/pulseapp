@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -317,7 +317,7 @@ export default function ReviewsPage() {
       {/* Başlık */}
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Yorumlar</h1>
+          <h1 className="h-page">Yorumlar</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             {tab === 'reviews'
               ? `${totalReviews} yorum · Ortalama ${avgRating} ★`
@@ -456,10 +456,10 @@ export default function ReviewsPage() {
                     </span>
                     {renderStars(review.rating)}
                     {review.rating <= 3 && review.status !== 'responded' && (
-                      <span className="badge bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"><AlertTriangle className="h-3 w-3 mr-1" />Dikkat</span>
+                      <span className="badge-danger"><AlertTriangle className="h-3 w-3 mr-1" />Dikkat</span>
                     )}
                     {review.status === 'responded' && (
-                      <span className="badge bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">Yanıtlandı</span>
+                      <span className="badge-success">Yanıtlandı</span>
                     )}
                   </div>
 
@@ -651,7 +651,7 @@ export default function ReviewsPage() {
                             {FEEDBACK_TYPE_LABELS[item.type]}
                           </span>
                           {isUrgent && (
-                            <span className="badge bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">
+                            <span className="badge-danger">
                               <AlertTriangle className="h-3 w-3 mr-1" />Acil
                             </span>
                           )}

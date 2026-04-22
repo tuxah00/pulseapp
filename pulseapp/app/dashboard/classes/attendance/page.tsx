@@ -302,7 +302,7 @@ function AttendancePage() {
                       className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
                         record.status === 'present'
                           ? 'bg-green-100 text-green-700 ring-1 ring-green-400'
-                          : 'bg-gray-100 text-gray-500 hover:bg-green-50 hover:text-green-600'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-600 dark:hover:text-green-400'
                       }`}
                     >
                       <CheckCircle className="h-3.5 w-3.5" />
@@ -313,7 +313,7 @@ function AttendancePage() {
                       className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
                         record.status === 'late'
                           ? 'bg-yellow-100 text-yellow-700 ring-1 ring-yellow-400'
-                          : 'bg-gray-100 text-gray-500 hover:bg-yellow-50 hover:text-yellow-600'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 hover:text-yellow-600 dark:hover:text-yellow-400'
                       }`}
                     >
                       <AlertCircle className="h-3.5 w-3.5" />
@@ -324,7 +324,7 @@ function AttendancePage() {
                       className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
                         record.status === 'absent'
                           ? 'bg-red-100 text-red-600 ring-1 ring-red-400'
-                          : 'bg-gray-100 text-gray-500 hover:bg-red-50 hover:text-red-500'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500 dark:hover:text-red-400'
                       }`}
                     >
                       <XCircle className="h-3.5 w-3.5" />

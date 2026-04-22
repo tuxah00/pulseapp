@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -11,6 +11,7 @@ import {
   Clock, Star, MessageSquare, CheckCircle, XCircle, AlertTriangle, Info, Download,
   Gift, FileText, ChevronRight,
 } from 'lucide-react'
+import ViewModeToggle from '@/components/ui/view-mode-toggle'
 import { formatPhone, formatDate, formatTime, formatCurrency, getSegmentColor, cn, getInitials, formatDateISO } from '@/lib/utils'
 import { SEGMENT_LABELS, STATUS_LABELS, REFERRAL_STATUS_LABELS, REWARD_TYPE_LABELS, type Customer, type CustomerSegment, type Referral, type RewardType, type LoyaltyPoints } from '@/types'
 import type { AppointmentRow, MessageRow, ReviewRow } from '@/types/db'
@@ -545,33 +546,20 @@ export default function CustomersPage() {
     }
   }, [selectedCustomer, fetchAllergies, fetchCustomerDetail])
 
+  // Tek hiyerarşik ESC handler — önce en üstteki modal kapanır
   useEffect(() => {
-    if (!showModal) return
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') closeModal() }
+    const anyOpen = !!(showModal || showRewardModal || showRedeemModal || selectedCustomer)
+    if (!anyOpen) return
+    const h = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      if (showRedeemModal) { setShowRedeemModal(false); return }
+      if (showRewardModal) { setIsClosingReward(true); return }
+      if (showModal) { setIsClosingModal(true); return }
+      if (selectedCustomer) { closePanelAnimated(); return }
+    }
     document.addEventListener('keydown', h)
     return () => document.removeEventListener('keydown', h)
-  }, [showModal])
-
-  useEffect(() => {
-    if (!selectedCustomer) return
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape' && !showModal && !showRewardModal && !showRedeemModal) closePanelAnimated() }
-    document.addEventListener('keydown', h)
-    return () => document.removeEventListener('keydown', h)
-  }, [selectedCustomer, showModal, showRewardModal, showRedeemModal, closePanelAnimated])
-
-  useEffect(() => {
-    if (!showRewardModal) return
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') closeRewardModal() }
-    document.addEventListener('keydown', h)
-    return () => document.removeEventListener('keydown', h)
-  }, [showRewardModal])
-
-  useEffect(() => {
-    if (!showRedeemModal) return
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowRedeemModal(false) }
-    document.addEventListener('keydown', h)
-    return () => document.removeEventListener('keydown', h)
-  }, [showRedeemModal])
+  }, [showModal, showRewardModal, showRedeemModal, selectedCustomer, closePanelAnimated])
 
   function getStatusIcon(status: string) {
     switch (status) {
@@ -632,8 +620,13 @@ export default function CustomersPage() {
             <Star className="h-4 w-4 text-amber-500" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-              {'★'.repeat(rev.rating)}{'☆'.repeat(5 - rev.rating)} Yorum
+            <p className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center gap-1">
+              <span className="flex items-center gap-0.5">
+                {Array.from({length: 5}).map((_, i) => (
+                  <Star key={i} className={`h-3 w-3 ${i < rev.rating ? 'fill-amber-400 text-amber-400' : 'text-gray-300 dark:text-gray-600'}`} />
+                ))}
+              </span>
+              <span>Yorum</span>
             </p>
             {rev.comment && (
               <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 line-clamp-2">&ldquo;{rev.comment}&rdquo;</p>
@@ -687,7 +680,7 @@ export default function CustomersPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">{customerLabel}</h1>
+          <h1 className="h-page">{customerLabel}</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{totalCount} {customerLabel.toLowerCase()} kayıtlı</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -779,9 +772,14 @@ export default function CustomersPage() {
               onSortDir={setSortDir}
             />
           </ToolbarPopover>
-          <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-0.5" />
-          <button onClick={() => setViewMode('list')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'list' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Liste"><LayoutList className="h-4 w-4" /></button>
-          <button onClick={() => setViewMode('box')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'box' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Kutular"><LayoutGrid className="h-4 w-4" /></button>
+          <ViewModeToggle
+            value={viewMode}
+            onChange={setViewMode}
+            modes={[
+              { key: 'list', icon: <LayoutList className="h-4 w-4" />, label: 'Liste' },
+              { key: 'box', icon: <LayoutGrid className="h-4 w-4" />, label: 'Kutular' },
+            ]}
+          />
         </div>
       </div>
 
@@ -860,14 +858,14 @@ export default function CustomersPage() {
             <button
               onClick={() => setPage(p => Math.max(0, p - 1))}
               disabled={page === 0}
-              className="btn-secondary text-sm px-3 py-1.5 disabled:opacity-40"
+              className="btn-secondary text-sm px-3 py-1.5 disabled:opacity-50"
             >
               Önceki
             </button>
             <button
               onClick={() => setPage(p => p + 1)}
               disabled={(page + 1) * PAGE_SIZE >= totalCount}
-              className="btn-secondary text-sm px-3 py-1.5 disabled:opacity-40"
+              className="btn-secondary text-sm px-3 py-1.5 disabled:opacity-50"
             >
               Sonraki
             </button>
@@ -878,7 +876,7 @@ export default function CustomersPage() {
       {/* ── Müşteri Detay Slide-Over Paneli ── */}
       {selectedCustomer && (
         <Portal>
-          <div className="fixed inset-0 z-[100] bg-black/50 dark:bg-black/70" onClick={closePanelAnimated} />
+          <div className="fixed inset-0 z-[60] bg-black/50 dark:bg-black/70" onClick={closePanelAnimated} />
           <div
             className={`slide-panel border-l border-gray-200 dark:border-gray-700 ${panelClosing ? 'closing' : ''}`}
             onAnimationEnd={() => { if (panelClosing) { setSelectedCustomer(null); setPanelClosing(false) } }}
@@ -937,7 +935,7 @@ export default function CustomersPage() {
                     <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-pulse-50 dark:bg-pulse-900/20 text-pulse-900 dark:text-pulse-400 font-bold text-lg">
                       {getInitials(selectedCustomer.name)}
                     </div>
-                    <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{selectedCustomer.name}</h4>
+                    <h4 className="h-section">{selectedCustomer.name}</h4>
                     <span className={`badge mt-1 ${getSegmentColor(selectedCustomer.segment)}`}>{SEGMENT_LABELS[selectedCustomer.segment]}</span>
                   </div>
 
@@ -1149,12 +1147,7 @@ export default function CustomersPage() {
                                 {ref.reward_value ? ` (${ref.reward_value})` : ''}
                               </p>
                             </div>
-                            <span className={cn(
-                              'badge text-xs',
-                              ref.reward_claimed
-                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
-                                : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300'
-                            )}>
+                            <span className={ref.reward_claimed ? 'badge-success' : 'badge-warning'}>
                               {ref.reward_claimed ? 'Alındı' : 'Bekliyor'}
                             </span>
                           </div>
@@ -1173,7 +1166,11 @@ export default function CustomersPage() {
                         {customerReviews.map((rev) => (
                           <div key={rev.id} className="rounded-lg bg-gray-50 dark:bg-gray-700/50 p-3">
                             <div className="flex items-center justify-between">
-                              <span className="text-sm text-amber-500">{'★'.repeat(rev.rating)}{'☆'.repeat(5 - rev.rating)}</span>
+                              <span className="flex items-center gap-0.5">
+                                {Array.from({length: 5}).map((_, i) => (
+                                  <Star key={i} className={`h-3.5 w-3.5 ${i < rev.rating ? 'fill-amber-400 text-amber-400' : 'text-gray-300 dark:text-gray-600'}`} />
+                                ))}
+                              </span>
                               <span className="text-xs text-gray-400">{rev.created_at ? formatDate(rev.created_at) : ''}</span>
                             </div>
                             {rev.comment && <p className="text-xs text-gray-600 dark:text-gray-300 mt-1 line-clamp-3">{rev.comment}</p>}
@@ -1285,9 +1282,9 @@ export default function CustomersPage() {
       {/* Modal */}
       {(showModal || isClosingModal) && (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
+        <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
           <div className={`modal-content card w-full max-w-md dark:bg-gray-900 ${isClosingModal ? 'closing' : ''}`}>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+            <h2 className="h-section mb-4">
               {editingCustomer ? `${singularLabel} Düzenle` : `Yeni ${singularLabel} Ekle`}
             </h2>
             <form onSubmit={handleSubmit(onValidSubmit)} className="space-y-4" noValidate>
@@ -1349,9 +1346,9 @@ export default function CustomersPage() {
       {/* Ödül Verme Modalı */}
       {(showRewardModal || isClosingReward) && (
         <Portal>
-          <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4 ${isClosingReward ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingReward) { setShowRewardModal(false); setIsClosingReward(false) } }}>
+          <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${isClosingReward ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingReward) { setShowRewardModal(false); setIsClosingReward(false) } }}>
             <div className={`modal-content card w-full max-w-sm dark:bg-gray-900 ${isClosingReward ? 'closing' : ''}`}>
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+              <h2 className="h-section mb-4 flex items-center gap-2">
                 <Gift className="h-5 w-5 text-pulse-900 dark:text-pulse-300" /> Ödül Ver
               </h2>
               <div className="space-y-4">
@@ -1397,11 +1394,11 @@ export default function CustomersPage() {
       {showRedeemModal && selectedCustomer && customerLoyalty && (
         <Portal>
           <div
-            className="modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4"
+            className="modal-overlay fixed inset-0 z-[115] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4"
             onClick={(e) => { if (e.target === e.currentTarget) setShowRedeemModal(false) }}
           >
             <div className="modal-content card w-full max-w-sm dark:bg-gray-900">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1 flex items-center gap-2">
+              <h2 className="h-section mb-1 flex items-center gap-2">
                 <Gift className="h-5 w-5 text-pulse-900 dark:text-pulse-300" /> Puan Kullan
               </h2>
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">

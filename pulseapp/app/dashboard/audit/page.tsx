@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -8,6 +8,7 @@ import { Shield, ShieldX, Loader2, Search, Filter, ChevronLeft, ChevronRight, X 
 import { cn } from '@/lib/utils'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { getCustomerLabelSingular } from '@/lib/config/sector-modules'
+import EmptyState from '@/components/ui/empty-state'
 
 interface AuditLog {
   id: string
@@ -389,7 +390,7 @@ export default function AuditPage() {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Denetim Kaydı</h1>
+          <h1 className="h-page">Denetim Kaydı</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">İşletmenizdeki tüm eylemler kayıt altında</p>
         </div>
       </div>
@@ -451,56 +452,54 @@ export default function AuditPage() {
           <Loader2 className="h-8 w-8 animate-spin text-pulse-900" />
         </div>
       ) : logs.length === 0 ? (
-        <div className="card flex flex-col items-center justify-center py-16">
-          <Shield className="mb-4 h-12 w-12 text-gray-300" />
-          <p className="text-gray-500">Henüz kayıt yok</p>
-        </div>
+        <EmptyState
+          icon={<Shield className="h-8 w-8" />}
+          title="Henüz kayıt yok"
+        />
       ) : (
         <>
-          <div className="card overflow-hidden p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
-                    <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Zaman</th>
-                    <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Personel</th>
-                    <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Eylem</th>
-                    <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Kaynak</th>
-                    <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400 hidden md:table-cell">Detay</th>
+          <div className="table-wrapper">
+            <table className="table-base">
+              <thead className="table-head-row">
+                <tr>
+                  <th className="table-head-cell">Zaman</th>
+                  <th className="table-head-cell">Personel</th>
+                  <th className="table-head-cell">Eylem</th>
+                  <th className="table-head-cell">Kaynak</th>
+                  <th className="table-head-cell hidden md:table-cell">Detay</th>
+                </tr>
+              </thead>
+              <tbody>
+                {logs.map((log) => (
+                  <tr key={log.id} className="table-row">
+                    <td className="table-cell text-gray-500 whitespace-nowrap">
+                      {new Date(log.created_at).toLocaleString('tr-TR')}
+                    </td>
+                    <td className="table-cell font-medium text-gray-900 dark:text-gray-100">
+                      <div className="flex items-center gap-2">
+                        <span>{log.staff_name ?? 'Sistem'}</span>
+                        {log.details?.via === 'ai_assistant' && (
+                          <span className="rounded-full bg-pulse-900/10 text-pulse-900 dark:bg-pulse-300/20 dark:text-pulse-300 px-2 py-0.5 text-[10px] font-medium whitespace-nowrap">
+                            PulseApp Asistan
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="table-cell">
+                      <span className={cn('badge text-xs', ACTION_COLORS[log.action] ?? 'bg-gray-100 text-gray-700')}>
+                        {ACTION_LABELS[log.action] ?? log.action}
+                      </span>
+                    </td>
+                    <td className="table-cell text-gray-600 dark:text-gray-400">
+                      {resourceLabels[log.resource] ?? log.resource}
+                    </td>
+                    <td className="table-cell text-gray-500 dark:text-gray-400 text-xs hidden md:table-cell max-w-xs truncate" title={formatAuditDetail(log)}>
+                      {formatAuditDetail(log) || '—'}
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {logs.map((log) => (
-                    <tr key={log.id} className="border-b border-gray-100 dark:border-gray-800 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/30">
-                      <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
-                        {new Date(log.created_at).toLocaleString('tr-TR')}
-                      </td>
-                      <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
-                        <div className="flex items-center gap-2">
-                          <span>{log.staff_name ?? 'Sistem'}</span>
-                          {log.details?.via === 'ai_assistant' && (
-                            <span className="rounded-full bg-pulse-900/10 text-pulse-900 dark:bg-pulse-300/20 dark:text-pulse-300 px-2 py-0.5 text-[10px] font-medium whitespace-nowrap">
-                              PulseApp Asistan
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={cn('badge text-xs', ACTION_COLORS[log.action] ?? 'bg-gray-100 text-gray-700')}>
-                          {ACTION_LABELS[log.action] ?? log.action}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
-                        {resourceLabels[log.resource] ?? log.resource}
-                      </td>
-                      <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs hidden md:table-cell max-w-xs truncate" title={formatAuditDetail(log)}>
-                        {formatAuditDetail(log) || '—'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </table>
           </div>
 
           {/* Sayfalama */}

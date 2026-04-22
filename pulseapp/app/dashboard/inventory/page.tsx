@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import { Portal } from '@/components/ui/portal'
@@ -25,6 +25,7 @@ import { exportToCSV } from '@/lib/utils/export'
 import { Pagination } from '@/components/ui/pagination'
 import type { StockMovement, Supplier } from '@/types'
 import EmptyState from '@/components/ui/empty-state'
+import ViewModeToggle from '@/components/ui/view-mode-toggle'
 
 interface Product {
   id: string
@@ -151,26 +152,19 @@ export default function StoklarPage() {
 
   useEffect(() => { setPage(0) }, [debouncedSearch, categoryFilter, stockFilter])
 
+  // Tek hiyerarşik ESC handler — önce en üstteki modal kapanır
   useEffect(() => {
-    if (!showModal) return
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') closeModal() }
+    const anyOpen = !!(showSupplierModal || showModal || selectedProduct)
+    if (!anyOpen) return
+    const h = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      if (showSupplierModal) { setIsClosingSupplierModal(true); return }
+      if (showModal) { setIsClosingModal(true); return }
+      if (selectedProduct) { closePanelAnimated(); return }
+    }
     document.addEventListener('keydown', h)
     return () => document.removeEventListener('keydown', h)
-  }, [showModal])
-
-  useEffect(() => {
-    if (!showSupplierModal) return
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') closeSupplierModal() }
-    document.addEventListener('keydown', h)
-    return () => document.removeEventListener('keydown', h)
-  }, [showSupplierModal])
-
-  useEffect(() => {
-    if (!selectedProduct) return
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape' && !showModal && !showSupplierModal) closePanelAnimated() }
-    document.addEventListener('keydown', h)
-    return () => document.removeEventListener('keydown', h)
-  }, [selectedProduct, showModal, showSupplierModal, closePanelAnimated])
+  }, [showSupplierModal, showModal, selectedProduct, closePanelAnimated])
 
   const fetchMovements = useCallback(async (productId: string) => {
     setMovementsLoading(true)
@@ -381,10 +375,10 @@ export default function StoklarPage() {
 
   function stockBadge(product: Product) {
     if (product.stock_count === 0)
-      return <span className="badge bg-red-100 text-red-700">Stok Yok</span>
+      return <span className="badge-danger">Stok Yok</span>
     if (product.stock_count <= product.min_stock_level)
-      return <span className="badge bg-amber-100 text-amber-700">Az Stok</span>
-    return <span className="badge bg-green-100 text-green-700">Stokta Var</span>
+      return <span className="badge-warning">Az Stok</span>
+    return <span className="badge-success">Stokta Var</span>
   }
 
   function movementTypeLabel(type: string) {
@@ -436,7 +430,7 @@ export default function StoklarPage() {
       {/* Başlık */}
       <div className="mb-6 flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Stoklar</h1>
+          <h1 className="h-page">Stoklar</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             {dbError ? 'Ürün ve stok yönetimi' : `${products.length} ürün`}
           </p>
@@ -480,9 +474,14 @@ export default function StoklarPage() {
                 <ToolbarPopover icon={<ArrowUpDown className="h-4 w-4" />} label="Sırala" active={sortField !== null}>
                   <SortPopoverContent options={SORT_OPTIONS} sortField={sortField} sortDir={sortDir} onSortField={setSortField} onSortDir={setSortDir} />
                 </ToolbarPopover>
-                <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-0.5" />
-                <button onClick={() => setViewMode('list')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'list' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Liste"><LayoutList className="h-4 w-4" /></button>
-                <button onClick={() => setViewMode('box')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'box' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Kutular"><LayoutGrid className="h-4 w-4" /></button>
+                <ViewModeToggle
+                  value={viewMode}
+                  onChange={setViewMode}
+                  modes={[
+                    { key: 'list', icon: <LayoutList className="h-4 w-4" />, label: 'Liste' },
+                    { key: 'box', icon: <LayoutGrid className="h-4 w-4" />, label: 'Kutular' },
+                  ]}
+                />
               </div>
             </>
           )}
@@ -608,7 +607,7 @@ export default function StoklarPage() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium text-gray-900 dark:text-gray-100 truncate">{product.name}</span>
                       {stockBadge(product)}
-                      {product.category && <span className="badge bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{product.category}</span>}
+                      {product.category && <span className="badge-neutral">{product.category}</span>}
                     </div>
                     <div className="mt-0.5 flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
                       <span>{product.stock_count} {product.unit}</span>
@@ -697,7 +696,7 @@ export default function StoklarPage() {
       {/* ── Ürün Detay Slide-Over Paneli ── */}
       {selectedProduct && (
         <>
-          <div className="fixed inset-x-0 bottom-0 top-14 z-[54] bg-black/30 dark:bg-black/50" onClick={closePanelAnimated} />
+          <div className="fixed inset-x-0 bottom-0 top-14 z-[60] bg-black/50 dark:bg-black/70" onClick={closePanelAnimated} />
           <div
             className={`slide-panel !top-14 border-l border-gray-200 dark:border-gray-700 ${panelClosing ? 'closing' : ''}`}
             onAnimationEnd={() => { if (panelClosing) { setSelectedProduct(null); setPanelClosing(false) } }}
@@ -731,7 +730,7 @@ export default function StoklarPage() {
                     <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700">
                       <Package className="h-8 w-8 text-gray-500 dark:text-gray-400" />
                     </div>
-                    <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{selectedProduct.name}</h4>
+                    <h4 className="h-section">{selectedProduct.name}</h4>
                     <div className="mt-1">{stockBadge(selectedProduct)}</div>
                   </div>
 
@@ -832,10 +831,10 @@ export default function StoklarPage() {
       {/* Ürün Ekle / Düzenleme Modal */}
       {showModal && (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
+        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
           <div className={`modal-content card w-full max-w-md max-h-[90vh] overflow-y-auto dark:bg-gray-900 ${isClosingModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              <h2 className="h-section">
                 {editingProduct ? 'Ürünü Düzenle' : 'Yeni Ürün Ekle'}
               </h2>
               <button onClick={() => closeModal()} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
@@ -950,10 +949,10 @@ export default function StoklarPage() {
       {/* Tedarikçi Ekle / Düzenle Modal */}
       {showSupplierModal && (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 ${isClosingSupplierModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingSupplierModal) { setShowSupplierModal(false); setIsClosingSupplierModal(false) } }}>
+        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${isClosingSupplierModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingSupplierModal) { setShowSupplierModal(false); setIsClosingSupplierModal(false) } }}>
           <div className={`modal-content card w-full max-w-md ${isClosingSupplierModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              <h2 className="h-section">
                 {editingSupplier ? 'Tedarikçiyi Düzenle' : 'Yeni Tedarikçi'}
               </h2>
               <button onClick={() => closeSupplierModal()} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>

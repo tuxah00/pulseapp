@@ -24,7 +24,7 @@ export default async function AiBriefWidget({ businessId }: { businessId: string
   const lines = (data.body || '').split('\n').map((l: string) => l.trim()).filter(Boolean)
 
   return (
-    <div className="card space-y-3 border-l-4 border-amber-400">
+    <div className="rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50/40 dark:bg-amber-950/15 shadow-sm p-4 space-y-3">
       <div className="flex items-center gap-2">
         <div className="h-8 w-8 rounded-lg bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center">
           <Sun className="h-4 w-4 text-amber-600" />

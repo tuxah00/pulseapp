@@ -283,7 +283,7 @@ export function CustomerSearchSelect({
                   value={search}
                   onValueChange={setSearch}
                   placeholder="Ad veya telefon ile ara..."
-                  className="w-full pl-8 pr-3 py-2 text-sm bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg outline-none focus:ring-1 focus:ring-pulse-500 dark:text-gray-100 placeholder:text-gray-400"
+                  className="w-full pl-8 pr-3 py-2 text-sm bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg outline-none focus:ring-1 focus:ring-pulse-900 dark:text-gray-100 placeholder:text-gray-400"
                 />
               </div>
             </div>

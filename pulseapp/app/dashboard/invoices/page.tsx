@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -32,11 +32,11 @@ interface SimpleCustomer {
 }
 
 const STATUS_CONFIG: Record<InvoiceStatus, { label: string; color: string; icon: React.ElementType }> = {
-  pending:   { label: 'Bekliyor',       color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',  icon: Clock },
-  paid:      { label: 'Ödendi',         color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',  icon: CheckCircle },
-  partial:   { label: 'Kısmi Ödeme',   color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',      icon: ChevronDown },
-  overdue:   { label: 'Vadesi Geçmiş', color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',          icon: AlertCircle },
-  cancelled: { label: 'İptal',          color: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400',         icon: XCircle },
+  pending:   { label: 'Bekliyor',       color: 'badge-warning',  icon: Clock },
+  paid:      { label: 'Ödendi',         color: 'badge-success',  icon: CheckCircle },
+  partial:   { label: 'Kısmi Ödeme',   color: 'badge-info',     icon: ChevronDown },
+  overdue:   { label: 'Vadesi Geçmiş', color: 'badge-danger',   icon: AlertCircle },
+  cancelled: { label: 'İptal',          color: 'badge-neutral',  icon: XCircle },
 }
 
 const PAYMENT_METHODS: { value: PaymentMethod; label: string; icon: React.ElementType }[] = [
@@ -190,19 +190,19 @@ export default function InvoicesPage() {
     }
   }, [selectedInvoice, fetchPayments])
 
+  // Tek hiyerarşik ESC handler — önce en üstteki katman kapanır
   useEffect(() => {
-    if (!showCreateModal) return
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') closeCreateModal() }
+    const anyOpen = !!(showCreateModal || showPaymentForm || selectedInvoice)
+    if (!anyOpen) return
+    const h = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      if (showCreateModal) { closeCreateModal(); return }
+      if (showPaymentForm) { setShowPaymentForm(false); return }
+      if (selectedInvoice) { closePanelAnimated(); return }
+    }
     document.addEventListener('keydown', h)
     return () => document.removeEventListener('keydown', h)
-  }, [showCreateModal])
-
-  useEffect(() => {
-    if (!selectedInvoice) return
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape' && !showCreateModal) closePanelAnimated() }
-    document.addEventListener('keydown', h)
-    return () => document.removeEventListener('keydown', h)
-  }, [selectedInvoice, showCreateModal, closePanelAnimated])
+  }, [showCreateModal, showPaymentForm, selectedInvoice, closePanelAnimated])
 
   function addItem() {
     setFormItems(prev => [...prev, { service_name: '', quantity: 1, unit_price: 0, total: 0 }])
@@ -500,7 +500,7 @@ export default function InvoicesPage() {
       {/* Başlık */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Faturalar</h1>
+          <h1 className="h-page">Faturalar</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{invoices.length} fatura</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -537,16 +537,16 @@ export default function InvoicesPage() {
       {/* Özet Kartlar */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <button onClick={() => setStatusFilter(statusFilter === 'paid' ? 'all' : 'paid')} className={cn('relative overflow-hidden rounded-2xl border border-green-100 dark:border-green-900/40 bg-green-50 dark:bg-green-950/30 p-4 text-left transition-all hover:shadow-sm', statusFilter === 'paid' && 'ring-2 ring-green-500')}>
-          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Tahsil Edilen</p>
-          <p className="text-xl font-bold bg-gradient-to-r from-emerald-500 to-teal-600 bg-clip-text text-transparent">{formatCurrency(totalRevenue)}</p>
+          <p className="text-xs font-medium text-green-700 dark:text-green-400 mb-1">Tahsil Edilen</p>
+          <p className="text-xl font-bold text-green-800 dark:text-green-300">{formatCurrency(totalRevenue)}</p>
         </button>
         <button onClick={() => setStatusFilter(statusFilter === 'pending' ? 'all' : 'pending')} className={cn('relative overflow-hidden rounded-2xl border border-amber-100 dark:border-amber-900/40 bg-amber-50 dark:bg-amber-950/30 p-4 text-left transition-all hover:shadow-sm', statusFilter === 'pending' && 'ring-2 ring-amber-500')}>
-          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Bekleyen</p>
-          <p className="text-xl font-bold bg-gradient-to-r from-amber-500 to-orange-600 bg-clip-text text-transparent">{formatCurrency(pendingTotal)}</p>
+          <p className="text-xs font-medium text-amber-700 dark:text-amber-400 mb-1">Bekleyen</p>
+          <p className="text-xl font-bold text-amber-800 dark:text-amber-300">{formatCurrency(pendingTotal)}</p>
         </button>
         <button onClick={() => setStatusFilter(statusFilter === 'overdue' ? 'all' : 'overdue')} className={cn('relative overflow-hidden rounded-2xl border border-red-100 dark:border-red-900/40 bg-red-50 dark:bg-red-950/30 p-4 text-left transition-all hover:shadow-sm', statusFilter === 'overdue' && 'ring-2 ring-red-500')}>
-          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Vadesi Geçmiş</p>
-          <p className={cn('text-xl font-bold', overdueCount > 0 ? 'bg-gradient-to-r from-red-500 to-rose-600 bg-clip-text text-transparent' : 'text-gray-900 dark:text-gray-100')}>{overdueCount} fatura</p>
+          <p className="text-xs font-medium text-red-700 dark:text-red-400 mb-1">Vadesi Geçmiş</p>
+          <p className={cn('text-xl font-bold', overdueCount > 0 ? 'text-red-800 dark:text-red-300' : 'text-gray-900 dark:text-gray-100')}>{overdueCount} fatura</p>
         </button>
       </div>
 
@@ -674,7 +674,7 @@ export default function InvoicesPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium text-gray-700 dark:text-gray-300">{invoice.invoice_number}</span>
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                      <span className="badge-danger">
                         <Trash2 className="h-3 w-3" />Silinmiş
                       </span>
                     </div>
@@ -727,7 +727,7 @@ export default function InvoicesPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-medium text-gray-900 dark:text-gray-100">{invoice.invoice_number}</span>
-                    <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium', cfg.color)}>
+                    <span className={cfg.color}>
                       <Icon className="h-3 w-3" />{cfg.label}
                     </span>
                     {invoice.payment_type === 'installment' && (
@@ -769,7 +769,7 @@ export default function InvoicesPage() {
       {/* ── Fatura Detay Slide-Over ── */}
       {selectedInvoice && (
         <Portal>
-          <div className="fixed inset-0 z-[100] bg-black/50 dark:bg-black/70" onClick={closePanelAnimated} />
+          <div className="fixed inset-0 z-[60] bg-black/50 dark:bg-black/70" onClick={closePanelAnimated} />
           <div
             className={`slide-panel border-l border-gray-200 dark:border-gray-700 ${panelClosing ? 'closing' : ''}`}
             onAnimationEnd={() => { if (panelClosing) { setSelectedInvoice(null); setPanelClosing(false) } }}
@@ -796,7 +796,7 @@ export default function InvoicesPage() {
                   const cfg = STATUS_CONFIG[selectedInvoice.status]
                   const Icon = cfg.icon
                   return (
-                    <span className={cn('inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium', cfg.color)}>
+                    <span className={cn(cfg.color, 'px-3 py-1.5 text-sm')}>
                       <Icon className="h-4 w-4" />{cfg.label}
                     </span>
                   )
@@ -1076,10 +1076,10 @@ export default function InvoicesPage() {
       {/* Fatura Oluştur Modal */}
       {(showCreateModal || isClosingCreateModal) && (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4 ${isClosingCreateModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingCreateModal) { setShowCreateModal(false); setIsClosingCreateModal(false) } }}>
+        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${isClosingCreateModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingCreateModal) { setShowCreateModal(false); setIsClosingCreateModal(false) } }}>
           <div className={`modal-content card w-full max-w-lg max-h-[90vh] overflow-y-auto dark:bg-gray-900 ${isClosingCreateModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Yeni Fatura Oluştur</h2>
+              <h2 className="h-section">Yeni Fatura Oluştur</h2>
               <button onClick={() => closeCreateModal()} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
             </div>
 

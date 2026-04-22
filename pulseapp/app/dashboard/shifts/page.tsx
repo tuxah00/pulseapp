@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
@@ -92,10 +92,10 @@ interface ShiftRequest {
   created_at: string
 }
 
-const REQUEST_STATUS_STYLES: Record<ShiftRequestStatus, { bg: string; text: string }> = {
-  pending:  { bg: 'bg-yellow-50 dark:bg-yellow-900/20', text: 'text-yellow-700 dark:text-yellow-400' },
-  approved: { bg: 'bg-green-50 dark:bg-green-900/20',  text: 'text-green-700 dark:text-green-400' },
-  rejected: { bg: 'bg-red-50 dark:bg-red-900/20',      text: 'text-red-700 dark:text-red-400' },
+const REQUEST_STATUS_BADGE: Record<ShiftRequestStatus, string> = {
+  pending:  'badge-warning',
+  approved: 'badge-success',
+  rejected: 'badge-danger',
 }
 
 export default function VardiyePage() {
@@ -537,7 +537,7 @@ export default function VardiyePage() {
       {/* Başlık */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Vardiya Yönetimi</h1>
+          <h1 className="h-page">Vardiya Yönetimi</h1>
           <p className="text-sm text-gray-500 mt-1">Personel vardiyelerini ve çalışma saatlerini yönetin</p>
         </div>
         {activeTab === 'shifts' && (
@@ -898,7 +898,7 @@ export default function VardiyePage() {
       {(noteDetail || isClosingNoteDetail) && noteDetail && (
         <Portal>
         <div
-          className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 ${isClosingNoteDetail ? 'closing' : ''}`}
+          className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 dark:bg-black/70 ${isClosingNoteDetail ? 'closing' : ''}`}
           onAnimationEnd={() => { if (isClosingNoteDetail) { setNoteDetail(null); setIsClosingNoteDetail(false) } }}
           onClick={() => setIsClosingNoteDetail(true)}
         >
@@ -931,7 +931,7 @@ export default function VardiyePage() {
       {/* Reset Confirmation Modal */}
       {(resetConfirm || isClosingResetConfirm) && (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 ${isClosingResetConfirm ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingResetConfirm) { setResetConfirm(false); setIsClosingResetConfirm(false) } }}>
+        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 dark:bg-black/70 ${isClosingResetConfirm ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingResetConfirm) { setResetConfirm(false); setIsClosingResetConfirm(false) } }}>
           <div className={`modal-content bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4 ${isClosingResetConfirm ? 'closing' : ''}`}>
             <h3 className="font-semibold text-gray-900 dark:text-gray-100">Tabloyu Sıfırla</h3>
             <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -953,7 +953,7 @@ export default function VardiyePage() {
         if (!modal) return null
         return (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setModal(null); setIsClosingModal(false) } }}>
+        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 dark:bg-black/70 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setModal(null); setIsClosingModal(false) } }}>
           <div className={`modal-content bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4 ${isClosingModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between">
               <h3 className="font-semibold text-gray-900 dark:text-gray-100">
@@ -1098,14 +1098,13 @@ export default function VardiyePage() {
           ) : (
             <div className="space-y-3">
               {requests.map(req => {
-                const sc = REQUEST_STATUS_STYLES[req.status]
                 return (
                   <div key={req.id} className="card p-4 flex flex-col sm:flex-row sm:items-center gap-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="font-medium text-gray-900 dark:text-white text-sm">{req.staff_name}</p>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${sc.bg} ${sc.text}`}>{SHIFT_REQUEST_STATUS_LABELS[req.status]}</span>
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                        <span className={REQUEST_STATUS_BADGE[req.status]}>{SHIFT_REQUEST_STATUS_LABELS[req.status]}</span>
+                        <span className="badge-neutral">
                           {SHIFT_TYPE_LABELS[req.shift_type]}
                         </span>
                       </div>
@@ -1146,7 +1145,7 @@ export default function VardiyePage() {
       {(showRequestModal || isClosingRequestModal) && (
         <Portal>
           <div
-            className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 ${isClosingRequestModal ? 'closing' : ''}`}
+            className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${isClosingRequestModal ? 'closing' : ''}`}
             onClick={() => setIsClosingRequestModal(true)}
             onAnimationEnd={() => { if (isClosingRequestModal) { setShowRequestModal(false); setIsClosingRequestModal(false) } }}
           >
@@ -1204,7 +1203,7 @@ export default function VardiyePage() {
       {(reviewTarget || isClosingReviewModal) && (
         <Portal>
           <div
-            className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 ${isClosingReviewModal ? 'closing' : ''}`}
+            className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${isClosingReviewModal ? 'closing' : ''}`}
             onClick={() => setIsClosingReviewModal(true)}
             onAnimationEnd={() => { if (isClosingReviewModal) { setReviewTarget(null); setIsClosingReviewModal(false) } }}
           >
@@ -1258,7 +1257,7 @@ export default function VardiyePage() {
       {activeTab === 'hours' && (
         <form onSubmit={handleSaveHours}>
           <div className="card">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">Çalışma Saatleri</h2>
+            <h2 className="h-section mb-1">Çalışma Saatleri</h2>
             <p className="text-sm text-gray-500 mb-6">
               İşletmenizin açık olduğu gün ve saatleri belirleyin. Kapalı günlerde vardiya atanamaz.
             </p>

@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useCallback, useEffect, useState } from 'react'
 import {
@@ -122,7 +122,7 @@ export default function AiActionsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+        <h1 className="h-page flex items-center gap-2">
           <Inbox className="w-6 h-6 text-pulse-900 dark:text-pulse-300" />
           Asistan Aksiyonları
         </h1>
@@ -206,11 +206,11 @@ function ActionCard({
   onDecide: (a: PendingAction, d: 'confirm' | 'cancel') => void
 }) {
   const statusStyle: Record<PendingAction['status'], { label: string; badge: string; icon: React.ReactNode }> = {
-    pending:   { label: 'Bekliyor',  badge: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300', icon: <Clock className="w-3.5 h-3.5" /> },
-    scheduled: { label: 'Planlı',    badge: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',   icon: <Calendar className="w-3.5 h-3.5" /> },
-    executed:  { label: 'Çalıştı',   badge: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300', icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
-    cancelled: { label: 'İptal',     badge: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400', icon: <XCircle className="w-3.5 h-3.5" /> },
-    expired:   { label: 'Süresi dolmuş', badge: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300', icon: <XCircle className="w-3.5 h-3.5" /> },
+    pending:   { label: 'Bekliyor',  badge: 'badge-warning', icon: <Clock className="w-3.5 h-3.5" /> },
+    scheduled: { label: 'Planlı',    badge: 'badge-info',   icon: <Calendar className="w-3.5 h-3.5" /> },
+    executed:  { label: 'Çalıştı',   badge: 'badge-success', icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
+    cancelled: { label: 'İptal',     badge: 'badge-neutral', icon: <XCircle className="w-3.5 h-3.5" /> },
+    expired:   { label: 'Süresi dolmuş', badge: 'badge-danger', icon: <XCircle className="w-3.5 h-3.5" /> },
   }
   const st = statusStyle[action.status]
   const remaining = action.status === 'pending' ? timeUntil(action.expires_at) : null
@@ -221,7 +221,7 @@ function ActionCard({
     <div className="card p-4 cursor-default space-y-2">
       <div className="flex items-start justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 ${st.badge}`}>
+          <span className={st.badge}>
             {st.icon} {st.label}
           </span>
           <span className="text-[11px] text-gray-500 dark:text-gray-400">
@@ -262,7 +262,7 @@ function ActionCard({
             type="button"
             onClick={() => onDecide(action, 'confirm')}
             disabled={busy}
-            className="btn-primary text-xs px-3 py-1.5 flex items-center gap-1 disabled:opacity-60"
+            className="btn-primary text-xs px-3 py-1.5 flex items-center gap-1 disabled:opacity-50"
           >
             {busy ? (
               <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Çalıştırılıyor</>
@@ -274,7 +274,7 @@ function ActionCard({
             type="button"
             onClick={() => onDecide(action, 'cancel')}
             disabled={busy}
-            className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-1 disabled:opacity-60"
+            className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-1 disabled:opacity-50"
           >
             <XCircle className="w-3.5 h-3.5" /> İptal
           </button>

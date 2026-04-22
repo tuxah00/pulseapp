@@ -15,6 +15,7 @@ import { Portal } from '@/components/ui/portal'
 import { cn } from '@/lib/utils'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { requirePermission } from '@/lib/hooks/use-require-permission'
+import EmptyState from '@/components/ui/empty-state'
 
 interface WaitlistEntry {
   id: string
@@ -430,15 +431,15 @@ export default function WaitlistPage() {
       {loading ? (
         <div className="flex items-center justify-center h-32"><Loader2 className="h-6 w-6 animate-spin text-pulse-900" /></div>
       ) : filtered.length === 0 ? (
-        <div className="card p-8 text-center">
-          <Clock className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-          <p className="text-gray-500 dark:text-gray-400">Bekleme listesi boş</p>
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Yeni bir kayıt eklemek için butonu kullanın</p>
-        </div>
+        <EmptyState
+          icon={<Clock className="h-8 w-8" />}
+          title="Bekleme listesi boş"
+          description="Yeni bir kayıt eklemek için butonu kullanın"
+        />
       ) : (
         <AnimatedList className="space-y-3">
           {filtered.map(e => (
-            <AnimatedItem key={e.id} className="card p-4 cursor-pointer hover:ring-1 hover:ring-pulse-500/40 transition-all" onClick={() => openBook(e)}>
+            <AnimatedItem key={e.id} className="card p-4 cursor-pointer hover:ring-1 hover:ring-pulse-900/40 transition-all" onClick={() => openBook(e)}>
               <div className="flex items-start gap-4">
                 <div className={cn(
                   'h-10 w-10 rounded-xl flex items-center justify-center text-sm font-bold flex-shrink-0',
@@ -539,7 +540,7 @@ export default function WaitlistPage() {
       {(showBook || closingBook) && bookEntry && (
         <Portal>
           <div
-            className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 ${closingBook ? 'closing' : ''}`}
+            className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${closingBook ? 'closing' : ''}`}
             onClick={() => setClosingBook(true)}
             onAnimationEnd={() => { if (closingBook) { setShowBook(false); setClosingBook(false); setBookEntry(null) } }}
           >
@@ -603,7 +604,7 @@ export default function WaitlistPage() {
       {/* ═══ Modal: Listeye Ekle ═══ */}
       {(showCreate || closingCreate) && (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 ${closingCreate ? 'closing' : ''}`} onClick={() => setClosingCreate(true)} onAnimationEnd={() => { if (closingCreate) { setShowCreate(false); setClosingCreate(false) } }}>
+        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${closingCreate ? 'closing' : ''}`} onClick={() => setClosingCreate(true)} onAnimationEnd={() => { if (closingCreate) { setShowCreate(false); setClosingCreate(false) } }}>
           <div className={`modal-content card w-full max-w-lg dark:bg-gray-900 ${closingCreate ? 'closing' : ''}`} onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-base font-medium text-gray-900 dark:text-white">Bekleme Listesine Ekle</h3>

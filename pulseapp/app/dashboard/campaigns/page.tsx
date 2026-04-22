@@ -29,11 +29,11 @@ const SEGMENT_COLORS: Record<CustomerSegment, string> = {
 }
 
 const STATUS_CONFIG = {
-  draft: { label: 'Taslak', icon: FileText, color: 'text-gray-500 dark:text-gray-400', bg: 'bg-gray-100 dark:bg-gray-800' },
-  scheduled: { label: 'Zamanlandı', icon: CalendarClock, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-900/20' },
-  sending: { label: 'Gönderiliyor', icon: Send, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-900/20' },
-  completed: { label: 'Tamamlandı', icon: CheckCircle2, color: 'text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-900/20' },
-  cancelled: { label: 'İptal', icon: Ban, color: 'text-red-500 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-900/20' },
+  draft: { label: 'Taslak', icon: FileText, color: 'text-gray-500 dark:text-gray-400', bg: 'bg-gray-100 dark:bg-gray-800', badge: 'badge-warning' },
+  scheduled: { label: 'Zamanlandı', icon: CalendarClock, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-900/20', badge: 'badge-warning' },
+  sending: { label: 'Gönderiliyor', icon: Send, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-900/20', badge: 'badge-warning' },
+  completed: { label: 'Tamamlandı', icon: CheckCircle2, color: 'text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-900/20', badge: 'badge-success' },
+  cancelled: { label: 'İptal', icon: Ban, color: 'text-red-500 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-900/20', badge: 'badge-danger' },
 }
 
 const CHANNEL_LABELS = { auto: 'Otomatik', sms: 'SMS', whatsapp: 'WhatsApp' }
@@ -313,8 +313,8 @@ export default function CampaignsPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="font-semibold text-gray-900 dark:text-white">{c.name}</p>
-                        <span className={cn('text-xs px-2 py-0.5 rounded-full font-medium', cfg.bg, cfg.color)}>{cfg.label}</span>
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+                        <span className={cfg.badge}>{cfg.label}</span>
+                        <span className="badge-neutral">
                           {CHANNEL_LABELS[c.channel]}
                         </span>
                       </div>
@@ -423,7 +423,7 @@ export default function CampaignsPage() {
       {(showModal || closingModal) && (
         <Portal>
         <div
-          className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 ${closingModal ? 'closing' : ''}`}
+          className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${closingModal ? 'closing' : ''}`}
           onClick={closeModal}
           onAnimationEnd={onAnimEnd}
         >

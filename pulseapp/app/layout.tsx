@@ -1,9 +1,7 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { GeistSans } from 'geist/font/sans'
 import './globals.css'
 import { cn } from "@/lib/utils";
-
-const inter = Inter({ subsets: ['latin'], variable: '--font-sans' })
 
 export const metadata: Metadata = {
   title: 'PulseApp — İşletmenizin Dijital Asistanı',
@@ -17,7 +15,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="tr" className={cn(inter.className, inter.variable, "font-sans")} suppressHydrationWarning>
+    <html lang="tr" className={cn(GeistSans.variable, "font-sans")} suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{

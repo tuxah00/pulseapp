@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
@@ -531,9 +531,9 @@ export default function KasaPage() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <Wallet className="h-6 w-6 text-pulse-900" />
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Kasa</h1>
+          <h1 className="h-page">Kasa</h1>
           {session && (
-            <span className="badge bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+            <span className="badge-success">
               Açık
             </span>
           )}
@@ -568,7 +568,7 @@ export default function KasaPage() {
             <button
               onClick={() => setItemTab('products')}
               className={cn('flex-1 flex items-center justify-center gap-1 px-1.5 py-1 rounded-md text-xs font-medium transition-colors',
-                itemTab === 'products' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                itemTab === 'products' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
               )}
             >
               <Package className="h-3 w-3 shrink-0" /> Ürün
@@ -576,7 +576,7 @@ export default function KasaPage() {
             <button
               onClick={() => setItemTab('packages')}
               className={cn('flex-1 flex items-center justify-center gap-1 px-1.5 py-1 rounded-md text-xs font-medium transition-colors',
-                itemTab === 'packages' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                itemTab === 'packages' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
               )}
             >
               <Gift className="h-3 w-3 shrink-0" /> Paket
@@ -608,7 +608,7 @@ export default function KasaPage() {
                       service_id: svc.id,
                     })}
                     disabled={!svc.price}
-                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left disabled:opacity-40 focus:outline-none"
+                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left disabled:opacity-50 focus:outline-none"
                   >
                     <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{svc.name}</span>
                     <span className="text-sm text-pulse-900 font-semibold flex-shrink-0 ml-2">
@@ -630,7 +630,7 @@ export default function KasaPage() {
                       product_id: prod.id,
                     })}
                     disabled={!prod.price || prod.stock_count <= 0}
-                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left disabled:opacity-40 focus:outline-none"
+                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left disabled:opacity-50 focus:outline-none"
                   >
                     <div className="min-w-0">
                       <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate block">{prod.name}</span>
@@ -657,7 +657,7 @@ export default function KasaPage() {
                       sessions_total: pkg.sessions_total,
                     })}
                     disabled={!pkg.price}
-                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left disabled:opacity-40 focus:outline-none"
+                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left disabled:opacity-50 focus:outline-none"
                   >
                     <div className="min-w-0">
                       <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate block">{pkg.name}</span>
@@ -781,7 +781,7 @@ export default function KasaPage() {
                   <button
                     onClick={applyLoyaltyPoints}
                     disabled={!loyaltyPointsInput || parseInt(loyaltyPointsInput) <= 0 || parseInt(loyaltyPointsInput) > loyaltyBalance}
-                    className="text-xs px-3 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-40 transition-colors whitespace-nowrap"
+                    className="text-xs px-3 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50 transition-colors whitespace-nowrap"
                   >
                     Uygula
                   </button>
@@ -912,7 +912,7 @@ export default function KasaPage() {
                 key={pm.key}
                 onClick={() => addPaymentRow(pm.key)}
                 disabled={cart.length === 0}
-                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-40 text-sm font-medium"
+                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50 text-sm font-medium"
               >
                 {pm.icon} {pm.label}
               </button>
@@ -960,7 +960,7 @@ export default function KasaPage() {
           <button
             onClick={handleCheckout}
             disabled={cart.length === 0 || remaining > 0.01 || processing}
-            className="flex-shrink-0 w-full btn-primary py-3 text-base font-semibold flex items-center justify-center gap-2 disabled:opacity-40"
+            className="flex-shrink-0 w-full btn-primary py-3 text-base font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {processing ? (
               <Loader2 className="h-5 w-5 animate-spin" />
@@ -974,23 +974,23 @@ export default function KasaPage() {
 
       {/* ── Bugünün İşlemleri ── */}
       {transactions.length > 0 && (
-        <div className="card p-4">
-          <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
+        <section className="space-y-3">
+          <h3 className="h-section flex items-center gap-2">
             <Clock className="h-5 w-5" /> Bugünün İşlemleri
           </h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-gray-500 border-b border-gray-200 dark:border-gray-700">
-                  <th className="pb-2 font-medium">Saat</th>
-                  <th className="pb-2 font-medium">Fiş No</th>
-                  <th className="pb-2 font-medium">Müşteri</th>
-                  <th className="pb-2 font-medium text-right">Tutar</th>
-                  <th className="pb-2 font-medium">Ödeme</th>
-                  <th className="pb-2 font-medium">Durum</th>
+          <div className="table-wrapper">
+            <table className="table-base">
+              <thead className="table-head-row">
+                <tr>
+                  <th className="table-head-cell">Saat</th>
+                  <th className="table-head-cell">Fiş No</th>
+                  <th className="table-head-cell">Müşteri</th>
+                  <th className="table-head-cell text-right">Tutar</th>
+                  <th className="table-head-cell">Ödeme</th>
+                  <th className="table-head-cell">Durum</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+              <tbody>
                 {transactions.map(tx => {
                   const payments = (tx.payments || []) as POSPayment[]
                   const methodLabels = payments.map(p => {
@@ -999,24 +999,24 @@ export default function KasaPage() {
                   }).join(' + ')
 
                   return (
-                    <tr key={tx.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                      <td className="py-2 text-gray-700 dark:text-gray-300">
+                    <tr key={tx.id} className="table-row">
+                      <td className="table-cell">
                         {new Date(tx.created_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
                       </td>
-                      <td className="py-2 text-gray-500 font-mono text-xs">{tx.receipt_number}</td>
-                      <td className="py-2 text-gray-700 dark:text-gray-300">
+                      <td className="table-cell text-gray-500 font-mono text-xs">{tx.receipt_number}</td>
+                      <td className="table-cell">
                         {tx.customers?.name || '—'}
                       </td>
-                      <td className="py-2 text-right font-semibold text-gray-900 dark:text-gray-100">
+                      <td className="table-cell text-right font-semibold text-gray-900 dark:text-gray-100">
                         {formatCurrency(tx.total)}
                       </td>
-                      <td className="py-2 text-gray-500">{methodLabels}</td>
-                      <td className="py-2">
-                        <span className={cn('badge text-xs',
-                          tx.payment_status === 'paid' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                          tx.payment_status === 'partial' ? 'bg-orange-100 text-orange-700' :
-                          'bg-gray-100 text-gray-600'
-                        )}>
+                      <td className="table-cell text-gray-500">{methodLabels}</td>
+                      <td className="table-cell">
+                        <span className={
+                          tx.payment_status === 'paid' ? 'badge-success' :
+                          tx.payment_status === 'partial' ? 'badge-warning' :
+                          'badge-neutral'
+                        }>
                           {tx.payment_status === 'paid' ? 'Ödendi' : tx.payment_status === 'partial' ? 'Kısmi' : 'Bekliyor'}
                         </span>
                       </td>
@@ -1026,16 +1026,16 @@ export default function KasaPage() {
               </tbody>
             </table>
           </div>
-        </div>
+        </section>
       )}
 
       {/* ── Kasa Oturumu Modal ── */}
       {(showSessionModal || isClosingSessionModal) && (
         <Portal>
-          <div className={`modal-overlay fixed inset-0 z-[100] bg-black/60 dark:bg-black/70 ${isClosingSessionModal ? 'closing' : ''}`} onClick={() => closeSessionModal()} onAnimationEnd={() => { if (isClosingSessionModal) { setShowSessionModal(false); setIsClosingSessionModal(false) } }} />
-          <div className="fixed inset-0 z-[101] flex items-center justify-center p-4 pointer-events-none">
+          <div className={`modal-overlay fixed inset-0 z-[60] bg-black/50 dark:bg-black/70 ${isClosingSessionModal ? 'closing' : ''}`} onClick={() => closeSessionModal()} onAnimationEnd={() => { if (isClosingSessionModal) { setShowSessionModal(false); setIsClosingSessionModal(false) } }} />
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none">
             <div className={`modal-content bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-md p-6 pointer-events-auto ${isClosingSessionModal ? 'closing' : ''}`}>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+              <h3 className="h-section mb-4">
                 {!session ? 'Kasayı Aç' : 'Kasayı Kapat'}
               </h3>
 
@@ -1088,7 +1088,7 @@ export default function KasaPage() {
                   </div>
                   <div className="flex gap-3">
                     <button onClick={() => closeSessionModal()} className="btn-secondary flex-1">İptal</button>
-                    <button onClick={closeSession} className="btn-primary flex-1 bg-orange-500 hover:bg-orange-600">Kasayı Kapat</button>
+                    <button onClick={closeSession} className="btn-primary flex-1">Kasayı Kapat</button>
                   </div>
                 </div>
               )}

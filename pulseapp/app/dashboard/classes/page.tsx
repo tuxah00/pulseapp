@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import { Portal } from '@/components/ui/portal'
@@ -17,6 +17,7 @@ import {
   Eye,
   Trash2,
 } from 'lucide-react'
+import EmptyState from '@/components/ui/empty-state'
 
 const DAY_NAMES = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar']
 
@@ -228,7 +229,7 @@ export default function ClassesPage() {
         <div className="flex items-center gap-3">
           <CalendarDays className="h-7 w-7 text-indigo-600" />
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Sınıf Programı</h1>
+            <h1 className="h-page">Sınıf Programı</h1>
             <p className="text-sm text-gray-500">Haftalık grup dersleri</p>
           </div>
         </div>
@@ -335,9 +336,13 @@ export default function ClassesPage() {
 
       {/* All classes list */}
       <div className="mt-8">
-        <h2 className="text-lg font-semibold text-gray-900 mb-3">Tüm Sınıflar</h2>
+        <h2 className="h-section mb-3">Tüm Sınıflar</h2>
         {classes.length === 0 ? (
-          <p className="text-gray-400 text-sm">Henüz sınıf eklenmemiş.</p>
+          <EmptyState
+            icon={<CalendarDays className="h-8 w-8" />}
+            title="Henüz sınıf eklenmemiş"
+            description="İlk sınıfınızı oluşturmak için Yeni Sınıf butonunu kullanın."
+          />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {classes.map(cls => (
@@ -355,7 +360,7 @@ export default function ClassesPage() {
                 <div className="flex flex-col items-end gap-1">
                   <button
                     onClick={() => handleToggleActive(cls)}
-                    className={`text-xs px-2 py-0.5 rounded-full font-medium ${cls.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}
+                    className={cls.is_active ? 'badge-success' : 'badge-neutral'}
                   >
                     {cls.is_active ? 'Aktif' : 'Pasif'}
                   </button>
@@ -380,7 +385,7 @@ export default function ClassesPage() {
       {/* Modal */}
       {showModal && (
         <Portal>
-        <div className={`fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4 modal-overlay ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
+        <div className={`fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-[60] p-4 modal-overlay ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
           <div className={`bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-md p-6 modal-content ${isClosingModal ? 'closing' : ''}`}>
             <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
               {editingClass ? 'Sınıfı Düzenle' : 'Yeni Sınıf Ekle'}

@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
@@ -49,9 +49,10 @@ import { CustomSelect } from '@/components/ui/custom-select'
 import { CustomerSearchSelect } from '@/components/ui/customer-search-select'
 import { Portal } from '@/components/ui/portal'
 import EmptyState from '@/components/ui/empty-state'
+import ViewModeToggle from '@/components/ui/view-mode-toggle'
 
-const UNRESOLVED_BORDER = 'opacity-50 !border-l-[3px] !border-l-red-500'
-const UNRESOLVED_BORDER_ONLY = '!border-l-[3px] !border-l-red-500'
+const UNRESOLVED_BORDER = 'opacity-50'
+const UNRESOLVED_BORDER_ONLY = 'bg-red-50/40 dark:bg-red-950/10 border-red-100 dark:border-red-900/30'
 
 export default function AppointmentsPage() {
   const { businessId, staffId: currentStaffId, staffName: currentStaffName, sector, loading: ctxLoading } = useBusinessContext()
@@ -304,19 +305,19 @@ export default function AppointmentsPage() {
     return () => { cancelled = true }
   }, [showModal, businessId, customerId, serviceId])
 
+  // Tek hiyerarşik ESC handler — önce en üstteki katman kapanır
   useEffect(() => {
-    if (!showModal) return
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') closeModal() }
+    const anyOpen = !!(slotPopup || showModal || selectedAppointment)
+    if (!anyOpen) return
+    const h = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      if (slotPopup) { setSlotPopup(null); return }
+      if (showModal) { setIsClosingModal(true); return }
+      if (selectedAppointment) { closePanelAnimated(); return }
+    }
     document.addEventListener('keydown', h)
     return () => document.removeEventListener('keydown', h)
-  }, [showModal])
-
-  useEffect(() => {
-    if (!selectedAppointment) return
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape' && !showModal) closePanelAnimated() }
-    document.addEventListener('keydown', h)
-    return () => document.removeEventListener('keydown', h)
-  }, [selectedAppointment, showModal, closePanelAnimated])
+  }, [slotPopup, showModal, selectedAppointment, closePanelAnimated])
 
   function changeDate(days: number) {
     let d = new Date(selectedDate + 'T12:00:00')
@@ -1288,7 +1289,7 @@ export default function AppointmentsPage() {
       {/* Başlık */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Randevular</h1>
+          <h1 className="h-page">Randevular</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{totalCount} randevu</p>
         </div>
         <button onClick={() => openNewModal()} className="btn-primary shrink-0">
@@ -1349,10 +1350,10 @@ export default function AppointmentsPage() {
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="grid flex-1 grid-cols-5 gap-2">
           <button onClick={() => setStatusFilter(null)} className={cn('rounded-2xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 p-3 text-center transition-all hover:shadow-sm', statusFilter === null && 'ring-2 ring-gray-400 dark:ring-gray-500')}><p className="text-xl font-bold text-gray-900 dark:text-gray-100">{totalCount}</p><p className="text-xs text-gray-500 mt-0.5">Toplam</p></button>
-          <button onClick={() => setStatusFilter(statusFilter === 'confirmed' ? null : 'confirmed')} className={cn('rounded-2xl border border-blue-100 dark:border-blue-900/40 bg-blue-50 dark:bg-blue-950/30 p-3 text-center transition-all hover:shadow-sm', statusFilter === 'confirmed' && 'ring-2 ring-blue-500')}><p className="text-xl font-bold text-blue-600 dark:text-blue-400">{confirmedCount}</p><p className="text-xs text-gray-500 mt-0.5">Onaylı</p></button>
-          <button onClick={() => setStatusFilter(statusFilter === 'completed' ? null : 'completed')} className={cn('rounded-2xl border border-green-100 dark:border-green-900/40 bg-green-50 dark:bg-green-950/30 p-3 text-center transition-all hover:shadow-sm', statusFilter === 'completed' && 'ring-2 ring-green-500')}><p className="text-xl font-bold text-green-600 dark:text-green-400">{completedCount}</p><p className="text-xs text-gray-500 mt-0.5">Tamamlandı</p></button>
-          <button onClick={() => setStatusFilter(statusFilter === 'no_show' ? null : 'no_show')} className={cn('rounded-2xl border border-red-100 dark:border-red-900/40 bg-red-50 dark:bg-red-950/30 p-3 text-center transition-all hover:shadow-sm', statusFilter === 'no_show' && 'ring-2 ring-red-500')}><p className="text-xl font-bold text-red-600 dark:text-red-400">{noShowCount}</p><p className="text-xs text-gray-500 mt-0.5">Gelmedi</p></button>
-          <button onClick={() => setStatusFilter(statusFilter === 'unresolved' ? null : 'unresolved')} className={cn('rounded-2xl border border-amber-100 dark:border-amber-900/40 bg-amber-50 dark:bg-amber-950/30 p-3 text-center transition-all hover:shadow-sm', statusFilter === 'unresolved' && 'ring-2 ring-amber-500')}><p className="text-xl font-bold text-amber-600 dark:text-amber-400">{unresolvedCount}</p><p className="text-xs text-gray-500 mt-0.5">Belirsiz</p></button>
+          <button onClick={() => setStatusFilter(statusFilter === 'confirmed' ? null : 'confirmed')} className={cn('rounded-2xl border border-blue-100 dark:border-blue-900/40 bg-blue-50 dark:bg-blue-950/30 p-3 text-center transition-all hover:shadow-sm', statusFilter === 'confirmed' && 'ring-2 ring-blue-500')}><p className="text-xl font-bold text-blue-600 dark:text-blue-400">{confirmedCount}</p><p className="text-xs text-blue-700 dark:text-blue-400 mt-0.5">Onaylı</p></button>
+          <button onClick={() => setStatusFilter(statusFilter === 'completed' ? null : 'completed')} className={cn('rounded-2xl border border-green-100 dark:border-green-900/40 bg-green-50 dark:bg-green-950/30 p-3 text-center transition-all hover:shadow-sm', statusFilter === 'completed' && 'ring-2 ring-green-500')}><p className="text-xl font-bold text-green-600 dark:text-green-400">{completedCount}</p><p className="text-xs text-green-700 dark:text-green-400 mt-0.5">Tamamlandı</p></button>
+          <button onClick={() => setStatusFilter(statusFilter === 'no_show' ? null : 'no_show')} className={cn('rounded-2xl border border-red-100 dark:border-red-900/40 bg-red-50 dark:bg-red-950/30 p-3 text-center transition-all hover:shadow-sm', statusFilter === 'no_show' && 'ring-2 ring-red-500')}><p className="text-xl font-bold text-red-600 dark:text-red-400">{noShowCount}</p><p className="text-xs text-red-700 dark:text-red-400 mt-0.5">Gelmedi</p></button>
+          <button onClick={() => setStatusFilter(statusFilter === 'unresolved' ? null : 'unresolved')} className={cn('rounded-2xl border border-amber-100 dark:border-amber-900/40 bg-amber-50 dark:bg-amber-950/30 p-3 text-center transition-all hover:shadow-sm', statusFilter === 'unresolved' && 'ring-2 ring-amber-500')}><p className="text-xl font-bold text-amber-600 dark:text-amber-400">{unresolvedCount}</p><p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">Belirsiz</p></button>
         </div>
         <div className="flex justify-end">
           <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
@@ -1410,13 +1411,18 @@ export default function AppointmentsPage() {
                 sortField={sortField} sortDir={sortDir} onSortField={setSortField} onSortDir={setSortDir}
               />
             </ToolbarPopover>
-            <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-0.5" />
-            <button type="button" onClick={() => setViewMode('list')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'list' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Liste görünüm"><LayoutList className="h-4 w-4" /></button>
-            <button type="button" onClick={() => setViewMode('week')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'week' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Haftalık takvim"><CalendarDays className="h-4 w-4" /></button>
-            <button type="button" onClick={() => setViewMode('month')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'month' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Aylık takvim"><CalendarRange className="h-4 w-4" /></button>
-            <button type="button" onClick={() => setViewMode('box')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'box' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Kutu görünüm"><LayoutGrid className="h-4 w-4" /></button>
-            <button type="button" onClick={() => setViewMode('staff')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'staff' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Personel takvimi"><Users className="h-4 w-4" /></button>
-            <button type="button" onClick={() => setViewMode('room')} className={cn('flex h-9 w-9 items-center justify-center rounded-lg transition-colors', viewMode === 'room' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700')} title="Oda takvimi"><Building2 className="h-4 w-4" /></button>
+            <ViewModeToggle
+              value={viewMode}
+              onChange={setViewMode}
+              modes={[
+                { key: 'list' as const, icon: <LayoutList className="h-4 w-4" />, label: 'Liste' },
+                { key: 'week' as const, icon: <CalendarDays className="h-4 w-4" />, label: 'Haftalık Takvim' },
+                { key: 'month' as const, icon: <CalendarRange className="h-4 w-4" />, label: 'Aylık Takvim' },
+                { key: 'box' as const, icon: <LayoutGrid className="h-4 w-4" />, label: 'Kutu Görünüm' },
+                { key: 'staff' as const, icon: <Users className="h-4 w-4" />, label: 'Personel Takvimi' },
+                { key: 'room' as const, icon: <Building2 className="h-4 w-4" />, label: 'Oda Takvimi' },
+              ]}
+            />
           </div>
         </div>
       </div>
@@ -2342,9 +2348,9 @@ export default function AppointmentsPage() {
       {/* Saat dilimi popup (çakışan randevular) */}
       {slotPopup && (
         <Portal>
-        <div className="fixed inset-0 z-[100]" onClick={() => setSlotPopup(null)}>
+        <div className="fixed inset-0 z-[60]" onClick={() => setSlotPopup(null)}>
           <div
-            className="absolute z-[101] bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 p-3 w-72 modal-content"
+            className="absolute z-[60] bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 p-3 w-72 modal-content"
             style={{
               top: typeof window !== 'undefined' ? Math.min(slotPopup.y - 10, window.innerHeight - 300) : slotPopup.y - 10,
               left: typeof window !== 'undefined' ? Math.min(slotPopup.x - 10, window.innerWidth - 300) : slotPopup.x - 10,
@@ -2381,9 +2387,9 @@ export default function AppointmentsPage() {
       {/* Seçim sonrası aksiyon menüsü */}
       {actionMenu && (
         <Portal>
-          <div className="fixed inset-0 z-[100]" onClick={clearSelection}>
+          <div className="fixed inset-0 z-[60]" onClick={clearSelection}>
             <div
-              className="absolute z-[101] bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 p-3 w-56 modal-content"
+              className="absolute z-[60] bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 p-3 w-56 modal-content"
               style={{
                 top: typeof window !== 'undefined' ? Math.min(actionMenu.y - 10, window.innerHeight - 200) : actionMenu.y - 10,
                 left: typeof window !== 'undefined' ? Math.min(actionMenu.x - 10, window.innerWidth - 260) : actionMenu.x - 10,
@@ -2573,7 +2579,7 @@ export default function AppointmentsPage() {
       {/* ── Detay Slide-Over Paneli ── */}
       {selectedAppointment && (
         <Portal>
-          <div className="fixed inset-0 z-[100] bg-black/50 dark:bg-black/70" onClick={closePanelAnimated} />
+          <div className="fixed inset-0 z-[60] bg-black/50 dark:bg-black/70" onClick={closePanelAnimated} />
           <div
             className={`slide-panel border-l border-gray-200 dark:border-gray-700 ${panelClosing ? 'closing' : ''}`}
             onAnimationEnd={() => { if (panelClosing) { setSelectedAppointment(null); setPanelClosing(false) } }}
@@ -2726,10 +2732,10 @@ export default function AppointmentsPage() {
       {/* Yeni / Düzenleme Randevu Modal */}
       {showModal && (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
+        <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
           <div className={`modal-content card w-full max-w-md max-h-[90vh] overflow-y-auto ${isClosingModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              <h2 className="h-section">
                 {editingAppointment ? 'Randevu Düzenle' : 'Yeni Randevu'}
               </h2>
               <button onClick={() => { closeModal(); setEditingAppointment(null) }} className="text-gray-400 hover:text-gray-600">
@@ -2913,10 +2919,10 @@ export default function AppointmentsPage() {
       {/* Erteleme Modal */}
       {(rescheduleAppointment || isClosingReschedule) && (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4 ${isClosingReschedule ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingReschedule) { setRescheduleAppointment(null); setIsClosingReschedule(false) } }}>
+        <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${isClosingReschedule ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingReschedule) { setRescheduleAppointment(null); setIsClosingReschedule(false) } }}>
           <div className={`modal-content card w-full max-w-sm ${isClosingReschedule ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Randevuyu Ertele</h2>
+              <h2 className="h-section">Randevuyu Ertele</h2>
               <button onClick={() => closeReschedule()} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
             </div>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
@@ -2960,10 +2966,10 @@ export default function AppointmentsPage() {
       {/* İptal Onay Modal */}
       {(cancelConfirmAppointment || isClosingCancelConfirm) && (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/70 p-4 ${isClosingCancelConfirm ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingCancelConfirm) { setCancelConfirmAppointment(null); setIsClosingCancelConfirm(false) } }}>
+        <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${isClosingCancelConfirm ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingCancelConfirm) { setCancelConfirmAppointment(null); setIsClosingCancelConfirm(false) } }}>
           <div className={`modal-content card w-full max-w-sm ${isClosingCancelConfirm ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Randevuyu İptal Et</h2>
+              <h2 className="h-section">Randevuyu İptal Et</h2>
               <button onClick={() => closeCancelConfirm()} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
             </div>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
