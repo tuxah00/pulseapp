@@ -78,7 +78,7 @@ export default function WeeklyInsights() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch('/api/ai/insights')
+      const res = await fetch('/api/ai/weekly-insights')
       if (!res.ok) throw new Error('Rapor alınamadı')
       const json = await res.json()
       try {
