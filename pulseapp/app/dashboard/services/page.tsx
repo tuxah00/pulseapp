@@ -292,8 +292,8 @@ export default function ServicesPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <button onClick={() => openEditModal(service)} className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"><Pencil className="h-4 w-4" /></button>
-                <button onClick={() => handleDelete(service)} className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-600 transition-colors"><Trash2 className="h-4 w-4" /></button>
+                <button onClick={() => openEditModal(service)} className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"><Pencil className="h-4 w-4" /></button>
+                <button onClick={() => handleDelete(service)} className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 transition-colors"><Trash2 className="h-4 w-4" /></button>
               </div>
             </AnimatedItem>
           ))}
@@ -316,8 +316,8 @@ export default function ServicesPage() {
                 )}
               </div>
               <div className="mt-3 flex items-center justify-center gap-2">
-                <button onClick={() => openEditModal(service)} className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600"><Pencil className="h-3.5 w-3.5" /></button>
-                <button onClick={() => handleDelete(service)} className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-600"><Trash2 className="h-3.5 w-3.5" /></button>
+                <button onClick={() => openEditModal(service)} className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"><Pencil className="h-3.5 w-3.5" /></button>
+                <button onClick={() => handleDelete(service)} className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 transition-colors"><Trash2 className="h-3.5 w-3.5" /></button>
               </div>
             </AnimatedItem>
           ))}
