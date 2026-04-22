@@ -230,6 +230,7 @@ export default function Sidebar({ businessName, userName, sector, plan, permissi
                     key={item.key}
                     href={item.href}
                     onClick={() => setMobileOpen(false)}
+                    title={collapsed ? item.name : undefined}
                     className={cn(
                       'group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150',
                       active
@@ -282,6 +283,7 @@ export default function Sidebar({ businessName, userName, sector, plan, permissi
               key={item.name}
               href={item.href}
               onClick={() => setMobileOpen(false)}
+              title={collapsed ? item.name : undefined}
               className={cn(
                 'group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150',
                 active
@@ -303,6 +305,7 @@ export default function Sidebar({ businessName, userName, sector, plan, permissi
 
         <button
           onClick={handleLogout}
+          title={collapsed ? 'Çıkış Yap' : undefined}
           className="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium
                      text-gray-600 dark:text-gray-400 transition-all duration-150
                      hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400"

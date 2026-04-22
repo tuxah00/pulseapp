@@ -523,7 +523,7 @@ export default function AnalyticsPage() {
                     ? 'border-pulse-900 text-pulse-900 dark:text-pulse-400'
                     : isPulseValue
                       ? 'border-transparent text-pulse-900/75 dark:text-pulse-400/80 hover:text-pulse-900 dark:hover:text-pulse-300'
-                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                      : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
                 )}>
                 {icon}{label}
               </button>

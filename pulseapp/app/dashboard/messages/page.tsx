@@ -368,7 +368,7 @@ export default function MessagesPage() {
                     'badge px-2.5 py-1 cursor-pointer whitespace-nowrap transition-colors flex items-center gap-1',
                     filterChannel === key
                       ? key === 'whatsapp' ? 'bg-green-600 text-white' : 'bg-gray-900 text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                   )}
                 >
                   {icon}
@@ -385,7 +385,7 @@ export default function MessagesPage() {
                   'badge px-2.5 py-1 cursor-pointer whitespace-nowrap transition-colors',
                   filterClassification === 'all'
                     ? 'bg-gray-900 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                 )}
               >
                 Tümü
@@ -398,7 +398,7 @@ export default function MessagesPage() {
                     'badge px-2.5 py-1 cursor-pointer whitespace-nowrap transition-colors flex items-center gap-1',
                     filterClassification === key
                       ? AI_LABELS[key].color + ' ring-2 ring-offset-1'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                   )}
                 >
                   {AI_LABELS[key].icon}
@@ -522,7 +522,7 @@ export default function MessagesPage() {
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <a
                     href={`/dashboard/customers`}
-                    className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+                    className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                     title="Müşteri profili"
                   >
                     <User className="h-4 w-4" />
