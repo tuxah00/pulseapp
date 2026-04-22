@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendMessage } from '@/lib/messaging/send'
 import { verifyCronAuth } from '@/lib/api/verify-cron'
+import { createLogger } from '@/lib/utils/logger'
+
+const log = createLogger({ route: 'api/cron/workflows' })
 
 // GET — Cron ile çalıştırılan iş akışı adımlarını işle
 export async function GET(request: NextRequest) {
@@ -25,7 +28,7 @@ export async function GET(request: NextRequest) {
     .limit(50)
 
   if (runsError) {
-    console.error('Workflow runs fetch error:', runsError)
+    log.error({ err: runsError }, 'Workflow runs fetch error')
     return NextResponse.json({ error: runsError.message }, { status: 500 })
   }
 
@@ -107,7 +110,7 @@ export async function GET(request: NextRequest) {
 
       processedCount++
     } catch (err: any) {
-      console.error(`Workflow run ${run.id} işlenirken hata:`, err)
+      log.error({ err, runId: run.id }, 'Workflow run işlenirken hata')
       errorCount++
       // Hatayı kaydet ama tüm işlemi durdurma
       await admin

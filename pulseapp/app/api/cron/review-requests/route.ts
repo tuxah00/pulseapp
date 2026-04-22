@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendMessage } from '@/lib/messaging/send'
 import { verifyCronAuth } from '@/lib/api/verify-cron'
+import { createLogger } from '@/lib/utils/logger'
+
+const log = createLogger({ route: 'api/cron/review-requests' })
 
 export async function GET(request: NextRequest) {
   const authErr = verifyCronAuth(request)
@@ -59,11 +62,11 @@ export async function GET(request: NextRequest) {
           .update({ review_requested: true })
           .eq('id', apt.id)
         results.errors++
-        console.error(`Yorum SMS hatası (${apt.id}):`, smsResult.error)
+        log.error({ err: smsResult.error, appointmentId: apt.id }, 'Yorum SMS hatası')
       }
     } catch (err) {
       results.errors++
-      console.error(`Yorum istek hatası (${apt.id}):`, err)
+      log.error({ err, appointmentId: apt.id }, 'Yorum istek hatası')
     }
   }
 

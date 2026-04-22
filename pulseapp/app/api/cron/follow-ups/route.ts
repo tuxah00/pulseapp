@@ -3,6 +3,9 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { sendMessage } from '@/lib/messaging/send'
 import { generateWhatsAppMessage } from '@/lib/whatsapp/templates'
 import { verifyCronAuth } from '@/lib/api/verify-cron'
+import { createLogger } from '@/lib/utils/logger'
+
+const log = createLogger({ route: 'api/cron/follow-ups' })
 
 /**
  * Follow-up Cron Job
@@ -83,7 +86,7 @@ export async function GET(request: NextRequest) {
 
       results.sent++
     } catch (err) {
-      console.error(`Follow-up gönderim hatası (${followUp.id}):`, err)
+      log.error({ err, followUpId: followUp.id }, 'Follow-up gönderim hatası')
       // Hata durumunda cancelled olarak işaretle (tablo sadece pending/sent/cancelled destekliyor)
       await supabase
         .from('follow_up_queue')

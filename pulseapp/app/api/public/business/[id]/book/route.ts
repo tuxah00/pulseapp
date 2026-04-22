@@ -6,6 +6,9 @@ import { validateBody } from '@/lib/api/validate'
 import { publicBookingSchema } from '@/lib/schemas'
 import { normalizePhone, phoneOrFilter } from '@/lib/utils/phone'
 import { sendSMS } from '@/lib/sms/send'
+import { createLogger } from '@/lib/utils/logger'
+
+const log = createLogger({ route: 'api/public/business/[id]/book' })
 
 const supabase = createAdminClient()
 
@@ -165,7 +168,7 @@ export async function POST(
       messageType: 'system',
     })
   } catch (err) {
-    console.error('Booking SMS hatası:', err)
+    log.error({ err }, 'Booking SMS hatası')
     // SMS hatası randevu oluşturmayı etkilemez
   }
 

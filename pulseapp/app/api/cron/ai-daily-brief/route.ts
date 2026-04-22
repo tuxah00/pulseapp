@@ -6,6 +6,9 @@ import { handleDetectAnomalies, handleDetectRiskCustomers } from '@/lib/ai/assis
 import { computeStrategicRecommendations } from '@/lib/analytics/insights'
 import { getCurrentSeasonalContext } from '@/lib/ai/strategic-context'
 import type { SectorType } from '@/types'
+import { createLogger } from '@/lib/utils/logger'
+
+const log = createLogger({ route: 'api/cron/ai-daily-brief' })
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -35,7 +38,7 @@ export async function GET(request: NextRequest) {
       briefs += 1
     } catch (err) {
       failures += 1
-      console.error(`[ai-daily-brief] business ${biz.id} failed:`, err)
+      log.error({ err, businessId: biz.id }, '[ai-daily-brief] business failed')
     }
   }
 
@@ -79,7 +82,7 @@ async function generateAndStoreBrief(
     handleDetectAnomalies(admin, businessId),
     handleDetectRiskCustomers(admin, businessId, { limit: 5 }),
     computeStrategicRecommendations(admin, businessId, sector).catch(err => {
-      console.error('[ai-daily-brief] strategic recs failed:', err)
+      log.error({ err }, '[ai-daily-brief] strategic recs failed')
       return []
     }),
   ])
@@ -162,7 +165,7 @@ async function generateBriefText(
     })
     return res.choices[0]?.message?.content?.trim() || null
   } catch (err) {
-    console.error('[ai-daily-brief] openai error:', err)
+    log.error({ err }, '[ai-daily-brief] openai error')
     return null
   }
 }

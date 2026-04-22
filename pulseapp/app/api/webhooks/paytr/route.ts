@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { verifyPaytrCallback, parseOrderId, getPlanPriceKurus, type PaytrCallbackData } from '@/lib/billing/paytr'
+import { createLogger } from '@/lib/utils/logger'
+
+const log = createLogger({ route: 'api/webhooks/paytr' })
 
 // POST: PayTR ödeme sonucu webhook
 export async function POST(req: NextRequest) {
@@ -16,7 +19,7 @@ export async function POST(req: NextRequest) {
 
   // İmza doğrula
   if (!verifyPaytrCallback(data)) {
-    console.error('PayTR webhook: geçersiz hash', data.merchant_oid)
+    log.error({ merchantOid: data.merchant_oid }, 'PayTR webhook: geçersiz hash')
     return new Response('PAYTR_ERROR: Hash mismatch', { status: 400 })
   }
 
@@ -48,14 +51,14 @@ export async function POST(req: NextRequest) {
 
   if (data.status !== 'success') {
     // Başarısız ödeme — sadece logluyoruz
-    console.warn('PayTR: ödeme başarısız', data.merchant_oid, data.failed_reason_msg)
+    log.warn({ merchantOid: data.merchant_oid, failedReason: data.failed_reason_msg }, 'PayTR: ödeme başarısız')
     return new Response('OK')
   }
 
   // merchantOid'den plan ve businessId'yi parse et
   const parsed = parseOrderId(data.merchant_oid)
   if (!parsed) {
-    console.error('PayTR: merchant_oid parse hatası', data.merchant_oid)
+    log.error({ merchantOid: data.merchant_oid }, 'PayTR: merchant_oid parse hatası')
     return new Response('OK')
   }
 
@@ -66,7 +69,7 @@ export async function POST(req: NextRequest) {
   const expectedKurus = getPlanPriceKurus(planType)
   const paidKurus = parseInt(data.total_amount, 10)
   if (!Number.isFinite(paidKurus) || paidKurus !== expectedKurus) {
-    console.error('PayTR: tutar uyuşmazlığı', { merchant_oid: data.merchant_oid, planType, expectedKurus, paidKurus })
+    log.error({ merchantOid: data.merchant_oid, planType, expectedKurus, paidKurus }, 'PayTR: tutar uyuşmazlığı')
     return new Response('PAYTR_ERROR: Tutar uyuşmuyor', { status: 400 })
   }
 
@@ -94,7 +97,7 @@ export async function POST(req: NextRequest) {
     .eq('id', businessId)
 
   if (error) {
-    console.error('PayTR: abonelik güncelleme hatası', error)
+    log.error({ err: error }, 'PayTR: abonelik güncelleme hatası')
   }
 
   // PayTR'ye "OK" döndür (zorunlu)

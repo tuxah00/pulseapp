@@ -5,6 +5,9 @@ import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
 import { validateBody } from '@/lib/api/validate'
 import { waitlistCreateSchema } from '@/lib/schemas'
 import { normalizePhone, phoneOrFilter } from '@/lib/utils/phone'
+import { createLogger } from '@/lib/utils/logger'
+
+const log = createLogger({ route: 'api/public/business/[id]/waitlist' })
 
 const supabase = createAdminClient()
 
@@ -65,7 +68,7 @@ export async function POST(
       .single()
 
     if (customerError || !newCustomer) {
-      console.error('Misafir müşteri oluşturulamadı:', customerError)
+      log.error({ err: customerError }, 'Misafir müşteri oluşturulamadı')
       return NextResponse.json({ error: 'Kayıt oluşturulamadı' }, { status: 500 })
     }
     customerId = newCustomer.id
@@ -93,7 +96,7 @@ export async function POST(
     })
 
   if (insertError) {
-    console.error('Bekleme listesi kayıt hatası:', insertError)
+    log.error({ err: insertError }, 'Bekleme listesi kayıt hatası')
     return NextResponse.json({ error: 'Kayıt oluşturulamadı' }, { status: 500 })
   }
 

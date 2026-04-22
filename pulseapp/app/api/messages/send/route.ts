@@ -4,6 +4,9 @@ import { sendMessage } from '@/lib/messaging/send'
 import { withPermission } from '@/lib/api/with-permission'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
 import type { MessageChannel } from '@/types'
+import { createLogger } from '@/lib/utils/logger'
+
+const log = createLogger({ route: 'api/messages/send' })
 
 export const POST = withPermission('messages', async (req: NextRequest, ctx) => {
   // Rate limit kontrolü
@@ -75,7 +78,7 @@ export const POST = withPermission('messages', async (req: NextRequest, ctx) => 
 
     return NextResponse.json({ success: true, channel: 'web' })
   } catch (error: any) {
-    console.error('Mesaj gönderme API hatası:', error)
+    log.error({ err: error }, 'Mesaj gönderme API hatası')
     return NextResponse.json(
       { error: 'Mesaj gönderme hatası', details: error.message },
       { status: 500 },

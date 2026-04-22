@@ -4,6 +4,9 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { computeInsightsSummary } from '@/lib/analytics/insights'
 import { fetchMacroContext } from '@/lib/analytics/macro-context'
 import type { SectorType } from '@/types'
+import { createLogger } from '@/lib/utils/logger'
+
+const log = createLogger({ route: 'api/insights/summary' })
 
 // GET: İş Zekası sayfası için atomik özet verisi
 // KPI + operasyonel nabız + marj/kohort/mevsimsel/öneri + makro bağlam (kur + haftalık brief)
@@ -38,13 +41,13 @@ export async function GET(request: NextRequest) {
     const [summary, macro] = await Promise.all([
       computeInsightsSummary(admin, businessId, sector, { from, to }),
       fetchMacroContext(admin, sector).catch(err => {
-        console.error('[insights/summary] macro fetch failed:', err)
+        log.error({ err }, '[insights/summary] macro fetch failed')
         return { snapshot: null, brief: null }
       }),
     ])
     return NextResponse.json({ ...summary, macro })
   } catch (err: any) {
-    console.error('[insights/summary] compute error:', err)
+    log.error({ err }, '[insights/summary] compute error')
     return NextResponse.json(
       { error: err?.message || 'İçgörü hesaplanamadı' },
       { status: 500 },

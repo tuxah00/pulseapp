@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { withAuth } from '@/lib/api/with-permission'
+import { createLogger } from '@/lib/utils/logger'
+
+const log = createLogger({ route: 'api/ai/assistant/conversations' })
 
 // 30 günden eski sohbetler otomatik silinir (onboarding hariç).
 const CONVERSATION_RETENTION_DAYS = 30
@@ -19,7 +22,7 @@ export const GET = withAuth(async (req: NextRequest, ctx) => {
     .eq('is_onboarding', false)
     .lt('updated_at', cutoff)
     .then(({ error }) => {
-      if (error) console.error('Eski sohbet temizleme hatası:', error.message)
+      if (error) log.error({ err: error }, 'Eski sohbet temizleme hatası')
     })
 
   const { data, error } = await admin

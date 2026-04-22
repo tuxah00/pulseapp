@@ -3,6 +3,9 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/api/with-permission'
 import { getAnthropicClient, AI_MODEL } from '@/lib/ai/client'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
+import { createLogger } from '@/lib/utils/logger'
+
+const log = createLogger({ route: 'api/ai/campaign-suggest' })
 
 export interface CampaignSuggestion {
   segment: string
@@ -132,7 +135,7 @@ Yanıtı SADECE JSON formatında ver:
       stats: { segmentCounts, riskCount, upcomingBirthdays, totalCustomers: customers.length },
     })
   } catch (err: unknown) {
-    console.error('AI kampanya önerisi hatası:', err)
+    log.error({ err }, 'AI kampanya önerisi hatası')
     const message = err instanceof Error ? err.message : 'Kampanya önerisi alınamadı'
     return NextResponse.json({ error: message }, { status: 500 })
   }

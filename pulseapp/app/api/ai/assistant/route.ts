@@ -14,6 +14,9 @@ import { AI_LIMITS } from '@/lib/ai/assistant-limits'
 import { fetchMacroContext, macroContextForPrompt } from '@/lib/analytics/macro-context'
 import type { AuthContext } from '@/lib/api/with-permission'
 import type { PlanType } from '@/types'
+import { createLogger } from '@/lib/utils/logger'
+
+const log = createLogger({ route: 'api/ai/assistant' })
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -172,7 +175,7 @@ export async function POST(req: NextRequest) {
   } else {
     // Makro bağlam (kur + haftalık sektör brief'i) — best effort, hata durumunda boş
     const macroCtx = await fetchMacroContext(admin, sectorValue).catch(err => {
-      console.error('[assistant] macro context fetch failed:', err)
+      log.error({ err }, '[assistant] macro context fetch failed')
       return { snapshot: null, brief: null }
     })
     const macroSummary = macroContextForPrompt(macroCtx) || undefined
@@ -417,7 +420,7 @@ export async function POST(req: NextRequest) {
         send({ type: 'done', conversationId: convId })
         controller.close()
       } catch (err) {
-        console.error('AI Assistant stream error:', err)
+        log.error({ err }, 'AI Assistant stream error')
         send({ type: 'error', error: 'Bir hata oluştu. Lütfen tekrar deneyin.' })
         controller.close()
       }

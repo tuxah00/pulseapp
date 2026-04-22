@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { CustomerSegment } from '@/types'
 import { verifyCronAuth } from '@/lib/api/verify-cron'
+import { createLogger } from '@/lib/utils/logger'
+
+const log = createLogger({ route: 'api/cron/winback' })
 
 export async function GET(request: NextRequest) {
   const authErr = verifyCronAuth(request)
@@ -57,7 +60,7 @@ export async function GET(request: NextRequest) {
         results.segmentsUpdated++
       } catch (err) {
         results.errors++
-        console.error(`Segment güncelleme hatası (müşteri: ${customer.id}):`, err)
+        log.error({ err, customerId: customer.id }, 'Segment güncelleme hatası')
       }
     }
   }

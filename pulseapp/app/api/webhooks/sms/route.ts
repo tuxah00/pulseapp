@@ -3,6 +3,9 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { sendSMS } from '@/lib/sms/send'
 import { handleAppointmentConfirmationReply } from '@/lib/messaging/appointment-confirmation'
 import { verifyTwilioWebhook } from '@/lib/webhooks/verify-twilio'
+import { createLogger } from '@/lib/utils/logger'
+
+const log = createLogger({ route: 'api/webhooks/sms' })
 
 /**
  * Twilio inbound SMS webhook
@@ -49,7 +52,7 @@ export async function POST(request: NextRequest) {
   if (!businessId) {
     // Müşteri bulunamadı — orphan mesaj güvenlik riski (saldırgan ilk işletmeyi spam'leyebilir)
     // İşletmeye yazmak yerine sadece logla ve düş
-    console.warn('SMS webhook: bilinmeyen numara, mesaj düşürüldü', { from, messageSid })
+    log.warn({ from, messageSid }, 'SMS webhook: bilinmeyen numara, mesaj düşürüldü')
     return new NextResponse('OK', { status: 200 })
   }
 

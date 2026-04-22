@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { parsePaginationParams } from '@/lib/api/validate'
+import { createLogger } from '@/lib/utils/logger'
+
+const log = createLogger({ route: 'api/orders' })
 
 export async function GET(req: NextRequest) {
   try {
@@ -34,7 +37,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ orders: data || [], total: count || 0 })
   } catch (err) {
-    console.error('Orders GET error:', err)
+    log.error({ err }, 'Orders GET error')
     return NextResponse.json({ error: 'Siparişler alınamadı' }, { status: 500 })
   }
 }
@@ -94,7 +97,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ order: data })
   } catch (err) {
-    console.error('Orders POST error:', err)
+    log.error({ err }, 'Orders POST error')
     return NextResponse.json({ error: 'Sipariş oluşturulamadı' }, { status: 500 })
   }
 }
@@ -135,7 +138,7 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ order: data })
   } catch (err) {
-    console.error('Orders PATCH error:', err)
+    log.error({ err }, 'Orders PATCH error')
     return NextResponse.json({ error: 'Güncelleme başarısız' }, { status: 500 })
   }
 }
@@ -167,7 +170,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (err) {
-    console.error('Orders DELETE error:', err)
+    log.error({ err }, 'Orders DELETE error')
     return NextResponse.json({ error: 'Silme başarısız' }, { status: 500 })
   }
 }

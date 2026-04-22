@@ -5,6 +5,9 @@ import { getAnthropicClient, AI_MODEL } from '@/lib/ai/client'
 import { getPhotoAnalysisPrompt } from '@/lib/ai/photo-prompts'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
 import type { SectorType } from '@/types'
+import { createLogger } from '@/lib/utils/logger'
+
+const log = createLogger({ route: 'api/ai/before-after' })
 
 // POST: Öncesi/Sonrası karşılaştırma
 export async function POST(req: NextRequest) {
@@ -100,7 +103,7 @@ export async function POST(req: NextRequest) {
       protocolId: protocolId || null,
     })
   } catch (err: unknown) {
-    console.error('AI before-after analizi hatası:', err)
+    log.error({ err }, 'AI before-after analizi hatası')
     const message = err instanceof Error ? err.message : 'Analiz yapılamadı'
     return NextResponse.json({ error: message }, { status: 500 })
   }

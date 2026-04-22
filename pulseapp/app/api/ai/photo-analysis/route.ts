@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { getAnthropicClient, AI_MODEL, MAX_TOKENS } from '@/lib/ai/client'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
+import { createLogger } from '@/lib/utils/logger'
+
+const log = createLogger({ route: 'api/ai/photo-analysis' })
 
 export async function POST(request: NextRequest) {
   const rl = checkRateLimit(request, RATE_LIMITS.ai)
@@ -66,7 +69,7 @@ Türkçe ve kısa, öz yanıt ver. Her başlık 2-3 cümle olsun.`
 
     return NextResponse.json({ analysis: responseText })
   } catch (err) {
-    console.error('AI fotoğraf analizi hatası:', err)
+    log.error({ err }, 'AI fotoğraf analizi hatası')
     return NextResponse.json({ error: 'AI analizi yapılamadı' }, { status: 500 })
   }
 }

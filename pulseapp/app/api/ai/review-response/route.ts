@@ -3,6 +3,9 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { getAnthropicClient, AI_MODEL, MAX_TOKENS } from '@/lib/ai/client'
 import { getReviewResponseSystemPrompt } from '@/lib/ai/prompts'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
+import { createLogger } from '@/lib/utils/logger'
+
+const log = createLogger({ route: 'api/ai/review-response' })
 
 export async function POST(request: NextRequest) {
   try {
@@ -62,8 +65,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ draft: draft.trim() })
   } catch (error) {
-    console.error('AI review response hatası:', error)
     const message = error instanceof Error ? error.message : String(error)
+    log.error({ err: error }, 'AI review response hatası')
     return NextResponse.json(
       { error: 'AI yanıt oluşturma hatası', details: message },
       { status: 500 }

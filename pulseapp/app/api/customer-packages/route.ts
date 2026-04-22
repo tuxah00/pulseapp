@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/api/with-permission'
+import { createLogger } from '@/lib/utils/logger'
+
+const log = createLogger({ route: 'api/customer-packages' })
 
 /**
  * POST /api/customer-packages
@@ -76,7 +79,7 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (error) {
-    console.error('[customer-packages] insert error', error)
+    log.error({ err: error }, '[customer-packages] insert error')
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 

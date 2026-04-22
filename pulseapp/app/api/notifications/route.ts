@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { createLogger } from '@/lib/utils/logger'
+
+const log = createLogger({ route: 'api/notifications' })
 
 export async function GET(req: NextRequest) {
   try {
@@ -35,7 +38,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ notifications: data || [], total: count || 0 })
   } catch (err) {
-    console.error('Notifications GET error:', err)
+    log.error({ err }, 'Notifications GET error')
     return NextResponse.json({ error: 'Bildirimler alınamadı' }, { status: 500 })
   }
 }
@@ -95,7 +98,7 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ error: 'Geçersiz işlem' }, { status: 400 })
   } catch (err) {
-    console.error('Notifications PATCH error:', err)
+    log.error({ err }, 'Notifications PATCH error')
     return NextResponse.json({ error: 'İşlem başarısız' }, { status: 500 })
   }
 }

@@ -3,6 +3,9 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { requirePortalSession } from '@/lib/portal/guards'
 import { isValidCustomerBirthday } from '@/lib/utils/birthday'
 import { MSG } from '@/lib/schemas/messages'
+import { createLogger } from '@/lib/utils/logger'
+
+const log = createLogger({ route: 'api/portal/profile' })
 
 const ALLOWED_CHANNELS = new Set(['sms', 'whatsapp', 'auto'])
 
@@ -96,7 +99,7 @@ export async function PATCH(request: NextRequest) {
     .single()
 
   if (error) {
-    console.error('[portal/profile] update error', error)
+    log.error({ err: error }, '[portal/profile] update error')
     return NextResponse.json({ error: 'Profil güncellenemedi' }, { status: 500 })
   }
 

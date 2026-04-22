@@ -4,6 +4,9 @@ import { getAnthropicClient, AI_MODEL, MAX_TOKENS } from '@/lib/ai/client'
 import { getReplySystemPrompt } from '@/lib/ai/prompts'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
 import type { AiClassification, WorkingHours, DayHours } from '@/types'
+import { createLogger } from '@/lib/utils/logger'
+
+const log = createLogger({ route: 'api/ai/reply' })
 
 const DAY_LABELS: Record<string, string> = {
   mon: 'Pzt', tue: 'Sal', wed: 'Çar', thu: 'Per', fri: 'Cum', sat: 'Cmt', sun: 'Paz',
@@ -86,8 +89,8 @@ export async function POST(request: NextRequest) {
       classification: classification || null,
     })
   } catch (error) {
-    console.error('AI reply hatası:', error)
     const message = error instanceof Error ? error.message : String(error)
+    log.error({ err: error }, 'AI reply hatası')
     return NextResponse.json(
       { error: 'AI yanıt oluşturma hatası', details: message },
       { status: 500 }
