@@ -394,19 +394,19 @@ export default function ClassesPage() {
             <div className="space-y-4">
               {/* Name */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Sınıf Adı</label>
+                <label className="label">Sınıf Adı</label>
                 <input
                   type="text"
                   value={form.name}
                   onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
-                  className="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="input"
                   placeholder="Örn: Sabah Yogası"
                 />
               </div>
 
               {/* Color */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Renk</label>
+                <label className="label">Renk</label>
                 <div className="flex gap-2">
                   {COLOR_OPTIONS.map(c => (
                     <button
@@ -422,7 +422,7 @@ export default function ClassesPage() {
 
               {/* Days */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Günler</label>
+                <label className="label">Günler</label>
                 <div className="flex flex-wrap gap-2">
                   {DAY_NAMES.map((name, i) => (
                     <button
@@ -443,36 +443,36 @@ export default function ClassesPage() {
               {/* Time & Duration */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Başlangıç Saati</label>
+                  <label className="label">Başlangıç Saati</label>
                   <input
                     type="time"
                     value={form.start_time}
                     onChange={e => setForm(p => ({ ...p, start_time: e.target.value }))}
-                    className="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="input"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Süre (dk)</label>
+                  <label className="label">Süre (dk)</label>
                   <input
                     type="number"
                     min={15}
                     step={15}
                     value={form.duration_minutes}
                     onChange={e => setForm(p => ({ ...p, duration_minutes: parseInt(e.target.value) || 60 }))}
-                    className="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="input"
                   />
                 </div>
               </div>
 
               {/* Capacity */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Kapasite</label>
+                <label className="label">Kapasite</label>
                 <input
                   type="number"
                   min={1}
                   value={form.capacity}
                   onChange={e => setForm(p => ({ ...p, capacity: parseInt(e.target.value) || 20 }))}
-                  className="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="input"
                 />
               </div>
             </div>
@@ -480,14 +480,14 @@ export default function ClassesPage() {
             <div className="flex gap-3 mt-6">
               <button
                 onClick={() => closeModal()}
-                className="flex-1 px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                className="btn-secondary flex-1"
               >
                 İptal
               </button>
               <button
                 onClick={handleSave}
                 disabled={saving || !form.name.trim() || form.day_of_week.length === 0}
-                className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+                className="btn-primary flex-1 disabled:opacity-50"
               >
                 {saving ? 'Kaydediliyor...' : 'Kaydet'}
               </button>

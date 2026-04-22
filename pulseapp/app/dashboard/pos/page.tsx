@@ -960,7 +960,7 @@ export default function KasaPage() {
           <button
             onClick={handleCheckout}
             disabled={cart.length === 0 || remaining > 0.01 || processing}
-            className="flex-shrink-0 w-full btn-primary py-3 text-base font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
+            className="flex-shrink-0 w-full btn-primary font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {processing ? (
               <Loader2 className="h-5 w-5 animate-spin" />
