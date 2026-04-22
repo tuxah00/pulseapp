@@ -55,7 +55,11 @@ vi.mock('@/lib/supabase/admin', () => ({
 // Route handler'ı mock'tan SONRA import edilmeli.
 const { POST } = await import('@/app/api/book/route')
 
-function makeRequest(body: unknown, businessId = 'biz-1') {
+// UUID validation gereksinimi nedeniyle testlerde geçerli UUID kullanılır
+const TEST_BUSINESS_ID = '00000000-0000-4000-8000-000000000001'
+const TEST_SERVICE_ID = '00000000-0000-4000-8000-000000000002'
+
+function makeRequest(body: unknown, businessId = TEST_BUSINESS_ID) {
   return new NextRequest(
     `http://localhost:3000/api/book?businessId=${businessId}`,
     {
@@ -74,10 +78,10 @@ describe('POST /api/book', () => {
     )
   })
 
-  it('eksik alan varsa 400 ve "Eksik alanlar" döner', async () => {
+  it('eksik alan varsa 400 ve Zod field-level hata döner', async () => {
     const req = makeRequest({
-      service_id: 'svc-1',
-      appointment_date: '2026-04-08',
+      service_id: TEST_SERVICE_ID,
+      appointment_date: '2099-04-08',
       start_time: '10:00',
       // customer_name eksik
       customer_phone: '5551234567',
@@ -87,7 +91,8 @@ describe('POST /api/book', () => {
     const json = await res.json()
 
     expect(res.status).toBe(400)
-    expect(json.error).toBe('Eksik alanlar')
+    expect(json.error).toBe('Doğrulama başarısız')
+    expect(json.fields).toHaveProperty('customer_name')
   })
 
   it('businessId query param yoksa 400 döner', async () => {
@@ -101,7 +106,7 @@ describe('POST /api/book', () => {
     const json = await res.json()
 
     expect(res.status).toBe(400)
-    expect(json.error).toBe('businessId gerekli')
+    expect(json.error).toBe('Geçersiz businessId')
   })
 
   it('çalışma saatleri dışı randevu 400 döner', async () => {
@@ -124,8 +129,8 @@ describe('POST /api/book', () => {
     }
 
     const req = makeRequest({
-      service_id: 'svc-1',
-      appointment_date: '2026-04-06', // Pazartesi
+      service_id: TEST_SERVICE_ID,
+      appointment_date: '2099-04-06', // Pazartesi
       start_time: '08:00',
       customer_name: 'Test Müşteri',
       customer_phone: '5551234567',
@@ -156,8 +161,8 @@ describe('POST /api/book', () => {
     }
 
     const req = makeRequest({
-      service_id: 'svc-1',
-      appointment_date: '2026-04-05', // Pazar
+      service_id: TEST_SERVICE_ID,
+      appointment_date: '2099-04-05', // Pazar
       start_time: '10:00',
       customer_name: 'Test Müşteri',
       customer_phone: '5551234567',
@@ -174,8 +179,8 @@ describe('POST /api/book', () => {
     mockChainResults.businesses = { data: null, error: null }
 
     const req = makeRequest({
-      service_id: 'svc-1',
-      appointment_date: '2026-04-08',
+      service_id: TEST_SERVICE_ID,
+      appointment_date: '2099-04-08',
       start_time: '10:00',
       customer_name: 'Test Müşteri',
       customer_phone: '5551234567',
