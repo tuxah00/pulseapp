@@ -492,6 +492,8 @@ export interface BusinessSettings {
   ai_preferences?: AIPreferences
   ai_memory?: AIMemory
   ai_permissions?: AIPermissions
+  // Sektörel benchmark opt-in (Faz 5.3) — anonim agregatlar için
+  benchmark_opt_in?: boolean
 }
 
 export type AIAssistantTone = 'samimi' | 'formal' | 'kisa'

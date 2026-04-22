@@ -6,7 +6,7 @@ import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { useTutorial } from '@/lib/hooks/use-tutorial'
 import { requirePermission } from '@/lib/hooks/use-require-permission'
-import { Loader2, RotateCcw, Save, ShieldCheck, Sparkles, X } from 'lucide-react'
+import { BarChart3, Loader2, RotateCcw, Save, ShieldCheck, Sparkles, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { logAudit } from '@/lib/utils/audit'
@@ -93,6 +93,8 @@ export default function AISettingsPage() {
   const [savedPrefs, setSavedPrefs] = useState<AIPreferences>(DEFAULT_PREFS)
   const [aiPermissions, setAiPermissions] = useState<AIPermissions>(DEFAULT_AI_PERMISSIONS)
   const [savedAiPermissions, setSavedAiPermissions] = useState<AIPermissions>(DEFAULT_AI_PERMISSIONS)
+  const [benchmarkOptIn, setBenchmarkOptIn] = useState<boolean>(false)
+  const [savedBenchmarkOptIn, setSavedBenchmarkOptIn] = useState<boolean>(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -107,8 +109,9 @@ export default function AISettingsPage() {
   const isDirty = useMemo(
     () =>
       JSON.stringify(prefs) !== JSON.stringify(savedPrefs) ||
-      JSON.stringify(aiPermissions) !== JSON.stringify(savedAiPermissions),
-    [prefs, savedPrefs, aiPermissions, savedAiPermissions]
+      JSON.stringify(aiPermissions) !== JSON.stringify(savedAiPermissions) ||
+      benchmarkOptIn !== savedBenchmarkOptIn,
+    [prefs, savedPrefs, aiPermissions, savedAiPermissions, benchmarkOptIn, savedBenchmarkOptIn]
   )
 
   const fetchPrefs = useCallback(async () => {
@@ -130,6 +133,9 @@ export default function AISettingsPage() {
       const loadedPerms = { ...DEFAULT_AI_PERMISSIONS, ...(settings.ai_permissions || {}) }
       setAiPermissions(loadedPerms)
       setSavedAiPermissions(loadedPerms)
+      const loadedOptIn = !!settings.benchmark_opt_in
+      setBenchmarkOptIn(loadedOptIn)
+      setSavedBenchmarkOptIn(loadedOptIn)
     }
     setLoading(false)
   }, [businessId, supabase])
@@ -183,6 +189,7 @@ export default function AISettingsPage() {
       ...current,
       ai_preferences: { ...(current.ai_preferences || {}), ...prefs },
       ai_permissions: { ...(current.ai_permissions || {}), ...aiPermissions },
+      benchmark_opt_in: benchmarkOptIn,
     }
 
     const { error: upErr } = await supabase
@@ -197,6 +204,7 @@ export default function AISettingsPage() {
       setSaveSuccess(true)
       setSavedPrefs(snapshot)
       setSavedAiPermissions(permsSnapshot)
+      setSavedBenchmarkOptIn(benchmarkOptIn)
       setTimeout(() => setSaveSuccess(false), 3000)
       window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'AI tercihleri kaydedildi' } }))
       logAudit({
@@ -230,7 +238,7 @@ export default function AISettingsPage() {
               <span className="text-sm text-gray-400 dark:text-gray-500 mr-2">Kaydedilmemiş değişiklikler var</span>
               <button
                 type="button"
-                onClick={() => { setPrefs(savedPrefs); setAiPermissions(savedAiPermissions) }}
+                onClick={() => { setPrefs(savedPrefs); setAiPermissions(savedAiPermissions); setBenchmarkOptIn(savedBenchmarkOptIn) }}
                 className="btn-secondary"
               >
                 <X className="mr-1.5 h-4 w-4" />
@@ -420,6 +428,32 @@ export default function AISettingsPage() {
           </div>
         </section>
 
+        {/* Sektörel Benchmark Opt-in */}
+        <section className="card p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 flex items-center justify-center flex-shrink-0">
+                <BarChart3 className="w-4 h-4" />
+              </div>
+              <div>
+                <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Sektörel Benchmark&apos;a Katıl</h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 max-w-md">
+                  Anonim verilerinle sektörünün ortalamalarını görürsün (ortalama bilet, doluluk, elde tutma, no-show, yeni müşteri oranı). <strong>İşletme adın veya kimlik bilgin asla paylaşılmaz</strong> — sadece çeyreklik percentile&apos;lar hesaplanır ve bir çeyrek için en az 20 işletme olmadan satır yazılmaz.
+                </p>
+              </div>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer shrink-0">
+              <input
+                type="checkbox"
+                checked={benchmarkOptIn}
+                onChange={e => setBenchmarkOptIn(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:ring-2 peer-focus:ring-pulse-900/30 rounded-full peer-checked:bg-pulse-900 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all" />
+            </label>
+          </div>
+        </section>
+
         {/* AI Asistan Yetkileri */}
         <section className="card p-5">
           <div className="flex items-start gap-3 mb-3">
@@ -510,7 +544,7 @@ export default function AISettingsPage() {
           {isDirty && (
             <button
               type="button"
-              onClick={() => { setPrefs(savedPrefs); setAiPermissions(savedAiPermissions) }}
+              onClick={() => { setPrefs(savedPrefs); setAiPermissions(savedAiPermissions); setBenchmarkOptIn(savedBenchmarkOptIn) }}
               className="btn-secondary"
             >
               <X className="mr-1.5 h-4 w-4" />
