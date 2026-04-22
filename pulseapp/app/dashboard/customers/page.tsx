@@ -545,33 +545,20 @@ export default function CustomersPage() {
     }
   }, [selectedCustomer, fetchAllergies, fetchCustomerDetail])
 
+  // Tek hiyerarşik ESC handler — önce en üstteki modal kapanır
   useEffect(() => {
-    if (!showModal) return
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') closeModal() }
+    const anyOpen = !!(showModal || showRewardModal || showRedeemModal || selectedCustomer)
+    if (!anyOpen) return
+    const h = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      if (showRedeemModal) { setShowRedeemModal(false); return }
+      if (showRewardModal) { setIsClosingReward(true); return }
+      if (showModal) { setIsClosingModal(true); return }
+      if (selectedCustomer) { closePanelAnimated(); return }
+    }
     document.addEventListener('keydown', h)
     return () => document.removeEventListener('keydown', h)
-  }, [showModal])
-
-  useEffect(() => {
-    if (!selectedCustomer) return
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape' && !showModal && !showRewardModal && !showRedeemModal) closePanelAnimated() }
-    document.addEventListener('keydown', h)
-    return () => document.removeEventListener('keydown', h)
-  }, [selectedCustomer, showModal, showRewardModal, showRedeemModal, closePanelAnimated])
-
-  useEffect(() => {
-    if (!showRewardModal) return
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') closeRewardModal() }
-    document.addEventListener('keydown', h)
-    return () => document.removeEventListener('keydown', h)
-  }, [showRewardModal])
-
-  useEffect(() => {
-    if (!showRedeemModal) return
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowRedeemModal(false) }
-    document.addEventListener('keydown', h)
-    return () => document.removeEventListener('keydown', h)
-  }, [showRedeemModal])
+  }, [showModal, showRewardModal, showRedeemModal, selectedCustomer, closePanelAnimated])
 
   function getStatusIcon(status: string) {
     switch (status) {

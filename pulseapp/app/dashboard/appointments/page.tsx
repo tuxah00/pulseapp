@@ -304,19 +304,19 @@ export default function AppointmentsPage() {
     return () => { cancelled = true }
   }, [showModal, businessId, customerId, serviceId])
 
+  // Tek hiyerarşik ESC handler — önce en üstteki katman kapanır
   useEffect(() => {
-    if (!showModal) return
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') closeModal() }
+    const anyOpen = !!(slotPopup || showModal || selectedAppointment)
+    if (!anyOpen) return
+    const h = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      if (slotPopup) { setSlotPopup(null); return }
+      if (showModal) { setIsClosingModal(true); return }
+      if (selectedAppointment) { closePanelAnimated(); return }
+    }
     document.addEventListener('keydown', h)
     return () => document.removeEventListener('keydown', h)
-  }, [showModal])
-
-  useEffect(() => {
-    if (!selectedAppointment) return
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape' && !showModal) closePanelAnimated() }
-    document.addEventListener('keydown', h)
-    return () => document.removeEventListener('keydown', h)
-  }, [selectedAppointment, showModal, closePanelAnimated])
+  }, [slotPopup, showModal, selectedAppointment, closePanelAnimated])
 
   function changeDate(days: number) {
     let d = new Date(selectedDate + 'T12:00:00')

@@ -190,19 +190,19 @@ export default function InvoicesPage() {
     }
   }, [selectedInvoice, fetchPayments])
 
+  // Tek hiyerarşik ESC handler — önce en üstteki katman kapanır
   useEffect(() => {
-    if (!showCreateModal) return
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') closeCreateModal() }
+    const anyOpen = !!(showCreateModal || showPaymentForm || selectedInvoice)
+    if (!anyOpen) return
+    const h = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      if (showCreateModal) { closeCreateModal(); return }
+      if (showPaymentForm) { setShowPaymentForm(false); return }
+      if (selectedInvoice) { closePanelAnimated(); return }
+    }
     document.addEventListener('keydown', h)
     return () => document.removeEventListener('keydown', h)
-  }, [showCreateModal])
-
-  useEffect(() => {
-    if (!selectedInvoice) return
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape' && !showCreateModal) closePanelAnimated() }
-    document.addEventListener('keydown', h)
-    return () => document.removeEventListener('keydown', h)
-  }, [selectedInvoice, showCreateModal, closePanelAnimated])
+  }, [showCreateModal, showPaymentForm, selectedInvoice, closePanelAnimated])
 
   function addItem() {
     setFormItems(prev => [...prev, { service_name: '', quantity: 1, unit_price: 0, total: 0 }])

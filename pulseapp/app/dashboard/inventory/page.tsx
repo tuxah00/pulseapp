@@ -151,26 +151,19 @@ export default function StoklarPage() {
 
   useEffect(() => { setPage(0) }, [debouncedSearch, categoryFilter, stockFilter])
 
+  // Tek hiyerarşik ESC handler — önce en üstteki modal kapanır
   useEffect(() => {
-    if (!showModal) return
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') closeModal() }
+    const anyOpen = !!(showSupplierModal || showModal || selectedProduct)
+    if (!anyOpen) return
+    const h = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      if (showSupplierModal) { setIsClosingSupplierModal(true); return }
+      if (showModal) { setIsClosingModal(true); return }
+      if (selectedProduct) { closePanelAnimated(); return }
+    }
     document.addEventListener('keydown', h)
     return () => document.removeEventListener('keydown', h)
-  }, [showModal])
-
-  useEffect(() => {
-    if (!showSupplierModal) return
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') closeSupplierModal() }
-    document.addEventListener('keydown', h)
-    return () => document.removeEventListener('keydown', h)
-  }, [showSupplierModal])
-
-  useEffect(() => {
-    if (!selectedProduct) return
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape' && !showModal && !showSupplierModal) closePanelAnimated() }
-    document.addEventListener('keydown', h)
-    return () => document.removeEventListener('keydown', h)
-  }, [selectedProduct, showModal, showSupplierModal, closePanelAnimated])
+  }, [showSupplierModal, showModal, selectedProduct, closePanelAnimated])
 
   const fetchMovements = useCallback(async (productId: string) => {
     setMovementsLoading(true)
