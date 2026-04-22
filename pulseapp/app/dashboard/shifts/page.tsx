@@ -804,26 +804,26 @@ export default function VardiyePage() {
           <p className="text-sm">Henüz personel eklenmemiş. Önce personel ekleyin.</p>
         </div>
       ) : (
-        <div ref={tableRef} className="card overflow-auto">
-          <table className="w-full text-sm">
+        <div ref={tableRef} className="table-wrapper">
+          <table className="table-base">
             <thead>
-              <tr>
-                <th className="py-3 pr-4 text-left font-medium text-gray-500 dark:text-gray-400 w-32">Personel</th>
+              <tr className="table-head-row">
+                <th className="table-head-cell w-32">Personel</th>
                 {weekDays.map((day, i) => {
                   if (!isDayOpen(i)) return null
                   return (
-                    <th key={i} className="py-3 px-2 text-center font-medium text-gray-500 dark:text-gray-400 min-w-[100px]">
+                    <th key={i} className="table-head-cell text-center min-w-[100px]">
                       <div>{DAY_LABELS[i]}</div>
-                      <div className="text-xs text-gray-400">{formatDisplayDate(day)}</div>
+                      <div className="text-xs text-gray-400 dark:text-gray-500 font-normal normal-case tracking-normal">{formatDisplayDate(day)}</div>
                     </th>
                   )
                 })}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+            <tbody>
               {staff.map(member => (
-                <tr key={member.id}>
-                  <td className="py-3 pr-4 font-medium text-gray-900 dark:text-gray-100 text-sm">
+                <tr key={member.id} className="table-row">
+                  <td className="table-cell font-medium">
                     {member.name}
                   </td>
                   {weekDays.map((day, di) => {
