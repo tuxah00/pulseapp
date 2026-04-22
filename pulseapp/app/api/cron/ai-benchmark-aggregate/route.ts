@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { verifyCronAuth } from '@/lib/api/verify-cron'
 import { createLogger } from '@/lib/utils/logger'
-import type { SectorType } from '@/types'
+import type { BusinessSettings, SectorType } from '@/types'
 
 const log = createLogger({ route: 'api/cron/ai-benchmark-aggregate' })
 
@@ -75,17 +75,38 @@ async function computeBusinessMetrics(
   const startIso = `${periodStart}T00:00:00Z`
   const endIso = `${periodEnd}T23:59:59Z`
 
-  // avg_ticket: ödenmiş faturaların ortalama tutarı (TL)
-  const { data: invoices } = await admin
-    .from('invoices')
-    .select('total')
-    .eq('business_id', businessId)
-    .eq('status', 'paid')
-    .is('deleted_at', null)
-    .gte('created_at', startIso)
-    .lte('created_at', endIso)
+  // Tüm sorgular paralel
+  const [invoicesRes, apptsRes, staffRes, newCustRes] = await Promise.all([
+    admin
+      .from('invoices')
+      .select('total')
+      .eq('business_id', businessId)
+      .eq('status', 'paid')
+      .is('deleted_at', null)
+      .gte('created_at', startIso)
+      .lte('created_at', endIso),
+    admin
+      .from('appointments')
+      .select('status, customer_id, appointment_date')
+      .eq('business_id', businessId)
+      .is('deleted_at', null)
+      .gte('appointment_date', periodStart)
+      .lte('appointment_date', periodEnd),
+    admin
+      .from('staff_members')
+      .select('id', { count: 'exact', head: true })
+      .eq('business_id', businessId)
+      .eq('status', 'active'),
+    admin
+      .from('customers')
+      .select('id', { count: 'exact', head: true })
+      .eq('business_id', businessId)
+      .gte('created_at', startIso)
+      .lte('created_at', endIso),
+  ])
 
-  const invoiceTotals = (invoices ?? [])
+  // avg_ticket: ödenmiş faturaların ortalama tutarı (TL)
+  const invoiceTotals = (invoicesRes.data ?? [])
     .map((i) => Number(i.total) || 0)
     .filter((v) => v > 0)
   const avg_ticket =
@@ -93,51 +114,35 @@ async function computeBusinessMetrics(
       ? invoiceTotals.reduce((a, b) => a + b, 0) / invoiceTotals.length
       : null
 
-  // no_show_rate + occupancy input: randevular
-  const { data: appts } = await admin
-    .from('appointments')
-    .select('status, customer_id, appointment_date')
-    .eq('business_id', businessId)
-    .is('deleted_at', null)
-    .gte('appointment_date', periodStart)
-    .lte('appointment_date', periodEnd)
-
-  const apptList = appts ?? []
+  // no_show_rate + retention + occupancy input: randevular
+  const apptList = apptsRes.data ?? []
   const totalAppts = apptList.length
-  const noShowCount = apptList.filter((a) => a.status === 'no_show').length
-  const completedCount = apptList.filter((a) => a.status === 'completed').length
+  let noShowCount = 0
+  let completedCount = 0
+  const customerApptCount = new Map<string, number>()
+  for (const a of apptList) {
+    if (a.status === 'no_show') noShowCount++
+    else if (a.status === 'completed') completedCount++
+    if (a.customer_id) {
+      customerApptCount.set(a.customer_id, (customerApptCount.get(a.customer_id) ?? 0) + 1)
+    }
+  }
   const no_show_rate = totalAppts > 0 ? (noShowCount / totalAppts) * 100 : null
 
   // occupancy ≈ completed / (staff × working_days × slots_per_day)
-  const { data: staff } = await admin
-    .from('staff_members')
-    .select('id')
-    .eq('business_id', businessId)
-    .eq('status', 'active')
-
-  const staffCount = (staff ?? []).length
+  const staffCount = staffRes.count ?? 0
   const availableSlots = staffCount * ASSUMED_WORKING_DAYS_PER_QUARTER * ASSUMED_SLOTS_PER_STAFF_PER_DAY
   const occupancy = availableSlots > 0 ? Math.min((completedCount / availableSlots) * 100, 100) : null
 
   // retention_rate: periyotta randevusu olan müşterilerden kaçı 2+ randevulu?
-  const customerApptCount = new Map<string, number>()
-  for (const a of apptList) {
-    if (!a.customer_id) continue
-    customerApptCount.set(a.customer_id, (customerApptCount.get(a.customer_id) ?? 0) + 1)
-  }
+  let repeatCustomers = 0
+  for (const c of customerApptCount.values()) if (c >= 2) repeatCustomers++
   const totalActiveCustomers = customerApptCount.size
-  const repeatCustomers = Array.from(customerApptCount.values()).filter((c) => c >= 2).length
   const retention_rate =
     totalActiveCustomers > 0 ? (repeatCustomers / totalActiveCustomers) * 100 : null
 
   // new_customer_rate: periyotta oluşturulan yeni müşteri / toplam aktif müşteri (periyot içi)
-  const { count: newCustomerCount } = await admin
-    .from('customers')
-    .select('id', { count: 'exact', head: true })
-    .eq('business_id', businessId)
-    .gte('created_at', startIso)
-    .lte('created_at', endIso)
-
+  const newCustomerCount = newCustRes.count
   const new_customer_rate =
     totalActiveCustomers > 0 && newCustomerCount !== null
       ? Math.min((newCustomerCount / totalActiveCustomers) * 100, 100)
@@ -154,30 +159,28 @@ export async function GET(request: NextRequest) {
   const now = new Date()
   const { start: periodStart, end: periodEnd } = getLastCompletedQuarter(now)
 
-  // Opt-in işletmeleri çek — settings.benchmark_opt_in = true
-  const { data: businesses, error } = await admin
+  // Opt-in işletmeleri çek — SQL-side JSONB filter
+  const { data: optIn, error } = await admin
     .from('businesses')
-    .select('id, sector, settings')
+    .select('id, sector')
     .eq('is_active', true)
+    .contains('settings', { benchmark_opt_in: true } satisfies Partial<BusinessSettings>)
 
   if (error) {
     log.error({ error: error.message }, 'fetch businesses failed')
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  const optIn = (businesses ?? []).filter(
-    (b) => b.settings && typeof b.settings === 'object' && (b.settings as any).benchmark_opt_in === true
-  )
-
   log.info(
-    { period: `${periodStart} → ${periodEnd}`, totalOptIn: optIn.length },
+    { period: `${periodStart} → ${periodEnd}`, totalOptIn: (optIn ?? []).length },
     'benchmark run started'
   )
 
   // Sektöre göre grupla
-  const sectorGroups = new Map<SectorType, typeof optIn>()
-  for (const b of optIn) {
-    const sector = b.sector as SectorType
+  type OptInRow = { id: string; sector: string | null }
+  const sectorGroups = new Map<SectorType, OptInRow[]>()
+  for (const b of (optIn ?? []) as OptInRow[]) {
+    const sector = (b.sector ?? 'other') as SectorType
     const arr = sectorGroups.get(sector) ?? []
     arr.push(b)
     sectorGroups.set(sector, arr)
@@ -185,6 +188,15 @@ export async function GET(request: NextRequest) {
 
   let writtenRows = 0
   let skippedSectors = 0
+
+  const metricKeys: Metric[] = [
+    'avg_ticket',
+    'occupancy',
+    'retention_rate',
+    'no_show_rate',
+    'new_customer_rate',
+  ]
+  const computedAt = now.toISOString()
 
   for (const [sector, bizList] of sectorGroups) {
     if (bizList.length < MIN_SAMPLE_SIZE) {
@@ -196,29 +208,33 @@ export async function GET(request: NextRequest) {
       continue
     }
 
-    // Her işletme için metrikler
+    // İşletme metrikleri paralel hesap
+    const settled = await Promise.allSettled(
+      bizList.map((biz) => computeBusinessMetrics(admin, biz.id, periodStart, periodEnd))
+    )
     const allMetrics: BusinessMetrics[] = []
-    for (const biz of bizList) {
-      try {
-        const m = await computeBusinessMetrics(admin, biz.id, periodStart, periodEnd)
-        allMetrics.push(m)
-      } catch (err) {
+    for (let i = 0; i < settled.length; i++) {
+      const r = settled[i]
+      if (r.status === 'fulfilled') allMetrics.push(r.value)
+      else
         log.error(
-          { business_id: biz.id, error: err instanceof Error ? err.message : String(err) },
+          { business_id: bizList[i].id, error: r.reason instanceof Error ? r.reason.message : String(r.reason) },
           'metric compute failed'
         )
-      }
     }
 
-    // Her metric için p25/p50/p75 — sadece non-null değerlerden
-    const metricKeys: Metric[] = [
-      'avg_ticket',
-      'occupancy',
-      'retention_rate',
-      'no_show_rate',
-      'new_customer_rate',
-    ]
-
+    // Her metric için p25/p50/p75 — sadece non-null değerlerden; tek upsert'te topla
+    const rows: Array<{
+      sector: SectorType
+      metric: Metric
+      p25: number
+      p50: number
+      p75: number
+      sample_size: number
+      period_start: string
+      period_end: string
+      computed_at: string
+    }> = []
     for (const metric of metricKeys) {
       const values = allMetrics
         .map((m) => m[metric])
@@ -233,35 +249,29 @@ export async function GET(request: NextRequest) {
         continue
       }
 
-      const p25 = Number(percentile(values, 25).toFixed(2))
-      const p50 = Number(percentile(values, 50).toFixed(2))
-      const p75 = Number(percentile(values, 75).toFixed(2))
+      rows.push({
+        sector,
+        metric,
+        p25: Number(percentile(values, 25).toFixed(2)),
+        p50: Number(percentile(values, 50).toFixed(2)),
+        p75: Number(percentile(values, 75).toFixed(2)),
+        sample_size: values.length,
+        period_start: periodStart,
+        period_end: periodEnd,
+        computed_at: computedAt,
+      })
+    }
 
-      const { error: upsertErr } = await admin
-        .from('sector_benchmarks_aggregate')
-        .upsert(
-          {
-            sector,
-            metric,
-            p25,
-            p50,
-            p75,
-            sample_size: values.length,
-            period_start: periodStart,
-            period_end: periodEnd,
-            computed_at: now.toISOString(),
-          },
-          { onConflict: 'sector,metric,period_start,period_end' }
-        )
+    if (rows.length === 0) continue
 
-      if (upsertErr) {
-        log.error(
-          { sector, metric, error: upsertErr.message },
-          'upsert failed'
-        )
-      } else {
-        writtenRows++
-      }
+    const { error: upsertErr } = await admin
+      .from('sector_benchmarks_aggregate')
+      .upsert(rows, { onConflict: 'sector,metric,period_start,period_end' })
+
+    if (upsertErr) {
+      log.error({ sector, rowCount: rows.length, error: upsertErr.message }, 'upsert failed')
+    } else {
+      writtenRows += rows.length
     }
   }
 
@@ -278,7 +288,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     ok: true,
     period: { start: periodStart, end: periodEnd },
-    opt_in_count: optIn.length,
+    opt_in_count: (optIn ?? []).length,
     sectors_processed: sectorGroups.size,
     sectors_skipped: skippedSectors,
     rows_written: writtenRows,

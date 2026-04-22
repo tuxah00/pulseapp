@@ -1,6 +1,6 @@
 import type { SectorType } from '@/types'
 import type { createAdminClient } from '@/lib/supabase/admin'
-import { SECTOR_STRATEGY } from '@/lib/ai/strategic-context'
+import { SECTOR_STRATEGY, DEMAND_MULTIPLIERS } from '@/lib/ai/strategic-context'
 
 type SupabaseAdmin = ReturnType<typeof createAdminClient>
 
@@ -74,19 +74,7 @@ function linearRegression(points: { x: number; y: number }[]): { slope: number; 
 function seasonalMultiplier(sector: SectorType, month: number): number {
   const strategy = SECTOR_STRATEGY[sector] ?? SECTOR_STRATEGY.other
   const pattern = strategy.seasonal[month - 1]
-  if (!pattern) return 1
-  switch (pattern.demand) {
-    case 'low':
-      return 0.75
-    case 'normal':
-      return 1
-    case 'high':
-      return 1.2
-    case 'peak':
-      return 1.4
-    default:
-      return 1
-  }
+  return pattern ? DEMAND_MULTIPLIERS[pattern.demand] ?? 1 : 1
 }
 
 function dateAddDays(d: Date, days: number): Date {

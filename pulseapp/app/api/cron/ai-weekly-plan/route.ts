@@ -10,8 +10,12 @@ import {
   computeSeasonalTrend,
 } from '@/lib/analytics/insights'
 import { getSectorStrategyForPrompt } from '@/lib/ai/strategic-context'
-import { createInsightIfNotDuplicate } from '@/lib/ai/watcher/event-handlers'
-import type { SectorType } from '@/types'
+import {
+  createInsightIfNotDuplicate,
+  type InsightSeverity,
+  type InsightType,
+} from '@/lib/ai/watcher/event-handlers'
+import type { BusinessSettings, SectorType } from '@/types'
 
 const log = createLogger({ route: 'api/cron/ai-weekly-plan' })
 
@@ -20,8 +24,8 @@ export const maxDuration = 300
 export const dynamic = 'force-dynamic'
 
 interface WeeklyPlanCard {
-  type: 'opportunity' | 'risk' | 'suggestion'
-  severity: 'info' | 'normal' | 'high' | 'critical'
+  type: Exclude<InsightType, 'automation_proposal'>
+  severity: InsightSeverity
   title: string
   body: string
   action_label?: string
@@ -58,7 +62,8 @@ export async function GET(request: NextRequest) {
 
   for (const biz of businesses ?? []) {
     // AI kapalıysa atla
-    if ((biz as any).settings?.ai_preferences?.enabled === false) continue
+    const settings = biz.settings as BusinessSettings | null
+    if (settings?.ai_preferences?.enabled === false) continue
 
     try {
       const cardsCreated = await generatePlanForBusiness(
@@ -101,37 +106,35 @@ async function generatePlanForBusiness(
     to: now.toISOString().split('T')[0],
   }
 
-  // Son 4 hafta KPI + margin + pulse + seasonal
-  const [margin, kpi, pulse, seasonal] = await Promise.all([
-    computeMarginAnalysis(admin, businessId, period),
-    computeKpi(admin, businessId, period, sector),
-    computeOperationalPulse(admin, businessId),
-    computeSeasonalTrend(admin, businessId, sector),
-  ])
-
-  // Bekleme listesi sayımı
-  const { count: waitlistCount } = await admin
-    .from('waitlist')
-    .select('id', { count: 'exact', head: true })
-    .eq('business_id', businessId)
-    .eq('status', 'waiting')
-
-  // Risk müşteriler (90+ gün gelmemiş aktif)
+  // Tüm veri toplama paralel — KPI + margin + pulse + seasonal + durumsal sayımlar
   const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000).toISOString()
-  const { count: churnRisk } = await admin
-    .from('customers')
-    .select('id', { count: 'exact', head: true })
-    .eq('business_id', businessId)
-    .eq('is_active', true)
-    .not('last_visit_at', 'is', null)
-    .lt('last_visit_at', ninetyDaysAgo)
-
-  // Aktif kampanyalar
-  const { count: activeCampaigns } = await admin
-    .from('campaigns')
-    .select('id', { count: 'exact', head: true })
-    .eq('business_id', businessId)
-    .in('status', ['scheduled', 'running'])
+  const [margin, kpi, pulse, seasonal, waitlistRes, churnRes, campaignsRes] =
+    await Promise.all([
+      computeMarginAnalysis(admin, businessId, period),
+      computeKpi(admin, businessId, period, sector),
+      computeOperationalPulse(admin, businessId),
+      computeSeasonalTrend(admin, businessId, sector),
+      admin
+        .from('waitlist')
+        .select('id', { count: 'exact', head: true })
+        .eq('business_id', businessId)
+        .eq('status', 'waiting'),
+      admin
+        .from('customers')
+        .select('id', { count: 'exact', head: true })
+        .eq('business_id', businessId)
+        .eq('is_active', true)
+        .not('last_visit_at', 'is', null)
+        .lt('last_visit_at', ninetyDaysAgo),
+      admin
+        .from('campaigns')
+        .select('id', { count: 'exact', head: true })
+        .eq('business_id', businessId)
+        .in('status', ['scheduled', 'running']),
+    ])
+  const waitlistCount = waitlistRes.count
+  const churnRisk = churnRes.count
+  const activeCampaigns = campaignsRes.count
 
   let plan: WeeklyPlanResponse
   if (hasOpenAI) {
@@ -207,10 +210,10 @@ async function generatePlanForBusiness(
 async function callOpenAIForPlan(ctx: {
   businessName: string
   sector: SectorType
-  kpi: any
-  pulse: any
-  margin: any[]
-  seasonal: any[]
+  kpi: Awaited<ReturnType<typeof computeKpi>>
+  pulse: Awaited<ReturnType<typeof computeOperationalPulse>>
+  margin: Awaited<ReturnType<typeof computeMarginAnalysis>>
+  seasonal: Awaited<ReturnType<typeof computeSeasonalTrend>>
   waitlistCount: number
   churnRisk: number
   activeCampaigns: number
@@ -302,8 +305,8 @@ Kurallar:
 }
 
 function buildFallbackPlan(ctx: {
-  kpi: any
-  pulse: any
+  kpi: Awaited<ReturnType<typeof computeKpi>>
+  pulse: Awaited<ReturnType<typeof computeOperationalPulse>>
   waitlistCount: number
   churnRisk: number
 }): WeeklyPlanResponse {

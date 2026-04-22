@@ -499,6 +499,7 @@ export interface BusinessSettings {
 export type AIAssistantTone = 'samimi' | 'formal' | 'kisa'
 
 export interface AIPreferences {
+  enabled?: boolean             // false → AI cron işleri (watcher, weekly plan) atlanır
   tone?: AIAssistantTone
   auto_brief_enabled?: boolean
   brief_time?: string           // 'HH:mm' işletme yerel saati
