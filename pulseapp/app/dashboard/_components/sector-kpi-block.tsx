@@ -92,26 +92,30 @@ export default async function SectorKPIBlock({
 }
 
 type ColorKey = 'indigo' | 'rose' | 'violet' | 'emerald'
-const COLORS: Record<ColorKey, { bg: string; icon: string; text: string }> = {
+const COLORS: Record<ColorKey, { bg: string; icon: string; text: string; label: string }> = {
   indigo: {
     bg: 'bg-indigo-50 dark:bg-indigo-950/40',
     icon: 'bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400',
     text: 'text-indigo-900 dark:text-indigo-100',
+    label: 'text-indigo-700 dark:text-indigo-300',
   },
   rose: {
     bg: 'bg-rose-50 dark:bg-rose-950/40',
     icon: 'bg-rose-500/10 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400',
     text: 'text-rose-900 dark:text-rose-100',
+    label: 'text-rose-700 dark:text-rose-300',
   },
   violet: {
     bg: 'bg-violet-50 dark:bg-violet-950/40',
     icon: 'bg-violet-500/10 dark:bg-violet-500/20 text-violet-600 dark:text-violet-400',
     text: 'text-violet-900 dark:text-violet-100',
+    label: 'text-violet-700 dark:text-violet-300',
   },
   emerald: {
     bg: 'bg-emerald-50 dark:bg-emerald-950/40',
     icon: 'bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400',
     text: 'text-emerald-900 dark:text-emerald-100',
+    label: 'text-emerald-700 dark:text-emerald-300',
   },
 }
 
@@ -133,9 +137,9 @@ function KpiCard({
     <div className={`rounded-2xl border border-gray-200 dark:border-gray-800 p-4 ${c.bg}`}>
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{title}</p>
+          <p className={`text-xs font-medium uppercase tracking-wider ${c.label}`}>{title}</p>
           <p className={`mt-1 text-2xl font-bold ${c.text}`}>{value}</p>
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{subtitle}</p>
+          <p className={`mt-1 text-xs ${c.label}`}>{subtitle}</p>
         </div>
         <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${c.icon}`}>
           {icon}
