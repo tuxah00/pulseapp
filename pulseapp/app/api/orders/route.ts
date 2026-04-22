@@ -74,24 +74,29 @@ export async function POST(req: NextRequest) {
 
     if (error) throw error
 
-    // Decrease stock for each item
-    for (const item of (items || [])) {
-      if (item.product_id && item.quantity) {
-        try {
-          const { data: product } = await supabase
-            .from('products')
-            .select('stock_count')
-            .eq('id', item.product_id)
-            .single()
-          if (product) {
-            await supabase
+    // Decrease stock for items that have a product_id — single batch SELECT then parallel UPDATEs
+    const stockItems = (items || []).filter((item: { product_id?: string; quantity?: number }) => item.product_id && item.quantity)
+    if (stockItems.length > 0) {
+      const productIds = stockItems.map((item: { product_id: string }) => item.product_id)
+      const { data: products } = await supabase
+        .from('products')
+        .select('id, stock_count')
+        .in('id', productIds)
+        .eq('business_id', staff.business_id)
+
+      if (products && products.length > 0) {
+        const stockMap = new Map(products.map((p: { id: string; stock_count: number }) => [p.id, p.stock_count || 0]))
+        await Promise.all(
+          stockItems.map((item: { product_id: string; quantity: number }) => {
+            const current = stockMap.get(item.product_id)
+            if (current === undefined) return Promise.resolve()
+            return supabase
               .from('products')
-              .update({ stock_count: Math.max(0, (product.stock_count || 0) - item.quantity) })
+              .update({ stock_count: Math.max(0, current - item.quantity) })
               .eq('id', item.product_id)
-          }
-        } catch {
-          // Stock update failed, continue
-        }
+              .eq('business_id', staff.business_id)
+          })
+        )
       }
     }
 
