@@ -277,6 +277,7 @@ Güncel durum (2026-04-18 taraması):
 - `2026-04-18`: Dialog/Sheet `sr-only="Close"` etiketi Türkçeleştirildi (`"Kapat"`)
 - `2026-04-23`: **AI Asistan Faz 1 — Motor Konsolidasyonu** (`b1ef3c8`). Anthropic Claude tamamen kaldırıldı; 7 AI endpoint OpenAI GPT-4o Mini'ye taşındı (classify, reply, review-response, insights, campaign-suggest, photo-analysis, before-after). `@anthropic-ai/sdk` dependency silindi. Tek motor, maliyet optimizasyonu.
 - `2026-04-23`: **AI Asistan Faz 2 — Hafıza ve RAG Altyapısı**. 3 yeni migration (`061`, `062`, `063`), `lib/ai/memory/` modülü (read/write/embed/types), 3 yeni asistan aracı (`semantic_search_history`, `remember_preference`, `forget_preference`), 2 yeni cron (`ai-embed-worker`, `ai-memory-extractor`). Asistan artık sohbetler arası kalıcı tercih hatırlar ve geçmişte anlamsal arama yapar. KVKK uyumlu (customer/staff hard delete olduğunda trigger ile hafıza temizlenir).
+- `2026-04-23`: **AI Asistan Faz 3 — Skill Paketleri ve Sektör Bazlı Araç Yükleme**. `lib/ai/skills/` modülü (types/registry/loader), sektör → skill → araç eşlemesi, 6 yeni araç (4 estetik klinik: `list_protocols`, `get_protocol_details`, `list_customer_allergies`, `check_contraindications`; 2 diş kliniği: `list_tooth_records`, `update_tooth_record`), asistan route'una skill loader entegrasyonu. Artık her sohbette yalnızca o sektörle ilgili araçlar yükleniyor — bağlam küçüldü, token tasarrufu başladı.
 
 ---
 
@@ -313,9 +314,6 @@ Proje tasarım aşamasında. Aşağıdakiler **production'a açılmadan önce** 
 Aşağıdaki migration'lar Supabase SQL Editor'de manuel olarak çalıştırılmalıdır:
 - `008_fix_shifts_trigger.sql` — shifts tablosunun updated_at trigger'ını moddatetime'dan bağımsız hale getirir (vardiye kaydetme için kritik)
 - `035_rewards.sql` — `rewards` ve `customer_rewards` tabloları, RLS politikaları (ödül sistemi için gerekli)
-- `061_ai_business_memory.sql` — **Faz 2**: AI asistan uzun vadeli hafıza (işletme/müşteri/personel tercihleri) + KVKK trigger'ları
-- `062_pgvector_embeddings.sql` — **Faz 2**: `vector` extension + `ai_embeddings` tablosu + `search_embeddings()` RPC (anlamsal arama)
-- `063_ai_conversation_summary.sql` — **Faz 2**: `ai_conversations.summary`, `summary_updated_at`, `message_count_at_summary` kolonları (uzun sohbet bağlam yönetimi)
 
 ### Uygulanan Migration'lar (Supabase'de çalıştırıldı)
 - `006_create_shifts.sql` + `008_fix_shifts_trigger.sql` → **✅ Uygulandı (2026-03-19)**
@@ -326,6 +324,9 @@ Aşağıdaki migration'lar Supabase SQL Editor'de manuel olarak çalıştırılm
 - `054b_reviews_anonymous.sql` → **✅ Uygulandı (2026-04-18)** — `reviews.is_anonymous` kolonu + partial index
 - `057_follow_up_reform.sql` → **✅ Uygulandı (2026-04-19)** — follow_up_queue status enum genişletme (in_progress, no_response, done, rescheduled), notes + status_history JSONB
 - `058_shift_requests.sql` → **✅ Uygulandı (2026-04-21)** — `shift_requests` tablosu + 4 RLS politikası (personel talep → yönetici onay akışı)
+- `061_ai_business_memory.sql` → **✅ Uygulandı (2026-04-23)** — AI asistan uzun vadeli hafıza tablosu + 4 RLS policy + updated_at trigger + KVKK cascade trigger'lar (customer/staff delete)
+- `062_pgvector_embeddings.sql` → **✅ Uygulandı (2026-04-23)** — `vector` extension + `ai_embeddings` tablosu + IVFFlat index + `search_embeddings()` RPC + KVKK cascade
+- `063_ai_conversation_summary.sql` → **✅ Uygulandı (2026-04-23)** — `ai_conversations.summary`, `summary_updated_at`, `message_count_at_summary` kolonları
 
 ### Migration Numaralandırma Kuralı (2026-04-18'den itibaren)
 Aynı numaraya denk gelen migration'lar `a/b/c` harf suffix'i ile ayrılır. Alfabetik sıralama doğru çalışma sırasını korur.
@@ -333,4 +334,4 @@ Aynı numaraya denk gelen migration'lar `a/b/c` harf suffix'i ile ayrılır. Alf
 
 Mevcut a/b çiftleri: `036a/036b`, `037a/037b`, `040a/040b`, `049a/049b`, `050a/050b`, `053a/053b`, `054a/054b`.
 
-Son migration numarası: `063_ai_conversation_summary.sql` (2026-04-23, Faz 2 — kullanıcı tarafından SQL Editor'de çalıştırılacak).
+Son migration numarası: `063_ai_conversation_summary.sql` (2026-04-23, Faz 2).
