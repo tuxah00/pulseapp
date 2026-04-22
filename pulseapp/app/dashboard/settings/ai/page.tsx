@@ -382,7 +382,7 @@ export default function AISettingsPage() {
                 {tutorial.seenTopics.map(t => (
                   <span
                     key={t.pageKey}
-                    className="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-800 px-2.5 py-1 text-[11px] text-gray-600 dark:text-gray-300"
+                    className="badge-neutral text-[11px]"
                   >
                     {t.title}
                   </span>

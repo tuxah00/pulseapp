@@ -21,11 +21,11 @@ const SEGMENT_LABELS: Record<CustomerSegment, string> = {
 }
 
 const SEGMENT_COLORS: Record<CustomerSegment, string> = {
-  new: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
-  regular: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
-  vip: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300',
-  risk: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300',
-  lost: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300',
+  new: 'badge-info',
+  regular: 'badge-success',
+  vip: 'badge-brand',
+  risk: 'badge-warning',
+  lost: 'badge-danger',
 }
 
 const STATUS_CONFIG = {
@@ -323,7 +323,7 @@ export default function CampaignsPage() {
                       {c.segment_filter?.segments?.length ? (
                         <div className="flex flex-wrap gap-1 mt-1.5">
                           {(c.segment_filter.segments as CustomerSegment[]).map(seg => (
-                            <span key={seg} className={cn('text-[10px] px-1.5 py-0.5 rounded-full font-medium', SEGMENT_COLORS[seg])}>
+                            <span key={seg} className={cn(SEGMENT_COLORS[seg], 'text-[10px]')}>
                               {SEGMENT_LABELS[seg]}
                             </span>
                           ))}

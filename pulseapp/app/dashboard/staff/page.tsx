@@ -41,8 +41,8 @@ const ROLE_ORDER: Record<StaffRole, number> = {
 
 const ROLE_COLORS: Record<StaffRole, string> = {
   owner: 'badge-warning',
-  manager: 'badge bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
-  staff: 'badge-brand',
+  manager: 'badge-brand',
+  staff: 'badge-neutral',
 }
 
 const PERMISSION_LABELS: Record<keyof StaffPermissions, string> = {

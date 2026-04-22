@@ -317,18 +317,18 @@ function formatAuditDetail(log: AuditLog): string {
 }
 
 const ACTION_COLORS: Record<string, string> = {
-  create: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
-  update: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
-  delete: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
-  login: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
-  status_change: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300',
-  send: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
-  pay: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
-  cancel: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
-  restore: 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300',
-  assign: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300',
-  revoke: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300',
-  request: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+  create: 'badge-success',
+  update: 'badge-info',
+  delete: 'badge-danger',
+  login: 'badge-neutral',
+  status_change: 'badge-warning',
+  send: 'badge-info',
+  pay: 'badge-success',
+  cancel: 'badge-danger',
+  restore: 'badge-success',
+  assign: 'badge-info',
+  revoke: 'badge-danger',
+  request: 'badge-warning',
 }
 
 export default function AuditPage() {
@@ -486,7 +486,7 @@ export default function AuditPage() {
                       </div>
                     </td>
                     <td className="table-cell">
-                      <span className={cn('badge text-xs', ACTION_COLORS[log.action] ?? 'bg-gray-100 text-gray-700')}>
+                      <span className={cn('text-xs', ACTION_COLORS[log.action] ?? 'badge-neutral')}>
                         {ACTION_LABELS[log.action] ?? log.action}
                       </span>
                     </td>

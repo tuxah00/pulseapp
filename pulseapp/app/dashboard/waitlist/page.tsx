@@ -456,7 +456,7 @@ export default function WaitlistPage() {
                       <Phone className="h-3 w-3" /> {e.customer_phone}
                     </p>
                     {e.auto_book_on_match && (
-                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 flex items-center gap-1">
+                      <span className="badge-warning text-[11px]">
                         <Zap className="h-3 w-3" /> Otomatik Randevu
                       </span>
                     )}
@@ -498,12 +498,12 @@ export default function WaitlistPage() {
                 <div className="flex-shrink-0 flex items-center gap-2 self-center" onClick={ev => ev.stopPropagation()}>
                   {e.is_notified && e.is_active && <CountdownBadge expiresAt={e.notification_expires_at} />}
                   {e.is_notified && !e.is_active && (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 flex items-center gap-1">
+                    <span className="badge-success text-xs">
                       <Bell className="h-3 w-3" /> Bildirildi
                     </span>
                   )}
                   {!e.is_notified && !e.is_active && (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                    <span className="badge-neutral text-xs">
                       <BellOff className="h-3 w-3" /> Pasif
                     </span>
                   )}
