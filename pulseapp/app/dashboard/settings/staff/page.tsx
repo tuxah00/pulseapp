@@ -30,9 +30,9 @@ const ROLE_ORDER: Record<StaffRole, number> = {
 }
 
 const ROLE_COLORS: Record<StaffRole, string> = {
-  owner: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
-  manager: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
-  staff: 'bg-pulse-100 text-pulse-900 dark:bg-pulse-900/30 dark:text-pulse-300',
+  owner: 'badge-warning',
+  manager: 'badge-brand',
+  staff: 'badge-neutral',
 }
 
 const PERMISSION_LABELS: Record<keyof StaffPermissions, string> = {
@@ -465,7 +465,7 @@ export default function StaffPage() {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-medium text-gray-900 dark:text-gray-100">{member.name}</span>
-                <span className={cn('badge', ROLE_COLORS[member.role])}>{ROLE_LABELS[member.role]}</span>
+                <span className={ROLE_COLORS[member.role]}>{ROLE_LABELS[member.role]}</span>
                 {isMe && <span className="badge-info">Siz</span>}
                 {member.role !== 'owner' && (
                   <span className="text-xs text-gray-400">{permCount}/{totalPerms} yetki</span>
@@ -579,7 +579,7 @@ export default function StaffPage() {
                   {selectedStaff.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                 </div>
                 <h4 className="h-section">{selectedStaff.name}</h4>
-                <span className={cn('badge mt-1', ROLE_COLORS[selectedStaff.role])}>{ROLE_LABELS[selectedStaff.role]}</span>
+                <span className={cn(ROLE_COLORS[selectedStaff.role], 'mt-1')}>{ROLE_LABELS[selectedStaff.role]}</span>
               </div>
 
               {/* İletişim */}
@@ -721,7 +721,7 @@ export default function StaffPage() {
               <div>
                 <h2 className="h-section">{permPopupStaff.name}</h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  <span className={cn('badge text-xs mr-2', ROLE_COLORS[permPopupStaff.role])}>{ROLE_LABELS[permPopupStaff.role]}</span>
+                  <span className={cn(ROLE_COLORS[permPopupStaff.role], 'text-xs mr-2')}>{ROLE_LABELS[permPopupStaff.role]}</span>
                   Erişim Yetkileri
                 </p>
               </div>

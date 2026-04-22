@@ -1541,7 +1541,7 @@ export default function PaketlerPage() {
                       return (
                         <div key={i} className={cn('flex items-center justify-between px-3 py-2 text-xs', isConflict ? 'bg-red-50/50 dark:bg-red-900/10' : 'bg-white dark:bg-gray-900/50')}>
                           <div className="flex items-center gap-2 min-w-0">
-                            <span className={cn('inline-flex items-center justify-center h-5 w-5 rounded-full text-[10px] font-semibold flex-shrink-0', isConflict ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300' : 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300')}>
+                            <span className={cn('inline-flex items-center justify-center h-5 w-5 rounded-full text-[10px] font-semibold flex-shrink-0', isConflict ? 'badge-danger' : 'badge-success')}>
                               {i + 1}
                             </span>
                             <div className="min-w-0">

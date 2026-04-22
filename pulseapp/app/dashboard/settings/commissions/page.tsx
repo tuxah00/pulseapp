@@ -423,10 +423,8 @@ export default function CommissionsPage() {
                   {rule.services?.name || <span className="text-gray-400 italic">Tüm Hizmetler</span>}
                 </span>
                 <span className={cn(
-                  'badge font-semibold',
-                  rule.rate_percent
-                    ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
-                    : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                  'font-semibold',
+                  rule.rate_percent ? 'badge-brand' : 'badge-info'
                 )}>
                   {rule.rate_percent ? `%${rule.rate_percent}` : formatCurrency(rule.rate_fixed || 0)}
                 </span>

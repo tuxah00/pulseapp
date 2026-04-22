@@ -154,7 +154,7 @@ export default function AiInsightsWidget() {
                     className={cn(
                       'text-[10px] flex items-center gap-0.5 px-2 py-1 rounded-lg transition-colors',
                       copiedIdx === i
-                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                        ? 'badge-success'
                         : 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400 hover:bg-indigo-100'
                     )}
                   >

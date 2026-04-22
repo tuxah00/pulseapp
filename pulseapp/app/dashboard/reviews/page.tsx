@@ -55,10 +55,10 @@ const FEEDBACK_TYPE_ICONS: Record<FeedbackType, typeof Lightbulb> = {
 }
 
 const FEEDBACK_TYPE_COLORS: Record<FeedbackType, string> = {
-  suggestion: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
-  complaint: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
-  praise: 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300',
-  question: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+  suggestion: 'badge-warning',
+  complaint: 'badge-danger',
+  praise: 'badge-success',
+  question: 'badge-info',
 }
 
 const FEEDBACK_STATUS_LABELS: Record<FeedbackStatus, string> = {
@@ -69,10 +69,10 @@ const FEEDBACK_STATUS_LABELS: Record<FeedbackStatus, string> = {
 }
 
 const FEEDBACK_STATUS_COLORS: Record<FeedbackStatus, string> = {
-  open: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800',
-  in_progress: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800',
-  resolved: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800',
-  closed: 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700',
+  open: 'badge-warning',
+  in_progress: 'badge-info',
+  resolved: 'badge-success',
+  closed: 'badge-neutral',
 }
 
 const FEEDBACK_STATUS_OPTIONS: { value: FeedbackStatus; label: string }[] = [
@@ -441,7 +441,7 @@ export default function ReviewsPage() {
                 {/* Avatar */}
                 <div className={cn(
                   'flex h-10 w-10 items-center justify-center rounded-full font-semibold text-sm flex-shrink-0',
-                  review.rating >= 4 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' : review.rating === 3 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+                  review.rating >= 4 ? 'badge-success' : review.rating === 3 ? 'badge-warning' : 'badge-danger'
                 )}>
                   {review.is_anonymous
                     ? 'A'
@@ -643,10 +643,7 @@ export default function ReviewsPage() {
                           {item.customer_phone && (
                             <span className="text-xs text-gray-400 dark:text-gray-500">{item.customer_phone}</span>
                           )}
-                          <span className={cn(
-                            'inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full',
-                            FEEDBACK_TYPE_COLORS[item.type]
-                          )}>
+                          <span className={cn(FEEDBACK_TYPE_COLORS[item.type], 'text-[11px]')}>
                             <Icon className="h-3 w-3" />
                             {FEEDBACK_TYPE_LABELS[item.type]}
                           </span>
@@ -677,10 +674,7 @@ export default function ReviewsPage() {
                               disabled={fbStatusSavingId === item.id}
                             />
                           </div>
-                          <span className={cn(
-                            'text-[11px] font-medium px-2 py-0.5 rounded-full border',
-                            FEEDBACK_STATUS_COLORS[item.status]
-                          )}>
+                          <span className={cn(FEEDBACK_STATUS_COLORS[item.status], 'text-[11px]')}>
                             {FEEDBACK_STATUS_LABELS[item.status]}
                           </span>
                         </div>

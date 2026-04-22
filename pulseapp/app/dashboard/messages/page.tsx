@@ -27,12 +27,12 @@ interface Conversation {
 }
 
 const AI_LABELS: Record<AiClassification, { label: string; color: string; icon: React.ReactNode }> = {
-  appointment: { label: 'Randevu', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300', icon: <Calendar className="h-3 w-3" /> },
-  question: { label: 'Soru', color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300', icon: <HelpCircle className="h-3 w-3" /> },
-  complaint: { label: 'Şikayet', color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300', icon: <AlertTriangle className="h-3 w-3" /> },
-  cancellation: { label: 'İptal', color: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300', icon: <X className="h-3 w-3" /> },
-  greeting: { label: 'Selamlama', color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300', icon: <MessageCircle className="h-3 w-3" /> },
-  other: { label: 'Diğer', color: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400', icon: <MessageSquare className="h-3 w-3" /> },
+  appointment: { label: 'Randevu', color: 'badge-info', icon: <Calendar className="h-3 w-3" /> },
+  question: { label: 'Soru', color: 'badge-info', icon: <HelpCircle className="h-3 w-3" /> },
+  complaint: { label: 'Şikayet', color: 'badge-danger', icon: <AlertTriangle className="h-3 w-3" /> },
+  cancellation: { label: 'İptal', color: 'badge-danger', icon: <X className="h-3 w-3" /> },
+  greeting: { label: 'Selamlama', color: 'badge-success', icon: <MessageCircle className="h-3 w-3" /> },
+  other: { label: 'Diğer', color: 'badge-neutral', icon: <MessageSquare className="h-3 w-3" /> },
 }
 
 function formatMessageTime(dateStr: string): string {
@@ -477,10 +477,7 @@ export default function MessagesPage() {
                       {/* AI sınıflandırma badge'i */}
                       {conv.lastMessage.ai_classification && conv.lastMessage.direction === 'inbound' && (
                         <div className="mt-1">
-                          <span className={cn(
-                            'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium',
-                            AI_LABELS[conv.lastMessage.ai_classification].color
-                          )}>
+                          <span className={cn(AI_LABELS[conv.lastMessage.ai_classification].color, 'text-[10px]')}>
                             {AI_LABELS[conv.lastMessage.ai_classification].icon}
                             {AI_LABELS[conv.lastMessage.ai_classification].label}
                           </span>
@@ -571,10 +568,7 @@ export default function MessagesPage() {
                               {/* AI sınıflandırma */}
                               {msg.ai_classification && msg.direction === 'inbound' && (
                                 <div className="mb-1.5">
-                                  <span className={cn(
-                                    'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium',
-                                    AI_LABELS[msg.ai_classification].color
-                                  )}>
+                                  <span className={cn(AI_LABELS[msg.ai_classification].color, 'text-[10px]')}>
                                     <Bot className="h-2.5 w-2.5" />
                                     AI: {AI_LABELS[msg.ai_classification].label}
                                     {msg.ai_confidence && (

@@ -265,15 +265,15 @@ function isImageUrl(url: string): boolean {
 
 function getPriorityBadge(priority: string | undefined) {
   if (!priority) return null
-  const map: Record<string, { bg: string; text: string }> = {
-    'Düşük': { bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-600 dark:text-gray-300' },
-    'Normal': { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-700 dark:text-blue-300' },
-    'Yüksek': { bg: 'bg-amber-100 dark:bg-amber-900/30', text: 'text-amber-700 dark:text-amber-300' },
-    'Acil': { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-300' },
+  const map: Record<string, string> = {
+    'Düşük': 'badge-neutral',
+    'Normal': 'badge-info',
+    'Yüksek': 'badge-warning',
+    'Acil': 'badge-danger',
   }
-  const style = map[priority] || map['Normal']
+  const cls = map[priority] || 'badge-info'
   return (
-    <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium', style.bg, style.text)}>
+    <span className={cls}>
       {priority === 'Acil' && <AlertTriangle className="h-3 w-3" />}
       {priority}
     </span>
@@ -1119,7 +1119,7 @@ function RecordsPageInner() {
                       {tags.map((tag: string, i: number) => (
                         <span
                           key={i}
-                          className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                          className="badge-neutral"
                         >
                           {tag}
                         </span>
