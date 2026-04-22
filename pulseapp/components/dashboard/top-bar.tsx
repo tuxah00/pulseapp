@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ChevronRight, Home, Bell, Sun, Moon, Command, Inbox } from 'lucide-react'
+import { ChevronRight, Home, Bell, Sun, Moon, Command, Inbox, Lightbulb } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
@@ -11,6 +11,7 @@ import { getCustomerLabel } from '@/lib/config/sector-modules'
 import type { SectorType } from '@/types'
 import { useTheme } from '@/components/theme-provider'
 import { cn } from '@/lib/utils'
+import { AIInsightsDrawer } from '@/components/dashboard/ai-insights-drawer'
 
 const ROUTE_LABELS: Record<string, string> = {
   dashboard: 'Genel Bakış',
@@ -84,6 +85,8 @@ export default function TopBar({ businessName, userName, onOpenCommand }: TopBar
   const { theme, toggleTheme } = useTheme()
   const [unreadCount, setUnreadCount] = useState(0)
   const [pendingActionCount, setPendingActionCount] = useState(0)
+  const [insightCount, setInsightCount] = useState(0)
+  const [insightsOpen, setInsightsOpen] = useState(false)
 
   useEffect(() => {
     if (!businessId) return
@@ -162,6 +165,37 @@ export default function TopBar({ businessName, userName, onOpenCommand }: TopBar
     }
   }, [businessId, permissions?.analytics])
 
+  // AI insight yeni sayacı
+  useEffect(() => {
+    if (!businessId) return
+    let cancelled = false
+
+    const fetchInsightCount = async () => {
+      try {
+        const res = await fetch(`/api/ai/insights/count?businessId=${businessId}`)
+        if (!res.ok) return
+        const json = await res.json()
+        if (!cancelled) setInsightCount(json.count ?? 0)
+      } catch {
+        // sessizce yut
+      }
+    }
+
+    fetchInsightCount()
+    const interval = setInterval(fetchInsightCount, 120_000)  // 2 dakikada bir
+    const onVisible = () => { if (document.visibilityState === 'visible') fetchInsightCount() }
+    const onRead = () => { if (!cancelled) setInsightCount(0) }
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('pulse-insights-read', onRead)
+
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('pulse-insights-read', onRead)
+    }
+  }, [businessId])
+
   const segments = pathname.split('/').filter(Boolean)
   const crumbs = segments.map((seg, i) => {
     const href = '/' + segments.slice(0, i + 1).join('/')
@@ -177,6 +211,7 @@ export default function TopBar({ businessName, userName, onOpenCommand }: TopBar
   const initials = userName.charAt(0).toUpperCase()
 
   return (
+  <>
     <header className="sticky top-0 z-30 flex h-14 items-center gap-4
                        border-b border-gray-200/80 dark:border-white/[0.06]
                        bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl
@@ -233,6 +268,31 @@ export default function TopBar({ businessName, userName, onOpenCommand }: TopBar
             </kbd>
           </button>
         )}
+
+        {/* AI Insights ampul */}
+        <button
+          onClick={() => setInsightsOpen(true)}
+          className="relative h-9 w-9 flex items-center justify-center rounded-lg
+                     text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10
+                     hover:text-amber-500 dark:hover:text-amber-400 transition-all duration-150"
+          title="AI Önerileri"
+        >
+          <Lightbulb className="h-4.5 w-4.5" />
+          <AnimatePresence>
+            {insightCount > 0 && (
+              <motion.span
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                exit={{ scale: 0 }}
+                className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 px-1 items-center justify-center
+                           rounded-full bg-amber-500 text-[10px] text-white font-bold leading-none
+                           ring-2 ring-white dark:ring-gray-950"
+              >
+                {insightCount > 9 ? '9+' : insightCount}
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </button>
 
         {/* Theme toggle */}
         <button
@@ -326,5 +386,8 @@ export default function TopBar({ businessName, userName, onOpenCommand }: TopBar
         </div>
       </div>
     </header>
+
+    <AIInsightsDrawer open={insightsOpen} onClose={() => setInsightsOpen(false)} />
+  </>
   )
 }
