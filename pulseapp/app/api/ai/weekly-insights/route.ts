@@ -4,6 +4,8 @@ import { getOpenAIClient, ASSISTANT_MODEL } from '@/lib/ai/openai-client'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
 import { createLogger } from '@/lib/utils/logger'
 
+export const dynamic = 'force-dynamic'
+
 const log = createLogger({ route: 'api/ai/insights' })
 
 interface InsightItem {
