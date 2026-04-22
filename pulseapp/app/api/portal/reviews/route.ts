@@ -143,7 +143,7 @@ export async function POST(request: NextRequest) {
       business_id: businessId,
       type: 'review',
       title: 'Yeni Yorum',
-      body: `${body.rating} yıldız${comment ? ` — "${comment.slice(0, 60)}"` : ''}`,
+      body: `${rating} yıldız${comment ? ` — "${comment.slice(0, 60)}"` : ''}`,
       related_id: created.id,
       related_type: 'review',
       is_read: false,

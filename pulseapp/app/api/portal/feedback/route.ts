@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
       business_id: businessId,
       type: 'feedback',
       title: 'Yeni Geri Bildirim',
-      body: `${customer?.name || 'Müşteri'} — ${TYPE_LABELS[body.type] ?? body.type}${subject ? `: ${subject.slice(0, 60)}` : ''}`,
+      body: `${customer?.name || 'Müşteri'} — ${TYPE_LABELS[type] ?? type}${subject ? `: ${subject.slice(0, 60)}` : ''}`,
       related_id: created.id,
       related_type: 'feedback',
       is_read: false,

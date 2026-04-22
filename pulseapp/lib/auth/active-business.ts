@@ -80,7 +80,7 @@ export async function resolveActiveStaff(
 export async function resolveActiveStaffForApi(
   supabase: SupabaseClient,
   userId: string,
-  selectFields: string = 'id, business_id, role, permissions, write_permissions, is_active'
+  selectFields: string = 'id, business_id, role, permissions, write_permissions, is_active, name'
 ): Promise<{ staff: any | null; status: 'active' | 'needs_selection' | 'needs_onboarding' }> {
   const activeBusinessId = getActiveBusinessIdFromCookie()
 

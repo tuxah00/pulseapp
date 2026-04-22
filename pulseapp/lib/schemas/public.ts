@@ -128,7 +128,7 @@ export type PortalFeedbackCreateInput = z.infer<typeof portalFeedbackCreateSchem
 export const portalReviewCreateSchema = z.object({
   appointmentId: UUID.optional().nullable(),
   rating: z
-    .number({ invalid_type_error: 'Puan sayı olmalı' })
+    .number({ error: 'Puan sayı olmalı' })
     .int('Puan tam sayı olmalı')
     .min(1, 'En az 1 puan verilmeli')
     .max(5, 'En fazla 5 puan verilebilir'),

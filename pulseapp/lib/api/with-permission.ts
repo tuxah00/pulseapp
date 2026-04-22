@@ -31,6 +31,7 @@ const log = createLogger({ route: 'lib/api/with-permission' })
 export interface AuthContext {
   userId: string
   staffId: string
+  staffName: string
   businessId: string
   role: StaffRole
   permissions: StaffPermissions
@@ -87,6 +88,7 @@ async function resolveAuthContext(): Promise<
     ctx: {
       userId: user.id,
       staffId: staff.id,
+      staffName: staff.name ?? '',
       businessId: staff.business_id,
       role,
       permissions: getEffectivePermissions(role, staff.permissions),

@@ -357,6 +357,12 @@ ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'tutoring';
 -- idx_ai_pending_actions_scheduled partial index (status='scheduled')
 ```
 
+32. **Mesaj şablon metadata** (`059_messages_template_meta.sql`): ⏳ Manuel uygulama gerekli (token süresi dolduğu için otomatik çalıştırılamadı)
+```sql
+-- messages.template_name TEXT, messages.template_params JSONB kolonları
+-- idx_messages_template_name partial index (business_id, template_name) WHERE template_name IS NOT NULL
+```
+
 ## Faz 2: Estetik Klinik Özellik Seti (2026-04-04)
 
 ### Yeni Tablolar

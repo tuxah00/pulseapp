@@ -10,7 +10,7 @@ import {
   MessageSquare, Search, Send, Loader2, Phone,
   Bot, User, ChevronLeft, Clock, ArrowDownCircle,
   Sparkles, Calendar, HelpCircle, AlertTriangle,
-  MessageCircle, X, Filter, Smartphone,
+  MessageCircle, X, Filter, Smartphone, FileText,
 } from 'lucide-react'
 import { formatPhone, cn } from '@/lib/utils'
 import EmptyState from '@/components/ui/empty-state'
@@ -19,6 +19,8 @@ import { tr } from 'date-fns/locale'
 import type {
   Message, Customer, AiClassification, MessageDirection, MessageChannel,
 } from '@/types'
+import { TemplatePicker } from '@/components/whatsapp/template-picker'
+import type { WhatsAppTemplateType } from '@/lib/whatsapp/templates'
 
 interface Conversation {
   customer: Customer
@@ -50,7 +52,7 @@ function formatConversationDate(dateStr: string): string {
 }
 
 export default function MessagesPage() {
-  const { businessId, loading: ctxLoading, permissions } = useBusinessContext()
+  const { businessId, businessName, loading: ctxLoading, permissions } = useBusinessContext()
   const { collapsed } = useSidebar()
   const supabase = createClient()
 
@@ -68,6 +70,7 @@ export default function MessagesPage() {
   const [mobileShowChat, setMobileShowChat] = useState(false)
   const [aiSuggestion, setAiSuggestion] = useState<string | null>(null)
   const [aiLoading, setAiLoading] = useState(false)
+  const [templatePickerOpen, setTemplatePickerOpen] = useState(false)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -275,6 +278,41 @@ export default function MessagesPage() {
       setNewMessage(aiSuggestion)
       setAiSuggestion(null)
       inputRef.current?.focus()
+    }
+  }
+
+  async function handleSendTemplate(args: {
+    templateType: WhatsAppTemplateType
+    templateParams: Record<string, string>
+    preview: string
+  }) {
+    if (!selectedCustomer || !businessId) return
+
+    const res = await fetch('/api/messages/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        customerId: selectedCustomer.id,
+        content: args.preview,
+        messageType: 'template',
+        channel: 'auto',
+        templateName: args.templateType,
+        templateParams: args.templateParams,
+      }),
+    })
+    const data = await res.json()
+
+    if (data.success) {
+      window.dispatchEvent(new CustomEvent('pulse-toast', {
+        detail: { type: 'system', title: 'Şablon mesaj gönderildi', body: `Kanal: ${data.channel ?? 'web'}` },
+      }))
+      setTemplatePickerOpen(false)
+      fetchMessages(selectedCustomer.id)
+      fetchConversations()
+    } else {
+      window.dispatchEvent(new CustomEvent('pulse-toast', {
+        detail: { type: 'error', title: 'Mesaj gönderilemedi', body: data.error || 'Bilinmeyen hata' },
+      }))
     }
   }
 
@@ -686,6 +724,14 @@ export default function MessagesPage() {
                       : <Sparkles className="h-5 w-5" />
                     }
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setTemplatePickerOpen(true)}
+                    title="Şablondan mesaj gönder"
+                    className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-green-50 text-green-700 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-300 dark:hover:bg-green-900/30 transition-all"
+                  >
+                    <FileText className="h-5 w-5" />
+                  </button>
                   <div className="flex-1 relative">
                     <textarea
                       ref={inputRef}
@@ -715,7 +761,8 @@ export default function MessagesPage() {
                 </form>
                 <p className="mt-2 text-[10px] text-gray-400 text-center">
                   <Sparkles className="inline h-3 w-3 text-purple-400 mr-1" />
-                  AI öneri · Enter ile gönder · Shift+Enter ile yeni satır
+                  AI öneri · <FileText className="inline h-3 w-3 text-green-600 mr-1" />
+                  Şablon · Enter ile gönder · Shift+Enter ile yeni satır
                 </p>
               </div>
             </>
@@ -751,6 +798,16 @@ export default function MessagesPage() {
           )}
         </div>
       </div>
+
+      {selectedCustomer && (
+        <TemplatePicker
+          open={templatePickerOpen}
+          onClose={() => setTemplatePickerOpen(false)}
+          customerName={selectedCustomer.name}
+          businessName={businessName || ''}
+          onSend={handleSendTemplate}
+        />
+      )}
     </div>
   )
 }

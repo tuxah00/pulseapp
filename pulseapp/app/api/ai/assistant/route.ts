@@ -67,6 +67,7 @@ export async function POST(req: NextRequest) {
   const ctx: AuthContext = {
     userId: user.id,
     staffId: staff.id,
+    staffName: staff.name ?? '',
     businessId: staff.business_id,
     role,
     permissions,
