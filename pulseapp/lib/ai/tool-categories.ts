@@ -100,6 +100,16 @@ export const TOOL_CATEGORY: Record<string, AIPermissionCategory> = {
   // Scheduling meta-işlemleri — appointments altında tutulur
   schedule_action: 'appointments_write',
   cancel_scheduled_action: 'appointments_write',
+
+  // Estetik klinik araçları (Faz 3 — medical-aesthetic skill)
+  list_protocols: 'customers_read',
+  get_protocol_details: 'customers_read',
+  list_customer_allergies: 'customers_read',
+  check_contraindications: 'customers_read',
+
+  // Diş kliniği araçları (Faz 3 — dental-clinic skill)
+  list_tooth_records: 'customers_read',
+  update_tooth_record: 'customers_write',
 }
 
 export function getToolCategory(toolName: string): AIPermissionCategory | null {
