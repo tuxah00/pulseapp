@@ -51,8 +51,8 @@ import { Portal } from '@/components/ui/portal'
 import EmptyState from '@/components/ui/empty-state'
 import ViewModeToggle from '@/components/ui/view-mode-toggle'
 
-const UNRESOLVED_BORDER = 'opacity-50 !border-l-[3px] !border-l-red-500'
-const UNRESOLVED_BORDER_ONLY = '!border-l-[3px] !border-l-red-500'
+const UNRESOLVED_BORDER = 'opacity-50'
+const UNRESOLVED_BORDER_ONLY = 'bg-red-50/40 dark:bg-red-950/10 border-red-100 dark:border-red-900/30'
 
 export default function AppointmentsPage() {
   const { businessId, staffId: currentStaffId, staffName: currentStaffName, sector, loading: ctxLoading } = useBusinessContext()

@@ -537,16 +537,16 @@ export default function InvoicesPage() {
       {/* Özet Kartlar */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <button onClick={() => setStatusFilter(statusFilter === 'paid' ? 'all' : 'paid')} className={cn('relative overflow-hidden rounded-2xl border border-green-100 dark:border-green-900/40 bg-green-50 dark:bg-green-950/30 p-4 text-left transition-all hover:shadow-sm', statusFilter === 'paid' && 'ring-2 ring-green-500')}>
-          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Tahsil Edilen</p>
-          <p className="text-xl font-bold bg-gradient-to-r from-emerald-500 to-teal-600 bg-clip-text text-transparent">{formatCurrency(totalRevenue)}</p>
+          <p className="text-xs font-medium text-green-700 dark:text-green-400 mb-1">Tahsil Edilen</p>
+          <p className="text-xl font-bold text-green-800 dark:text-green-300">{formatCurrency(totalRevenue)}</p>
         </button>
         <button onClick={() => setStatusFilter(statusFilter === 'pending' ? 'all' : 'pending')} className={cn('relative overflow-hidden rounded-2xl border border-amber-100 dark:border-amber-900/40 bg-amber-50 dark:bg-amber-950/30 p-4 text-left transition-all hover:shadow-sm', statusFilter === 'pending' && 'ring-2 ring-amber-500')}>
-          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Bekleyen</p>
-          <p className="text-xl font-bold bg-gradient-to-r from-amber-500 to-orange-600 bg-clip-text text-transparent">{formatCurrency(pendingTotal)}</p>
+          <p className="text-xs font-medium text-amber-700 dark:text-amber-400 mb-1">Bekleyen</p>
+          <p className="text-xl font-bold text-amber-800 dark:text-amber-300">{formatCurrency(pendingTotal)}</p>
         </button>
         <button onClick={() => setStatusFilter(statusFilter === 'overdue' ? 'all' : 'overdue')} className={cn('relative overflow-hidden rounded-2xl border border-red-100 dark:border-red-900/40 bg-red-50 dark:bg-red-950/30 p-4 text-left transition-all hover:shadow-sm', statusFilter === 'overdue' && 'ring-2 ring-red-500')}>
-          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Vadesi Geçmiş</p>
-          <p className={cn('text-xl font-bold', overdueCount > 0 ? 'bg-gradient-to-r from-red-500 to-rose-600 bg-clip-text text-transparent' : 'text-gray-900 dark:text-gray-100')}>{overdueCount} fatura</p>
+          <p className="text-xs font-medium text-red-700 dark:text-red-400 mb-1">Vadesi Geçmiş</p>
+          <p className={cn('text-xl font-bold', overdueCount > 0 ? 'text-red-800 dark:text-red-300' : 'text-gray-900 dark:text-gray-100')}>{overdueCount} fatura</p>
         </button>
       </div>
 
