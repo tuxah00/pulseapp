@@ -26,7 +26,8 @@ if (!SUPABASE_URL || !SERVICE_KEY || !BUSINESS_ID) {
 
 const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
 
-const SEED_TAG = '[SEED]' // Demo müşteri isimlerinde bu tag bulunur
+// Demo verisi, isim sonundaki bu tag ile tanınır
+const SEED_TAG = '[SEED]'
 
 // ── Veri Setleri ──────────────────────────────────────────────────────────────
 
@@ -35,8 +36,9 @@ const FIRST_NAMES = ['Ayşe', 'Fatma', 'Zeynep', 'Elif', 'Merve', 'Selin', 'Bü�
   'Hasan', 'Hüseyin', 'İbrahim', 'Yusuf', 'Can']
 const LAST_NAMES = ['Yılmaz', 'Kaya', 'Demir', 'Çelik', 'Şahin', 'Doğan', 'Arslan',
   'Koç', 'Kurt', 'Aydın', 'Polat', 'Taş', 'Er', 'Çetin', 'Öztürk']
-const SERVICES = ['Botoks', 'Dolgu', 'PRP', 'Lazer', 'Cilt Bakımı', 'Mezoterapi']
+const FALLBACK_SERVICES = ['Botoks', 'Dolgu', 'PRP', 'Lazer', 'Cilt Bakımı', 'Mezoterapi']
 const SEGMENTS = ['new', 'regular', 'vip', 'regular', 'new']
+const STATUSES = ['completed', 'completed', 'completed', 'cancelled', 'no_show']
 
 function randomItem<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)]
@@ -46,14 +48,10 @@ function randomPhone() {
   return `+905${Math.floor(100_000_000 + Math.random() * 900_000_000)}`
 }
 
-function daysAgo(n: number) {
-  const d = new Date()
-  d.setDate(d.getDate() - n)
-  return d.toISOString().split('T')[0]
-}
-
 function randomPastDate(maxDaysAgo = 180) {
-  return daysAgo(Math.floor(Math.random() * maxDaysAgo))
+  const d = new Date()
+  d.setDate(d.getDate() - Math.floor(Math.random() * maxDaysAgo))
+  return d.toISOString().split('T')[0]
 }
 
 // ── Ana Seed Fonksiyonu ───────────────────────────────────────────────────────
@@ -61,7 +59,7 @@ function randomPastDate(maxDaysAgo = 180) {
 async function seed() {
   console.log(`🌱 Seed başlıyor — businessId: ${BUSINESS_ID}`)
 
-  // ── 1. Mevcut demo müşteri sayısını kontrol et ──
+  // ── 1. Mevcut demo müşteri sayısını kontrol et (idempotency) ──
   const { count } = await supabase
     .from('customers')
     .select('*', { count: 'exact', head: true })
@@ -73,34 +71,28 @@ async function seed() {
     return
   }
 
-  // ── 2. 30 Müşteri oluştur ──────────────────────────────────────────────────
+  // ── 2. 30 Müşteri — tek batch insert ──────────────────────────────────────
   console.log('👥 30 demo müşteri oluşturuluyor…')
-  const customers: { id: string; full_name: string }[] = []
 
-  for (let i = 0; i < 30; i++) {
-    const firstName = randomItem(FIRST_NAMES)
-    const lastName = randomItem(LAST_NAMES)
-    const fullName = `${firstName} ${lastName} ${SEED_TAG}`
+  const customerRows = Array.from({ length: 30 }, (_, i) => ({
+    business_id: BUSINESS_ID,
+    full_name: `${randomItem(FIRST_NAMES)} ${randomItem(LAST_NAMES)} ${SEED_TAG}`,
+    phone: randomPhone(),
+    segment: randomItem(SEGMENTS),
+    birthday: i < 10 ? `199${i % 5}-0${(i % 9) + 1}-15` : null,
+    notes: 'Demo veri — seed-staging.ts',
+  }))
 
-    const { data, error } = await supabase
-      .from('customers')
-      .insert({
-        business_id: BUSINESS_ID,
-        full_name: fullName,
-        phone: randomPhone(),
-        segment: randomItem(SEGMENTS),
-        birthday: i < 10 ? `199${i % 5}-0${(i % 9) + 1}-15` : null,
-        notes: 'Demo veri — seed-staging.ts',
-      })
-      .select('id, full_name')
-      .single()
+  const { data: insertedCustomers, error: custErr } = await supabase
+    .from('customers')
+    .insert(customerRows)
+    .select('id, full_name')
 
-    if (error) {
-      console.warn(`  ⚠ Müşteri oluşturulamadı: ${error.message}`)
-    } else if (data) {
-      customers.push(data)
-    }
+  if (custErr) {
+    console.error('Müşteri batch insert hatası:', custErr.message)
+    process.exit(1)
   }
+  const customers = insertedCustomers ?? []
   console.log(`  ✓ ${customers.length} müşteri oluşturuldu`)
 
   // ── 3. Hizmetleri çek ──────────────────────────────────────────────────────
@@ -110,70 +102,65 @@ async function seed() {
     .eq('business_id', BUSINESS_ID)
     .limit(10)
 
-  const servicePool = services?.length ? services : SERVICES.map((name, i) => ({
-    id: null,
-    name,
-    duration: 30 + i * 15,
-    price: 500 + i * 200,
-  }))
+  const servicePool = services?.length
+    ? services
+    : FALLBACK_SERVICES.map((name, i) => ({ id: null, name, duration: 30 + i * 15, price: 500 + i * 200 }))
 
-  // ── 4. 6 Aylık randevu geçmişi ────────────────────────────────────────────
+  // ── 4. 6 Aylık randevu geçmişi — tek batch insert ────────────────────────
   console.log('📅 Randevu geçmişi oluşturuluyor…')
-  let appointmentCount = 0
-  const STATUSES = ['completed', 'completed', 'completed', 'cancelled', 'no_show']
 
-  for (const customer of customers.slice(0, 20)) {
+  const appointmentRows = customers.slice(0, 20).flatMap((customer) => {
     const apptCount = 2 + Math.floor(Math.random() * 8)
-    for (let j = 0; j < apptCount; j++) {
+    return Array.from({ length: apptCount }, () => {
       const service = randomItem(servicePool)
-      const apptDate = randomPastDate(180)
       const hour = 9 + Math.floor(Math.random() * 9)
-      const startTime = `${String(hour).padStart(2, '0')}:00`
-      const endTime = `${String(hour + 1).padStart(2, '0')}:00`
-
-      const { error } = await supabase.from('appointments').insert({
+      return {
         business_id: BUSINESS_ID,
         customer_id: customer.id,
         service_id: service.id ?? undefined,
         service_name: service.name,
-        appointment_date: apptDate,
-        start_time: startTime,
-        end_time: endTime,
+        appointment_date: randomPastDate(180),
+        start_time: `${String(hour).padStart(2, '0')}:00`,
+        end_time: `${String(hour + 1).padStart(2, '0')}:00`,
         status: randomItem(STATUSES),
         price: service.price ?? 500,
         notes: `Demo randevu — ${customer.full_name}`,
-      })
-      if (!error) appointmentCount++
-    }
-  }
-  console.log(`  ✓ ${appointmentCount} randevu oluşturuldu`)
+      }
+    })
+  })
 
-  // ── 5. 20 Demo Fotoğraf Kaydı ─────────────────────────────────────────────
+  const { error: apptErr } = await supabase.from('appointments').insert(appointmentRows)
+  if (apptErr) console.warn('  ⚠ Randevu insert hatası:', apptErr.message)
+  else console.log(`  ✓ ${appointmentRows.length} randevu oluşturuldu`)
+
+  // ── 5. 20 Demo Fotoğraf — 5 before/after çifti + 10 progress ─────────────
+  // Her before/after çifti kendi pair_id'sine sahip (1 before + 1 after = 1 pair).
   console.log('📸 Fotoğraf kayıtları oluşturuluyor…')
-  const PHOTO_TYPES = ['before', 'after', 'progress'] as const
-  let photoCount = 0
-  const pairId = crypto.randomUUID()
 
-  for (let i = 0; i < 20; i++) {
+  const photoRows = Array.from({ length: 20 }, (_, i) => {
     const customer = customers[i % customers.length]
-    const photoType = i < 10 ? (i % 2 === 0 ? 'before' : 'after') : 'progress'
-    const usePair = i < 10
-
-    const { error } = await supabase.from('customer_photos').insert({
+    // 0-9 arası: 5 before/after çifti (çift i için pairId aynı; tek i için farklı pairId)
+    // 10-19 arası: progress fotoğrafları
+    const isPair = i < 10
+    const pairIndex = isPair ? Math.floor(i / 2) : null
+    return {
       business_id: BUSINESS_ID,
       customer_id: customer.id,
       photo_url: `https://picsum.photos/seed/pulse${i}/400/400`,
-      photo_type: photoType,
-      pair_id: usePair ? pairId : null,
+      photo_type: isPair ? (i % 2 === 0 ? 'before' : 'after') : 'progress',
+      // Her çift (0+1, 2+3, 4+5, 6+7, 8+9) aynı pair_id'yi paylaşır
+      pair_id: isPair ? `00000000-0000-0000-0000-${String(pairIndex).padStart(12, '0')}` : null,
       notes: 'Demo fotoğraf — seed-staging.ts',
       is_public: i < 6,
-    })
-    if (!error) photoCount++
-  }
-  console.log(`  ✓ ${photoCount} fotoğraf kaydı oluşturuldu`)
+    }
+  })
+
+  const { error: photoErr } = await supabase.from('customer_photos').insert(photoRows)
+  if (photoErr) console.warn('  ⚠ Fotoğraf insert hatası:', photoErr.message)
+  else console.log(`  ✓ ${photoRows.length} fotoğraf kaydı oluşturuldu`)
 
   console.log('\n🎉 Seed tamamlandı!')
-  console.log(`   Müşteri: ${customers.length} | Randevu: ${appointmentCount} | Fotoğraf: ${photoCount}`)
+  console.log(`   Müşteri: ${customers.length} | Randevu: ${appointmentRows.length} | Fotoğraf: ${photoRows.length}`)
 }
 
 seed().catch((err) => {

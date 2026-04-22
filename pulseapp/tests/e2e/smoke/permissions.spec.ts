@@ -13,18 +13,17 @@ test.describe('Yetki Matrisi', () => {
 
   test('owner denetim kaydına erişebilir', async ({ page }) => {
     await page.goto('/dashboard/audit')
-    // 401/403 sayfası değil, gerçek içerik gelmeliyetki varsa
+    // 401/403 sayfası değil, gerçek içerik gelmeli — yetki varsa
     const body = page.locator('body')
     await expect(body).not.toContainText('401')
     await expect(body).not.toContainText('Yetkisiz')
   })
 
   test('giriş yapılmamışken /dashboard → login yönlendirmesi', async ({ page }) => {
-    // Logout state — doğrudan dashboard'a git
+    // Yeni bağlam (oturum olmadan) ile doğrudan dashboard'a git
+    await page.context().clearCookies()
     await page.goto('/dashboard')
-    // Eğer zaten giriş yapılı değilse login'e gitmeli
-    // (Bu test login state'ine bağlı; giriş yapılıysa pass)
-    await expect(page.locator('body')).toBeVisible()
+    await expect(page).toHaveURL(/\/auth\/login/, { timeout: 10_000 })
   })
 
   test('korumalı API endpoint anonim erişimde 401 döner', async ({ page }) => {

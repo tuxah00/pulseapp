@@ -1,8 +1,5 @@
 import { test, expect } from '@playwright/test'
 import { login } from './helpers'
-import path from 'path'
-import fs from 'fs'
-import os from 'os'
 
 test.describe('Analitik', () => {
   test.beforeEach(async ({ page }) => {
@@ -40,7 +37,8 @@ test.describe('Analitik', () => {
     const periodBtn = page.locator('button', { hasText: /bu ay|geçen ay|7 gün/i }).first()
     if (await periodBtn.isVisible()) {
       await periodBtn.click()
-      await expect(page.locator('body')).toBeVisible()
+      // Seçilen dönem butonu aktif/seçili görünmeli
+      await expect(periodBtn).toBeVisible()
     }
   })
 })

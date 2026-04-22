@@ -9,11 +9,9 @@
  * ```
  *
  * - Development: renkli, okunabilir satır ('[INFO] api/book | msg | {context}')
- * - Production (`NODE_ENV==='production'`): tek satır JSON (Vercel log drain + ileride Sentry
- *   bridge kolay olacak şekilde)
+ * - Production (`NODE_ENV==='production'`): tek satır JSON (Vercel log drain uyumlu)
  * - Error instance'ları otomatik olarak `{name, message, stack}` şeklinde serialize edilir.
- *
- * Sprint 8'de Sentry devreye alındığında `error` seviyesi Sentry.captureException'a köprülenir.
+ * - `error` seviyesi Sentry'ye de köprülenir (`NEXT_PUBLIC_SENTRY_DSN` varsa).
  */
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error'
@@ -56,7 +54,7 @@ function normalizeContext(ctx: LogContext): LogContext {
   return out
 }
 
-/** Sprint 8: error seviyesindeki logları Sentry'ye köprüler. */
+/** `error` seviyesindeki logları Sentry'ye iletir. DSN yoksa sessizce geçer. */
 function captureSentry(message: string, merged: LogContext) {
   if (process.env.NODE_ENV !== 'production' || !process.env.NEXT_PUBLIC_SENTRY_DSN) return
   try {
