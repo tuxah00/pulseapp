@@ -439,7 +439,7 @@ export default function WaitlistPage() {
       ) : (
         <AnimatedList className="space-y-3">
           {filtered.map(e => (
-            <AnimatedItem key={e.id} className="card p-4 cursor-pointer hover:ring-1 hover:ring-pulse-500/40 transition-all" onClick={() => openBook(e)}>
+            <AnimatedItem key={e.id} className="card p-4 cursor-pointer hover:ring-1 hover:ring-pulse-900/40 transition-all" onClick={() => openBook(e)}>
               <div className="flex items-start gap-4">
                 <div className={cn(
                   'h-10 w-10 rounded-xl flex items-center justify-center text-sm font-bold flex-shrink-0',

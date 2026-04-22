@@ -632,8 +632,13 @@ export default function CustomersPage() {
             <Star className="h-4 w-4 text-amber-500" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-              {'★'.repeat(rev.rating)}{'☆'.repeat(5 - rev.rating)} Yorum
+            <p className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center gap-1">
+              <span className="flex items-center gap-0.5">
+                {Array.from({length: 5}).map((_, i) => (
+                  <Star key={i} className={`h-3 w-3 ${i < rev.rating ? 'fill-amber-400 text-amber-400' : 'text-gray-300 dark:text-gray-600'}`} />
+                ))}
+              </span>
+              <span>Yorum</span>
             </p>
             {rev.comment && (
               <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 line-clamp-2">&ldquo;{rev.comment}&rdquo;</p>
@@ -1168,7 +1173,11 @@ export default function CustomersPage() {
                         {customerReviews.map((rev) => (
                           <div key={rev.id} className="rounded-lg bg-gray-50 dark:bg-gray-700/50 p-3">
                             <div className="flex items-center justify-between">
-                              <span className="text-sm text-amber-500">{'★'.repeat(rev.rating)}{'☆'.repeat(5 - rev.rating)}</span>
+                              <span className="flex items-center gap-0.5">
+                                {Array.from({length: 5}).map((_, i) => (
+                                  <Star key={i} className={`h-3.5 w-3.5 ${i < rev.rating ? 'fill-amber-400 text-amber-400' : 'text-gray-300 dark:text-gray-600'}`} />
+                                ))}
+                              </span>
                               <span className="text-xs text-gray-400">{rev.created_at ? formatDate(rev.created_at) : ''}</span>
                             </div>
                             {rev.comment && <p className="text-xs text-gray-600 dark:text-gray-300 mt-1 line-clamp-3">{rev.comment}</p>}
