@@ -38,6 +38,14 @@ Her çalışma bağlamı kendi `feature/[konu]` branch'inde yürür. Aktif branc
 2. `git checkout feature/[konu]` ile o branch'e geç.
 3. Tüm push'lar o branch'e yapılır.
 
+## Ertelenen Kurulumlar (Pilot Müşteri Gelince Hatırlat)
+
+| Kurulum | Neden | Ne Yapılacak |
+|---------|-------|-------------|
+| **Sentry** | Hata takip servisi — canlıda hata olunca e-posta/bildirim gönderir | [sentry.io](https://sentry.io)'dan ücretsiz hesap aç → DSN al → Vercel'e `NEXT_PUBLIC_SENTRY_DSN` ekle. Kod hazır, sadece env değişkeni eksik. |
+
+---
+
 ## Deploy
 - **GitHub repo:** tuxah00/pulseapp
 - **Vercel:** main branch'e her push'ta otomatik deploy
