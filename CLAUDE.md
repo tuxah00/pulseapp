@@ -279,6 +279,7 @@ Güncel durum (2026-04-18 taraması):
 - `2026-04-23`: **AI Asistan Faz 2 — Hafıza ve RAG Altyapısı**. 3 yeni migration (`061`, `062`, `063`), `lib/ai/memory/` modülü (read/write/embed/types), 3 yeni asistan aracı (`semantic_search_history`, `remember_preference`, `forget_preference`), 2 yeni cron (`ai-embed-worker`, `ai-memory-extractor`). Asistan artık sohbetler arası kalıcı tercih hatırlar ve geçmişte anlamsal arama yapar. KVKK uyumlu (customer/staff hard delete olduğunda trigger ile hafıza temizlenir).
 - `2026-04-23`: **AI Asistan Faz 3 — Skill Paketleri ve Sektör Bazlı Araç Yükleme**. `lib/ai/skills/` modülü (types/registry/loader), sektör → skill → araç eşlemesi, 6 yeni araç (4 estetik klinik: `list_protocols`, `get_protocol_details`, `list_customer_allergies`, `check_contraindications`; 2 diş kliniği: `list_tooth_records`, `update_tooth_record`), asistan route'una skill loader entegrasyonu. Artık her sohbette yalnızca o sektörle ilgili araçlar yükleniyor — bağlam küçüldü, token tasarrufu başladı.
 - `2026-04-23`: **AI Asistan Faz 4 — Proaktif Danışman Katmanı**. 2 yeni migration (`064`, `065`), `lib/ai/watcher/event-handlers.ts` (no_show, overdue, churned, anomaly, slot_gap, pattern tespiti), 2 yeni cron (`ai-watcher`, `ai-pattern-detector`), insights API (`/api/ai/insights` + `[id]` + `count`), TopBar'da amber ampul ikonu + rozet, `ai-insights-drawer.tsx` (Fırsat/Risk/Öneri/Otomasyon kartları, Yap+Reddet butonları). Asistan artık personel sormadan işletmedeki riskleri ve fırsatları tespit eder.
+- `2026-04-23`: **AI Asistan Faz 5 — Stratejik Planner + Forecast + Benchmark** (`ai-asistan` branch). 1 yeni migration (`066_sector_benchmarks_aggregate`), `/api/cron/ai-weekly-plan` (pazartesi 07:00 — sektör playbook + 4 haftalık KPI ile işletme başına haftalık plan → `ai_insights` kartları), `lib/analytics/forecast.ts` (30 gün gelir tahmini: lineer regresyon + R² + sezonsal çarpan + `simulateCampaign()`), 2 yeni asistan aracı (`forecast_revenue`, `simulate_campaign`) analytics skill'ine eklendi, `/api/ai/transcribe` Whisper için `getOpenAIClient()` + `WHISPER_MODEL` sabiti kullanımına geçirildi.
 
 ---
 
@@ -330,6 +331,7 @@ Aşağıdaki migration'lar Supabase SQL Editor'de manuel olarak çalıştırılm
 - `063_ai_conversation_summary.sql` → **✅ Uygulandı (2026-04-23)** — `ai_conversations.summary`, `summary_updated_at`, `message_count_at_summary` kolonları
 - `064_ai_event_queue.sql` → **✅ Uygulandı (2026-04-23)** — `ai_event_queue` tablosu + RLS + index'ler (Faz 4 — proaktif danışman olayları)
 - `065_ai_insights.sql` → **✅ Uygulandı (2026-04-23)** — `ai_insights` tablosu + RLS + index'ler (Faz 4 — insight kartları)
+- `066_sector_benchmarks_aggregate.sql` → **✅ Uygulandı (2026-04-23)** — `sector_benchmarks_aggregate` tablosu + unique index (sector+metric+period) + RLS public read (Faz 5 — anonim sektörel benchmark, sample_size >= 20 şartı)
 
 ### Migration Numaralandırma Kuralı (2026-04-18'den itibaren)
 Aynı numaraya denk gelen migration'lar `a/b/c` harf suffix'i ile ayrılır. Alfabetik sıralama doğru çalışma sırasını korur.
@@ -337,4 +339,4 @@ Aynı numaraya denk gelen migration'lar `a/b/c` harf suffix'i ile ayrılır. Alf
 
 Mevcut a/b çiftleri: `036a/036b`, `037a/037b`, `040a/040b`, `049a/049b`, `050a/050b`, `053a/053b`, `054a/054b`.
 
-Son migration numarası: `065_ai_insights.sql` (2026-04-23, Faz 4).
+Son migration numarası: `066_sector_benchmarks_aggregate.sql` (2026-04-23, Faz 5).
