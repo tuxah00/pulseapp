@@ -643,7 +643,7 @@ export default function RewardsPage() {
                         </button>
                       )}
                     </div>
-                    {cr.notes && <p className="text-xs text-gray-400 mt-1 pl-1 border-l-2 border-gray-200 dark:border-gray-700">{cr.notes}</p>}
+                    {cr.notes && <p className="text-xs text-gray-400 dark:text-gray-500 italic mt-1">{cr.notes}</p>}
                   </AnimatedItem>
                 ))}
               </AnimatedList>
