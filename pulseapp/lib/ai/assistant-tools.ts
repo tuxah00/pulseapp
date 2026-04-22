@@ -13,6 +13,7 @@ import {
   computeSeasonalTrend,
   computeCohortRetention,
 } from '@/lib/analytics/insights'
+import { computeForecast, simulateCampaign } from '@/lib/analytics/forecast'
 import { semanticSearch } from '@/lib/ai/memory/embed'
 import { upsertMemory, deleteMemory } from '@/lib/ai/memory/write'
 import type { MemoryScope, EmbeddingContentType } from '@/lib/ai/memory/types'
@@ -581,6 +582,37 @@ export const ASSISTANT_TOOLS: ChatCompletionTool[] = [
             description: 'Sadece belirli bir bölüm istenirse belirt (varsayılan all). Yanıt boyutunu küçültür.',
           },
         },
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'forecast_revenue',
+      description: 'Önümüzdeki 30 gün için beklenen ciro ve randevu tahminini döner. Son 90 günün verisinden lineer regresyon + sektörel sezonsal düzeltme ile hesaplanır. "Önümüzdeki ay ne bekleyelim", "gelecek ayın tahmini", "trendim nasıl" gibi sorular için kullan.',
+      parameters: {
+        type: 'object',
+        properties: {
+          horizon_days: { type: 'number', description: 'Tahmin aralığı (gün, varsayılan 30, max 90)' },
+          apply_seasonal: { type: 'boolean', description: 'Sezonsal düzeltme uygulansın mı (varsayılan true)' },
+        },
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'simulate_campaign',
+      description: 'Bir kampanya senaryosunun beklenen etkisini simüle eder. "100 müşteriye %20 indirim SMS gönderirsem ne kazanırım" tarzı soruları yanıtlar. Kabul oranı, beklenen ciro, maliyet, kâr, ROI hesaplar.',
+      parameters: {
+        type: 'object',
+        properties: {
+          segment_size: { type: 'number', description: 'Hedef müşteri sayısı' },
+          discount_pct: { type: 'number', description: 'İndirim yüzdesi (0-100)' },
+          channel: { type: 'string', enum: ['sms', 'whatsapp', 'email'], description: 'Gönderim kanalı' },
+          avg_ticket: { type: 'number', description: 'Ortalama bilet (₺). Verilmezse son 90 günün ortalaması kullanılır.' },
+        },
+        required: ['segment_size', 'discount_pct', 'channel'],
       },
     },
   },
@@ -1290,6 +1322,8 @@ export const TOOL_LABELS: Record<string, string> = {
   detect_anomalies: 'Anomali taraması yapılıyor...',
   recommend_strategic_actions: 'Stratejik öneriler hesaplanıyor...',
   get_business_insights: 'İş zekası analizi hazırlanıyor...',
+  forecast_revenue: 'Önümüzdeki 30 gün tahmin ediliyor...',
+  simulate_campaign: 'Kampanya senaryosu simüle ediliyor...',
   schedule_action: 'Eylem zamanlanıyor...',
   list_scheduled_actions: 'Planlı eylemler listeleniyor...',
   cancel_scheduled_action: 'Zamanlanmış eylem iptal ediliyor...',
@@ -1410,6 +1444,8 @@ const TOOL_PERMISSIONS: Record<string, keyof StaffPermissions> = {
   detect_anomalies: 'analytics',
   recommend_strategic_actions: 'analytics',
   get_business_insights: 'analytics',
+  forecast_revenue: 'analytics',
+  simulate_campaign: 'analytics',
   schedule_action: 'dashboard',
   list_scheduled_actions: 'dashboard',
   cancel_scheduled_action: 'dashboard',
@@ -1543,6 +1579,10 @@ export async function executeAssistantTool(
         return await handleRecommendStrategicActions(admin, businessId, args)
       case 'get_business_insights':
         return await handleGetBusinessInsights(admin, businessId, args)
+      case 'forecast_revenue':
+        return await handleForecastRevenue(admin, businessId, args)
+      case 'simulate_campaign':
+        return await handleSimulateCampaign(admin, businessId, args)
       case 'schedule_action':
         return await handleScheduleAction(admin, ctx, args)
       case 'list_scheduled_actions':
@@ -3198,6 +3238,100 @@ async function handleGetBusinessInsights(
     case 'all':
     default:
       return { success: true, data: await computeInsightsSummary(admin, businessId, sector, period) }
+  }
+}
+
+async function handleForecastRevenue(
+  admin: SupabaseAdmin,
+  businessId: string,
+  args: { horizon_days?: number; apply_seasonal?: boolean },
+) {
+  const { data: biz } = await admin
+    .from('businesses')
+    .select('sector')
+    .eq('id', businessId)
+    .single()
+
+  const sector = (biz?.sector as SectorType) || 'other'
+  const horizon = Math.min(Math.max(args.horizon_days ?? 30, 7), 90)
+  const forecast = await computeForecast(admin, businessId, sector, {
+    horizonDays: horizon,
+    applySeasonal: args.apply_seasonal !== false,
+  })
+
+  // Asistan için kompakt çıktı — günlük seri 7 günde bir örneklenir
+  const sampledDaily = forecast.daily.filter((_, i) => i % 7 === 0 || i === forecast.daily.length - 1)
+
+  return {
+    success: true,
+    data: {
+      period: forecast.period,
+      total_expected_revenue: forecast.total_expected_revenue,
+      total_expected_appointments: forecast.total_expected_appointments,
+      trend: forecast.trend,
+      trend_pct: forecast.trend_pct,
+      confidence_level: Math.round(forecast.confidence_level * 100) / 100,
+      seasonal_adjustment_applied: forecast.seasonal_adjustment_applied,
+      notes: forecast.notes,
+      weekly_sample: sampledDaily,
+    },
+  }
+}
+
+async function handleSimulateCampaign(
+  admin: SupabaseAdmin,
+  businessId: string,
+  args: {
+    segment_size?: number
+    discount_pct?: number
+    channel?: 'sms' | 'whatsapp' | 'email'
+    avg_ticket?: number
+  },
+) {
+  if (!args.segment_size || !args.channel || args.discount_pct === undefined) {
+    return {
+      success: false,
+      error: 'segment_size, discount_pct ve channel zorunlu',
+    }
+  }
+
+  let avgTicket = args.avg_ticket
+  if (!avgTicket) {
+    // Son 90 günün ortalama bileti
+    const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()
+    const { data: recentInvoices } = await admin
+      .from('invoices')
+      .select('total, paid_amount')
+      .eq('business_id', businessId)
+      .is('deleted_at', null)
+      .in('status', ['paid', 'partial'])
+      .gte('created_at', ninetyDaysAgo)
+      .limit(500)
+
+    const amounts = (recentInvoices ?? []).map((i: any) => Number(i.paid_amount ?? i.total ?? 0)).filter(v => v > 0)
+    avgTicket = amounts.length > 0
+      ? amounts.reduce((s, v) => s + v, 0) / amounts.length
+      : 500 // varsayılan
+  }
+
+  const result = simulateCampaign({
+    segment_size: args.segment_size,
+    discount_pct: args.discount_pct,
+    channel: args.channel,
+    avg_ticket: avgTicket,
+  })
+
+  return {
+    success: true,
+    data: {
+      ...result,
+      avg_ticket_used: Math.round(avgTicket),
+      scenario: {
+        segment_size: args.segment_size,
+        discount_pct: args.discount_pct,
+        channel: args.channel,
+      },
+    },
   }
 }
 

@@ -28,3 +28,6 @@ export const VISION_MAX_TOKENS = 1500
 
 // Embedding modeli (RAG — Faz 2'de aktifleşecek)
 export const EMBEDDING_MODEL = 'text-embedding-3-small'
+
+// Sesli komut transkripsiyonu (Faz 5)
+export const WHISPER_MODEL = 'whisper-1'
