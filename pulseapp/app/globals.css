@@ -29,12 +29,12 @@
     --ring: 220 90% 56%;
     --radius: 0.625rem;
 
-    /* Chart colors */
-    --chart-1: 220 90% 56%;
-    --chart-2: 142 71% 45%;
-    --chart-3: 38 92% 50%;
-    --chart-4: 262 80% 60%;
-    --chart-5: 350 80% 60%;
+    /* Chart colors — navy-led, warm amber & teal accents (no purple/pink AI cliché) */
+    --chart-1: 221 71% 33%;   /* pulse-900 navy */
+    --chart-2: 160 60% 40%;   /* deep teal */
+    --chart-3: 38 92% 50%;    /* amber */
+    --chart-4: 215 55% 55%;   /* steel blue */
+    --chart-5: 22 70% 52%;    /* terracotta */
 
     /* Sidebar */
     --sidebar-background: 0 0% 98%;
@@ -51,16 +51,20 @@
     --glass-border: rgba(255, 255, 255, 0.2);
     --glass-blur: 16px;
 
-    /* Gradients */
-    --gradient-primary: linear-gradient(135deg, #338dff 0%, #1457e1 100%);
-    --gradient-accent: linear-gradient(135deg, #7c3aed 0%, #338dff 100%);
+    /* Gradients — navy-anchored, no purple AI-slop */
+    --gradient-primary: linear-gradient(135deg, #193d8f 0%, #142757 100%);
+    --gradient-accent:  linear-gradient(135deg, #142757 0%, #1b6df5 100%);
     --gradient-success: linear-gradient(135deg, #10b981 0%, #047857 100%);
     --gradient-warning: linear-gradient(135deg, #f59e0b 0%, #b45309 100%);
-    --gradient-danger: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+    --gradient-danger:  linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
 
-    /* Heatmap */
-    --heatmap-empty: #e5e7eb;
-    --heatmap-fill: 59, 130, 246;
+    /* Heatmap — pulse brand navy */
+    --heatmap-empty: #eef2f7;
+    --heatmap-fill: 25, 61, 143;
+
+    /* Warm accent (gold) — rewards, milestones, premium — "spark" moments (10% rule) */
+    --accent-gold: oklch(78% 0.13 78);
+    --accent-gold-ink: oklch(38% 0.09 72);
   }
 
   .dark {
@@ -83,11 +87,11 @@
     --input: 217 33% 17%;
     --ring: 220 90% 60%;
 
-    --chart-1: 220 90% 65%;
-    --chart-2: 142 60% 55%;
-    --chart-3: 38 80% 60%;
-    --chart-4: 262 70% 65%;
-    --chart-5: 350 70% 65%;
+    --chart-1: 218 70% 60%;   /* navy lifted */
+    --chart-2: 160 50% 55%;   /* teal lifted */
+    --chart-3: 38 80% 60%;    /* amber lifted */
+    --chart-4: 215 45% 65%;   /* steel blue lifted */
+    --chart-5: 22 65% 62%;    /* terracotta lifted */
 
     --sidebar-background: 222 47% 9%;
     --sidebar-foreground: 210 40% 85%;
@@ -101,13 +105,18 @@
     --glass-bg: rgba(17, 24, 39, 0.85);
     --glass-border: rgba(255, 255, 255, 0.06);
 
-    /* Heatmap */
-    --heatmap-empty: #2d3748;
-    --heatmap-fill: 96, 165, 250;
+    /* Heatmap — pulse brand navy lifted */
+    --heatmap-empty: #1f2a3f;
+    --heatmap-fill: 142, 205, 255;
   }
 
   body {
-    @apply bg-gray-50 text-gray-900 antialiased dark:bg-gray-950 dark:text-gray-100;
+    @apply text-gray-900 antialiased dark:text-gray-100;
+    /* Nötraller lacivert yönünde çok hafif tinted — impeccable cohesion prensibi */
+    background-color: oklch(98% 0.006 245);
+  }
+  .dark body {
+    background-color: oklch(14% 0.015 245);
   }
 
   html {
@@ -211,6 +220,8 @@
   .badge-info     { @apply badge bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300; }
   .badge-neutral  { @apply badge bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300; }
   .badge-brand    { @apply badge bg-pulse-100 text-pulse-900 dark:bg-pulse-900/30 dark:text-pulse-300; }
+  /* Premium / milestone / ödül — warm accent, sparingly used (10% rule) */
+  .badge-gold     { @apply badge bg-gold-100 text-gold-800 dark:bg-gold-900/30 dark:text-gold-200; }
 
   /* ── Price ── */
   .text-price {

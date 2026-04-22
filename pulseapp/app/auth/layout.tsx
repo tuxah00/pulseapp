@@ -16,7 +16,7 @@ export default function AuthLayout({
     <div className="flex min-h-screen">
       {/* ── Sol panel: Marka (sadece md+) ── */}
       <div className="hidden md:flex md:w-[45%] lg:w-[40%] flex-col justify-between p-10 xl:p-14"
-           style={{ background: 'linear-gradient(145deg, #1457e1 0%, #338dff 60%, #7c3aed 100%)' }}>
+           style={{ background: 'linear-gradient(160deg, #142757 0%, #193d8f 55%, #1b6df5 100%)' }}>
         {/* Logo */}
         <div>
           <span className="text-2xl font-bold text-white tracking-tight">
