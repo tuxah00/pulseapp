@@ -41,6 +41,7 @@ type AppointmentView = AppointmentRow & {
 }
 import { logAudit } from '@/lib/utils/audit'
 import { addMonthsSafe } from '@/lib/utils/date-range'
+import { humanizeSupabaseError } from '@/lib/utils/humanize-supabase-error'
 import { getCustomerLabelSingular } from '@/lib/config/sector-modules'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
@@ -494,7 +495,7 @@ export default function AppointmentsPage() {
 
     if (editingAppointment) {
       const { error } = await supabase.from('appointments').update(payload).eq('id', editingAppointment.id)
-      if (error) { setError(error.message.includes('başka bir randevusu var') ? 'Bu personelin bu saatte başka bir randevusu var.' : error.message); setSaving(false); return }
+      if (error) { setError(humanizeSupabaseError(error)); setSaving(false); return }
     } else if (isRecurring && recurrenceCount > 1) {
       // Tekrarlayan randevu: Toplu oluşturma
       const groupId = crypto.randomUUID()
@@ -532,7 +533,7 @@ export default function AppointmentsPage() {
       }))
 
       const { error } = await supabase.from('appointments').insert(insertPayloads)
-      if (error) { setError(error.message); setSaving(false); return }
+      if (error) { setError(humanizeSupabaseError(error)); setSaving(false); return }
 
       if (conflictDates.length > 0) {
         const skipped = conflictDates.map(d => {
@@ -543,7 +544,7 @@ export default function AppointmentsPage() {
       }
     } else {
       const { error } = await supabase.from('appointments').insert({ business_id: businessId, ...payload, status: 'confirmed', source: 'manual' })
-      if (error) { setError(error.message.includes('başka bir randevusu var') ? 'Bu personelin bu saatte başka bir randevusu var.' : error.message); setSaving(false); return }
+      if (error) { setError(humanizeSupabaseError(error)); setSaving(false); return }
     }
     setSaving(false); closeModal()
     await fetchAppointments()
@@ -885,7 +886,7 @@ export default function AppointmentsPage() {
     const conflict = await checkStaffConflict(rescheduleAppointment.staff_id ?? null, rescheduleDate, rescheduleTime, endTime, rescheduleAppointment.id)
     if (conflict) { setError('Bu personelin bu saatte başka bir randevusu var.'); setSaving(false); return }
     const { error } = await supabase.from('appointments').update({ appointment_date: rescheduleDate, start_time: rescheduleTime, end_time: endTime }).eq('id', rescheduleAppointment.id)
-    if (error) { setError(error.message); setSaving(false); return }
+    if (error) { setError(humanizeSupabaseError(error)); setSaving(false); return }
     setSaving(false); closeReschedule(); fetchAppointments()
     window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Randevu ertelendi' } }))
   }
@@ -895,7 +896,7 @@ export default function AppointmentsPage() {
     setSaving(true)
     const apt = cancelConfirmAppointment
     const { error } = await supabase.from('appointments').update({ status: 'cancelled' }).eq('id', apt.id)
-    if (error) { window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: 'İptal güncellenemedi: ' + error.message } })); setSaving(false); closeCancelConfirm(); return }
+    if (error) { window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'İptal güncellenemedi', body: humanizeSupabaseError(error) } })); setSaving(false); closeCancelConfirm(); return }
     if (cancelNotifyCustomer && apt.customer_id) {
       try {
         await fetch('/api/messages/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ businessId, customerId: apt.customer_id, content: 'Merhaba, randevunuz iptal edilmiştir. Sorularınız için bizi arayabilirsiniz.' }) })

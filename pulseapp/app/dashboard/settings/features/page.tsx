@@ -80,8 +80,11 @@ export default function FeaturesSettingsPage() {
       setSavedAt(Date.now())
       // Sidebar'ın anında güncellenmesi için sayfayı yenile
       setTimeout(() => { window.location.reload() }, 400)
-    } catch (err: any) {
-      alert('Kaydedilemedi: ' + (err?.message || 'Bilinmeyen hata'))
+    } catch (err) {
+      console.error('Özellik ayarı kaydetme hatası:', err)
+      window.dispatchEvent(new CustomEvent('pulse-toast', {
+        detail: { type: 'error', title: 'Kaydedilemedi', body: 'Ayarlar kaydedilirken bir sorun oluştu. Lütfen tekrar deneyin.' }
+      }))
     } finally {
       setSaving(false)
     }

@@ -119,7 +119,9 @@ export default function ToothChart({ businessId, customerId, staffId }: Props) {
         setEditTooth(null)
       } else {
         const j = await res.json().catch(() => ({}))
-        alert(j.error || 'Kayıt sırasında hata oluştu')
+        window.dispatchEvent(new CustomEvent('pulse-toast', {
+          detail: { type: 'error', title: 'Kayıt yapılamadı', body: j.error || 'Diş kaydı sırasında bir sorun oluştu.' }
+        }))
       }
     } finally {
       setSaving(false)

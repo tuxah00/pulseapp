@@ -32,6 +32,7 @@ type TimelineItem =
   | { id: string; type: 'message'; date: string; sortDate: string; data: MessageRow }
   | { id: string; type: 'review'; date: string; sortDate: string; data: ReviewRow }
 import { logAudit } from '@/lib/utils/audit'
+import { humanizeSupabaseError } from '@/lib/utils/humanize-supabase-error'
 import CompactBoxCard from '@/components/ui/compact-box-card'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import { ToolbarPopover, SortPopoverContent } from '@/components/ui/toolbar-popover'
@@ -218,7 +219,7 @@ export default function CustomersPage() {
         segment,
       }).eq('id', editingCustomer.id)
       if (error) {
-        setError(error.message.includes('idx_customers_business_phone') ? 'Bu telefon numarası zaten kayıtlı.' : error.message.includes('invalid input syntax') ? 'Geçersiz veri formatı. Lütfen girdiğiniz bilgileri kontrol edin.' : error.message)
+        setError(humanizeSupabaseError(error))
         setSaving(false)
         return
       }
@@ -264,7 +265,7 @@ export default function CustomersPage() {
           }
           setError('Bu telefon numarası zaten kayıtlı.')
         } else {
-          setError(error.message.includes('invalid input syntax') ? 'Geçersiz veri formatı. Lütfen girdiğiniz bilgileri kontrol edin.' : error.message)
+          setError(humanizeSupabaseError(error))
         }
         setSaving(false)
         return
