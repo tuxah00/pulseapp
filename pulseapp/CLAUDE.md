@@ -9,10 +9,39 @@ PulseApp, çok sektörlü SaaS işletme yönetim platformu. Next.js 14, Supabase
 - Yeni buton/link/highlight eklerken `pulse-500` (parlak mavi) değil `pulse-900` (lacivert) kullan
 - Açık mod ve karanlık mod: her ikisinde de aynı lacivert, yalnızca dark modda `pulse-300` veya `pulse-400` text variant kullanılır
 
+## Branch Çalışma Kuralı (KESİNLİKLE UYULMALI)
+
+### Branch İsimlendirme
+Her çalışma bağlamı kendi `feature/[konu]` branch'inde yürür. Aktif branch'ler:
+| Branch | Kapsam |
+|--------|--------|
+| `feature/launch-prep` | Canlıya çıkış hazırlığı (Sentry, PWA, checklist) |
+| `feature/faz3-skill-packages` | Faz 3 — Skill paketleri ve sektör bazlı araç yükleme |
+
+### Commit & Push Kuralı
+- **HİÇBİR ZAMAN `origin/main`'e doğrudan push yapılmaz.**
+- Her commit sadece o session'ın kendi branch'ine push'lanır:
+  ```
+  git push origin HEAD:refs/heads/feature/[konu]
+  ```
+- Kullanıcı test eder, ardından **"maine aktar"** derse main'e merge edilir.
+
+### Maine Aktarma Akışı (yalnızca kullanıcı onayı sonrası)
+1. `git push origin HEAD:main` (veya PR ile merge)
+2. Diğer tüm aktif branch'leri main ile eşitle:
+   ```
+   git push origin origin/main:refs/heads/feature/[diğer-branch]
+   ```
+
+### Yeni Session Başlarken
+1. Hangi branch'te çalışılacağını kullanıcıya sor veya CLAUDE.md'deki branch tablosuna bak.
+2. `git checkout feature/[konu]` ile o branch'e geç.
+3. Tüm push'lar o branch'e yapılır.
+
 ## Deploy
 - **GitHub repo:** tuxah00/pulseapp
 - **Vercel:** main branch'e her push'ta otomatik deploy
-- **Kural:** Her değişiklik sonrası build kontrol et → commit → push (kullanıcıya sormadan)
+- **Kural:** commit → branch'e push → kullanıcı test → "maine aktar" onayı → main'e merge
 
 ## Supabase Migration Kuralı
 - **Migration dosyası oluşturduktan sonra Supabase Management API ile otomatik olarak çalıştır**
