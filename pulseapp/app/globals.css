@@ -65,6 +65,16 @@
     /* Warm accent (gold) — rewards, milestones, premium — "spark" moments (10% rule) */
     --accent-gold: oklch(78% 0.13 78);
     --accent-gold-ink: oklch(38% 0.09 72);
+
+    /* Z-index skalası — tüm overlay/modal/panel'ler bu hiyerarşiye uymalı */
+    --z-topbar: 30;           /* Sticky TopBar */
+    --z-sidebar-mobile: 40;   /* Mobil sidebar açıldığında */
+    --z-fab: 55;              /* Floating action button (AI asistan) */
+    --z-overlay: 60;          /* Standart Dialog + centered modal backdrop */
+    --z-lightbox: 70;         /* Resim görüntüleyici (modal üstü) */
+    --z-slide-panel: 110;     /* Slide-over panel */
+    --z-stacked-modal: 115;   /* Slide-panel içinden açılan modal */
+    --z-confirm: 120;         /* ConfirmDialog (en üst) */
   }
 
   .dark {
@@ -196,15 +206,28 @@
     @apply block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5;
   }
 
-  /* ── Cards ── */
+  /* ── Cards ──
+     Flat + bordered — "generic drop shadow = AI slop" anti-pattern kaldırıldı.
+     Kartlar ayrımını sadece border ile yapar. Hover/interactive durumlar
+     .card-interactive modifier'ı ile opt-in yapılır. */
   .card {
-    @apply rounded-xl border border-gray-200 bg-white p-6 shadow-sm
-           transition-all duration-200 cursor-default
+    @apply rounded-xl border border-gray-200 bg-white p-6
+           transition-colors duration-200 cursor-default
            dark:bg-gray-900 dark:border-gray-800;
   }
-  /* Hover yalnızca .card-interactive modifier ile aktif olur */
+  /* Opt-in: tıklanabilir kart — border koyulaşır, subtle elevation (shadow değil) */
+  .card-interactive {
+    @apply cursor-pointer;
+  }
   .card-interactive:hover {
-    @apply shadow-md dark:border-gray-700;
+    @apply border-gray-300 dark:border-gray-700 bg-gray-50/40 dark:bg-gray-800/30;
+  }
+  /* Opt-in: modal/overlay kartları için subtle shadow — "elevated" hissi gerektiğinde */
+  .card-elevated {
+    box-shadow: 0 1px 2px -1px rgba(17, 24, 39, 0.04), 0 1px 3px -1px rgba(17, 24, 39, 0.06);
+  }
+  .dark .card-elevated {
+    box-shadow: 0 1px 2px -1px rgba(0, 0, 0, 0.3), 0 1px 3px -1px rgba(0, 0, 0, 0.4);
   }
 
   /* ── Badges ── */
