@@ -6,27 +6,29 @@ import { logAuditServer } from '@/lib/utils/audit'
 import { createLogger } from '@/lib/utils/logger'
 import { advanceWizardStep } from '@/lib/onboarding/wizard-progress'
 
-const log = createLogger({ route: 'api/onboarding/wizard/services' })
+const log = createLogger({ route: 'api/onboarding/wizard/packages' })
 
 /**
- * Kurulum sihirbazı Adım 1 — Hizmetler commit endpoint'i.
+ * Kurulum sihirbazı Adım 2 — Seans paketleri commit endpoint'i.
  *
- * Seçilen + özelleştirilen hizmet kartlarını `services` tablosuna insert eder
- * ve `businesses.settings.wizard_step` değerini 1'e günceller.
+ * Seçilen/özelleştirilen paketleri `service_packages` tablosuna insert eder
+ * ve `wizard_step = 2` olarak işaretler.
  *
- * Kısmi çıkışta veri kaybı olmaması için her adım kendi içinde tutarlı.
+ * Not: Paketler isteğe bağlı olarak bir servise `service_id` FK ile bağlanabilir;
+ * ancak wizard'da kullanıcı hangi servise bağlı olduğunu seçmediği için null bırakıyoruz.
+ * Kullanıcı sonradan `/dashboard/settings/packages` üzerinden düzenleyebilir.
  */
 
-const ServiceDraftSchema = z.object({
+const PackageDraftSchema = z.object({
   name: z.string().trim().min(1).max(120),
   description: z.string().max(500).nullable().optional(),
-  duration_minutes: z.number().int().min(5).max(480),
+  sessions_total: z.number().int().min(1).max(50),
   price: z.number().min(0).max(1_000_000),
-  recommended_interval_days: z.number().int().min(1).max(3650).nullable().optional(),
+  validity_days: z.number().int().min(1).max(3650).nullable().optional(),
 })
 
 const BodySchema = z.object({
-  services: z.array(ServiceDraftSchema).max(30),
+  packages: z.array(PackageDraftSchema).max(20),
 })
 
 export async function POST(req: NextRequest) {
@@ -48,17 +50,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Geçersiz veri', details: parsed.error.issues }, { status: 400 })
   }
 
-  const { services } = parsed.data
+  const { packages } = parsed.data
 
-  // Boş gönderim — sadece wizard_step güncelle, insert yok
-  if (services.length === 0) {
-    await advanceWizardStep(supabase, staff.business_id, 1)
+  if (packages.length === 0) {
+    await advanceWizardStep(supabase, staff.business_id, 2)
     return NextResponse.json({ ok: true, inserted: 0 })
   }
 
-  // Mevcut max sort_order'ı bul (kullanıcı daha önce hizmet eklemiş olabilir)
   const { data: maxRow } = await supabase
-    .from('services')
+    .from('service_packages')
     .select('sort_order')
     .eq('business_id', staff.business_id)
     .order('sort_order', { ascending: false })
@@ -66,31 +66,32 @@ export async function POST(req: NextRequest) {
     .maybeSingle()
   const baseSort = (maxRow?.sort_order ?? -1) + 1
 
-  const rows = services.map((s, i) => ({
+  const rows = packages.map((p, i) => ({
     business_id: staff.business_id,
-    name: s.name,
-    description: s.description ?? null,
-    duration_minutes: s.duration_minutes,
-    price: s.price,
-    recommended_interval_days: s.recommended_interval_days ?? null,
+    name: p.name,
+    description: p.description ?? null,
+    service_id: null,
+    sessions_total: p.sessions_total,
+    price: p.price,
+    validity_days: p.validity_days ?? null,
     sort_order: baseSort + i,
     is_active: true,
   }))
 
-  const { error } = await supabase.from('services').insert(rows)
+  const { error } = await supabase.from('service_packages').insert(rows)
   if (error) {
-    log.error({ err: error }, 'Hizmet ekleme hatası')
+    log.error({ err: error }, 'Paket ekleme hatası')
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  await advanceWizardStep(supabase, staff.business_id, 1)
+  await advanceWizardStep(supabase, staff.business_id, 2)
 
   await logAuditServer({
     businessId: staff.business_id,
     staffId: staff.id,
     staffName: staff.name ?? null,
     action: 'create',
-    resource: 'service',
+    resource: 'service_package',
     details: { source: 'wizard', count: rows.length },
   })
 

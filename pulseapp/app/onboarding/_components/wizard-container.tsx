@@ -7,6 +7,7 @@ import type { SectorType } from '@/types'
 import WelcomeStep from './welcome-step'
 import WizardShell, { WIZARD_STEPS } from './wizard-shell'
 import ServicesStep, { type ServiceDraft } from './services-step'
+import PackagesStep, { type PackageDraft } from './packages-step'
 
 /**
  * Sihirbaz state makinesi — client component.
@@ -42,6 +43,8 @@ export default function WizardContainer({ seed, initialStep }: WizardContainerPr
 
   // Adım 1 state
   const [selectedServices, setSelectedServices] = useState<ServiceDraft[]>([])
+  // Adım 2 state
+  const [selectedPackages, setSelectedPackages] = useState<PackageDraft[]>([])
 
   const markCompleteAndExit = async () => {
     setSkipAllLoading(true)
@@ -61,23 +64,31 @@ export default function WizardContainer({ seed, initialStep }: WizardContainerPr
     setCurrentStep(s => Math.max(s - 1, 0))
   }
 
-  const commitServicesAndNext = async () => {
+  /**
+   * Ortak commit akışı: POST → başarı toast → sonraki adım.
+   * Hata durumunda: toast göster, adımda kal.
+   */
+  const commitStep = async (
+    endpoint: string,
+    payload: Record<string, unknown>,
+    successLabel: (inserted: number) => string | null,
+    errorTitle: string,
+  ) => {
     setCommitLoading(true)
     try {
-      const res = await fetch('/api/onboarding/wizard/services', {
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ services: selectedServices }),
+        body: JSON.stringify(payload),
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({ error: 'Bilinmeyen hata' }))
-        emitToast('error', 'Hizmetler kaydedilemedi', data.error ?? undefined)
+        emitToast('error', errorTitle, data.error ?? undefined)
         return
       }
       const data = await res.json()
-      if (data.inserted > 0) {
-        emitToast('system', `${data.inserted} hizmet eklendi`)
-      }
+      const msg = successLabel(data.inserted ?? 0)
+      if (msg) emitToast('system', msg)
       goNext()
     } catch {
       emitToast('error', 'Bağlantı hatası', 'Lütfen tekrar deneyin.')
@@ -85,6 +96,22 @@ export default function WizardContainer({ seed, initialStep }: WizardContainerPr
       setCommitLoading(false)
     }
   }
+
+  const commitServicesAndNext = () =>
+    commitStep(
+      '/api/onboarding/wizard/services',
+      { services: selectedServices },
+      n => (n > 0 ? `${n} hizmet eklendi` : null),
+      'Hizmetler kaydedilemedi',
+    )
+
+  const commitPackagesAndNext = () =>
+    commitStep(
+      '/api/onboarding/wizard/packages',
+      { packages: selectedPackages },
+      n => (n > 0 ? `${n} paket eklendi` : null),
+      'Paketler kaydedilemedi',
+    )
 
   // Adım 0 — Karşılama
   if (currentStep === 0) {
@@ -115,7 +142,25 @@ export default function WizardContainer({ seed, initialStep }: WizardContainerPr
     )
   }
 
-  // Adım 2-5 — Placeholder; sonraki alt-sprint'lerde doldurulacak
+  // Adım 2 — Paketler
+  if (currentStep === 2) {
+    return (
+      <WizardShell
+        currentStep={2}
+        onBack={goBack}
+        onSkip={goNext}
+        onNext={commitPackagesAndNext}
+        nextLoading={commitLoading}
+      >
+        <PackagesStep
+          seedPackages={seed.packages}
+          onPackagesChange={setSelectedPackages}
+        />
+      </WizardShell>
+    )
+  }
+
+  // Adım 3-5 — Placeholder; sonraki alt-sprint'lerde doldurulacak
   return (
     <WizardShell
       currentStep={currentStep}
