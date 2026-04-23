@@ -28,6 +28,7 @@ import {
 } from '@/lib/config/sector-labels'
 import type { Customer } from '@/types'
 import CompactBoxCard from '@/components/ui/compact-box-card'
+import EmptyState from '@/components/ui/empty-state'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { CustomerSearchSelect } from '@/components/ui/customer-search-select'
@@ -960,22 +961,16 @@ function RecordsPageInner() {
 
       {/* ── Empty state ── */}
       {!dbError && records.length === 0 && (
-        <div className="card flex flex-col items-center justify-center py-24 text-center">
-          <Icon className="mb-4 h-16 w-16 text-gray-200 dark:text-gray-600" />
-          <h3 className="text-base font-semibold text-gray-700 dark:text-gray-300">
-            {search ? 'Aramanızla eşleşen kayıt bulunamadı' : 'Henüz kayıt eklenmemiş'}
-          </h3>
-          {!search && (
-            <>
-              <p className="mt-1 mb-4 text-sm text-gray-400">
-                Sağ üstteki butonu kullanarak ilk kaydı ekleyin.
-              </p>
-              <button onClick={openNewModal} className="btn-primary">
-                <Plus className="mr-2 h-4 w-4" />{config.addLabel}
-              </button>
-            </>
-          )}
-        </div>
+        <EmptyState
+          icon={<Icon className="w-8 h-8" />}
+          title={search ? 'Aramanızla eşleşen kayıt bulunamadı' : 'Henüz kayıt eklenmemiş'}
+          description={search ? undefined : 'Sağ üstteki butonu kullanarak ilk kaydı ekleyin.'}
+          action={search ? undefined : {
+            label: config.addLabel,
+            onClick: openNewModal,
+            icon: <Plus className="w-4 h-4" />,
+          }}
+        />
       )}
 
       {/* ── Record list ── */}

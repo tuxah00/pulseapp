@@ -11,6 +11,7 @@ import ViewModeToggle from '@/components/ui/view-mode-toggle'
 import { cn } from '@/lib/utils'
 import { Portal } from '@/components/ui/portal'
 import CompactBoxCard from '@/components/ui/compact-box-card'
+import EmptyState from '@/components/ui/empty-state'
 import type { StaffMember, StaffRole, StaffPermissions } from '@/types'
 import { logAudit } from '@/lib/utils/audit'
 import { DEFAULT_PERMISSIONS, getEffectivePermissions } from '@/types'
@@ -528,13 +529,16 @@ export default function StaffPage() {
       </div>
 
       {staff.length === 0 ? (
-        <div className="card flex flex-col items-center justify-center py-16">
-          <UserPlus className="mb-4 h-12 w-12 text-gray-300" />
-          <p className="text-gray-500 mb-4">Henüz personel eklenmemiş</p>
-          <button onClick={openNewModal} className="btn-primary">
-            <Plus className="mr-2 h-4 w-4" />İlk Personeli Ekle
-          </button>
-        </div>
+        <EmptyState
+          icon={<UserPlus className="w-8 h-8" />}
+          title="Henüz personel eklenmemiş"
+          description="İlk personelinizi ekleyerek başlayın."
+          action={{
+            label: 'İlk Personeli Ekle',
+            onClick: openNewModal,
+            icon: <Plus className="w-4 h-4" />,
+          }}
+        />
       ) : (
         <div className="space-y-6">
           {staffGroups.map((group) => (
