@@ -38,6 +38,34 @@ type SseEvent =
 
 type AccumulatedToolCall = { index: number; id: string; name: string; arguments: string }
 
+/**
+ * Geçmişi OpenAI şemasına uygun son temiz noktaya kırp.
+ *
+ * OpenAI kuralı: assistant mesajı `tool_calls` içeriyorsa, sonrasında HER `tool_call_id`
+ * için bir `tool` response mesajı gelmek zorunda. Bu zincir kopuksa 400 döner
+ * (akış yarıda kesildiyse, DB'ye assistant tool_calls yazıldı ama tool sonucu yazılamadıysa).
+ *
+ * Çözüm: sırayla yürü, bekleyen tool_call_id'leri takip et; set boşaldığı son
+ * index'e kadar kırp. Set hiç boşalmamışsa geçmişi tamamen boşalt.
+ */
+function sanitizeHistory(history: ChatCompletionMessageParam[]): ChatCompletionMessageParam[] {
+  const pending = new Set<string>()
+  let lastCompleteIdx = -1
+  for (let i = 0; i < history.length; i++) {
+    const msg = history[i]
+    if (msg.role === 'assistant' && 'tool_calls' in msg && Array.isArray(msg.tool_calls)) {
+      for (const tc of msg.tool_calls) {
+        if (tc?.id) pending.add(tc.id)
+      }
+    } else if (msg.role === 'tool' && 'tool_call_id' in msg && msg.tool_call_id) {
+      pending.delete(msg.tool_call_id)
+    }
+    if (pending.size === 0) lastCompleteIdx = i
+  }
+  if (pending.size === 0) return history
+  return history.slice(0, lastCompleteIdx + 1)
+}
+
 export async function POST(req: NextRequest) {
   // 1. Rate limit
   const rl = checkRateLimit(req, RATE_LIMITS.aiAssistant)
@@ -138,7 +166,7 @@ export async function POST(req: NextRequest) {
     .order('created_at', { ascending: true })
     .limit(limits.maxHistory)
 
-  const history: ChatCompletionMessageParam[] = (historyRows || []).map(row => {
+  const rawHistory: ChatCompletionMessageParam[] = (historyRows || []).map(row => {
     if (row.role === 'user') {
       return { role: 'user', content: row.content }
     }
@@ -150,6 +178,17 @@ export async function POST(req: NextRequest) {
     }
     return { role: 'assistant', content: row.content }
   })
+
+  // Dangling tool_calls sanitize — stream yarıda kesilirse assistant tool_calls mesajı
+  // kayıtta kalır ama tool response eklenemez. Bu durum sonraki istekte OpenAI'ı
+  // 400 ile reddetmeye götürür. Geçmişi son "temiz" noktaya kadar kırpıyoruz.
+  const history = sanitizeHistory(rawHistory)
+  if (history.length < rawHistory.length) {
+    log.info(
+      { route: 'api/ai/assistant', conversationId: convId, dropped: rawHistory.length - history.length },
+      '[assistant] bozuk geçmiş kırpıldı',
+    )
+  }
 
   // 7. Build system prompt
   const services = await getBusinessServices(admin, staff.business_id)
