@@ -308,17 +308,18 @@ export default function AppointmentsPage() {
 
   // Tek hiyerarşik ESC handler — önce en üstteki katman kapanır
   useEffect(() => {
-    const anyOpen = !!(slotPopup || showModal || selectedAppointment)
+    const anyOpen = !!(slotPopup || actionMenu || isSelecting || showModal || selectedAppointment)
     if (!anyOpen) return
     const h = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return
       if (slotPopup) { setSlotPopup(null); return }
+      if (actionMenu || isSelecting) { clearSelection(); return }
       if (showModal) { setIsClosingModal(true); return }
       if (selectedAppointment) { closePanelAnimated(); return }
     }
     document.addEventListener('keydown', h)
     return () => document.removeEventListener('keydown', h)
-  }, [slotPopup, showModal, selectedAppointment, closePanelAnimated])
+  }, [slotPopup, actionMenu, isSelecting, showModal, selectedAppointment, closePanelAnimated])
 
   function changeDate(days: number) {
     let d = new Date(selectedDate + 'T12:00:00')
@@ -864,17 +865,6 @@ export default function AppointmentsPage() {
     setSelectionEnd(null)
     setActionMenu(null)
   }
-
-  // ESC ile seçimi kapat
-  useEffect(() => {
-    const h = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && (actionMenu || isSelecting)) {
-        clearSelection()
-      }
-    }
-    document.addEventListener('keydown', h)
-    return () => document.removeEventListener('keydown', h)
-  }, [actionMenu, isSelecting])
 
   async function handleRescheduleSave(e: React.FormEvent) {
     e.preventDefault()
@@ -2704,7 +2694,7 @@ export default function AppointmentsPage() {
       {/* Yeni / Düzenleme Randevu Modal */}
       {showModal && (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
+        <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
           <div className={`modal-content card w-full max-w-md max-h-[90vh] overflow-y-auto ${isClosingModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="h-section">
@@ -2891,7 +2881,7 @@ export default function AppointmentsPage() {
       {/* Erteleme Modal */}
       {(rescheduleAppointment || isClosingReschedule) && (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${isClosingReschedule ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingReschedule) { setRescheduleAppointment(null); setIsClosingReschedule(false) } }}>
+        <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center p-4 ${isClosingReschedule ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingReschedule) { setRescheduleAppointment(null); setIsClosingReschedule(false) } }}>
           <div className={`modal-content card w-full max-w-sm ${isClosingReschedule ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="h-section">Randevuyu Ertele</h2>
@@ -2938,7 +2928,7 @@ export default function AppointmentsPage() {
       {/* İptal Onay Modal */}
       {(cancelConfirmAppointment || isClosingCancelConfirm) && (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${isClosingCancelConfirm ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingCancelConfirm) { setCancelConfirmAppointment(null); setIsClosingCancelConfirm(false) } }}>
+        <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center p-4 ${isClosingCancelConfirm ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingCancelConfirm) { setCancelConfirmAppointment(null); setIsClosingCancelConfirm(false) } }}>
           <div className={`modal-content card w-full max-w-sm ${isClosingCancelConfirm ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="h-section">Randevuyu İptal Et</h2>

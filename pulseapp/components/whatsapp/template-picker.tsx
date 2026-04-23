@@ -137,7 +137,7 @@ export function TemplatePicker({
 
   return (
     <div
-      className={cn('fixed inset-0 z-[60] flex items-center justify-center p-4 modal-overlay bg-black/50 dark:bg-black/70', closing && 'closing')}
+      className={cn('fixed inset-0 z-[60] flex items-center justify-center p-4 modal-overlay', closing && 'closing')}
       onAnimationEnd={handleAnimationEnd}
     >
       <div className={cn('modal-content bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col', closing && 'closing')}>

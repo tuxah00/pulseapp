@@ -1014,8 +1014,8 @@ export default function KasaPage() {
                       <td className="table-cell">
                         <span className={
                           tx.payment_status === 'paid' ? 'badge-success' :
-                          tx.payment_status === 'partial' ? 'badge-warning' :
-                          'badge-neutral'
+                          tx.payment_status === 'partial' ? 'badge-info' :
+                          'badge-warning'
                         }>
                           {tx.payment_status === 'paid' ? 'Ödendi' : tx.payment_status === 'partial' ? 'Kısmi' : 'Bekliyor'}
                         </span>
@@ -1032,7 +1032,7 @@ export default function KasaPage() {
       {/* ── Kasa Oturumu Modal ── */}
       {(showSessionModal || isClosingSessionModal) && (
         <Portal>
-          <div className={`modal-overlay fixed inset-0 z-[60] bg-black/50 dark:bg-black/70 ${isClosingSessionModal ? 'closing' : ''}`} onClick={() => closeSessionModal()} onAnimationEnd={() => { if (isClosingSessionModal) { setShowSessionModal(false); setIsClosingSessionModal(false) } }} />
+          <div className={`modal-overlay fixed inset-0 z-[60] ${isClosingSessionModal ? 'closing' : ''}`} onClick={() => closeSessionModal()} onAnimationEnd={() => { if (isClosingSessionModal) { setShowSessionModal(false); setIsClosingSessionModal(false) } }} />
           <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none">
             <div className={`modal-content bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-md p-6 pointer-events-auto ${isClosingSessionModal ? 'closing' : ''}`}>
               <h3 className="h-section mb-4">

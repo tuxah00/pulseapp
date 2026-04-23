@@ -607,14 +607,14 @@ export default function ReviewsPage() {
               <Loader2 className="h-8 w-8 animate-spin text-pulse-900" />
             </div>
           ) : filteredFeedback.length === 0 ? (
-            <div className="card flex flex-col items-center justify-center py-16">
-              <Inbox className="mb-4 h-12 w-12 text-gray-300 dark:text-gray-600" />
-              <p className="text-gray-500 dark:text-gray-400">
-                {fbSearch || fbTypeFilter !== 'all' || fbStatFilter
+            <EmptyState
+              icon={<Inbox className="w-8 h-8" />}
+              title={
+                fbSearch || fbTypeFilter !== 'all' || fbStatFilter
                   ? 'Filtreyle eşleşen geri bildirim bulunamadı'
-                  : 'Henüz geri bildirim yok'}
-              </p>
-            </div>
+                  : 'Henüz geri bildirim yok'
+              }
+            />
           ) : (
             <div className="space-y-3">
               {filteredFeedback.map((item) => {

@@ -22,6 +22,7 @@ import { useConfirm } from '@/lib/hooks/use-confirm'
 import { requirePermission } from '@/lib/hooks/use-require-permission'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { logAudit } from '@/lib/utils/audit'
+import EmptyState from '@/components/ui/empty-state'
 
 const DAY_LABELS: Record<string, string> = {
   mon: 'Pazartesi',
@@ -1140,17 +1141,16 @@ export default function BusinessSettingsPage() {
                 <Loader2 className="h-6 w-6 animate-spin text-pulse-900" />
               </div>
             ) : rooms.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gray-100 dark:bg-gray-700 mb-4">
-                  <DoorOpen className="h-8 w-8 text-gray-400" />
-                </div>
-                <p className="text-gray-500 dark:text-gray-400 font-medium">Henüz oda eklenmemiş</p>
-                <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">İlk odanızı ekleyerek başlayın.</p>
-                <button onClick={openNewRoomModal} className="btn-primary mt-4">
-                  <Plus className="mr-2 h-4 w-4" />
-                  İlk Odayı Ekle
-                </button>
-              </div>
+              <EmptyState
+                icon={<DoorOpen className="w-8 h-8" />}
+                title="Henüz oda eklenmemiş"
+                description="İlk odanızı ekleyerek başlayın."
+                action={{
+                  label: 'İlk Odayı Ekle',
+                  onClick: openNewRoomModal,
+                  icon: <Plus className="w-4 h-4" />,
+                }}
+              />
             ) : (
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {rooms.map((room) => (
@@ -1195,7 +1195,7 @@ export default function BusinessSettingsPage() {
       {showRoomModal && (
         <Portal>
         <div
-          className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${isClosingRoomModal ? 'closing' : ''}`}
+          className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 ${isClosingRoomModal ? 'closing' : ''}`}
           onAnimationEnd={() => {
             if (isClosingRoomModal) {
               setShowRoomModal(false)

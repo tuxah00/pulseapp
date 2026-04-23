@@ -540,7 +540,7 @@ export default function WaitlistPage() {
       {(showBook || closingBook) && bookEntry && (
         <Portal>
           <div
-            className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${closingBook ? 'closing' : ''}`}
+            className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 ${closingBook ? 'closing' : ''}`}
             onClick={() => setClosingBook(true)}
             onAnimationEnd={() => { if (closingBook) { setShowBook(false); setClosingBook(false); setBookEntry(null) } }}
           >
@@ -604,7 +604,7 @@ export default function WaitlistPage() {
       {/* ═══ Modal: Listeye Ekle ═══ */}
       {(showCreate || closingCreate) && (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${closingCreate ? 'closing' : ''}`} onClick={() => setClosingCreate(true)} onAnimationEnd={() => { if (closingCreate) { setShowCreate(false); setClosingCreate(false) } }}>
+        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 ${closingCreate ? 'closing' : ''}`} onClick={() => setClosingCreate(true)} onAnimationEnd={() => { if (closingCreate) { setShowCreate(false); setClosingCreate(false) } }}>
           <div className={`modal-content card w-full max-w-lg dark:bg-gray-900 ${closingCreate ? 'closing' : ''}`} onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-base font-medium text-gray-900 dark:text-white">Bekleme Listesine Ekle</h3>

@@ -31,7 +31,7 @@ function DialogOverlay({
     <DialogPrimitive.Backdrop
       data-slot="dialog-overlay"
       className={cn(
-        "modal-overlay fixed inset-0 isolate z-[60] bg-black/50 dark:bg-black/70 supports-backdrop-filter:backdrop-blur-sm",
+        "modal-overlay fixed inset-0 z-[60]",
         className
       )}
       {...props}
@@ -53,7 +53,7 @@ function DialogContent({
       <DialogPrimitive.Popup
         data-slot="dialog-content"
         className={cn(
-          "modal-content fixed top-1/2 left-1/2 z-[60] grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-2xl bg-white dark:bg-gray-900 p-6 text-sm text-gray-900 dark:text-gray-100 shadow-xl ring-1 ring-gray-200/50 dark:ring-white/10 outline-none sm:max-w-md",
+          "modal-content fixed top-1/2 left-1/2 z-[60] grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 text-sm text-gray-900 dark:text-gray-100 shadow-xl outline-none sm:max-w-md",
           className
         )}
         {...props}
