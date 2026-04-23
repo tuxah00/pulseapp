@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withAuth } from '@/lib/api/with-permission'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
-import OpenAI from 'openai'
+import { getOpenAIClient, WHISPER_MODEL } from '@/lib/ai/openai-client'
 
 export const POST = withAuth(async (req: NextRequest) => {
   const rl = checkRateLimit(req, RATE_LIMITS.ai)
@@ -22,11 +22,11 @@ export const POST = withAuth(async (req: NextRequest) => {
       return NextResponse.json({ error: 'Ses dosyası bulunamadı' }, { status: 400 })
     }
 
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+    const openai = getOpenAIClient()
 
     const transcription = await openai.audio.transcriptions.create({
       file: audio,
-      model: 'whisper-1',
+      model: WHISPER_MODEL,
       language: 'tr',
     })
 

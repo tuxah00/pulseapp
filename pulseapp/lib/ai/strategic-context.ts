@@ -620,6 +620,17 @@ export const DEMAND_LABELS_TR: Record<SeasonalDemand, string> = {
   peak: 'zirve',
 }
 
+/**
+ * Sezonsal talep enum'u → beklenen ciro/randevu çarpanı.
+ * Forecast ve benzeri analitik modüller sezonsal düzeltme için bunu kullanır.
+ */
+export const DEMAND_MULTIPLIERS: Record<SeasonalDemand, number> = {
+  low: 0.75,
+  normal: 1,
+  high: 1.2,
+  peak: 1.4,
+}
+
 export interface SeasonalContextSummary {
   currentMonth: number
   currentLabel: string

@@ -95,6 +95,9 @@ export const SKILL_TOOL_NAMES: Record<SkillId, readonly string[]> = {
     'detect_anomalies',
     'recommend_strategic_actions',
     'get_business_insights',
+    // Faz 5 — Forecast + Simülasyon
+    'forecast_revenue',
+    'simulate_campaign',
   ],
 
   /** Estetik klinik özel araçlar */

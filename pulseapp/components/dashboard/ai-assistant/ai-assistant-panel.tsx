@@ -31,7 +31,9 @@ export default function AIAssistantPanel({ businessName, sector, plan, permissio
   const [input, setInput] = useState('')
   const [showConversations, setShowConversations] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const [isAtBottom, setIsAtBottom] = useState(true)
 
   const {
     messages,
@@ -160,10 +162,23 @@ export default function AIAssistantPanel({ businessName, sector, plan, permissio
     dismissForCurrentPath()
   }, [dismissForCurrentPath])
 
-  // Auto-scroll to bottom
+  // Kullanıcı dibe yakın mı? (80px eşik) — yukarı kaydırdıysa otomatik kaydırma durur
   useEffect(() => {
+    const container = messagesContainerRef.current
+    if (!container) return
+    const handleScroll = () => {
+      const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight
+      setIsAtBottom(distanceFromBottom < 80)
+    }
+    container.addEventListener('scroll', handleScroll, { passive: true })
+    return () => container.removeEventListener('scroll', handleScroll)
+  }, [isOpen, isMinimized])
+
+  // Otomatik kaydırma — sadece kullanıcı zaten dipteyken
+  useEffect(() => {
+    if (!isAtBottom) return
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, activeTools])
+  }, [messages, activeTools, isAtBottom])
 
   // Focus input when panel opens
   useEffect(() => {
@@ -194,6 +209,7 @@ export default function AIAssistantPanel({ businessName, sector, plan, permissio
     if (!input.trim() || isLoading) return
     const text = input.trim()
     setInput('')
+    setIsAtBottom(true) // kullanıcı aktif gönderim yapıyor → dibe sabitlen
     sendMessage(text)
   }, [input, isLoading, sendMessage])
 
@@ -205,6 +221,7 @@ export default function AIAssistantPanel({ businessName, sector, plan, permissio
   }
 
   const handleQuickPrompt = (prompt: string) => {
+    setIsAtBottom(true)
     sendMessage(prompt)
   }
 
@@ -340,7 +357,7 @@ export default function AIAssistantPanel({ businessName, sector, plan, permissio
             </div>
 
             {/* Messages area */}
-            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 min-h-0">
+            <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4 min-h-0">
               {messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center px-4">
                   <div className="w-14 h-14 rounded-full bg-pulse-50 dark:bg-pulse-900/30 ring-1 ring-pulse-100 dark:ring-pulse-800/40 flex items-center justify-center mb-4">
