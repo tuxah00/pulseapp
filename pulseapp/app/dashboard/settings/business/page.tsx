@@ -1,6 +1,7 @@
 ﻿'use client'
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
@@ -21,6 +22,7 @@ import { useConfirm } from '@/lib/hooks/use-confirm'
 import { requirePermission } from '@/lib/hooks/use-require-permission'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { logAudit } from '@/lib/utils/audit'
+import EmptyState from '@/components/ui/empty-state'
 
 const DAY_LABELS: Record<string, string> = {
   mon: 'Pazartesi',
@@ -502,10 +504,12 @@ export default function BusinessSettingsPage() {
               <div className="flex items-center gap-5">
                 <div className="relative flex-shrink-0">
                   {settings.logo_url ? (
-                    <img
+                    <Image
                       src={settings.logo_url}
                       alt="Logo"
-                      className="h-20 w-20 rounded-2xl object-cover border border-gray-200 dark:border-gray-700"
+                      width={80}
+                      height={80}
+                      className="rounded-2xl object-cover border border-gray-200 dark:border-gray-700"
                     />
                   ) : (
                     <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-pulse-100 dark:bg-pulse-900/30 text-pulse-900 dark:text-pulse-400 text-2xl font-bold border-2 border-dashed border-pulse-300 dark:border-pulse-700">
@@ -1002,7 +1006,7 @@ export default function BusinessSettingsPage() {
             </div>
 
             {/* WhatsApp */}
-            <div className="card border-green-200 bg-gradient-to-br from-green-50/40 to-white dark:from-gray-800 dark:to-gray-800 dark:border-gray-700">
+            <div className="card">
               <div className="flex items-center gap-3 mb-1">
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-green-100">
                   <Smartphone className="h-5 w-5 text-green-600" />
@@ -1063,7 +1067,7 @@ export default function BusinessSettingsPage() {
               </div>
             </div>
 
-            <div className="card border-purple-200 bg-gradient-to-br from-purple-50/50 to-white dark:from-gray-800 dark:to-gray-800 dark:border-gray-700">
+            <div className="card">
               <div className="flex items-center gap-3 mb-1">
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-100">
                   <Sparkles className="h-5 w-5 text-purple-600" />
@@ -1137,17 +1141,16 @@ export default function BusinessSettingsPage() {
                 <Loader2 className="h-6 w-6 animate-spin text-pulse-900" />
               </div>
             ) : rooms.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gray-100 dark:bg-gray-700 mb-4">
-                  <DoorOpen className="h-8 w-8 text-gray-400" />
-                </div>
-                <p className="text-gray-500 dark:text-gray-400 font-medium">Henüz oda eklenmemiş</p>
-                <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">İlk odanızı ekleyerek başlayın.</p>
-                <button onClick={openNewRoomModal} className="btn-primary mt-4">
-                  <Plus className="mr-2 h-4 w-4" />
-                  İlk Odayı Ekle
-                </button>
-              </div>
+              <EmptyState
+                icon={<DoorOpen className="w-8 h-8" />}
+                title="Henüz oda eklenmemiş"
+                description="İlk odanızı ekleyerek başlayın."
+                action={{
+                  label: 'İlk Odayı Ekle',
+                  onClick: openNewRoomModal,
+                  icon: <Plus className="w-4 h-4" />,
+                }}
+              />
             ) : (
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {rooms.map((room) => (
@@ -1192,7 +1195,7 @@ export default function BusinessSettingsPage() {
       {showRoomModal && (
         <Portal>
         <div
-          className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${isClosingRoomModal ? 'closing' : ''}`}
+          className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 ${isClosingRoomModal ? 'closing' : ''}`}
           onAnimationEnd={() => {
             if (isClosingRoomModal) {
               setShowRoomModal(false)

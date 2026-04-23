@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+// RLS bypass: harici webhook, kullanıcı session'ı yok
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendWhatsApp } from '@/lib/whatsapp/send'
 import { handleAppointmentConfirmationReply } from '@/lib/messaging/appointment-confirmation'

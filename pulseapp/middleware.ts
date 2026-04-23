@@ -33,7 +33,12 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // ── Public rotalar ──
-  const publicPaths = ['/book', '/api/public', '/portal', '/api/portal']
+  // /portal/** → portal kendi cookie tabanlı oturum sistemine sahip (portal_customer_id + portal_business_id).
+  //   Middleware seviyesinde bloklamak yerine her portal server component kendi getPortalSession() kontrolünü yapıyor.
+  //   Dashboard session'ına sahip kullanıcılar (işletme sahipleri) da owner-preview endpointi üzerinden
+  //   portal cookie alabildiği için bu rotalar middleware'de public bırakılıyor.
+  // /book/manage/** → manage_token tabanlı public erişim; token kontrolü server component'te yapılıyor.
+  const publicPaths = ['/book', '/api/public', '/portal', '/api/portal', '/offline']
   if (publicPaths.some(p => pathname.startsWith(p))) {
     return supabaseResponse
   }

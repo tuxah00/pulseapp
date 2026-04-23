@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/api/with-permission'
-import { getAnthropicClient, AI_MODEL } from '@/lib/ai/client'
+import { getOpenAIClient, ASSISTANT_MODEL } from '@/lib/ai/openai-client'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
 import { createLogger } from '@/lib/utils/logger'
 
@@ -111,20 +111,21 @@ Yanıtı SADECE JSON formatında ver:
 }`
 
   try {
-    const anthropic = getAnthropicClient()
-    const message = await anthropic.messages.create({
-      model: AI_MODEL,
+    const openai = getOpenAIClient()
+    const completion = await openai.chat.completions.create({
+      model: ASSISTANT_MODEL,
       max_tokens: 1024,
       messages: [{ role: 'user', content: prompt }],
+      response_format: { type: 'json_object' },
     })
 
-    const content = message.content[0]
-    if (content.type !== 'text') {
+    const text = completion.choices[0]?.message?.content || ''
+    if (!text) {
       return NextResponse.json({ error: 'AI yanıtı alınamadı' }, { status: 500 })
     }
 
     let suggestions: CampaignSuggestion[] = []
-    const jsonMatch = content.text.match(/\{[\s\S]*\}/)
+    const jsonMatch = text.match(/\{[\s\S]*\}/)
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0])
       suggestions = parsed.suggestions || []

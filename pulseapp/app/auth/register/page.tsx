@@ -14,6 +14,7 @@ export default function RegisterPage() {
   const [step, setStep] = useState<1 | 2>(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
 
   // Step 1: Hesap
   const [fullName, setFullName] = useState('')
@@ -83,7 +84,7 @@ export default function RegisterPage() {
 
       setLoading(false)
       setError(null)
-      alert('Kayıt başarılı! E-posta adresinize onay linki gönderildi. Lütfen kontrol edin.')
+      setNotice('Kayıt başarılı! E-posta adresinize onay linki gönderildi. Lütfen gelen kutunuzu kontrol edin.')
       return
     }
 
@@ -257,6 +258,12 @@ export default function RegisterPage() {
               </div>
             </div>
           </>
+        )}
+
+        {notice && !error && (
+          <div className="rounded-lg bg-emerald-50 border border-emerald-100 px-4 py-3 text-sm text-emerald-700 dark:bg-emerald-900/20 dark:border-emerald-900/40 dark:text-emerald-300">
+            {notice}
+          </div>
         )}
 
         {error && (

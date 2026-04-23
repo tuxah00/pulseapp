@@ -36,14 +36,14 @@ export default function TutorialBubble({ topic, onOpen, onDismiss }: Props) {
           onClick={onOpen}
           className="flex items-start gap-2 text-left w-full group"
         >
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white flex-shrink-0">
+          <div className="w-7 h-7 rounded-lg bg-pulse-900 flex items-center justify-center text-white flex-shrink-0 ring-1 ring-pulse-900/20">
             <Sparkles className="w-3.5 h-3.5" />
           </div>
           <div className="min-w-0">
             <p className="text-xs font-semibold text-gray-900 dark:text-gray-100 leading-snug">
               {topic.title} sayfası
             </p>
-            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-snug group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-snug group-hover:text-pulse-900 dark:group-hover:text-pulse-300 transition-colors">
               Kısa bir ipucu ister misin?
             </p>
           </div>

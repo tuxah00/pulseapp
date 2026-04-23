@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-/* eslint-disable @next/next/no-img-element */
+import Image from 'next/image'
 import { Camera, Globe2, ImageOff, Loader2, Plus, Sparkles, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useConfirm } from '@/lib/hooks/use-confirm'
@@ -307,9 +307,8 @@ function PhotoCell({ photo, label, busy, canWrite, rounded, onOpen, onTogglePubl
   }
   return (
     <div className={cn('relative aspect-square group', rounded && 'rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800')}>
-      <button onClick={() => onOpen(photo)} className="absolute inset-0 w-full h-full">
-        <img src={photo.photo_url} alt={label ?? ''} loading="lazy" decoding="async" className="w-full h-full object-cover group-hover:opacity-90 transition-opacity" />
-      </button>
+      <Image src={photo.photo_url} alt={label ?? ''} fill className="object-cover group-hover:opacity-90 transition-opacity" />
+      <button onClick={() => onOpen(photo)} aria-label={label ? `${label} fotoğrafını aç` : 'Fotoğrafı aç'} className="absolute inset-0 w-full h-full" />
       {label && (
         <span className="absolute top-2 left-2 text-[10px] font-medium px-1.5 py-0.5 rounded bg-black/60 text-white pointer-events-none">
           {label}

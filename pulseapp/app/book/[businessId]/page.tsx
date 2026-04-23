@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import Image from 'next/image'
 import { useParams } from 'next/navigation'
 import {
   CheckCircle2, ChevronLeft, Loader2, Clock, Calendar,
@@ -831,10 +832,12 @@ function BusinessHeader({ business }: { business: BusinessData }) {
       {/* Avatar — ortada, şerit üzerine taşıyor */}
       <div className="flex flex-col items-center -mt-10 pb-5 px-5">
         {business.settings?.logo_url ? (
-          <img
+          <Image
             src={business.settings.logo_url}
             alt={business.name}
-            className="h-20 w-20 rounded-full object-cover border-4 border-white shadow-md"
+            width={80}
+            height={80}
+            className="rounded-full object-cover border-4 border-white shadow-md"
           />
         ) : (
           <div className="h-20 w-20 rounded-full bg-blue-500 border-4 border-white shadow-md flex items-center justify-center text-white text-2xl font-bold">

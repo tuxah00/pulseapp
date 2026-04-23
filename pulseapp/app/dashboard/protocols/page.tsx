@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import Image from 'next/image'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { requirePermission, requireSectorModule } from '@/lib/hooks/use-require-permission'
 import { getTreatmentNotesPlaceholder } from '@/lib/config/sector-labels'
@@ -271,7 +272,7 @@ export default function ProtocolsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Tedavi Protokolleri</h1>
+          <h1 className="h-page">Tedavi Protokolleri</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Seans bazlı tedavi planları oluşturun ve takip edin</p>
         </div>
         <button onClick={() => setShowCreate(true)} className="btn-primary flex items-center gap-2">
@@ -372,8 +373,8 @@ export default function ProtocolsPage() {
       {/* Detail Panel — Slide-over */}
       {(selectedProtocol || isClosingDetail) && selectedProtocol && (
         <Portal>
-          <div className={`modal-overlay fixed inset-0 z-[60] bg-black/50 dark:bg-black/70 ${isClosingDetail ? 'closing' : ''}`} onClick={closeDetail} onAnimationEnd={() => { if (isClosingDetail) { setSelectedProtocol(null); setIsClosingDetail(false) } }} />
-          <div className={`slide-panel fixed inset-y-0 right-0 z-[61] w-full max-w-lg bg-white dark:bg-gray-900 shadow-2xl overflow-y-auto ${isClosingDetail ? 'closing' : ''}`}>
+          <div className={`modal-overlay fixed inset-0 z-[110] ${isClosingDetail ? 'closing' : ''}`} onClick={closeDetail} onAnimationEnd={() => { if (isClosingDetail) { setSelectedProtocol(null); setIsClosingDetail(false) } }} />
+          <div className={`slide-panel fixed inset-y-0 right-0 z-[110] w-full max-w-lg bg-white dark:bg-gray-900 shadow-2xl overflow-y-auto ${isClosingDetail ? 'closing' : ''}`}>
             <div className="p-6 space-y-6">
               <DetailPanel
                 protocol={selectedProtocol}
@@ -392,11 +393,11 @@ export default function ProtocolsPage() {
       {/* Create Modal */}
       {(showCreate || isClosingCreate) && (
         <Portal>
-          <div className={`modal-overlay fixed inset-0 z-[60] bg-black/50 dark:bg-black/70 ${isClosingCreate ? 'closing' : ''}`} onClick={() => { closeCreate(); resetForm() }} onAnimationEnd={() => { if (isClosingCreate) { setShowCreate(false); setIsClosingCreate(false) } }} />
+          <div className={`modal-overlay fixed inset-0 z-[60] ${isClosingCreate ? 'closing' : ''}`} onClick={() => { closeCreate(); resetForm() }} onAnimationEnd={() => { if (isClosingCreate) { setShowCreate(false); setIsClosingCreate(false) } }} />
           <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none">
           <div className={`modal-content bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto pointer-events-auto ${isClosingCreate ? 'closing' : ''}`}>
             <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Yeni Tedavi Protokolü</h2>
+              <h2 className="h-section">Yeni Tedavi Protokolü</h2>
               <button onClick={() => { closeCreate(); resetForm() }} className="text-gray-400 hover:text-gray-600">
                 <X className="h-5 w-5" />
               </button>
@@ -565,7 +566,7 @@ function DetailPanel({
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">{protocol.name}</h2>
+          <h2 className="h-section">{protocol.name}</h2>
           <div className="flex items-center gap-3 mt-1">
             <span className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1">
               <User className="h-3.5 w-3.5" /> {customer?.name || '—'}
@@ -714,8 +715,7 @@ function DetailPanel({
                     <div className="flex flex-col items-center gap-1">
                       {session.before_photo_url ? (
                         <div className="relative group/photo">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={session.before_photo_url} alt="Öncesi" className="w-16 h-16 rounded-lg object-cover border border-gray-200 dark:border-gray-700" />
+                          <Image src={session.before_photo_url} alt="Öncesi" width={64} height={64} className="w-16 h-16 rounded-lg object-cover border border-gray-200 dark:border-gray-700" />
                           <button
                             onClick={() => triggerPhotoUpload(session.id, 'before')}
                             className="absolute inset-0 bg-black/40 rounded-lg opacity-0 group-hover/photo:opacity-100 transition-opacity flex items-center justify-center"
@@ -742,8 +742,7 @@ function DetailPanel({
                     <div className="flex flex-col items-center gap-1">
                       {session.after_photo_url ? (
                         <div className="relative group/photo">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={session.after_photo_url} alt="Sonrası" className="w-16 h-16 rounded-lg object-cover border border-gray-200 dark:border-gray-700" />
+                          <Image src={session.after_photo_url} alt="Sonrası" width={64} height={64} className="w-16 h-16 rounded-lg object-cover border border-gray-200 dark:border-gray-700" />
                           <button
                             onClick={() => triggerPhotoUpload(session.id, 'after')}
                             className="absolute inset-0 bg-black/40 rounded-lg opacity-0 group-hover/photo:opacity-100 transition-opacity flex items-center justify-center"

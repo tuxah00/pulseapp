@@ -30,7 +30,7 @@ const SEGMENT_COLORS: Record<CustomerSegment, string> = {
 
 const STATUS_CONFIG = {
   draft: { label: 'Taslak', icon: FileText, color: 'text-gray-500 dark:text-gray-400', bg: 'bg-gray-100 dark:bg-gray-800', badge: 'badge-warning' },
-  scheduled: { label: 'Zamanlandı', icon: CalendarClock, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-900/20', badge: 'badge-warning' },
+  scheduled: { label: 'Zamanlandı', icon: CalendarClock, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-900/20', badge: 'badge-info' },
   sending: { label: 'Gönderiliyor', icon: Send, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-900/20', badge: 'badge-warning' },
   completed: { label: 'Tamamlandı', icon: CheckCircle2, color: 'text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-900/20', badge: 'badge-success' },
   cancelled: { label: 'İptal', icon: Ban, color: 'text-red-500 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-900/20', badge: 'badge-danger' },
@@ -252,7 +252,7 @@ export default function CampaignsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Kampanyalar</h1>
+          <h1 className="h-page">Kampanyalar</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Müşterilerinize kampanyalar oluşturun</p>
         </div>
         <button onClick={openCreate} className="btn-primary flex items-center gap-2">
@@ -423,7 +423,7 @@ export default function CampaignsPage() {
       {(showModal || closingModal) && (
         <Portal>
         <div
-          className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${closingModal ? 'closing' : ''}`}
+          className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 ${closingModal ? 'closing' : ''}`}
           onClick={closeModal}
           onAnimationEnd={onAnimEnd}
         >

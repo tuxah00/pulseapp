@@ -9,15 +9,64 @@ PulseApp, çok sektörlü SaaS işletme yönetim platformu. Next.js 14, Supabase
 - Yeni buton/link/highlight eklerken `pulse-500` (parlak mavi) değil `pulse-900` (lacivert) kullan
 - Açık mod ve karanlık mod: her ikisinde de aynı lacivert, yalnızca dark modda `pulse-300` veya `pulse-400` text variant kullanılır
 
+## Branch Çalışma Kuralı (KESİNLİKLE UYULMALI)
+
+### Temel Prensipler
+- Her session'ın **bir planı** vardır (sprint, özellik, düzeltme vb.).
+- O plana göre **bir branch adı** belirlenir: `feature/[plan-konusu]`
+- Session boyunca **yalnızca o branch'e** push yapılır.
+- **HİÇBİR ZAMAN `origin/main`'e doğrudan push yapılmaz.**
+
+### Branch İsimlendirme Kuralı
+Branch adı session'ın planını yansıtır:
+
+| Plan / Konu | Branch Adı |
+|-------------|-----------|
+| **Aktif geliştirme (yeni özellikler, planlar)** | `gelecek-ozellik-plan` ← varsayılan |
+| Canlıya çıkış hazırlığı | `feature/launch-prep` |
+| Faz 3 — Skill paketleri | `feature/faz3-skill-packages` |
+| Hata düzeltme | `fix/[konu]` |
+| Refactor / temizlik | `refactor/[konu]` |
+
+### Yeni Session Başlarken
+1. Kullanıcı planı/konuyu söyler.
+2. O konuya uygun branch adı belirlenir ve kullanıcıya bildirilir.
+3. Branch yoksa oluşturulur (`git checkout -b feature/[konu]`), varsa geçilir.
+4. Tüm commitler ve push'lar **yalnızca o branch'e** yapılır.
+
+### Commit & Push
+```
+git push origin HEAD:refs/heads/feature/[konu]
+```
+
+### Maine Aktarma (yalnızca kullanıcı "maine aktar" dediğinde)
+1. Main'e merge:
+   ```
+   git push origin HEAD:main
+   ```
+2. Diğer aktif branch'leri main ile eşitle:
+   ```
+   git fetch origin
+   git push origin origin/main:refs/heads/feature/[diğer-branch]
+   ```
+
+## Ertelenen Kurulumlar (Pilot Müşteri Gelince Hatırlat)
+
+| Kurulum | Neden | Ne Yapılacak |
+|---------|-------|-------------|
+| **Sentry** | Hata takip servisi — canlıda hata olunca e-posta/bildirim gönderir | [sentry.io](https://sentry.io)'dan ücretsiz hesap aç → DSN al → Vercel'e `NEXT_PUBLIC_SENTRY_DSN` ekle. Kod hazır, sadece env değişkeni eksik. |
+
+---
+
 ## Deploy
 - **GitHub repo:** tuxah00/pulseapp
 - **Vercel:** main branch'e her push'ta otomatik deploy
-- **Kural:** Her değişiklik sonrası build kontrol et → commit → push (kullanıcıya sormadan)
+- **Kural:** commit → branch'e push → kullanıcı test → "maine aktar" onayı → main'e merge
 
 ## Supabase Migration Kuralı
 - **Migration dosyası oluşturduktan sonra Supabase Management API ile otomatik olarak çalıştır**
 - Endpoint: `POST https://api.supabase.com/v1/projects/dtahmvtmwtqodgypvopn/database/query`
-- Auth: `Bearer sbp_4ee89a23fa37b76100decb7bee5aecc80186cf20` (30 gün geçerli, yenileme: 2026-05-22)
+- Auth: `Bearer $SUPABASE_PAT` — token `.env.local`'den okunur (`SUPABASE_PAT` key'i), **asla CLAUDE.md'ye veya git'e yazılmaz**
 - Node.js ile her SQL statement'ı ayrı ayrı gönder (tek request'te birden fazla statement hata verebilir)
 - Başarılı response: HTTP 201, body `[]`
 - Migration çalıştırıldıktan sonra `CLAUDE.md` SQL Migration Gereksinimleri bölümüne ekle
@@ -26,7 +75,7 @@ PulseApp, çok sektörlü SaaS işletme yönetim platformu. Next.js 14, Supabase
 ```
 <type>: <Türkçe açıklama>
 
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+Co-Authored-By: Claude Code <noreply@anthropic.com>
 ```
 **type değerleri:** `feat` (yeni özellik) | `fix` (hata düzeltme) | `refactor` (yapısal değişiklik) | `chore` (config/bağımlılık) | `docs` (dokümantasyon)
 
@@ -52,8 +101,8 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 - **Frontend:** Next.js 14 (App Router), React, Tailwind CSS, TypeScript
 - **Backend:** Supabase (PostgreSQL + RLS + Realtime)
 - **Auth:** Supabase Auth → staff_members tablosu ile işletmeye bağlı
-- **AI:** Anthropic Claude API (`claude-sonnet-4-20250514`) via `@anthropic-ai/sdk`
-- **Model:** `lib/ai/client.ts` → `getAnthropicClient()`, `AI_MODEL`, `MAX_TOKENS`
+- **AI:** OpenAI API (`gpt-4o-mini`) via `openai` SDK (tek motor — maliyet optimizasyonu)
+- **Model:** `lib/ai/openai-client.ts` → `getOpenAIClient()`, `ASSISTANT_MODEL`, `CLASSIFY_MODEL`, `REPLY_MODEL`, `VISION_MODEL`, `EMBEDDING_MODEL`
 
 ## Supabase Patterns
 ```ts
@@ -363,7 +412,7 @@ ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'tutoring';
 -- idx_messages_template_name partial index (business_id, template_name) WHERE template_name IS NOT NULL
 ```
 
-33. **Fotoğraf AI analizi + portfolio yayımlama** (`060_photo_ai_analysis.sql`): ⏳ Manuel çalıştırılacak (Management API token 401 dönüyor — Supabase SQL Editor'den paste edilmeli)
+33. **Fotoğraf AI analizi + portfolio yayımlama** (`060_photo_ai_analysis.sql`): ✅ Uygulandı (2026-04-22)
 ```sql
 -- customer_photos.ai_analysis JSONB (AI karşılaştırma cache)
 -- customer_photos.is_public BOOLEAN (portfolio yayım bayrağı)
@@ -431,11 +480,6 @@ ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'tutoring';
 `PUT /api/contraindications` — auth gerektiren, body: `{ businessId, customerId, serviceId }`
 Response: `{ warnings: [...], hasRisk: boolean }`
 Randevu oluştururken müşteri + hizmet seçilince bu endpoint çağrılmalı.
-
-### AI Tedavi Önerisi
-`POST /api/ai/treatment-suggestion` — body: `{ businessId, customerId, complaint?, additionalNotes? }`
-Claude'a müşteri geçmişi (alerjiler, protokoller, randevular, mevcut hizmetler) gönderir.
-Model: `claude-sonnet-4-20250514` — yanıt Türkçe, markdown formatında.
 
 ### Public Randevu Yönetimi (manage_token)
 `GET/PATCH/DELETE /api/public/appointments/[token]` — auth GEREKTİRMEZ (public endpoint)

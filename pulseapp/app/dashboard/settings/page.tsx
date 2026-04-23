@@ -23,42 +23,42 @@ const SETTINGS_CARDS: SettingsCard[] = [
     title: 'İşletme',
     description: 'İşletme bilgileri, çalışma saatleri, hatırlatma & bildirim ayarları.',
     icon: Building2,
-    iconBg: 'from-blue-500 to-indigo-600',
+    iconBg: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
   },
   {
     href: '/dashboard/settings/ai',
     title: 'AI Asistan',
     description: 'Asistanın tonu, varsayılan hatırlatma süresi ve işletmene özel talimatlar.',
     icon: Sparkles,
-    iconBg: 'from-purple-500 to-indigo-600',
+    iconBg: 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
   },
   {
     href: '/dashboard/settings/staff',
     title: 'Personel Yetkileri',
     description: 'Personel ekleme, rol ataması ve modül bazlı yetki yönetimi.',
     icon: UserCog,
-    iconBg: 'from-emerald-500 to-teal-600',
+    iconBg: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
   },
   {
     href: '/dashboard/settings/commissions',
     title: 'Prim & Komisyon',
     description: 'Personel bazında hizmet komisyonu ve prim kuralları.',
     icon: BadgePercent,
-    iconBg: 'from-amber-500 to-orange-600',
+    iconBg: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
   },
   {
     href: '/dashboard/settings/billing',
     title: 'Faturalama',
     description: 'Abonelik planı, ödeme yöntemi ve fatura geçmişi.',
     icon: CreditCard,
-    iconBg: 'from-rose-500 to-pink-600',
+    iconBg: 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300',
   },
   {
     href: '/dashboard/settings/audit',
     title: 'Denetim Kaydı',
     description: 'Yapılan tüm işlemlerin detaylı kayıt geçmişi (sadece sahip).',
     icon: ShieldCheck,
-    iconBg: 'from-slate-500 to-gray-600',
+    iconBg: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
   },
 ]
 
@@ -84,7 +84,7 @@ export default function SettingsHubPage() {
   return (
     <div className="max-w-5xl mx-auto p-4 sm:p-6">
       <header className="mb-6">
-        <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Ayarlar</h1>
+        <h1 className="h-page">Ayarlar</h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
           İşletme ayarlarını, asistan tercihlerini ve yetkilendirmeyi buradan yönet.
         </p>
@@ -100,7 +100,7 @@ export default function SettingsHubPage() {
               className="group card p-5 hover:border-pulse-900/50 dark:hover:border-pulse-300/30 hover:shadow-md transition-all"
             >
               <div className="flex items-start gap-4">
-                <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${card.iconBg} flex items-center justify-center text-white flex-shrink-0 shadow-sm`}>
+                <div className={`w-11 h-11 rounded-xl ${card.iconBg} flex items-center justify-center flex-shrink-0`}>
                   <Icon className="w-5 h-5" />
                 </div>
                 <div className="flex-1 min-w-0">

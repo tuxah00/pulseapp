@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requirePortalSession } from '@/lib/portal/guards'
 import { isValidUUID } from '@/lib/utils/validate'
+import { validateBody } from '@/lib/api/validate'
+import { portalAppointmentUpdateSchema } from '@/lib/schemas'
 
 const TERMINAL_STATUSES = ['cancelled', 'completed', 'no_show'] as const
 
@@ -14,10 +16,9 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     return NextResponse.json({ error: 'Geçersiz istek' }, { status: 400 })
   }
 
-  const body = await request.json().catch(() => null) as { date?: string; startTime?: string; endTime?: string } | null
-  if (!body?.date || !body.startTime || !body.endTime) {
-    return NextResponse.json({ error: 'Tarih ve saat zorunludur' }, { status: 400 })
-  }
+  const parsed = await validateBody(request, portalAppointmentUpdateSchema)
+  if (!parsed.ok) return parsed.response
+  const { date, startTime, endTime } = parsed.data
 
   const admin = createAdminClient()
 
@@ -44,8 +45,8 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       .select('id')
       .eq('business_id', businessId)
       .eq('staff_id', appointment.staff_id)
-      .eq('appointment_date', body.date)
-      .eq('start_time', body.startTime)
+      .eq('appointment_date', date)
+      .eq('start_time', startTime)
       .neq('id', appointment.id)
       .not('status', 'eq', 'cancelled')
       .is('deleted_at', null)
@@ -59,9 +60,9 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   const { error: updateError } = await admin
     .from('appointments')
     .update({
-      appointment_date: body.date,
-      start_time: body.startTime,
-      end_time: body.endTime,
+      appointment_date: date,
+      start_time: startTime,
+      end_time: endTime,
       status: 'pending',
       updated_at: new Date().toISOString(),
     })

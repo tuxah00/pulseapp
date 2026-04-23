@@ -376,7 +376,7 @@ export default function PortalReviewsPage() {
                         </p>
                       )}
                       {r.actual_response && (
-                        <div className="mt-3 bg-pulse-900/5 dark:bg-pulse-900/20 border-l-2 border-pulse-900 dark:border-pulse-300 rounded-r-lg p-3">
+                        <div className="mt-3 bg-pulse-50 dark:bg-pulse-900/20 border border-pulse-200 dark:border-pulse-900/40 rounded-lg p-3">
                           <div className="flex items-center gap-1.5 text-[11px] font-medium text-pulse-900 dark:text-pulse-300 uppercase tracking-wide">
                             <CheckCircle2 className="h-3 w-3" />
                             İşletme yanıtı
@@ -531,7 +531,7 @@ export default function PortalReviewsPage() {
                       </div>
 
                       {item.response && (
-                        <div className="mt-4 bg-pulse-900/5 dark:bg-pulse-900/20 border-l-2 border-pulse-900 dark:border-pulse-300 rounded-r-lg p-3">
+                        <div className="mt-4 bg-pulse-50 dark:bg-pulse-900/20 border border-pulse-200 dark:border-pulse-900/40 rounded-lg p-3">
                           <div className="flex items-center gap-1.5 text-[11px] font-medium text-pulse-900 dark:text-pulse-300 uppercase tracking-wide">
                             <CheckCircle2 className="h-3 w-3" />
                             İşletmenin yanıtı

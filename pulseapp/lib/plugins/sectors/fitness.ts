@@ -105,7 +105,7 @@ Herhangi bir sağlık sorununuz varsa antrenörünüze bildiriniz.
       key: 'class-optimization',
       name: 'Ders Programı Optimizasyonu',
       description: 'Devam oranlarına göre optimal ders saati önerisi',
-      endpoint: '/api/ai/insights',
+      endpoint: '/api/ai/weekly-insights',
       requiredPlan: 'pro',
     },
   ],

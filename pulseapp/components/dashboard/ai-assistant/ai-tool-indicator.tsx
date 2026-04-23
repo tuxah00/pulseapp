@@ -24,7 +24,7 @@ export default function AIToolIndicator({ tools }: Props) {
           className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400"
         >
           {tool.status === 'running' ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-500" />
+            <Loader2 className="w-3.5 h-3.5 animate-spin text-pulse-700 dark:text-pulse-300" />
           ) : (
             <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
           )}

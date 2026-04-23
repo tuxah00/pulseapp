@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getAnthropicClient, AI_MODEL, MAX_TOKENS } from '@/lib/ai/client'
+import { getOpenAIClient, VISION_MODEL, VISION_MAX_TOKENS } from '@/lib/ai/openai-client'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
 import { requirePermission } from '@/lib/api/with-permission'
 import { validateBody } from '@/lib/api/validate'
@@ -35,26 +35,22 @@ Lütfen aşağıdaki başlıklar altında analiz yap:
 Türkçe ve kısa, öz yanıt ver. Her başlık 2-3 cümle olsun.`
 
   try {
-    const anthropic = getAnthropicClient()
-    const message = await anthropic.messages.create({
-      model: AI_MODEL,
-      max_tokens: MAX_TOKENS,
-      messages: [{
-        role: 'user',
-        content: [
-          {
-            type: 'image',
-            source: { type: 'url', url: imageUrl },
-          },
-          { type: 'text', text: prompt },
-        ],
-      }],
+    const openai = getOpenAIClient()
+    const completion = await openai.chat.completions.create({
+      model: VISION_MODEL,
+      max_tokens: VISION_MAX_TOKENS,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: prompt },
+            { type: 'image_url', image_url: { url: imageUrl } },
+          ],
+        },
+      ],
     })
 
-    const responseText = message.content
-      .filter(block => block.type === 'text')
-      .map(block => block.type === 'text' ? block.text : '')
-      .join('\n')
+    const responseText = completion.choices[0]?.message?.content || ''
 
     return NextResponse.json({ analysis: responseText })
   } catch (err) {

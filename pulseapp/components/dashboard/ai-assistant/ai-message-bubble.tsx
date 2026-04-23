@@ -23,7 +23,7 @@ export default function AIMessageBubble({ message, onConfirm }: Props) {
         className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
           isUser
             ? 'bg-pulse-900 text-white'
-            : 'bg-gradient-to-br from-purple-500 to-indigo-600 text-white'
+            : 'bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 ring-1 ring-black/5'
         }`}
       >
         {isUser ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}

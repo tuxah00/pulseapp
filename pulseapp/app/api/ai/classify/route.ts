@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { getAnthropicClient, AI_MODEL, MAX_TOKENS } from '@/lib/ai/client'
+import { getOpenAIClient, CLASSIFY_MODEL, DEFAULT_MAX_TOKENS } from '@/lib/ai/openai-client'
 import { getClassifySystemPrompt } from '@/lib/ai/prompts'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
 import type { AiClassification } from '@/types'
@@ -41,17 +41,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'İşletme bulunamadı' }, { status: 404 })
     }
 
-    const client = getAnthropicClient()
+    const client = getOpenAIClient()
     const systemPrompt = getClassifySystemPrompt(business.sector, business.name)
 
-    const response = await client.messages.create({
-      model: AI_MODEL,
-      max_tokens: MAX_TOKENS,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: message }],
+    const response = await client.chat.completions.create({
+      model: CLASSIFY_MODEL,
+      max_tokens: DEFAULT_MAX_TOKENS,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: message },
+      ],
+      response_format: { type: 'json_object' },
     })
 
-    const text = response.content[0].type === 'text' ? response.content[0].text : ''
+    const text = response.choices[0]?.message?.content || ''
 
     let result: { classification: AiClassification; confidence: number; summary: string }
     try {

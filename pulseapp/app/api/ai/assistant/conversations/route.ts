@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { withAuth } from '@/lib/api/with-permission'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
 import { validateBody } from '@/lib/api/validate'
@@ -16,26 +16,25 @@ export const GET = withAuth(async (req: NextRequest, ctx) => {
   const rl = checkRateLimit(req, RATE_LIMITS.aiAssistant)
   if (rl.limited) return rl.response
 
-  const admin = createAdminClient()
+  // RLS: ai_conversations_staff_access staff_id'yi otomatik filtreler — explicit filter gereksiz
+  const supabase = createServerSupabaseClient()
 
   // Eski sohbetleri temizle (fire-and-forget — hata listeyi etkilemesin)
   const cutoff = new Date(Date.now() - CONVERSATION_RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString()
-  admin
+  supabase
     .from('ai_conversations')
     .delete()
     .eq('business_id', ctx.businessId)
-    .eq('staff_id', ctx.staffId)
     .eq('is_onboarding', false)
     .lt('updated_at', cutoff)
     .then(({ error }) => {
       if (error) log.error({ err: error }, 'Eski sohbet temizleme hatası')
     })
 
-  const { data, error } = await admin
+  const { data, error } = await supabase
     .from('ai_conversations')
     .select('id, title, is_onboarding, created_at, updated_at')
     .eq('business_id', ctx.businessId)
-    .eq('staff_id', ctx.staffId)
     .order('updated_at', { ascending: false })
     .limit(50)
 
@@ -55,8 +54,8 @@ export const POST = withAuth(async (req: NextRequest, ctx) => {
   if (!parsed.ok) return parsed.response
   const { title, isOnboarding } = parsed.data
 
-  const admin = createAdminClient()
-  const { data, error } = await admin
+  const supabase = createServerSupabaseClient()
+  const { data, error } = await supabase
     .from('ai_conversations')
     .insert({
       business_id: ctx.businessId,

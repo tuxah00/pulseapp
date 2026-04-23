@@ -1,19 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
+// RLS bypass: public endpoint, user session yok — businessId filtresi cross-tenant korumasını sağlar
 import { createAdminClient } from '@/lib/supabase/admin'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
+import { validateBody } from '@/lib/api/validate'
 import { isValidUUID } from '@/lib/utils/validate'
+import { createBooking } from '@/lib/booking/create-booking'
+import { checkWorkingHours, type WorkingHoursMap } from '@/lib/booking/working-hours'
+import { autoAssignStaff } from '@/lib/booking/auto-assign-staff'
+import { legacyBookingSchema } from '@/lib/schemas'
 
 export async function GET(req: NextRequest) {
+  const supabase = createAdminClient()
   const businessId = req.nextUrl.searchParams.get('businessId')
   if (!businessId || !isValidUUID(businessId)) {
     return NextResponse.json({ error: 'Geçersiz businessId' }, { status: 400 })
   }
 
-  const supabase = createAdminClient()
-
   const { data: business, error: bizErr } = await supabase
     .from('businesses')
-    .select('id, name, sector, working_hours, phone, address, city, district, settings')
+    // settings alanı dahil edilmez — iç yapılandırma public endpoint'te açıklanmamalı
+    .select('id, name, sector, working_hours, phone, address, city, district')
     .eq('id', businessId)
     .eq('is_active', true)
     .single()
@@ -22,77 +28,58 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'İşletme bulunamadı' }, { status: 404 })
   }
 
-  const { data: services } = await supabase
-    .from('services')
-    .select('id, name, description, duration_minutes, price')
-    .eq('business_id', businessId)
-    .eq('is_active', true)
-    .order('sort_order')
+  const [{ data: services }, { data: staff }] = await Promise.all([
+    supabase
+      .from('services')
+      .select('id, name, description, duration_minutes, price')
+      .eq('business_id', businessId)
+      .eq('is_active', true)
+      .order('sort_order'),
+    supabase
+      .from('staff_members')
+      .select('id, name')
+      .eq('business_id', businessId)
+      .eq('is_active', true),
+  ])
 
-  const { data: staff } = await supabase
-    .from('staff_members')
-    .select('id, name')
-    .eq('business_id', businessId)
-    .eq('is_active', true)
-
-  return NextResponse.json({
-    business,
-    services: services || [],
-    staff: staff || [],
-  })
+  return NextResponse.json({ business, services: services || [], staff: staff || [] })
 }
 
 export async function POST(req: NextRequest) {
+  const supabase = createAdminClient()
   const businessId = req.nextUrl.searchParams.get('businessId')
   if (!businessId || !isValidUUID(businessId)) {
     return NextResponse.json({ error: 'Geçersiz businessId' }, { status: 400 })
   }
 
-  // Rate limit — public endpoint, spam koruması
   const rl = checkRateLimit(req, RATE_LIMITS.publicBooking)
   if (rl.limited) return rl.response
 
-  const supabase = createAdminClient()
-  const body = await req.json()
+  const parsed = await validateBody(req, legacyBookingSchema)
+  if (!parsed.ok) return parsed.response
 
   const {
-    service_id,
-    staff_id,
-    appointment_date,
-    start_time,
-    customer_name,
-    customer_phone,
-  } = body
+    customer_name: customerName,
+    customer_phone: customerPhone,
+    service_id: serviceId,
+    staff_id: staffIdInput,
+    appointment_date: date,
+    start_time: startTime,
+    notes,
+  } = parsed.data
 
-  if (!service_id || !appointment_date || !start_time || !customer_name || !customer_phone) {
-    return NextResponse.json({ error: 'Eksik alanlar' }, { status: 400 })
-  }
-
-  // Temel input validasyonu
-  if (typeof customer_name !== 'string' || customer_name.trim().length < 2 || customer_name.length > 100) {
-    return NextResponse.json({ error: 'Geçersiz isim' }, { status: 400 })
-  }
-  if (typeof customer_phone !== 'string' || customer_phone.replace(/\D/g, '').length < 10) {
-    return NextResponse.json({ error: 'Geçersiz telefon' }, { status: 400 })
-  }
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(appointment_date)) {
-    return NextResponse.json({ error: 'Geçersiz tarih formatı' }, { status: 400 })
-  }
-  if (!/^\d{2}:\d{2}$/.test(start_time)) {
-    return NextResponse.json({ error: 'Geçersiz saat formatı' }, { status: 400 })
-  }
-  if (!isValidUUID(service_id) || (staff_id && !isValidUUID(staff_id))) {
-    return NextResponse.json({ error: 'Geçersiz id' }, { status: 400 })
-  }
   // Geçmiş tarih kontrolü
-  const today = new Date().toISOString().slice(0, 10)
-  if (appointment_date < today) {
-    return NextResponse.json({ error: 'Geçmiş tarihe randevu oluşturulamaz' }, { status: 400 })
+  if (date < new Date().toISOString().slice(0, 10)) {
+    return NextResponse.json(
+      { error: 'Geçmiş tarihe randevu oluşturulamaz' },
+      { status: 400 },
+    )
   }
 
+  // Çalışma saati doğrulaması
   const { data: business } = await supabase
     .from('businesses')
-    .select('id, working_hours')
+    .select('working_hours')
     .eq('id', businessId)
     .eq('is_active', true)
     .single()
@@ -101,218 +88,61 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'İşletme bulunamadı' }, { status: 404 })
   }
 
-  // Çalışma saatleri doğrulaması
-  if (business.working_hours) {
-    const wh = business.working_hours as Record<string, { open: string; close: string } | null>
-    const dayMap: Record<number, string> = {
-      0: 'sun', 1: 'mon', 2: 'tue', 3: 'wed', 4: 'thu', 5: 'fri', 6: 'sat'
-    }
-    const d = new Date(appointment_date + 'T00:00:00')
-    const dayKey = dayMap[d.getDay()]
-    const dayHours = wh[dayKey]
-
-    if (!dayHours) {
-      return NextResponse.json({ error: 'Bu gün kapalıdır' }, { status: 400 })
-    }
-
-    if (start_time < dayHours.open) {
-      return NextResponse.json({ error: 'Çalışma saatleri dışında randevu oluşturulamaz' }, { status: 400 })
-    }
+  const whError = checkWorkingHours(
+    business.working_hours as WorkingHoursMap | null,
+    date,
+    startTime,
+  )
+  if (whError) {
+    return NextResponse.json({ error: whError.error }, { status: whError.status })
   }
 
-  const { data: service } = await supabase
-    .from('services')
-    .select('duration_minutes, name')
-    .eq('id', service_id)
-    .eq('business_id', businessId)
-    .single()
+  // Personel çözümle: belirtilmişse doğrula, yoksa müsait personeli bul
+  let resolvedStaffId: string | null = staffIdInput ?? null
+  let resolvedDuration: number | undefined
 
-  if (!service) {
-    return NextResponse.json({ error: 'Hizmet bulunamadı' }, { status: 404 })
-  }
-
-  const [h, m] = start_time.split(':').map(Number)
-  const totalMin = h * 60 + m + service.duration_minutes
-  // Gece yarısı aşımı: 23:30 + 60dk = "24:30" gibi invalid time olmasın
-  if (totalMin >= 24 * 60) {
-    return NextResponse.json({ error: 'Randevu gece yarısını aşamaz' }, { status: 400 })
-  }
-  const endH = Math.floor(totalMin / 60)
-  const endM = totalMin % 60
-  const end_time = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`
-
-  // Bitiş saati çalışma saatleri kontrolü
-  if (business.working_hours) {
-    const wh = business.working_hours as Record<string, { open: string; close: string } | null>
-    const dayMap: Record<number, string> = {
-      0: 'sun', 1: 'mon', 2: 'tue', 3: 'wed', 4: 'thu', 5: 'fri', 6: 'sat'
-    }
-    const d = new Date(appointment_date + 'T00:00:00')
-    const dayKey = dayMap[d.getDay()]
-    const dayHours = wh[dayKey]
-    if (dayHours && end_time > dayHours.close) {
-      return NextResponse.json({ error: 'Çalışma saatleri dışında randevu oluşturulamaz' }, { status: 400 })
-    }
-  }
-
-  let assignedStaffId: string | null = staff_id || null
-
-  if (staff_id) {
-    // Cross-tenant koruma: staff_id bu işletmeye ait ve aktif olmalı
+  if (staffIdInput) {
     const { data: staffRow } = await supabase
       .from('staff_members')
       .select('id')
-      .eq('id', staff_id)
+      .eq('id', staffIdInput)
       .eq('business_id', businessId)
       .eq('is_active', true)
       .maybeSingle()
-
     if (!staffRow) {
       return NextResponse.json({ error: 'Personel bulunamadı' }, { status: 404 })
     }
-
-    // Belirli personel seçildi — sadece onun çakışmasını kontrol et
-    const { data: conflicts } = await supabase
-      .from('appointments')
-      .select('id')
-      .eq('business_id', businessId)
-      .eq('appointment_date', appointment_date)
-      .eq('staff_id', staff_id)
-      .in('status', ['pending', 'confirmed'])
-      .is('deleted_at', null)
-      .lt('start_time', end_time)
-      .gt('end_time', start_time)
-
-    if (conflicts && conflicts.length > 0) {
-      return NextResponse.json({ error: 'Bu saat dolu. Lütfen başka bir saat seçin.' }, { status: 409 })
-    }
   } else {
-    // "Fark etmez" — müsait personel bul ve otomatik ata
-    const { data: staffList } = await supabase
-      .from('staff_members')
-      .select('id')
-      .eq('business_id', businessId)
-      .eq('is_active', true)
-
-    if (staffList && staffList.length > 0) {
-      // İzin kontrolü
-      const sIds = staffList.map(s => s.id)
-      const { data: offShifts } = await supabase
-        .from('shifts')
-        .select('staff_id')
-        .eq('business_id', businessId)
-        .eq('shift_date', appointment_date)
-        .eq('shift_type', 'off')
-        .in('staff_id', sIds)
-
-      const offSet = new Set((offShifts || []).map(s => s.staff_id))
-
-      // Her personelin çakışmasını kontrol et
-      const { data: allAppts } = await supabase
-        .from('appointments')
-        .select('staff_id, start_time, end_time')
-        .eq('business_id', businessId)
-        .eq('appointment_date', appointment_date)
-        .in('status', ['pending', 'confirmed'])
-        .is('deleted_at', null)
-        .in('staff_id', sIds)
-
-      const [sH, sM] = start_time.split(':').map(Number)
-      const [eH, eM] = end_time.split(':').map(Number)
-      const reqStart = sH * 60 + sM
-      const reqEnd = eH * 60 + eM
-
-      for (const s of staffList) {
-        if (offSet.has(s.id)) continue
-        const staffAppts = (allAppts || []).filter(a => a.staff_id === s.id)
-        const hasConflict = staffAppts.some(a => {
-          const [ash, asm] = a.start_time.split(':').map(Number)
-          const [aeh, aem] = a.end_time.split(':').map(Number)
-          return (ash * 60 + asm) < reqEnd && (aeh * 60 + aem) > reqStart
-        })
-        if (!hasConflict) {
-          assignedStaffId = s.id
-          break
-        }
-      }
-
-      if (!assignedStaffId) {
-        return NextResponse.json({ error: 'Bu saat dolu. Lütfen başka bir saat seçin.' }, { status: 409 })
-      }
-    }
-    // Personel yoksa staff_id = null ile devam et (eski davranış)
-  }
-
-  const normalizedPhone = customer_phone.replace(/\s/g, '')
-  let customerId: string
-
-  const { data: existingCustomers } = await supabase
-    .from('customers')
-    .select('id')
-    .eq('business_id', businessId)
-    .eq('phone', normalizedPhone)
-    .limit(1)
-
-  if (existingCustomers && existingCustomers.length > 0) {
-    customerId = existingCustomers[0].id
-  } else {
-    const { data: newCustomer, error: custErr } = await supabase
-      .from('customers')
-      .insert({
-        business_id: businessId,
-        name: customer_name,
-        phone: normalizedPhone,
-        segment: 'new',
-        total_visits: 0,
-        total_revenue: 0,
-        total_no_shows: 0,
-        whatsapp_opted_in: false,
-        is_active: true,
-      })
-      .select('id')
-      .single()
-
-    if (custErr || !newCustomer) {
-      return NextResponse.json({ error: 'Müşteri oluşturulamadı' }, { status: 500 })
-    }
-    customerId = newCustomer.id
-  }
-
-  const { data: appointment, error: apptErr } = await supabase
-    .from('appointments')
-    .insert({
-      business_id: businessId,
-      customer_id: customerId,
-      service_id,
-      staff_id: assignedStaffId,
-      appointment_date,
-      start_time,
-      end_time,
-      status: 'pending',
-      source: 'web',
-      reminder_24h_sent: false,
-      reminder_2h_sent: false,
-      review_requested: false,
+    const assigned = await autoAssignStaff(supabase, {
+      businessId,
+      serviceId,
+      date,
+      startTime,
     })
-    .select('id')
-    .single()
-
-  if (apptErr) {
-    return NextResponse.json({ error: 'Randevu oluşturulamadı' }, { status: 500 })
+    if (!assigned.ok) {
+      return NextResponse.json({ error: assigned.error }, { status: assigned.status })
+    }
+    resolvedStaffId = assigned.staffId
+    resolvedDuration = assigned.durationMinutes
   }
 
-  // Online randevu bildirimi oluştur
   try {
-    await supabase.from('notifications').insert({
-      business_id: businessId,
-      type: 'appointment',
-      title: 'Yeni Online Randevu',
-      body: `${customer_name} – ${service.name} – ${start_time}`,
-      related_id: appointment.id,
-      related_type: 'appointment',
-      is_read: false,
+    const booking = await createBooking(supabase, {
+      businessId,
+      name: customerName,
+      phone: customerPhone,
+      serviceId,
+      staffId: resolvedStaffId,
+      date,
+      startTime,
+      notes: notes ?? null,
+      source: 'web',
+      // auto-assign bloğunda zaten çekildiyse duplicate services sorgusunu önler
+      ...(resolvedDuration !== undefined && { durationMinutes: resolvedDuration }),
     })
-  } catch { /* bildirim hatası randevu oluşturmayı etkilemez */ }
-
-  return NextResponse.json({ success: true, appointment_id: appointment.id })
+    return NextResponse.json({ success: true, appointment_id: booking.appointmentId })
+  } catch (e: unknown) {
+    const err = e as Error & { status?: number }
+    return NextResponse.json({ error: err.message }, { status: err.status ?? 500 })
+  }
 }

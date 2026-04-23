@@ -131,6 +131,10 @@ export interface AssistantPromptContext {
   origin?: string
   /** Kur + haftalık sektör brief'i tek stringde — macroContextForPrompt çıktısı */
   macroSummary?: string
+  /** Uzun vadeli hafıza (ai_business_memory) — formatMemoryForPrompt çıktısı */
+  memorySummary?: string
+  /** Sohbet özeti (ai_conversations.summary) — uzun sohbetlerde bağlamı korumak için */
+  conversationSummary?: string
 }
 
 const AI_CATEGORY_LABELS: Record<AIPermissionCategory, string> = {
@@ -331,13 +335,18 @@ Kullanıcı "işletmemi analiz et", "genel durum", "iş zekası paneli", "SWOT",
   → Tek bir bölüm isteniyorsa section parametresi ile yanıtı küçült (ör. section: 'margin').
 Proaktiflik: Yaklaşan peak/high dönem varsa (aşağıdaki Mevsimsel bağlam) kullanıcı sormadan da kısaca hatırlat — "Mayıs peak, kapasiteyi şimdiden planlayın" gibi.
 
+### Hafıza ve Geçmiş Araması (Faz 2)
+- **Uzun vadeli hafıza:** Kullanıcı sana "bu müşteriye her zaman sayın diye hitap et", "21:00 sonrası mesaj atma", "Ayşe Hanım fiyat tartışmasından hoşlanmıyor" gibi kalıcı bir kural/bilgi verdiğinde **remember_preference** tool'unu çağır. Böylece ilerideki sohbetlerde bu bilgiyi sana otomatik hatırlatırım. "Artık o kuralı unut" dendiğinde **forget_preference**.
+- **Geçmiş araması:** Kullanıcı "Ayşe Hanım'a geçen ay ne demiştik?", "botoks sonrası şişlik şikayeti olanlar?", "bu müşteriye daha önce hangi tedavi önerilmişti?" gibi geçmişe dönük sorular sorduğunda **semantic_search_history** tool'unu çağır. AI sohbet mesajları, müşteri notları, protokol notları ve hasta dosyalarında anlamsal arama yapar.
+- Hafızaya kaydederken **key** alanı kısa İngilizce snake_case olsun (tone_preference, off_hours_messaging, vip_status, triggers_negative, loves, communication_prefs vb.). **value** alanı JSON objesi — en az bir "text" veya "note" alanı içersin ki anlaşılır olsun.
+
 ### Sektörel Strateji
 ${sectorStrategy}
 
 ### Mevsimsel Bağlam
 Şu an: ${seasonalCtx.currentLabel} — talep **${seasonalCtx.currentDemand}**${seasonalCtx.currentNote ? ` (${seasonalCtx.currentNote})` : ''}
 ${upcomingText ? `Yaklaşan: ${upcomingText}` : ''}
-${ctx.macroSummary ? `\n### Makro Bağlam (kur + haftalık sektör gündemi)\n${ctx.macroSummary}\nBu bilgiyi yalnızca kullanıcı ekonomi/kur/gündem bağlamında soru sorduğunda ya da öneri üretirken destekleyici argüman olarak kullan — başlangıçta spontane duyurma.` : ''}${customBlock}`
+${ctx.macroSummary ? `\n### Makro Bağlam (kur + haftalık sektör gündemi)\n${ctx.macroSummary}\nBu bilgiyi yalnızca kullanıcı ekonomi/kur/gündem bağlamında soru sorduğunda ya da öneri üretirken destekleyici argüman olarak kullan — başlangıçta spontane duyurma.` : ''}${ctx.memorySummary ? `\n\n${ctx.memorySummary}` : ''}${ctx.conversationSummary ? `\n\n## Önceki Sohbet Özeti\n${ctx.conversationSummary}\n> Bu özet, bu konuşmanın daha önceki bölümlerinden otomatik çıkarıldı. Tekrar soruları engellemek için buradaki bilgilere başvur.` : ''}${customBlock}`
 }
 
 export function buildOnboardingSystemPrompt(

@@ -101,7 +101,7 @@ export function withPermission(
   permission: keyof StaffPermissions,
   handler: PermissionHandler
 ) {
-  return async (req: NextRequest, _routeContext?: any) => {
+  return async (req: NextRequest, _routeContext?: unknown) => {
     try {
       const auth = await resolveAuthContext()
       if (!auth.ok) return auth.response
@@ -114,7 +114,7 @@ export function withPermission(
       }
 
       return handler(req, auth.ctx)
-    } catch (err: any) {
+    } catch (err) {
       log.error({ err }, 'Permission middleware hatası')
       return NextResponse.json(
         { error: 'Sunucu hatası' },
@@ -220,12 +220,12 @@ export async function requireWritePermission(
  * Public olmayan ama tüm staff'ın erişebildiği endpoint'ler için.
  */
 export function withAuth(handler: PermissionHandler) {
-  return async (req: NextRequest, _routeContext?: any) => {
+  return async (req: NextRequest, _routeContext?: unknown) => {
     try {
       const auth = await resolveAuthContext()
       if (!auth.ok) return auth.response
       return handler(req, auth.ctx)
-    } catch (err: any) {
+    } catch (err) {
       log.error({ err }, 'Auth middleware hatası')
       return NextResponse.json(
         { error: 'Sunucu hatası' },

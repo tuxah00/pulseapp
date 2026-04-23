@@ -28,7 +28,7 @@ export default async function DashboardLayout({
 
   if (result.status === 'needs_onboarding') {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-pulse-50 via-white to-pulse-100 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 p-4">
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-950 p-4">
         <div className="w-full max-w-md">
           <div className="mb-8 text-center">
             <h1 className="text-3xl font-bold text-pulse-900">

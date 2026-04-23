@@ -25,6 +25,7 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -76,7 +77,7 @@ function LoginForm() {
     }
 
     setError(null)
-    alert('Giriş linki e-posta adresinize gönderildi. Lütfen kontrol edin.')
+    setNotice('Giriş linki e-posta adresinize gönderildi. Lütfen gelen kutunuzu kontrol edin.')
     setLoading(false)
   }
 
@@ -130,6 +131,13 @@ function LoginForm() {
             </button>
           </div>
         </div>
+
+        {/* Bilgi */}
+        {notice && !error && (
+          <div className="rounded-lg bg-emerald-50 border border-emerald-100 px-4 py-3 text-sm text-emerald-700 dark:bg-emerald-900/20 dark:border-emerald-900/40 dark:text-emerald-300">
+            {notice}
+          </div>
+        )}
 
         {/* Hata */}
         {error && (

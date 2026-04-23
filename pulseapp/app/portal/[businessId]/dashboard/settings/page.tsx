@@ -116,7 +116,8 @@ export default function PortalSettingsPage() {
     try {
       const res = await fetch('/api/portal/data-export')
       if (!res.ok) {
-        alert('Veri indirilemedi')
+        setSaveMsg({ type: 'err', text: 'Veri indirilemedi, lütfen tekrar deneyin.' })
+        setTimeout(() => setSaveMsg(null), 3000)
         return
       }
       const blob = await res.blob()
@@ -144,7 +145,8 @@ export default function PortalSettingsPage() {
         setDeletionRequest(null)
       } else {
         const data = await res.json().catch(() => ({}))
-        alert(data.error || 'İptal edilemedi')
+        setSaveMsg({ type: 'err', text: data.error || 'İptal işlemi başarısız oldu.' })
+        setTimeout(() => setSaveMsg(null), 3000)
       }
     } finally {
       setCancelling(false)

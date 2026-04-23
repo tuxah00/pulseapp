@@ -1,6 +1,7 @@
 ﻿'use client'
 
 import { useEffect, useState, useRef, useCallback } from 'react'
+import NextImage from 'next/image'
 import { Portal } from '@/components/ui/portal'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { requirePermission, requireSectorModule } from '@/lib/hooks/use-require-permission'
@@ -317,11 +318,11 @@ export default function PortfolioPage() {
               {/* Image or placeholder */}
               <div className="aspect-square bg-gray-100 dark:bg-gray-700 relative overflow-hidden">
                 {item.image_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
+                  <NextImage
                     src={item.image_url}
                     alt={item.title}
-                    className="w-full h-full object-cover"
+                    fill
+                    className="object-cover"
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
@@ -390,7 +391,7 @@ export default function PortfolioPage() {
       {/* Upload Modal */}
       {showModal && (
         <Portal>
-        <div className={`fixed inset-0 z-[60] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 modal-overlay ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) onModalClosed() }}>
+        <div className={`fixed inset-0 z-[60] flex items-center justify-center p-4 modal-overlay ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) onModalClosed() }}>
           <div className={`bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-md modal-content ${isClosingModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
               <h2 className="h-section">Yeni Görsel Ekle</h2>
@@ -418,10 +419,12 @@ export default function PortfolioPage() {
                   onChange={onFileChange}
                 />
                 {previewUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
+                  <NextImage
                     src={previewUrl}
                     alt="Önizleme"
+                    width={400}
+                    height={144}
+                    unoptimized
                     className="max-h-36 rounded-lg object-contain"
                   />
                 ) : (
@@ -536,7 +539,7 @@ export default function PortfolioPage() {
       {/* AI Analysis Modal */}
       {showAnalysis && analysisItem && (
         <Portal>
-        <div className={`fixed inset-0 z-[60] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 modal-overlay ${isClosingAnalysis ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingAnalysis) onAnalysisClosed() }}>
+        <div className={`fixed inset-0 z-[60] flex items-center justify-center p-4 modal-overlay ${isClosingAnalysis ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingAnalysis) onAnalysisClosed() }}>
           <div className={`bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto modal-content ${isClosingAnalysis ? 'closing' : ''}`}>
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center gap-2">
@@ -551,9 +554,8 @@ export default function PortfolioPage() {
             <div className="px-6 py-4 space-y-4">
               {/* Image preview */}
               {analysisItem.image_url && (
-                <div className="rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={analysisItem.image_url} alt={analysisItem.title} className="w-full max-h-48 object-cover" />
+                <div className="rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 relative max-h-48">
+                  <NextImage src={analysisItem.image_url} alt={analysisItem.title} width={800} height={192} className="w-full object-cover" />
                 </div>
               )}
               <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{analysisItem.title}</p>
@@ -582,7 +584,7 @@ export default function PortfolioPage() {
       {/* Delete confirm dialog */}
       {deleteConfirm && (
         <Portal>
-        <div className={`fixed inset-0 z-[60] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 modal-overlay ${isClosingDeleteConfirm ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingDeleteConfirm) { setDeleteConfirm(null); setIsClosingDeleteConfirm(false) } }}>
+        <div className={`fixed inset-0 z-[60] flex items-center justify-center p-4 modal-overlay ${isClosingDeleteConfirm ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingDeleteConfirm) { setDeleteConfirm(null); setIsClosingDeleteConfirm(false) } }}>
           <div className={`bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-sm p-6 modal-content ${isClosingDeleteConfirm ? 'closing' : ''}`}>
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">

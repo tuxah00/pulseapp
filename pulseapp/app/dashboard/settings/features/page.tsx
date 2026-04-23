@@ -80,8 +80,11 @@ export default function FeaturesSettingsPage() {
       setSavedAt(Date.now())
       // Sidebar'ın anında güncellenmesi için sayfayı yenile
       setTimeout(() => { window.location.reload() }, 400)
-    } catch (err: any) {
-      alert('Kaydedilemedi: ' + (err?.message || 'Bilinmeyen hata'))
+    } catch (err) {
+      console.error('Özellik ayarı kaydetme hatası:', err)
+      window.dispatchEvent(new CustomEvent('pulse-toast', {
+        detail: { type: 'error', title: 'Kaydedilemedi', body: 'Ayarlar kaydedilirken bir sorun oluştu. Lütfen tekrar deneyin.' }
+      }))
     } finally {
       setSaving(false)
     }
@@ -103,11 +106,11 @@ export default function FeaturesSettingsPage() {
     <div className="max-w-3xl mx-auto p-4 sm:p-6 space-y-6">
       <header>
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-cyan-500 to-sky-600 flex items-center justify-center text-white shadow-sm">
+          <div className="w-11 h-11 rounded-xl bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300 flex items-center justify-center">
             <ToggleRight className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Özellikler</h1>
+            <h1 className="h-page">Özellikler</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
               İşletmenizde aktif olmasını istediğiniz opsiyonel modülleri buradan yönetin.
             </p>

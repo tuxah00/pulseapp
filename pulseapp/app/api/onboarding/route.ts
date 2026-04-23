@@ -1,3 +1,4 @@
+// RLS bypass: onboarding — staff_members kaydı henüz yok, RLS kullanıcıyı işletmeye bağlayamaz
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { getSeedForSector } from '@/lib/config/sector-seeds'

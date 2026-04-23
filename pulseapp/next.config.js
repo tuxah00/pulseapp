@@ -1,3 +1,5 @@
+const { withSentryConfig } = require('@sentry/nextjs')
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   swcMinify: true,
@@ -41,4 +43,15 @@ const nextConfig = {
   },
 }
 
-module.exports = nextConfig
+module.exports = withSentryConfig(nextConfig, {
+  // Build loglarını bastır
+  silent: true,
+  // Kaynak harita yüklemesi SENTRY_AUTH_TOKEN varsa aktif olur
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  // Üretimde kaynak haritaları istemci paketinden gizle
+  hideSourceMaps: true,
+  // Sentry CLI log çıktısını bastır
+  disableLogger: true,
+})

@@ -9,9 +9,11 @@ import { buildAssistantSystemPrompt, buildOnboardingSystemPrompt, buildPageTutor
 import { findTopicByKey } from '@/lib/ai/tutorial-content'
 import { ASSISTANT_TOOLS, TOOL_LABELS, executeAssistantTool } from '@/lib/ai/assistant-tools'
 import { filterAssistantTools } from '@/lib/ai/tool-categories'
+import { loadToolsForSector, getLoadedSkillIds } from '@/lib/ai/skills/loader'
 import { deriveBlocksFromToolResult } from '@/lib/ai/assistant-blocks'
 import { AI_LIMITS } from '@/lib/ai/assistant-limits'
 import { fetchMacroContext, macroContextForPrompt } from '@/lib/analytics/macro-context'
+import { readBusinessMemory, formatMemoryForPrompt } from '@/lib/ai/memory/read'
 import type { AuthContext } from '@/lib/api/with-permission'
 import type { PlanType } from '@/types'
 import { validateBody } from '@/lib/api/validate'
@@ -174,6 +176,28 @@ export async function POST(req: NextRequest) {
     })
     const macroSummary = macroContextForPrompt(macroCtx) || undefined
 
+    // Faz 2: Uzun vadeli hafıza (ai_business_memory) — best effort
+    const memoryRows = await readBusinessMemory(admin, staff.business_id, {
+      minConfidence: 0.5,
+    }).catch(err => {
+      log.error({ err }, '[assistant] memory fetch failed')
+      return []
+    })
+    const memorySummary = formatMemoryForPrompt(memoryRows) || undefined
+
+    // Faz 2: Sohbet özeti (uzun sohbetlerde bağlamı korur)
+    let conversationSummary: string | undefined
+    if (convId) {
+      const { data: convRow } = await admin
+        .from('ai_conversations')
+        .select('summary, message_count_at_summary')
+        .eq('id', convId)
+        .maybeSingle()
+      if (convRow?.summary && typeof convRow.summary === 'string') {
+        conversationSummary = convRow.summary
+      }
+    }
+
     systemPrompt = buildAssistantSystemPrompt({
       businessName: biz?.name || '',
       sector: sectorValue,
@@ -186,6 +210,8 @@ export async function POST(req: NextRequest) {
       aiPreferences: biz?.settings?.ai_preferences,
       origin,
       macroSummary,
+      memorySummary,
+      conversationSummary,
     })
   }
 
@@ -198,8 +224,13 @@ export async function POST(req: NextRequest) {
 
   // 9. Stream response
   const openai = getOpenAIClient()
+  // Faz 3: Önce sektöre göre ilgili araçları yükle (bağlamı küçültür, token tasarrufu)
+  const sectorTools = loadToolsForSector(sectorValue, ASSISTANT_TOOLS)
+  log.info({ sector: sectorValue, skills: getLoadedSkillIds(sectorValue), total: sectorTools.length }, '[assistant] skill paketleri yüklendi')
+
+  // Sonra yetki kesişim filtresi uygula (business ai_permissions + kullanıcı yetkisi)
   const allowedTools = filterAssistantTools(
-    ASSISTANT_TOOLS,
+    sectorTools,
     biz?.settings?.ai_permissions ?? null,
     permissions,
   )

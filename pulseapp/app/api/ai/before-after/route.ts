@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/api/with-permission'
-import { getAnthropicClient, AI_MODEL } from '@/lib/ai/client'
+import { getOpenAIClient, VISION_MODEL, VISION_MAX_TOKENS } from '@/lib/ai/openai-client'
 import { getPhotoAnalysisPrompt } from '@/lib/ai/photo-prompts'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
 import { validateBody } from '@/lib/api/validate'
@@ -51,49 +51,25 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const anthropic = getAnthropicClient()
-    const message = await anthropic.messages.create({
-      model: AI_MODEL,
-      max_tokens: 1500,
+    const openai = getOpenAIClient()
+    const completion = await openai.chat.completions.create({
+      model: VISION_MODEL,
+      max_tokens: VISION_MAX_TOKENS,
       messages: [
         {
           role: 'user',
           content: [
-            {
-              type: 'text',
-              text: 'Birinci fotoğraf (TEDAVİ ÖNCESİ):',
-            },
-            {
-              type: 'image',
-              source: {
-                type: 'url',
-                url: beforeUrl,
-              },
-            },
-            {
-              type: 'text',
-              text: 'İkinci fotoğraf (TEDAVİ SONRASI):',
-            },
-            {
-              type: 'image',
-              source: {
-                type: 'url',
-                url: afterUrl,
-              },
-            },
-            {
-              type: 'text',
-              text: systemPrompt + protocolContext,
-            },
+            { type: 'text', text: 'Birinci fotoğraf (TEDAVİ ÖNCESİ):' },
+            { type: 'image_url', image_url: { url: beforeUrl } },
+            { type: 'text', text: 'İkinci fotoğraf (TEDAVİ SONRASI):' },
+            { type: 'image_url', image_url: { url: afterUrl } },
+            { type: 'text', text: systemPrompt + protocolContext },
           ],
         },
       ],
     })
 
-    const analysis = message.content
-      .filter(b => b.type === 'text')
-      .map(b => b.type === 'text' ? b.text : '')
-      .join('\n')
+    const analysis = completion.choices[0]?.message?.content || ''
 
     return NextResponse.json({
       analysis,

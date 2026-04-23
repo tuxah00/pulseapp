@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
@@ -109,11 +110,10 @@ export function PortalShell({ businessId, business, customer, showTreatments, re
         )}
       >
         {/* İşletme hero */}
-        <div className="p-5 border-b border-gray-100 bg-gradient-to-br from-pulse-900/5 via-transparent to-purple-500/5">
+        <div className="p-5 border-b border-gray-100 bg-pulse-900/5">
           <div className="flex items-center gap-3">
             {business.logo_url ? (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img src={business.logo_url} alt={business.name} className="h-10 w-10 rounded-xl object-cover" />
+              <Image src={business.logo_url} alt={business.name} width={40} height={40} className="rounded-xl object-cover" />
             ) : (
               <div className="h-10 w-10 rounded-xl bg-pulse-900 flex items-center justify-center">
                 <span className="text-sm font-bold text-white">{business.name.slice(0, 1).toUpperCase()}</span>

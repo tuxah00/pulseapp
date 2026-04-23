@@ -804,26 +804,26 @@ export default function VardiyePage() {
           <p className="text-sm">Henüz personel eklenmemiş. Önce personel ekleyin.</p>
         </div>
       ) : (
-        <div ref={tableRef} className="card overflow-auto">
-          <table className="w-full text-sm">
+        <div ref={tableRef} className="table-wrapper">
+          <table className="table-base">
             <thead>
-              <tr>
-                <th className="py-3 pr-4 text-left font-medium text-gray-500 dark:text-gray-400 w-32">Personel</th>
+              <tr className="table-head-row">
+                <th className="table-head-cell w-32">Personel</th>
                 {weekDays.map((day, i) => {
                   if (!isDayOpen(i)) return null
                   return (
-                    <th key={i} className="py-3 px-2 text-center font-medium text-gray-500 dark:text-gray-400 min-w-[100px]">
+                    <th key={i} className="table-head-cell text-center min-w-[100px]">
                       <div>{DAY_LABELS[i]}</div>
-                      <div className="text-xs text-gray-400">{formatDisplayDate(day)}</div>
+                      <div className="text-xs text-gray-400 dark:text-gray-500 font-normal normal-case tracking-normal">{formatDisplayDate(day)}</div>
                     </th>
                   )
                 })}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+            <tbody>
               {staff.map(member => (
-                <tr key={member.id}>
-                  <td className="py-3 pr-4 font-medium text-gray-900 dark:text-gray-100 text-sm">
+                <tr key={member.id} className="table-row">
+                  <td className="table-cell font-medium">
                     {member.name}
                   </td>
                   {weekDays.map((day, di) => {
@@ -898,7 +898,7 @@ export default function VardiyePage() {
       {(noteDetail || isClosingNoteDetail) && noteDetail && (
         <Portal>
         <div
-          className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 dark:bg-black/70 ${isClosingNoteDetail ? 'closing' : ''}`}
+          className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 ${isClosingNoteDetail ? 'closing' : ''}`}
           onAnimationEnd={() => { if (isClosingNoteDetail) { setNoteDetail(null); setIsClosingNoteDetail(false) } }}
           onClick={() => setIsClosingNoteDetail(true)}
         >
@@ -931,7 +931,7 @@ export default function VardiyePage() {
       {/* Reset Confirmation Modal */}
       {(resetConfirm || isClosingResetConfirm) && (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 dark:bg-black/70 ${isClosingResetConfirm ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingResetConfirm) { setResetConfirm(false); setIsClosingResetConfirm(false) } }}>
+        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 ${isClosingResetConfirm ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingResetConfirm) { setResetConfirm(false); setIsClosingResetConfirm(false) } }}>
           <div className={`modal-content bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4 ${isClosingResetConfirm ? 'closing' : ''}`}>
             <h3 className="font-semibold text-gray-900 dark:text-gray-100">Tabloyu Sıfırla</h3>
             <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -953,7 +953,7 @@ export default function VardiyePage() {
         if (!modal) return null
         return (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 dark:bg-black/70 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setModal(null); setIsClosingModal(false) } }}>
+        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setModal(null); setIsClosingModal(false) } }}>
           <div className={`modal-content bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4 ${isClosingModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between">
               <h3 className="font-semibold text-gray-900 dark:text-gray-100">
@@ -1145,7 +1145,7 @@ export default function VardiyePage() {
       {(showRequestModal || isClosingRequestModal) && (
         <Portal>
           <div
-            className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${isClosingRequestModal ? 'closing' : ''}`}
+            className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 ${isClosingRequestModal ? 'closing' : ''}`}
             onClick={() => setIsClosingRequestModal(true)}
             onAnimationEnd={() => { if (isClosingRequestModal) { setShowRequestModal(false); setIsClosingRequestModal(false) } }}
           >
@@ -1203,7 +1203,7 @@ export default function VardiyePage() {
       {(reviewTarget || isClosingReviewModal) && (
         <Portal>
           <div
-            className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${isClosingReviewModal ? 'closing' : ''}`}
+            className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 ${isClosingReviewModal ? 'closing' : ''}`}
             onClick={() => setIsClosingReviewModal(true)}
             onAnimationEnd={() => { if (isClosingReviewModal) { setReviewTarget(null); setIsClosingReviewModal(false) } }}
           >

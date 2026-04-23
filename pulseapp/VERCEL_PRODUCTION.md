@@ -28,7 +28,7 @@ Vercel → Proje → **Settings** → **Environment Variables** bölümüne aşa
 
 | Değişken | Açıklama |
 |----------|----------|
-| `ANTHROPIC_API_KEY` | Claude AI (mesaj sınıflandırma vb.) |
+| `OPENAI_API_KEY` | GPT-4o Mini (sınıflandırma, yanıt, asistan, görsel analiz) |
 | `PAYTR_MERCHANT_ID` | PayTR ödeme |
 | `PAYTR_MERCHANT_KEY` | PayTR |
 | `PAYTR_MERCHANT_SALT` | PayTR |

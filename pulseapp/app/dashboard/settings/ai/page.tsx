@@ -250,11 +250,11 @@ export default function AISettingsPage() {
         </div>
       )}
       <header className="mb-6 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white">
+        <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 flex items-center justify-center">
           <Sparkles className="w-5 h-5" />
         </div>
         <div>
-          <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">AI Asistan Tercihleri</h1>
+          <h1 className="h-page">AI Asistan Tercihleri</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">Asistanın tonu, hatırlatma varsayılanı ve işletmene özel talimatlar.</p>
         </div>
       </header>

@@ -32,6 +32,7 @@ type TimelineItem =
   | { id: string; type: 'message'; date: string; sortDate: string; data: MessageRow }
   | { id: string; type: 'review'; date: string; sortDate: string; data: ReviewRow }
 import { logAudit } from '@/lib/utils/audit'
+import { humanizeSupabaseError } from '@/lib/utils/humanize-supabase-error'
 import CompactBoxCard from '@/components/ui/compact-box-card'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import { ToolbarPopover, SortPopoverContent } from '@/components/ui/toolbar-popover'
@@ -218,7 +219,7 @@ export default function CustomersPage() {
         segment,
       }).eq('id', editingCustomer.id)
       if (error) {
-        setError(error.message.includes('idx_customers_business_phone') ? 'Bu telefon numarası zaten kayıtlı.' : error.message.includes('invalid input syntax') ? 'Geçersiz veri formatı. Lütfen girdiğiniz bilgileri kontrol edin.' : error.message)
+        setError(humanizeSupabaseError(error))
         setSaving(false)
         return
       }
@@ -264,7 +265,7 @@ export default function CustomersPage() {
           }
           setError('Bu telefon numarası zaten kayıtlı.')
         } else {
-          setError(error.message.includes('invalid input syntax') ? 'Geçersiz veri formatı. Lütfen girdiğiniz bilgileri kontrol edin.' : error.message)
+          setError(humanizeSupabaseError(error))
         }
         setSaving(false)
         return
@@ -626,7 +627,7 @@ export default function CustomersPage() {
             <p className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center gap-1">
               <span className="flex items-center gap-0.5">
                 {Array.from({length: 5}).map((_, i) => (
-                  <Star key={i} className={`h-3 w-3 ${i < rev.rating ? 'fill-amber-400 text-amber-400' : 'text-gray-300 dark:text-gray-600'}`} />
+                  <Star key={i} className={`h-3 w-3 ${i < rev.rating ? 'fill-amber-400 text-amber-400' : 'text-gray-300 dark:text-gray-500'}`} />
                 ))}
               </span>
               <span>Yorum</span>
@@ -1184,7 +1185,7 @@ export default function CustomersPage() {
                             <div className="flex items-center justify-between">
                               <span className="flex items-center gap-0.5">
                                 {Array.from({length: 5}).map((_, i) => (
-                                  <Star key={i} className={`h-3.5 w-3.5 ${i < rev.rating ? 'fill-amber-400 text-amber-400' : 'text-gray-300 dark:text-gray-600'}`} />
+                                  <Star key={i} className={`h-3.5 w-3.5 ${i < rev.rating ? 'fill-amber-400 text-amber-400' : 'text-gray-300 dark:text-gray-500'}`} />
                                 ))}
                               </span>
                               <span className="text-xs text-gray-400">{rev.created_at ? formatDate(rev.created_at) : ''}</span>
@@ -1202,7 +1203,7 @@ export default function CustomersPage() {
                       <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-1.5">
                         <Gift className="h-3.5 w-3.5" /> Toplam Getiri
                       </p>
-                      <div className="rounded-lg bg-gradient-to-r from-pulse-50 to-blue-50 dark:from-pulse-900/20 dark:to-blue-900/20 p-4">
+                      <div className="rounded-lg bg-pulse-50 dark:bg-pulse-900/20 p-4">
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-2xl font-bold text-pulse-900 dark:text-pulse-300">{formatCurrency(selectedCustomer.total_revenue)}</p>
@@ -1306,7 +1307,7 @@ export default function CustomersPage() {
       {/* Modal */}
       {(showModal || isClosingModal) && (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
+        <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
           <div className={`modal-content card w-full max-w-md dark:bg-gray-900 ${isClosingModal ? 'closing' : ''}`}>
             <h2 className="h-section mb-4">
               {editingCustomer ? `${singularLabel} Düzenle` : `Yeni ${singularLabel} Ekle`}
@@ -1370,7 +1371,7 @@ export default function CustomersPage() {
       {/* Ödül Verme Modalı */}
       {(showRewardModal || isClosingReward) && (
         <Portal>
-          <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${isClosingReward ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingReward) { setShowRewardModal(false); setIsClosingReward(false) } }}>
+          <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center p-4 ${isClosingReward ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingReward) { setShowRewardModal(false); setIsClosingReward(false) } }}>
             <div className={`modal-content card w-full max-w-sm dark:bg-gray-900 ${isClosingReward ? 'closing' : ''}`}>
               <h2 className="h-section mb-4 flex items-center gap-2">
                 <Gift className="h-5 w-5 text-pulse-900 dark:text-pulse-300" /> Ödül Ver
@@ -1418,7 +1419,7 @@ export default function CustomersPage() {
       {showRedeemModal && selectedCustomer && customerLoyalty && (
         <Portal>
           <div
-            className="modal-overlay fixed inset-0 z-[115] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4"
+            className="modal-overlay fixed inset-0 z-[115] flex items-center justify-center p-4"
             onClick={(e) => { if (e.target === e.currentTarget) setShowRedeemModal(false) }}
           >
             <div className="modal-content card w-full max-w-sm dark:bg-gray-900">

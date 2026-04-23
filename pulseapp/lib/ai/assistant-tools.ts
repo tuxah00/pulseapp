@@ -13,6 +13,9 @@ import {
   computeSeasonalTrend,
   computeCohortRetention,
 } from '@/lib/analytics/insights'
+import { semanticSearch } from '@/lib/ai/memory/embed'
+import { upsertMemory, deleteMemory } from '@/lib/ai/memory/write'
+import type { MemoryScope, EmbeddingContentType } from '@/lib/ai/memory/types'
 import type { SectorType } from '@/types'
 
 type SupabaseAdmin = ReturnType<typeof createAdminClient>
@@ -1078,6 +1081,173 @@ export const ASSISTANT_TOOLS: ChatCompletionTool[] = [
       },
     },
   },
+
+  // Grup 14: Hafıza ve Anlamsal Arama (Faz 2)
+  {
+    type: 'function',
+    function: {
+      name: 'semantic_search_history',
+      description: 'Geçmiş AI sohbetleri, müşteri notları, tedavi protokol notları ve hasta dosyaları arasında anlamsal (semantic) arama yapar. Örnek: "Ayşe Hanıma geçen ay ne demiştik?" veya "botoks sonrası şişlik şikayeti".',
+      parameters: {
+        type: 'object',
+        properties: {
+          query: { type: 'string', description: 'Arama sorgusu (Türkçe, serbest metin). Ne aradığını açık ifade et.' },
+          customer_id: { type: 'string', description: 'Opsiyonel: sadece belirli bir müşteriye ait içerikleri ara.' },
+          content_type: {
+            type: 'string',
+            enum: ['ai_message', 'customer_note', 'business_record', 'protocol_note', 'protocol_session_note'],
+            description: 'Opsiyonel: arama türünü kısıtla. Boş bırakılırsa tüm tiplerde arar.',
+          },
+          limit: { type: 'number', description: 'En fazla kaç sonuç dönsün (varsayılan 10).' },
+        },
+        required: ['query'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'remember_preference',
+      description: 'Uzun vadeli hafızaya bir tercih/kural/bilgi kaydet. Kullanıcı "bu müşteriye sayın diye hitap et", "21:00 sonrası otomatik mesaj yollama" gibi şeyler söylediğinde bunu hatırla. Sohbetler arası kalıcıdır.',
+      parameters: {
+        type: 'object',
+        properties: {
+          scope: {
+            type: 'string',
+            enum: ['business', 'customer', 'staff'],
+            description: 'Kapsam: business (işletme geneli), customer (belirli müşteri), staff (belirli personel).',
+          },
+          scope_id: { type: 'string', description: 'Eğer scope=customer veya staff ise ilgili kaydın ID\'si. Scope=business ise boş bırak.' },
+          key: { type: 'string', description: 'Tercih anahtarı (kısa İngilizce snake_case). Örn: tone_preference, off_hours_messaging, vip_status, triggers_negative, loves.' },
+          value: { type: 'object', description: 'Tercih değeri (JSON objesi). Örn: {"text": "Sayın diye hitap et", "note": "müşteri istedi"}' },
+          expires_in_days: { type: 'number', description: 'Opsiyonel: kaç gün sonra unutulsun. Boş bırakılırsa kalıcı.' },
+        },
+        required: ['scope', 'key', 'value'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'forget_preference',
+      description: 'Hafızadan bir tercihi sil. Kullanıcı "artık o kuralı unut", "x tercihini kaldır" gibi şeyler dediğinde kullan.',
+      parameters: {
+        type: 'object',
+        properties: {
+          scope: { type: 'string', enum: ['business', 'customer', 'staff'] },
+          scope_id: { type: 'string', description: 'Scope=customer/staff ise ilgili ID.' },
+          key: { type: 'string', description: 'Silinecek hafıza anahtarı.' },
+        },
+        required: ['scope', 'key'],
+      },
+    },
+  },
+
+  // ── Estetik Klinik Araçları (medical-aesthetic skill — Faz 3) ──────────────
+  {
+    type: 'function',
+    function: {
+      name: 'list_protocols',
+      description: 'Bir müşterinin tedavi protokollerini listeler (botoks, lazer epilasyon, mezoterapi vb. çok seanslı tedaviler). Her protokolde toplam/tamamlanan seans sayısı ve durum görünür.',
+      parameters: {
+        type: 'object',
+        properties: {
+          customer_id: { type: 'string', description: 'Müşteri ID' },
+          status: {
+            type: 'string',
+            enum: ['active', 'completed', 'cancelled', 'paused'],
+            description: 'Durum filtresi (opsiyonel). Boş bırakılırsa tüm protokoller gelir.',
+          },
+        },
+        required: ['customer_id'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'get_protocol_details',
+      description: 'Tedavi protokolünün tüm detaylarını ve seans geçmişini getirir (hangi seanslar tamamlandı, hangileri planlandı, notlar).',
+      parameters: {
+        type: 'object',
+        properties: {
+          protocol_id: { type: 'string', description: 'Protokol ID' },
+        },
+        required: ['protocol_id'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'list_customer_allergies',
+      description: 'Müşterinin kayıtlı alerji ve hassasiyetlerini listeler. Tedavi veya hizmet öncesi güvenlik kontrolü için kullan.',
+      parameters: {
+        type: 'object',
+        properties: {
+          customer_id: { type: 'string', description: 'Müşteri ID' },
+        },
+        required: ['customer_id'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'check_contraindications',
+      description: 'Bir müşteri için belirli bir hizmetin güvenli olup olmadığını kontrol eder. Müşterinin alerjileri ile hizmetin kontrendikasyonları karşılaştırılır ve uyarılar döner. Randevu öncesi güvenlik taraması için kullan.',
+      parameters: {
+        type: 'object',
+        properties: {
+          customer_id: { type: 'string', description: 'Müşteri ID' },
+          service_id: { type: 'string', description: 'Hizmet ID' },
+        },
+        required: ['customer_id', 'service_id'],
+      },
+    },
+  },
+
+  // ── Diş Kliniği Araçları (dental-clinic skill — Faz 3) ──────────────────────
+  {
+    type: 'function',
+    function: {
+      name: 'list_tooth_records',
+      description: 'Diş kliniği için hastanın diş haritasını ve mevcut diş durumlarını getirir (dolgu, kron, çekim, eksik diş, implant, kanal tedavisi vb.).',
+      parameters: {
+        type: 'object',
+        properties: {
+          customer_id: { type: 'string', description: 'Hasta ID' },
+        },
+        required: ['customer_id'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'update_tooth_record',
+      description: 'Hastanın belirli bir dişinin durumunu günceller veya yeni kayıt oluşturur. Yapılan tedavi, tarih ve klinik notlar kaydedilebilir. Kullanıcı onayı gerekir.',
+      parameters: {
+        type: 'object',
+        properties: {
+          customer_id: { type: 'string', description: 'Hasta ID' },
+          tooth_number: {
+            type: 'number',
+            description: 'Diş numarası (FDI sistemine göre: üst sağ 11-18, üst sol 21-28, alt sol 31-38, alt sağ 41-48)',
+          },
+          condition: {
+            type: 'string',
+            enum: ['healthy', 'caries', 'filled', 'crown', 'extracted', 'implant', 'root_canal', 'bridge', 'missing'],
+            description: 'Diş durumu',
+          },
+          treatment: { type: 'string', description: 'Yapılan tedavi (ör: Kompozit dolgu, Kanal tedavisi)' },
+          notes: { type: 'string', description: 'Klinik notlar' },
+          treated_at: { type: 'string', description: 'Tedavi tarihi (YYYY-MM-DD). Varsayılan: bugün.' },
+        },
+        required: ['customer_id', 'tooth_number'],
+      },
+    },
+  },
 ]
 
 // ── Tool Label Map (UI göstergesi için) ──
@@ -1147,6 +1317,14 @@ export const TOOL_LABELS: Record<string, string> = {
   create_pos_transaction: 'POS satış önizlemesi hazırlanıyor...',
   record_expense: 'Gider önizlemesi hazırlanıyor...',
   record_manual_income: 'Gelir önizlemesi hazırlanıyor...',
+  // Estetik klinik
+  list_protocols: 'Tedavi protokolleri yükleniyor...',
+  get_protocol_details: 'Protokol detayları getiriliyor...',
+  list_customer_allergies: 'Alerji kayıtları yükleniyor...',
+  check_contraindications: 'Kontrendikasyon kontrolü yapılıyor...',
+  // Diş kliniği
+  list_tooth_records: 'Diş haritası yükleniyor...',
+  update_tooth_record: 'Diş kaydı güncellemesi hazırlanıyor...',
 }
 
 // Pending aksiyon tipleri için kısa isim etiketi (Bekleyen Aksiyonlar sayfası ve asistan kuyruğunda)
@@ -1179,6 +1357,17 @@ export const ACTION_TYPE_LABELS: Record<string, string> = {
   create_pos_transaction: 'Kasa işlemi',
   record_expense: 'Gider kaydı',
   record_manual_income: 'Gelir kaydı',
+  semantic_search_history: 'Geçmiş aranıyor...',
+  remember_preference: 'Tercih hatırlanıyor...',
+  forget_preference: 'Tercih siliniyor...',
+  // Estetik klinik
+  list_protocols: 'Tedavi protokolleri yükleniyor...',
+  get_protocol_details: 'Protokol detayları getiriliyor...',
+  list_customer_allergies: 'Alerji kayıtları yükleniyor...',
+  check_contraindications: 'Kontrendikasyon kontrolü yapılıyor...',
+  // Diş kliniği
+  list_tooth_records: 'Diş haritası yükleniyor...',
+  update_tooth_record: 'Diş kaydı güncellemesi hazırlanıyor...',
 }
 
 // ── Permission Map ──
@@ -1248,6 +1437,17 @@ const TOOL_PERMISSIONS: Record<string, keyof StaffPermissions> = {
   create_pos_transaction: 'pos',
   record_expense: 'analytics',
   record_manual_income: 'analytics',
+  semantic_search_history: 'dashboard',
+  remember_preference: 'dashboard',
+  forget_preference: 'dashboard',
+  // Estetik klinik
+  list_protocols: 'customers',
+  get_protocol_details: 'customers',
+  list_customer_allergies: 'customers',
+  check_contraindications: 'customers',
+  // Diş kliniği
+  list_tooth_records: 'customers',
+  update_tooth_record: 'customers',
 }
 
 // ── Tool Executor ──
@@ -1397,6 +1597,26 @@ export async function executeAssistantTool(
         return await handleRecordExpense(admin, ctx, args)
       case 'record_manual_income':
         return await handleRecordManualIncome(admin, ctx, args)
+      case 'semantic_search_history':
+        return await handleSemanticSearchHistory(admin, ctx, args)
+      case 'remember_preference':
+        return await handleRememberPreference(admin, ctx, args)
+      case 'forget_preference':
+        return await handleForgetPreference(admin, ctx, args)
+      // Estetik klinik araçları
+      case 'list_protocols':
+        return await handleListProtocols(admin, businessId, args)
+      case 'get_protocol_details':
+        return await handleGetProtocolDetails(admin, businessId, args)
+      case 'list_customer_allergies':
+        return await handleListCustomerAllergies(admin, businessId, args)
+      case 'check_contraindications':
+        return await handleCheckContraindications(admin, businessId, args)
+      // Diş kliniği araçları
+      case 'list_tooth_records':
+        return await handleListToothRecords(admin, businessId, args)
+      case 'update_tooth_record':
+        return await handleUpdateToothRecord(admin, ctx, args)
       default:
         return { success: false, error: `Bilinmeyen araç: ${toolName}` }
     }
@@ -3891,4 +4111,409 @@ async function handleRecordManualIncome(
   admin: SupabaseAdmin, ctx: ToolCtx, args: Record<string, any>,
 ) {
   return handleLedgerEntry(admin, ctx, args, 'income')
+}
+
+// ── Hafıza ve Anlamsal Arama Handler'ları (Faz 2) ──
+
+async function handleSemanticSearchHistory(
+  admin: SupabaseAdmin,
+  ctx: ToolCtx,
+  args: Record<string, any>,
+) {
+  const query = String(args.query ?? '').trim()
+  if (!query) {
+    return { success: false, error: 'query parametresi zorunludur' }
+  }
+
+  const results = await semanticSearch(admin, ctx.businessId, query, {
+    limit: Math.min(Number(args.limit ?? 10), 20),
+    contentType: args.content_type as EmbeddingContentType | undefined,
+    customerId: args.customer_id,
+  })
+
+  if (!results || results.length === 0) {
+    return {
+      success: true,
+      data: {
+        results: [],
+        message: 'Arama kriterine uyan geçmiş kayıt bulunamadı.',
+      },
+    }
+  }
+
+  // Kullanıcıya gösterilecek özet
+  const formatted = results.map(r => ({
+    type: r.content_type,
+    customer_id: r.customer_id,
+    similarity: Math.round(r.similarity * 100) / 100,
+    date: r.created_at,
+    text: r.text.length > 400 ? r.text.slice(0, 400) + '…' : r.text,
+    metadata: r.metadata,
+  }))
+
+  return {
+    success: true,
+    data: {
+      query,
+      count: formatted.length,
+      results: formatted,
+    },
+  }
+}
+
+async function handleRememberPreference(
+  admin: SupabaseAdmin,
+  ctx: ToolCtx,
+  args: Record<string, any>,
+) {
+  const scope = args.scope as MemoryScope
+  const key = String(args.key ?? '').trim()
+  const value = args.value
+
+  if (!scope || !['business', 'customer', 'staff'].includes(scope)) {
+    return { success: false, error: 'scope business/customer/staff olmalı' }
+  }
+  if (!key) {
+    return { success: false, error: 'key parametresi zorunludur' }
+  }
+  if (!value || typeof value !== 'object') {
+    return { success: false, error: 'value bir JSON objesi olmalı' }
+  }
+  if ((scope === 'customer' || scope === 'staff') && !args.scope_id) {
+    return { success: false, error: `scope=${scope} için scope_id zorunludur` }
+  }
+
+  // expires_in_days varsa expires_at hesapla
+  let expiresAt: string | null = null
+  if (args.expires_in_days && Number(args.expires_in_days) > 0) {
+    const d = new Date()
+    d.setDate(d.getDate() + Number(args.expires_in_days))
+    expiresAt = d.toISOString()
+  }
+
+  const row = await upsertMemory(admin, {
+    businessId: ctx.businessId,
+    scope,
+    scopeId: args.scope_id ?? null,
+    key,
+    value,
+    confidence: 1.0, // Explicit user kaynaklı → tam güven
+    source: 'explicit_user',
+    createdByStaffId: ctx.staffId ?? null,
+    expiresAt,
+  })
+
+  if (!row) {
+    return { success: false, error: 'Tercih kaydedilemedi' }
+  }
+
+  return {
+    success: true,
+    data: {
+      message: 'Hatırladım.',
+      scope,
+      key,
+      expires_at: expiresAt,
+    },
+  }
+}
+
+async function handleForgetPreference(
+  admin: SupabaseAdmin,
+  ctx: ToolCtx,
+  args: Record<string, any>,
+) {
+  const scope = args.scope as MemoryScope
+  const key = String(args.key ?? '').trim()
+
+  if (!scope || !['business', 'customer', 'staff'].includes(scope)) {
+    return { success: false, error: 'scope business/customer/staff olmalı' }
+  }
+  if (!key) {
+    return { success: false, error: 'key parametresi zorunludur' }
+  }
+
+  const ok = await deleteMemory(admin, ctx.businessId, scope, args.scope_id ?? null, key)
+  if (!ok) {
+    return { success: false, error: 'Tercih silinemedi' }
+  }
+
+  return {
+    success: true,
+    data: {
+      message: `Unuttum: ${scope} / ${key}`,
+    },
+  }
+}
+
+// ── Estetik Klinik Handler'ları (Faz 3 — medical-aesthetic skill) ──────────────
+
+async function handleListProtocols(
+  admin: SupabaseAdmin,
+  businessId: string,
+  args: Record<string, any>,
+) {
+  let q = admin
+    .from('treatment_protocols')
+    .select('id, name, total_sessions, completed_sessions, interval_days, status, notes, created_at, services(name)')
+    .eq('business_id', businessId)
+    .eq('customer_id', args.customer_id)
+    .order('created_at', { ascending: false })
+
+  if (args.status) q = q.eq('status', args.status)
+
+  const { data, error } = await q
+  if (error) return { success: false, error: error.message }
+
+  return {
+    success: true,
+    data: {
+      toplam: data?.length ?? 0,
+      protokoller: (data ?? []).map((p: any) => ({
+        id: p.id,
+        ad: p.name,
+        hizmet: p.services?.name ?? null,
+        seanslar: `${p.completed_sessions}/${p.total_sessions}`,
+        aralık_gün: p.interval_days,
+        durum: p.status,
+        notlar: p.notes,
+        oluşturuldu: p.created_at,
+      })),
+    },
+  }
+}
+
+async function handleGetProtocolDetails(
+  admin: SupabaseAdmin,
+  businessId: string,
+  args: Record<string, any>,
+) {
+  const { data: protocol, error: pErr } = await admin
+    .from('treatment_protocols')
+    .select('*, services(name)')
+    .eq('id', args.protocol_id)
+    .eq('business_id', businessId)
+    .single()
+
+  if (pErr || !protocol) return { success: false, error: 'Protokol bulunamadı' }
+
+  const { data: sessions } = await admin
+    .from('protocol_sessions')
+    .select('session_number, status, planned_date, completed_date, notes')
+    .eq('protocol_id', args.protocol_id)
+    .order('session_number', { ascending: true })
+
+  return {
+    success: true,
+    data: {
+      id: protocol.id,
+      ad: protocol.name,
+      hizmet: (protocol.services as any)?.name ?? null,
+      toplam_seans: protocol.total_sessions,
+      tamamlanan: protocol.completed_sessions,
+      aralık_gün: protocol.interval_days,
+      durum: protocol.status,
+      notlar: protocol.notes,
+      seanslar: (sessions ?? []).map((s: any) => ({
+        numara: s.session_number,
+        durum: s.status,
+        planlanan: s.planned_date,
+        tamamlandı: s.completed_date,
+        notlar: s.notes,
+      })),
+    },
+  }
+}
+
+async function handleListCustomerAllergies(
+  admin: SupabaseAdmin,
+  businessId: string,
+  args: Record<string, any>,
+) {
+  const { data, error } = await admin
+    .from('customer_allergies')
+    .select('id, allergen, severity, reaction, notes, reported_at')
+    .eq('business_id', businessId)
+    .eq('customer_id', args.customer_id)
+    .order('severity', { ascending: false })
+
+  if (error) return { success: false, error: error.message }
+
+  const severityLabel: Record<string, string> = {
+    mild: 'hafif', moderate: 'orta', severe: 'şiddetli',
+  }
+
+  return {
+    success: true,
+    data: {
+      toplam: data?.length ?? 0,
+      alerjiler: (data ?? []).map((a: any) => ({
+        id: a.id,
+        alerjen: a.allergen,
+        şiddet: severityLabel[a.severity] ?? a.severity,
+        reaksiyon: a.reaction,
+        notlar: a.notes,
+        tarih: a.reported_at,
+      })),
+      özet: data?.length
+        ? `${data.length} alerji kaydı: ${data.map((a: any) => `${a.allergen} (${severityLabel[a.severity] ?? a.severity})`).join(', ')}`
+        : 'Kayıtlı alerji yok.',
+    },
+  }
+}
+
+async function handleCheckContraindications(
+  admin: SupabaseAdmin,
+  businessId: string,
+  args: Record<string, any>,
+) {
+  const [{ data: allergies }, { data: contraindications }] = await Promise.all([
+    admin
+      .from('customer_allergies')
+      .select('allergen, severity')
+      .eq('business_id', businessId)
+      .eq('customer_id', args.customer_id),
+    admin
+      .from('service_contraindications')
+      .select('allergen, risk_level, warning_message')
+      .eq('business_id', businessId)
+      .eq('service_id', args.service_id),
+  ])
+
+  if (!allergies?.length) {
+    return {
+      success: true,
+      data: {
+        risk_var: false,
+        uyarılar: [],
+        mesaj: 'Müşterinin kayıtlı alerjisi yok. Hizmet güvenli görünüyor.',
+      },
+    }
+  }
+
+  if (!contraindications?.length) {
+    return {
+      success: true,
+      data: {
+        risk_var: false,
+        uyarılar: [],
+        mesaj: 'Bu hizmet için tanımlı kontrendikasyon yok.',
+      },
+    }
+  }
+
+  const allergenSet = new Set((allergies ?? []).map((a: any) => a.allergen.toLowerCase()))
+  const uyarılar = (contraindications ?? [])
+    .filter((c: any) => allergenSet.has(c.allergen.toLowerCase()))
+    .map((c: any) => {
+      const müşteriAlerjisi = (allergies ?? []).find(
+        (a: any) => a.allergen.toLowerCase() === c.allergen.toLowerCase()
+      )
+      return {
+        alerjen: c.allergen,
+        risk_seviyesi: c.risk_level,
+        müşteri_şiddeti: müşteriAlerjisi?.severity ?? null,
+        uyarı: c.warning_message ?? `${c.allergen} alerjisi bu hizmetle kontrendike.`,
+      }
+    })
+
+  const riskVar = uyarılar.length > 0
+  const yüksekRisk = uyarılar.some((w: any) => w.risk_seviyesi === 'high')
+
+  return {
+    success: true,
+    data: {
+      risk_var: riskVar,
+      uyarılar,
+      mesaj: riskVar
+        ? `⚠️ ${uyarılar.length} kontrendikasyon tespit edildi.${yüksekRisk ? ' Yüksek risk — hekim onayı önerilir.' : ''}`
+        : 'Kontrendikasyon yok. Hizmet güvenli görünüyor.',
+    },
+  }
+}
+
+// ── Diş Kliniği Handler'ları (Faz 3 — dental-clinic skill) ────────────────────
+
+async function handleListToothRecords(
+  admin: SupabaseAdmin,
+  businessId: string,
+  args: Record<string, any>,
+) {
+  const { data, error } = await admin
+    .from('tooth_records')
+    .select('tooth_number, condition, treatment, notes, treated_at')
+    .eq('business_id', businessId)
+    .eq('customer_id', args.customer_id)
+    .order('tooth_number', { ascending: true })
+
+  if (error) return { success: false, error: error.message }
+
+  const conditionLabel: Record<string, string> = {
+    healthy: 'Sağlıklı',
+    caries: 'Çürük',
+    filled: 'Dolgulu',
+    crown: 'Kronlu',
+    extracted: 'Çekilmiş',
+    implant: 'İmplant',
+    root_canal: 'Kanal tedavisi',
+    bridge: 'Köprü',
+    missing: 'Eksik',
+  }
+
+  const byCondition = (data ?? []).reduce((acc: Record<string, number>, r: any) => {
+    const label = conditionLabel[r.condition] ?? r.condition
+    acc[label] = (acc[label] || 0) + 1
+    return acc
+  }, {})
+
+  return {
+    success: true,
+    data: {
+      toplam_kayıt: data?.length ?? 0,
+      durum_özeti: byCondition,
+      dişler: (data ?? []).map((r: any) => ({
+        diş: r.tooth_number,
+        durum: conditionLabel[r.condition] ?? r.condition,
+        tedavi: r.treatment,
+        notlar: r.notes,
+        tedavi_tarihi: r.treated_at,
+      })),
+    },
+  }
+}
+
+async function handleUpdateToothRecord(
+  admin: SupabaseAdmin,
+  ctx: ToolCtx,
+  args: Record<string, any>,
+) {
+  const conditionLabel: Record<string, string> = {
+    healthy: 'Sağlıklı', caries: 'Çürük', filled: 'Dolgulu', crown: 'Kronlu',
+    extracted: 'Çekilmiş', implant: 'İmplant', root_canal: 'Kanal tedavisi',
+    bridge: 'Köprü', missing: 'Eksik',
+  }
+
+  const condStr = args.condition ? ` — ${conditionLabel[args.condition] ?? args.condition}` : ''
+  const treatStr = args.treatment ? ` (${args.treatment})` : ''
+  const preview = `Diş ${args.tooth_number}${condStr}${treatStr}`
+
+  const payload = {
+    business_id: ctx.businessId,
+    customer_id: args.customer_id,
+    tooth_number: Number(args.tooth_number),
+    condition: args.condition,
+    treatment: args.treatment ?? null,
+    notes: args.notes ?? null,
+    treated_at: args.treated_at ?? new Date().toISOString().split('T')[0],
+    treated_by_staff_id: ctx.staffId,
+  }
+
+  return createPendingAction(
+    admin,
+    ctx,
+    'update_tooth_record' as any,
+    payload,
+    preview,
+    { tooth_number: args.tooth_number, condition: args.condition, treatment: args.treatment },
+  )
 }

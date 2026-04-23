@@ -27,7 +27,7 @@ export function SummaryStats({
     subValue: string
     subKey?: MethodKey
     icon: React.ReactNode
-    color: string
+    tone: string
   }> = [
     {
       key: 'saved_time',
@@ -36,7 +36,7 @@ export function SummaryStats({
       subValue: `~${formatCurrency(savedMoneyEstimate)} zaman değeri`,
       subKey: 'saved_money',
       icon: <Clock className="h-5 w-5" />,
-      color: 'from-violet-500/10 to-violet-500/0',
+      tone: 'bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300',
     },
     {
       key: 'digital_revenue',
@@ -44,7 +44,7 @@ export function SummaryStats({
       value: formatCurrency(digitalRevenue),
       subValue: 'Online + AI + boş slot + kampanya',
       icon: <Wallet className="h-5 w-5" />,
-      color: 'from-emerald-500/10 to-emerald-500/0',
+      tone: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
     },
     {
       key: 'new_returning',
@@ -52,7 +52,7 @@ export function SummaryStats({
       value: `${newReturningCustomers} kişi`,
       subValue: 'Referans + geri kazanım',
       icon: <UserPlus className="h-5 w-5" />,
-      color: 'from-amber-500/10 to-amber-500/0',
+      tone: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
     },
   ]
 
@@ -61,11 +61,11 @@ export function SummaryStats({
       {cards.map(card => (
         <div
           key={card.key}
-          className={`card p-4 relative overflow-hidden bg-gradient-to-br ${card.color}`}
+          className="card p-4"
         >
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-pulse-100 dark:bg-pulse-900/30 text-pulse-900 dark:text-pulse-400">
+              <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${card.tone}`}>
                 {card.icon}
               </div>
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">

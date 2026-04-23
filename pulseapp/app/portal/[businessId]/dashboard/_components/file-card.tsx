@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { FileText, Image as ImageIcon, Folder, ChevronRight } from 'lucide-react'
 
 export interface PortalRecord {
@@ -81,15 +82,9 @@ export function FileCard({ record, onClick }: FileCardProps) {
       {thumbnails.length > 0 && (
         <div className="mt-3 grid grid-cols-3 gap-2">
           {thumbnails.map((url, i) => (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img
-              key={i}
-              src={url}
-              alt=""
-              loading="lazy"
-              decoding="async"
-              className="aspect-square w-full rounded-lg object-cover bg-gray-100 dark:bg-gray-800"
-            />
+            <div key={i} className="relative aspect-square rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+              <Image src={url} alt={record.title || 'Dosya önizleme'} fill className="object-cover" />
+            </div>
           ))}
         </div>
       )}
@@ -172,10 +167,9 @@ export function FileDetailModal({ record, onClose, onImageClick }: FileDetailMod
                     <button
                       key={i}
                       onClick={() => onImageClick?.(url)}
-                      className="aspect-square rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 hover:ring-2 hover:ring-pulse-900 transition-all"
+                      className="relative aspect-square rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 hover:ring-2 hover:ring-pulse-900 transition-all"
                     >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={url} alt={meta?.name || ''} className="w-full h-full object-cover" />
+                      <Image src={url} alt={meta?.name || ''} fill className="object-cover" />
                     </button>
                   ) : (
                     <a

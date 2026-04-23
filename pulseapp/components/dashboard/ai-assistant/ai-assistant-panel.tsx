@@ -241,7 +241,7 @@ export default function AIAssistantPanel({ businessName, sector, plan, permissio
         style={{ height: isMinimized ? 56 : 'min(600px, calc(100vh - 80px))' }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-purple-600 to-indigo-600 text-white flex-shrink-0">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-pulse-800 dark:border-pulse-900 bg-pulse-900 text-white flex-shrink-0">
           <div className="flex items-center gap-2">
             <Bot className="w-5 h-5" />
             <span className="font-semibold text-sm">PulseApp Asistan</span>
@@ -298,7 +298,7 @@ export default function AIAssistantPanel({ businessName, sector, plan, permissio
                           <div
                             key={conv.id}
                             className={`flex items-center justify-between px-3 py-2.5 text-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 ${
-                              conv.id === conversationId ? 'bg-indigo-50 dark:bg-indigo-900/30' : ''
+                              conv.id === conversationId ? 'bg-pulse-50 dark:bg-pulse-900/30' : ''
                             }`}
                           >
                             <span
@@ -332,7 +332,7 @@ export default function AIAssistantPanel({ businessName, sector, plan, permissio
                   newConversation()
                   setShowConversations(false)
                 }}
-                className="flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors"
+                className="flex items-center gap-1 text-xs text-pulse-900 dark:text-pulse-300 hover:text-pulse-700 dark:hover:text-pulse-200 transition-colors"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Yeni</span>
@@ -343,8 +343,8 @@ export default function AIAssistantPanel({ businessName, sector, plan, permissio
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 min-h-0">
               {messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center px-4">
-                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-purple-100 to-indigo-100 dark:from-purple-900/30 dark:to-indigo-900/30 flex items-center justify-center mb-4">
-                    <Sparkles className="w-7 h-7 text-indigo-600 dark:text-indigo-400" />
+                  <div className="w-14 h-14 rounded-full bg-pulse-50 dark:bg-pulse-900/30 ring-1 ring-pulse-100 dark:ring-pulse-800/40 flex items-center justify-center mb-4">
+                    <Sparkles className="w-7 h-7 text-pulse-900 dark:text-pulse-300" />
                   </div>
                   <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
                     Merhaba! Ben PulseApp Asistanınızım
@@ -357,7 +357,7 @@ export default function AIAssistantPanel({ businessName, sector, plan, permissio
                       <button
                         key={prompt}
                         onClick={() => handleQuickPrompt(prompt)}
-                        className="text-left text-xs px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors"
+                        className="text-left text-xs px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-pulse-300 dark:hover:border-pulse-600 transition-colors"
                       >
                         {prompt}
                       </button>
@@ -393,7 +393,7 @@ export default function AIAssistantPanel({ businessName, sector, plan, permissio
                   onKeyDown={handleKeyDown}
                   placeholder={{ idle: 'Mesajınızı yazın...', recording: 'Kaydediliyor...', transcribing: 'Çevriliyor...' }[recorderState]}
                   rows={1}
-                  className="flex-1 resize-none rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder:text-gray-400 dark:placeholder:text-gray-500 max-h-[100px]"
+                  className="flex-1 resize-none rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-pulse-900 focus:border-transparent placeholder:text-gray-400 dark:placeholder:text-gray-500 max-h-[100px]"
                   style={{ minHeight: 40 }}
                   onInput={(e) => {
                     const el = e.currentTarget
@@ -430,7 +430,7 @@ export default function AIAssistantPanel({ businessName, sector, plan, permissio
                   <button
                     onClick={handleSend}
                     disabled={!input.trim()}
-                    className="flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-indigo-600 text-white flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-md transition-all"
+                    className="flex-shrink-0 w-10 h-10 rounded-xl bg-pulse-900 hover:bg-pulse-800 text-white flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-md transition-all"
                     title="Gönder (Enter)"
                   >
                     <Send className="w-4 h-4" />

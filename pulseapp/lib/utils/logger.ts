@@ -9,11 +9,9 @@
  * ```
  *
  * - Development: renkli, okunabilir satır ('[INFO] api/book | msg | {context}')
- * - Production (`NODE_ENV==='production'`): tek satır JSON (Vercel log drain + ileride Sentry
- *   bridge kolay olacak şekilde)
+ * - Production (`NODE_ENV==='production'`): tek satır JSON (Vercel log drain uyumlu)
  * - Error instance'ları otomatik olarak `{name, message, stack}` şeklinde serialize edilir.
- *
- * Sprint 8'de Sentry devreye alındığında `error` seviyesi Sentry.captureException'a köprülenir.
+ * - `error` seviyesi Sentry'ye de köprülenir (`NEXT_PUBLIC_SENTRY_DSN` varsa).
  */
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error'
@@ -56,12 +54,31 @@ function normalizeContext(ctx: LogContext): LogContext {
   return out
 }
 
+/** `error` seviyesindeki logları Sentry'ye iletir. DSN yoksa sessizce geçer. */
+function captureSentry(message: string, merged: LogContext) {
+  if (process.env.NODE_ENV !== 'production' || !process.env.NEXT_PUBLIC_SENTRY_DSN) return
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const Sentry = require('@sentry/nextjs') as typeof import('@sentry/nextjs')
+    const err = merged.err ?? merged.error
+    if (err instanceof Error) {
+      Sentry.captureException(err, { extra: merged })
+    } else {
+      Sentry.captureMessage(message, { level: 'error', extra: merged })
+    }
+  } catch {
+    // Sentry henüz başlatılmamış — sessizce geç
+  }
+}
+
 function emit(level: LogLevel, base: LogContext, ctxOrMsg: LogContext | string, msg?: string) {
   if (LEVEL_RANK[level] < currentMinLevel()) return
 
   const message = typeof ctxOrMsg === 'string' ? ctxOrMsg : msg || ''
   const extra = typeof ctxOrMsg === 'string' ? {} : normalizeContext(ctxOrMsg)
   const merged = { ...base, ...extra }
+
+  if (level === 'error') captureSentry(message, merged)
 
   if (process.env.NODE_ENV === 'production') {
     const line = JSON.stringify({

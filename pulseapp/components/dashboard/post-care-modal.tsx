@@ -105,7 +105,7 @@ export function PostCareModal({
   return (
     <Portal>
       <div
-        className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/40 ${closing ? 'closing' : ''}`}
+        className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center ${closing ? 'closing' : ''}`}
         onClick={handleClose}
         onAnimationEnd={handleAnimationEnd}
       >
