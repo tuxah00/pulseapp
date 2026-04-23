@@ -308,17 +308,18 @@ export default function AppointmentsPage() {
 
   // Tek hiyerarşik ESC handler — önce en üstteki katman kapanır
   useEffect(() => {
-    const anyOpen = !!(slotPopup || showModal || selectedAppointment)
+    const anyOpen = !!(slotPopup || actionMenu || isSelecting || showModal || selectedAppointment)
     if (!anyOpen) return
     const h = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return
       if (slotPopup) { setSlotPopup(null); return }
+      if (actionMenu || isSelecting) { clearSelection(); return }
       if (showModal) { setIsClosingModal(true); return }
       if (selectedAppointment) { closePanelAnimated(); return }
     }
     document.addEventListener('keydown', h)
     return () => document.removeEventListener('keydown', h)
-  }, [slotPopup, showModal, selectedAppointment, closePanelAnimated])
+  }, [slotPopup, actionMenu, isSelecting, showModal, selectedAppointment, closePanelAnimated])
 
   function changeDate(days: number) {
     let d = new Date(selectedDate + 'T12:00:00')
@@ -864,17 +865,6 @@ export default function AppointmentsPage() {
     setSelectionEnd(null)
     setActionMenu(null)
   }
-
-  // ESC ile seçimi kapat
-  useEffect(() => {
-    const h = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && (actionMenu || isSelecting)) {
-        clearSelection()
-      }
-    }
-    document.addEventListener('keydown', h)
-    return () => document.removeEventListener('keydown', h)
-  }, [actionMenu, isSelecting])
 
   async function handleRescheduleSave(e: React.FormEvent) {
     e.preventDefault()
