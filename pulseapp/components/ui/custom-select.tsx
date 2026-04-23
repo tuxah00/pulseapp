@@ -64,11 +64,13 @@ export function CustomSelect({
     }
   }, [])
 
+  // Her açılışta public context'i yeniden kontrol et — mount sonrası
+  // portal render anında da doğru olması garanti
   useEffect(() => {
     if (!ref.current) return
     const inPublic = !!ref.current.closest('.public-page, .portal-layout, .booking-page')
     setIsPublicContext(inPublic)
-  }, [])
+  }, [open])
 
   useEffect(() => {
     if (!open) return
