@@ -66,7 +66,7 @@ export function BeforeAfterGallery({ photos }: BeforeAfterGalleryProps) {
               onClick={() => setActive(p)}
               className="relative aspect-square rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 hover:ring-2 hover:ring-pulse-900 transition-all"
             >
-              <Image src={p.photo_url} alt="" fill className="object-cover" />
+              <Image src={p.photo_url} alt={p.photo_type === 'before' ? 'Önce' : p.photo_type === 'after' ? 'Sonra' : 'Fotoğraf'} fill className="object-cover" />
             </button>
           ))}
         </div>

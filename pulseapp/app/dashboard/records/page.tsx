@@ -342,7 +342,7 @@ function ImageLightbox({ images, initialIndex, onClose, metadata }: {
       {/* Image */}
       <NextImage
         src={images[currentIndex]}
-        alt=""
+        alt={metadata?.[currentIndex]?.name || 'Kayıt görseli'}
         width={1200}
         height={900}
         className="max-h-[90vh] max-w-[90vw] object-contain rounded-lg select-none transition-opacity duration-200"
@@ -1200,7 +1200,7 @@ function RecordsPageInner() {
                                     }}
                                     className="block w-full aspect-square overflow-hidden hover:opacity-80 transition-opacity relative"
                                   >
-                                    <NextImage src={url} alt="" fill className="object-cover" />
+                                    <NextImage src={url} alt={fileName || 'Kayıt görseli'} fill className="object-cover" />
                                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
                                       <ZoomIn className="h-5 w-5 text-white drop-shadow-lg" />
                                     </div>

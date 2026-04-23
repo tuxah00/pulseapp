@@ -13,7 +13,7 @@ export default function AuthLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="flex min-h-screen">
+    <div className="public-page flex min-h-screen">
       {/* ── Sol panel: Marka (sadece md+) ── */}
       <div className="hidden md:flex md:w-[45%] lg:w-[40%] flex-col justify-between p-10 xl:p-14"
            style={{ background: 'linear-gradient(145deg, #1457e1 0%, #338dff 60%, #7c3aed 100%)' }}>
