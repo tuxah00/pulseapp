@@ -6,8 +6,12 @@
 // Her şablon bir InsightBlock'un çekirdeğini döndürür
 // (template_key ve category generate.ts'te eklenir).
 
-import type { InsightBlock, InsightTemplate, InsightAction } from './types'
-import type { CustomerSegment } from '@/types'
+import type {
+  InsightBlock,
+  InsightTemplate,
+  InsightAction,
+  InsightActionKind,
+} from './types'
 
 const pct = (value: number, fractionDigits = 0) =>
   `%${(value * 100).toFixed(fractionDigits)}`
@@ -47,7 +51,7 @@ export const revenueTemplates: InsightTemplate<RevenueInput>[] = [
             base_service: top?.label,
             reason: 'concentration_risk',
           }, true),
-          action('Winback kampanyası', 'send_winback', { segment: 'regular' }),
+          action('Winback kampanyası', 'create_campaign', { kind: 'winback', segment: 'regular' }),
         ],
         refineContext: { top: top?.label ?? '', share, total: i.totalRevenue },
       }
@@ -129,10 +133,10 @@ export const expenseTemplates: InsightTemplate<ExpenseInput>[] = [
       message: `Bu dönemde gider (${money(i.totalExpense)}), ciroyu (${money(i.totalRevenue)}) geçiyor. Sabit giderleri ve taşeron maliyetlerini gözden geçirmen gerekiyor.`,
       highlights: [`Açık: ${money(i.totalExpense - i.totalRevenue)}`],
       actions: [
-        action('Bütçe uyarısı kur', 'budget_alert', {
+        action('Bütçe uyarısı kur', 'update_business_settings', { setting: 'budget_alert',
           threshold_ratio: 0.9,
         }, true),
-        action('Aylık özet not', 'custom_note', { type: 'budget_review' }),
+        action('Aylık özet not', 'update_business_settings', { setting: 'note', type: 'budget_review' }),
       ],
       refineContext: { expense: i.totalExpense, revenue: i.totalRevenue },
     }),
@@ -154,7 +158,7 @@ export const expenseTemplates: InsightTemplate<ExpenseInput>[] = [
         message: `Toplam giderin ${pct(share)}'i sabit kalemlerden (kira + personel). Pazarlık alanı dar olduğundan kısa vadede ciroyu büyütmeye odaklanmak daha gerçekçi.`,
         highlights: [`Sabit pay: ${pct(share)}`],
         actions: [
-          action('Bütçe uyarısı kur', 'budget_alert', { threshold_ratio: 0.75 }, true),
+          action('Bütçe uyarısı kur', 'update_business_settings', { setting: 'budget_alert', threshold_ratio: 0.75 }, true),
           action('Ciro artırıcı kampanya', 'create_campaign', { tone: 'fill_capacity' }),
         ],
         refineContext: { fixedShare: share },
@@ -177,7 +181,7 @@ export const expenseTemplates: InsightTemplate<ExpenseInput>[] = [
         message: `Gider dağılımında "${top.category}" kalemi tek başına ${pct(top.amount / i.totalExpense)} pay alıyor. Bu kalemde sözleşme/fatura tekrar kontrol edilmeli.`,
         highlights: [`${top.category}: ${money(top.amount)}`],
         actions: [
-          action(`${top.category} bütçesi için uyarı`, 'budget_alert', {
+          action(`${top.category} bütçesi için uyarı`, 'update_business_settings', { setting: 'budget_alert',
             category: top.category,
           }, true),
         ],
@@ -297,7 +301,7 @@ export const serviceTemplates: InsightTemplate<ServiceInput>[] = [
         message: `"${weak.name}" hizmeti ${weak.sessionCount} seansa rağmen düşük ciro üretiyor (ortalama bilet ${money(weak.avgTicket)}). Fiyat revizyonu veya paket içinde konumlandırma değerlendirilebilir.`,
         highlights: [`${weak.name}: ${money(weak.revenue)} ciro`],
         actions: [
-          action('Hizmet fiyatını gözden geçir', 'adjust_service_price', {
+          action('Hizmet fiyatını gözden geçir', 'update_service', { intent: 'review_price',
             service_id: weak.id,
           }),
           action(`${weak.name} paketi öner`, 'create_package', {
@@ -363,7 +367,7 @@ export const campaignTemplates: InsightTemplate<CampaignInput>[] = [
       title: 'Aktif kampanya kaydı yok',
       message: `Son dönemde kampanya gönderimin olmamış. Risk segmentindeki müşterilere yönelik kısa bir winback ile başlayabiliriz.`,
       actions: [
-        action('Winback kampanyası başlat', 'send_winback', { segment: 'risk' }, true),
+        action('Winback kampanyası başlat', 'create_campaign', { kind: 'winback', segment: 'risk' }, true),
       ],
     }),
   },
@@ -508,7 +512,7 @@ export const messageFlowTemplates: InsightTemplate<MessageFlowInput>[] = [
         message: `"${best.label}" akışı ${pct(best.conversionRate, 1)} dönüşümle ${money(best.attributedRevenue)} ciroya katkı vermiş. Lost segmenti için ikinci bir dalga denemeye hazır.`,
         highlights: [`${best.label}: ${pct(best.conversionRate, 1)}`],
         actions: [
-          action('Lost segmente ikinci dalga', 'send_winback', {
+          action('Lost segmente ikinci dalga', 'create_campaign', { kind: 'winback',
             segment: 'lost',
           }, true),
         ],
@@ -539,7 +543,7 @@ export const messageFlowTemplates: InsightTemplate<MessageFlowInput>[] = [
         message: `"${f.label}" akışı son dönemde ${f.sentCount} kez gönderilmiş ama hiçbir randevuya dönüşmemiş. Kupon veya zaman sınırlı indirimle aksiyon çağrısını netleştirmek gerekiyor.`,
         highlights: [`${f.sentCount} gönderim → 0 randevu`],
         actions: [
-          action('Doğum günü şablonunu revize et', 'send_birthday_review', {
+          action('Doğum günü şablonunu revize et', 'toggle_message_flow', { kind: 'birthday', action: 'revise',
             template_name: f.template_name,
           }, true),
         ],
@@ -623,7 +627,7 @@ export const occupancyTemplates: InsightTemplate<OccupancyInput>[] = [
         action('Doluluk artırma kampanyası', 'create_campaign', {
           tone: 'fill_capacity',
         }, true),
-        action('Çalışma saatlerini gözden geçir', 'adjust_working_hours', {}),
+        action('Çalışma saatlerini gözden geçir', 'update_working_hours', {}),
       ],
       refineContext: { avg: i.avgRate, period: i.period },
     }),
@@ -666,7 +670,7 @@ export const occupancyTemplates: InsightTemplate<OccupancyInput>[] = [
         message: `"${high.label}" diliminde doluluk ${pct(high.rate)} — yeni müşteri bu saatlerde reddediliyor olabilir. Fiyatı hafif yukarı çekmek veya bekleme listesi açmak faydalı.`,
         highlights: [`${high.label}: ${pct(high.rate)}`],
         actions: [
-          action(`${high.label} için bekleme listesi kuralı`, 'custom_note', {
+          action(`${high.label} için bekleme listesi kuralı`, 'update_business_settings', { setting: 'note',
             note: 'waitlist_peak',
           }, true),
         ],
@@ -727,8 +731,8 @@ export const noShowTemplates: InsightTemplate<NoShowInput>[] = [
       actions: [
         action(
           i.confirmationsEnabled ? 'Onay SMS ayarlarını aç' : 'Onay SMS\'i etkinleştir',
-          'enable_confirmation_sms',
-          {},
+          'update_business_settings',
+          { setting: 'confirmation_sms_enabled', value: true },
           true
         ),
       ],
@@ -829,10 +833,16 @@ export const segmentTemplates: InsightTemplate<SegmentInput>[] = [
           `Büyüme: ${pct(growth)}`,
         ],
         actions: [
-          action('Risk segmentine winback', 'send_winback', {
+          action('Risk segmentine winback', 'create_campaign', { kind: 'winback',
             segment: 'risk',
           }, true),
-          action('Risk segmentini aç', 'open_segment_filter', { segment: 'risk' as CustomerSegment }),
+          action(
+            'Risk segmentini aç',
+            'navigate',
+            { segment: 'risk' },
+            false,
+            '/dashboard/customers?segment=risk'
+          ),
         ],
         refineContext: { growth, risk: i.distribution.risk },
       }
@@ -849,7 +859,7 @@ export const segmentTemplates: InsightTemplate<SegmentInput>[] = [
         title: 'Kayıp müşteri havuzu büyük',
         message: `Toplam müşterinin ${pct(share)}'i kayıp segmentinde (${i.distribution.lost} kişi). Güçlü bir ilk tur winback ile bir kısmı geri döndürülebilir.`,
         actions: [
-          action('Kayıp segmente winback', 'send_winback', {
+          action('Kayıp segmente winback', 'create_campaign', { kind: 'winback',
             segment: 'lost',
           }, true),
         ],
@@ -1012,16 +1022,18 @@ function roiRatio(c: CampaignItem): number {
 
 function action(
   label: string,
-  action_type: InsightAction['action_type'],
+  kind: InsightActionKind,
   payload: Record<string, unknown>,
-  primary = false
+  primary = false,
+  href?: string
 ): InsightAction {
   return {
-    key: `${action_type}_${Math.random().toString(36).slice(2, 8)}`,
+    key: `${kind}_${Math.random().toString(36).slice(2, 8)}`,
     label,
-    action_type,
+    kind,
     payload,
     primary,
+    ...(href ? { href } : {}),
   }
 }
 

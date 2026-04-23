@@ -40,31 +40,41 @@ export interface InsightBlock {
 
 /**
  * Tek tıkla ai_pending_actions kuyruğuna eklenebilecek öneri.
- * `action_type` ve `payload` değerleri POST /api/insights/apply ile eşleşir.
+ *
+ * Backend akışı:
+ *   1. UI "Uygula" butonuna basar
+ *   2. POST /api/insights/apply body: { kind, payload, title }
+ *   3. Endpoint `kind` → PendingActionType haritalamasıyla `ai_pending_actions`
+ *      satırı oluşturur.
+ *
+ * UI-only (navigate) aksiyonlar `kind: 'navigate'` olarak işaretlenir —
+ * bu durumda `href` alanına bakılır, pending action üretilmez.
  */
+export type InsightActionKind =
+  // ai_pending_actions'a düşen asıl önerilerin "insight tarafındaki adı"
+  | 'create_campaign'
+  | 'clone_campaign'
+  | 'create_package'
+  | 'create_message_flow'
+  | 'toggle_message_flow'
+  | 'update_service'
+  | 'update_working_hours'
+  | 'update_business_settings'
+  | 'schedule_reminder'
+  // UI-only (sayfa yönlendirme veya panel aksiyonu)
+  | 'navigate'
+
 export interface InsightAction {
   key: string
   label: string
-  action_type: InsightActionType
+  kind: InsightActionKind
   /** Endpoint'e aynen iletilir; kullanıcı metin editleyebilir. */
   payload: Record<string, unknown>
+  /** `kind: 'navigate'` için — dashboard içi URL. */
+  href?: string
   /** Birincil aksiyon mu? UI primary/ghost stilini buna göre seçer. */
   primary?: boolean
 }
-
-export type InsightActionType =
-  | 'create_campaign'
-  | 'create_package'
-  | 'create_message_flow'
-  | 'adjust_working_hours'
-  | 'adjust_service_price'
-  | 'schedule_reminder'
-  | 'open_segment_filter'
-  | 'send_winback'
-  | 'send_birthday_review'
-  | 'enable_confirmation_sms'
-  | 'budget_alert'
-  | 'custom_note'
 
 /**
  * Veri paterni → şablon eşlemesi. `generate()` bu şablonların match'ini
