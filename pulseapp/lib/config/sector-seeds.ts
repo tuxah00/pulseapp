@@ -1,4 +1,4 @@
-import type { SectorType } from '@/types'
+import type { CustomerSegment, RewardType, SectorType } from '@/types'
 
 /**
  * Onboarding sırasında işletmenin sektörüne göre otomatik eklenen örnek içerikler.
@@ -41,10 +41,40 @@ export interface SeedWorkflow {
   steps: SeedWorkflowStep[]
 }
 
+/**
+ * Kurulum sihirbazının "Ödüller" adımında sektörüne göre önerilen
+ * preset ödül şablonu. `trigger` / `triggerValue` alanları yalnızca UI
+ * açıklaması olarak kullanılır (DB'deki `rewards` tablosunda birebir kolon yok);
+ * kullanıcı seçip onayladığında bu bilgi `description` içine gömülüp yazılır.
+ */
+export interface SeedReward {
+  name: string
+  description: string
+  rewardType: RewardType
+  value: number
+  validDays: number
+  // UI göstergesi — "10. ziyaret", "doğum günü" gibi
+  triggerLabel: string
+}
+
+/**
+ * Kurulum sihirbazının "Kampanyalar" adımında sektörüne göre önerilen
+ * taslak kampanya. DB'ye `campaigns` tablosuna `status='draft'` ile yazılır.
+ */
+export interface SeedCampaign {
+  name: string
+  description: string
+  discountPercent?: number
+  targetSegments: CustomerSegment[] | null  // null = tüm müşteriler (segment filtresi yok)
+  messageTemplate: string
+}
+
 export interface SectorSeed {
   services: SeedService[]
   packages: SeedPackage[]
   workflows: SeedWorkflow[]
+  rewards: SeedReward[]
+  campaigns: SeedCampaign[]
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -99,6 +129,61 @@ const DENTAL_CLINIC_SEED: SectorSeed = {
       steps: [
         { delay_hours: 0, message: 'Doğum gününüz kutlu olsun! Bu ay içinde alacağınız temizlik randevusunda %15 indirim hediyemiz olsun.' },
       ],
+    },
+  ],
+  rewards: [
+    {
+      name: 'Yıllık Ücretsiz Kontrol',
+      description: 'Yılda bir kez ücretsiz muayene hediyesi.',
+      rewardType: 'free_service',
+      value: 0,
+      validDays: 365,
+      triggerLabel: '10. ziyarette',
+    },
+    {
+      name: 'Arkadaş Tavsiye İndirimi',
+      description: 'Yeni hasta getiren hastalara %15 indirim.',
+      rewardType: 'discount_percent',
+      value: 15,
+      validDays: 90,
+      triggerLabel: 'Tavsiye başına',
+    },
+    {
+      name: 'Doğum Günü Hediyesi',
+      description: 'Doğum ayında ücretsiz diş taşı temizliği.',
+      rewardType: 'free_service',
+      value: 0,
+      validDays: 30,
+      triggerLabel: 'Doğum gününde',
+    },
+  ],
+  campaigns: [
+    {
+      name: 'Bahar Temizlik Kampanyası',
+      description: 'Tüm hastalar için bahar dönemi diş taşı temizliği indirimi.',
+      discountPercent: 20,
+      targetSegments: null,
+      messageTemplate: 'Merhaba {name}, bahar geldi! Diş taşı temizliği randevunuzda %20 indirim sizi bekliyor. Randevu: {link}',
+    },
+    {
+      name: 'Beyazlatma + Kontrol Paketi',
+      description: 'Yeni ve düzenli hastalara özel kombine paket indirimi.',
+      discountPercent: 30,
+      targetSegments: ['new', 'regular'],
+      messageTemplate: 'Merhaba {name}, beyazlatma + kontrol paketimizde %30 indirim! Detay: {link}',
+    },
+    {
+      name: '6 Aylık Kontrol Hatırlatma Bonusu',
+      description: 'Son 6 aydır gelmemiş hastalara kontrol randevusunda bonus.',
+      discountPercent: 15,
+      targetSegments: ['risk', 'lost'],
+      messageTemplate: 'Sizi özledik {name}! 6 aylık rutin kontrolünüzde %15 indirim hediyemiz olsun. Randevu: {link}',
+    },
+    {
+      name: 'İmplant Danışmanlığı Ücretsiz',
+      description: 'İmplant düşünen hastalara ücretsiz konsültasyon kampanyası.',
+      targetSegments: null,
+      messageTemplate: 'Merhaba {name}, implant tedavisini merak ediyorsanız ücretsiz konsültasyon için bize ulaşın: {link}',
     },
   ],
 }
@@ -157,6 +242,61 @@ const MEDICAL_AESTHETIC_SEED: SectorSeed = {
       steps: [
         { delay_hours: 0, message: 'Doğum gününüz kutlu olsun! Bu ay içinde alacağınız uygulamalarda %10 indirim hediyemiz olsun.' },
       ],
+    },
+  ],
+  rewards: [
+    {
+      name: '10. Seansta %20 İndirim',
+      description: '10. uygulamasını tamamlayan hastalara %20 indirim.',
+      rewardType: 'discount_percent',
+      value: 20,
+      validDays: 60,
+      triggerLabel: '10. ziyarette',
+    },
+    {
+      name: 'Arkadaş Getirene Ücretsiz Mezoterapi',
+      description: '5 yeni hasta tavsiye edene bir seans ücretsiz mezoterapi.',
+      rewardType: 'free_service',
+      value: 0,
+      validDays: 180,
+      triggerLabel: '5 tavsiye sonrası',
+    },
+    {
+      name: 'Doğum Günü Hediyesi',
+      description: 'Doğum ayında ürün/uygulama hediyesi.',
+      rewardType: 'gift',
+      value: 0,
+      validDays: 30,
+      triggerLabel: 'Doğum gününde',
+    },
+  ],
+  campaigns: [
+    {
+      name: 'İlk Seans %20 İndirim',
+      description: 'Yeni hastalar için ilk uygulama indirimi.',
+      discountPercent: 20,
+      targetSegments: ['new'],
+      messageTemplate: 'Hoş geldiniz {name}! İlk seansınızda %20 indirim sizi bekliyor. Randevu: {link}',
+    },
+    {
+      name: 'Yaza Hazırlık: Lazer Epilasyon',
+      description: 'Lazer paketlerinde sezon indirimi.',
+      discountPercent: 15,
+      targetSegments: null,
+      messageTemplate: 'Merhaba {name}, yaz yaklaşıyor! Lazer epilasyon paketlerinde %15 indirim. Detay: {link}',
+    },
+    {
+      name: 'Dolguda 2. Seans Hediye',
+      description: 'Düzenli hastalara dolgu paketi promosyonu.',
+      targetSegments: ['regular'],
+      messageTemplate: 'Merhaba {name}, bu ay dolgu uygulamanıza 2. seans hediye. Randevu: {link}',
+    },
+    {
+      name: 'VIP Hastalarımıza Özel PRP',
+      description: 'VIP segment için PRP uygulamasında %25 indirim.',
+      discountPercent: 25,
+      targetSegments: ['vip'],
+      messageTemplate: 'Değerli hastamız {name}, PRP uygulamanızda size özel %25 indirim hazırladık. Detay: {link}',
     },
   ],
 }

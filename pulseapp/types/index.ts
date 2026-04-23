@@ -492,6 +492,21 @@ export interface BusinessSettings {
   ai_preferences?: AIPreferences
   ai_memory?: AIMemory
   ai_permissions?: AIPermissions
+  // Kurulum sihirbazı (medical_aesthetic + dental_clinic için)
+  wizard_completed?: boolean
+  wizard_step?: number
+  // Randevudan 24 saat sonra "Nasıl hissediyorsunuz?" takip mesajı
+  follow_up_24h_enabled?: boolean
+  // Doğum günü SMS açık/kapalı bayrağı (birthday_sms_enabled zaten yukarıda mevcut)
+  // Wizard'dan özelleştirilmiş mesaj metinleri — ilgili cron/otomasyonlar bu alanı okur
+  message_templates?: {
+    reminder_24h?: string
+    reminder_2h?: string
+    review_request?: string
+    follow_up_24h?: string
+    winback?: string
+    birthday?: string
+  }
 }
 
 export type AIAssistantTone = 'samimi' | 'formal' | 'kisa'
