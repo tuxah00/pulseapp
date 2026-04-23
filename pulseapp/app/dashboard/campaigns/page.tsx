@@ -30,7 +30,7 @@ const SEGMENT_COLORS: Record<CustomerSegment, string> = {
 
 const STATUS_CONFIG = {
   draft: { label: 'Taslak', icon: FileText, color: 'text-gray-500 dark:text-gray-400', bg: 'bg-gray-100 dark:bg-gray-800', badge: 'badge-warning' },
-  scheduled: { label: 'Zamanlandı', icon: CalendarClock, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-900/20', badge: 'badge-warning' },
+  scheduled: { label: 'Zamanlandı', icon: CalendarClock, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-900/20', badge: 'badge-info' },
   sending: { label: 'Gönderiliyor', icon: Send, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-900/20', badge: 'badge-warning' },
   completed: { label: 'Tamamlandı', icon: CheckCircle2, color: 'text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-900/20', badge: 'badge-success' },
   cancelled: { label: 'İptal', icon: Ban, color: 'text-red-500 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-900/20', badge: 'badge-danger' },

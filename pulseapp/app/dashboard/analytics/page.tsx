@@ -1078,7 +1078,7 @@ export default function AnalyticsPage() {
                         </td>
                         <td className="table-cell font-medium text-gray-900 dark:text-gray-100">
                           {income.category}
-                          {income.is_recurring && <span className="ml-1.5 badge-success text-[10px]">Tekrar</span>}
+                          {income.is_recurring && <span className="ml-1.5 badge-info text-[10px]">Tekrar</span>}
                         </td>
                         <td className="table-cell text-gray-500 dark:text-gray-400">{income.description || '—'}</td>
                         <td className="table-cell text-right font-medium text-green-600">{formatCurrency(income.amount)}</td>

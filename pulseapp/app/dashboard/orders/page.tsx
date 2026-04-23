@@ -46,7 +46,7 @@ const STATUS_CONFIG: Record<string, { label: string; badge: string; icon: Lucide
   pending: { label: 'Bekliyor', badge: 'badge-warning', icon: Clock },
   preparing: { label: 'Hazırlanıyor', badge: 'badge-info', icon: ChefHat },
   ready: { label: 'Hazır', badge: 'badge-success', icon: CheckCircle },
-  served: { label: 'Servis Edildi', badge: 'badge bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300', icon: ClipboardList },
+  served: { label: 'Servis Edildi', badge: 'badge-success', icon: ClipboardList },
   paid: { label: 'Ödendi', badge: 'badge-neutral', icon: CreditCard },
   cancelled: { label: 'İptal', badge: 'badge-danger', icon: XCircle },
 }

@@ -1014,8 +1014,8 @@ export default function KasaPage() {
                       <td className="table-cell">
                         <span className={
                           tx.payment_status === 'paid' ? 'badge-success' :
-                          tx.payment_status === 'partial' ? 'badge-warning' :
-                          'badge-neutral'
+                          tx.payment_status === 'partial' ? 'badge-info' :
+                          'badge-warning'
                         }>
                           {tx.payment_status === 'paid' ? 'Ödendi' : tx.payment_status === 'partial' ? 'Kısmi' : 'Bekliyor'}
                         </span>
