@@ -1,5 +1,5 @@
 {
-  "ignoreCommand": "case \"$VERCEL_GIT_COMMIT_REF\" in main|develop|claude-develop) exit 1 ;; *) exit 0 ;; esac",
+  "ignoreCommand": "case \"$VERCEL_GIT_COMMIT_REF\" in claude/*) exit 0 ;; *) exit 1 ;; esac",
   "crons": [
     { "path": "/api/cron/daily", "schedule": "0 9 * * *" },
     { "path": "/api/cron/birthday", "schedule": "0 8 * * *" }
