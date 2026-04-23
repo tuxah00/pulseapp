@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+// RLS bypass: staff_invitations için RLS yok, davet linki üretimi auth owner check'inden sonra admin ile yapılır
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logAuditServer } from '@/lib/utils/audit'
 import { resolveActiveStaffForApi } from '@/lib/auth/active-business'

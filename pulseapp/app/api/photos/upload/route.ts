@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+// RLS bypass: Supabase Storage bucket auto-create + yazma (storage RLS ayrı politikalar, auth wrapper üzerinden yetki kontrolü zaten yapıldı)
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireWritePermission } from '@/lib/api/with-permission'
 

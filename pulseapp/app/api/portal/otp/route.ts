@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+// RLS bypass: portal endpoint — müşteri henüz Supabase auth user değil, OTP oluşturma RLS dışı
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendMessage } from '@/lib/messaging/send'
 import { phoneOrFilter } from '@/lib/utils/phone'

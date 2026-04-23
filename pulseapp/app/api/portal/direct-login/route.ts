@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+// RLS bypass: portal endpoint — müşteri henüz Supabase auth user değil, direct login RLS dışı
 import { createAdminClient } from '@/lib/supabase/admin'
 import { phoneOrFilter } from '@/lib/utils/phone'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'

@@ -1,26 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
-
-async function verifyMembership(
-  supabase: ReturnType<typeof createServerSupabaseClient>,
-  userId: string,
-  businessId: string,
-) {
-  const { data } = await supabase
-    .from('staff_members')
-    .select('id')
-    .eq('user_id', userId)
-    .eq('business_id', businessId)
-    .single()
-  return data
-}
+import { requirePermission, requireWritePermission } from '@/lib/api/with-permission'
 
 // GET: Hastanın tüm diş kayıtları
 export async function GET(request: NextRequest) {
-  const supabase = createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
+  const auth = await requirePermission(request, 'customers')
+  if (!auth.ok) return auth.response
 
   const { searchParams } = new URL(request.url)
   const businessId = searchParams.get('businessId')
@@ -28,12 +13,13 @@ export async function GET(request: NextRequest) {
   if (!businessId || !customerId) {
     return NextResponse.json({ error: 'businessId ve customerId gerekli' }, { status: 400 })
   }
+  if (businessId !== auth.ctx.businessId) {
+    return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
+  }
 
-  const staff = await verifyMembership(supabase, user.id, businessId)
-  if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
-
-  const admin = createAdminClient()
-  const { data, error } = await admin
+  // RLS: tooth_records_business_isolation — business_id IN staff_members WHERE user_id = auth.uid()
+  const supabase = createServerSupabaseClient()
+  const { data, error } = await supabase
     .from('tooth_records')
     .select('*, staff:treated_by_staff_id(id, name)')
     .eq('business_id', businessId)
@@ -46,9 +32,8 @@ export async function GET(request: NextRequest) {
 
 // POST/PATCH: Diş kaydı oluştur veya güncelle (upsert by tooth_number)
 export async function POST(request: NextRequest) {
-  const supabase = createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
+  const auth = await requireWritePermission(request, 'customers')
+  if (!auth.ok) return auth.response
 
   const body = await request.json()
   const { businessId, customerId, toothNumber, condition, treatment, notes, treatedAt } = body
@@ -56,11 +41,12 @@ export async function POST(request: NextRequest) {
   if (!businessId || !customerId || !toothNumber || !condition) {
     return NextResponse.json({ error: 'businessId, customerId, toothNumber ve condition gerekli' }, { status: 400 })
   }
+  if (businessId !== auth.ctx.businessId) {
+    return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
+  }
 
-  const staff = await verifyMembership(supabase, user.id, businessId)
-  if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
-
-  const admin = createAdminClient()
+  // RLS: tooth_records_business_isolation — business_id match zorunlu
+  const supabase = createServerSupabaseClient()
   const payload = {
     business_id: businessId,
     customer_id: customerId,
@@ -69,10 +55,10 @@ export async function POST(request: NextRequest) {
     treatment: treatment || null,
     notes: notes || null,
     treated_at: treatedAt || null,
-    treated_by_staff_id: staff.id,
+    treated_by_staff_id: auth.ctx.staffId,
   }
 
-  const { data, error } = await admin
+  const { data, error } = await supabase
     .from('tooth_records')
     .upsert(payload, { onConflict: 'business_id,customer_id,tooth_number' })
     .select()
@@ -84,9 +70,8 @@ export async function POST(request: NextRequest) {
 
 // DELETE: Diş kaydını sil (sadece tooth_number bazlı)
 export async function DELETE(request: NextRequest) {
-  const supabase = createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
+  const auth = await requireWritePermission(request, 'customers')
+  if (!auth.ok) return auth.response
 
   const { searchParams } = new URL(request.url)
   const businessId = searchParams.get('businessId')
@@ -96,12 +81,13 @@ export async function DELETE(request: NextRequest) {
   if (!businessId || !customerId || !toothNumber) {
     return NextResponse.json({ error: 'businessId, customerId ve toothNumber gerekli' }, { status: 400 })
   }
+  if (businessId !== auth.ctx.businessId) {
+    return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
+  }
 
-  const staff = await verifyMembership(supabase, user.id, businessId)
-  if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
-
-  const admin = createAdminClient()
-  const { error } = await admin
+  // RLS: tooth_records_business_isolation — business_id match zorunlu
+  const supabase = createServerSupabaseClient()
+  const { error } = await supabase
     .from('tooth_records')
     .delete()
     .eq('business_id', businessId)

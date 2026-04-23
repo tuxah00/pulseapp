@@ -29,6 +29,7 @@ export async function logAuditServer(params: {
   ipAddress?: string | null
 }) {
   try {
+    // RLS bypass: audit_logs INSERT için user policy yok (sadece service role); audit kaydı her çağrıdan güvenle yazılmalı
     const { createAdminClient } = await import('@/lib/supabase/admin')
     const admin = createAdminClient()
     await admin.from('audit_logs').insert({
