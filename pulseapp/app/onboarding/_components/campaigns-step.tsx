@@ -97,11 +97,12 @@ export default function CampaignsStep({ seedCampaigns, onCampaignsChange }: Camp
           return (
             <div
               key={`${c.name}-${i}`}
+              style={{ ['--stagger-index' as string]: i }}
               className={[
-                'overflow-hidden rounded-xl border-2 transition-all duration-200',
+                'wizard-card-stagger overflow-hidden rounded-xl border-2 transition-all duration-200',
                 isSelected
                   ? 'border-white bg-white text-pulse-900 shadow-xl'
-                  : 'border-white/20 bg-white/5 text-white hover:border-white/40 hover:bg-white/10',
+                  : 'border-white/20 bg-white/5 text-white hover:-translate-y-0.5 hover:border-white/40 hover:bg-white/10',
               ].join(' ')}
             >
               <button

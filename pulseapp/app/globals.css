@@ -714,6 +714,41 @@ a, button {
   animation: wizardFadeIn 0.4s ease-out both;
 }
 
+/* Kart stagger — her karta inline style ile --stagger-index verilir */
+@keyframes wizardCardRise {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.wizard-card-stagger {
+  animation: wizardCardRise 0.4s ease-out both;
+  animation-delay: calc(var(--stagger-index, 0) * 60ms);
+}
+
+/* Adım geçişleri — wizard-container'da key değişimiyle remount ve slideIn */
+@keyframes wizardStepSlideIn {
+  from { opacity: 0; transform: translateX(24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.animate-wizard-step {
+  animation: wizardStepSlideIn 0.35s cubic-bezier(0.25, 0.9, 0.3, 1) both;
+}
+
+/* Hareket kısıtlaması tercih edenler için animasyonları devre dışı bırak */
+@media (prefers-reduced-motion: reduce) {
+  .animate-welcome-icon,
+  .animate-welcome-title-1,
+  .animate-welcome-title-2,
+  .animate-welcome-sub,
+  .animate-welcome-cta,
+  .animate-rewards-reveal,
+  .animate-wizard-confetti,
+  .animate-wizard-finish,
+  .animate-wizard-step,
+  .wizard-card-stagger {
+    animation: none !important;
+  }
+}
+
 /* Sihirbaz tamamlama ekranı — konfeti + kart girişi */
 @keyframes wizardConfettiFall {
   0%   { transform: translateY(0) rotate(0deg); opacity: 1; }

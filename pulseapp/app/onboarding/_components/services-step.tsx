@@ -50,11 +50,9 @@ export default function ServicesStep({ seedServices, onServicesChange }: Service
   const [customCards, setCustomCards] = useState<CustomCard[]>([])
 
   const updateSeed = (key: string, patch: Partial<SeedCardState>) => {
-    setSeedState(prev => {
-      const next = { ...prev, [key]: { ...prev[key], ...patch } }
-      emit(next, customCards)
-      return next
-    })
+    const next = { ...seedState, [key]: { ...seedState[key], ...patch } }
+    setSeedState(next)
+    emit(next, customCards)
   }
 
   const addCustom = () => {
@@ -117,17 +115,18 @@ export default function ServicesStep({ seedServices, onServicesChange }: Service
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {seedServices.map(s => {
+        {seedServices.map((s, idx) => {
           const state = seedState[s.key]
           const isSelected = state?.selected ?? false
           return (
             <div
               key={s.key}
+              style={{ ['--stagger-index' as string]: idx }}
               className={[
-                'relative overflow-hidden rounded-xl border-2 transition-all duration-200',
+                'wizard-card-stagger relative overflow-hidden rounded-xl border-2 transition-all duration-200',
                 isSelected
                   ? 'border-white bg-white text-pulse-900 shadow-xl'
-                  : 'border-white/20 bg-white/5 text-white hover:border-white/40 hover:bg-white/10',
+                  : 'border-white/20 bg-white/5 text-white hover:-translate-y-0.5 hover:border-white/40 hover:bg-white/10',
               ].join(' ')}
             >
               <button

@@ -94,9 +94,11 @@ export default function WizardShell({
         </div>
       )}
 
-      {/* İçerik */}
+      {/* İçerik — key={currentStep} her adım geçişinde remount + slide-in tetikler */}
       <div className="flex flex-1 items-center justify-center px-6 py-8">
-        <div className="w-full max-w-3xl">{children}</div>
+        <div key={currentStep} className="animate-wizard-step w-full max-w-3xl">
+          {children}
+        </div>
       </div>
 
       {/* Action bar (alt) */}

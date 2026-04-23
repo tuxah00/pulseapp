@@ -148,14 +148,15 @@ export default function WorkflowsStep({ onSelectionChange }: WorkflowsStepProps)
       </div>
 
       <div className="space-y-2">
-        {PRESETS.map(p => {
+        {PRESETS.map((p, idx) => {
           const on = enabled[p.key]
           const isOpen = expanded === p.key
           return (
             <div
               key={p.key}
+              style={{ ['--stagger-index' as string]: idx }}
               className={[
-                'overflow-hidden rounded-xl border-2 transition-all',
+                'wizard-card-stagger overflow-hidden rounded-xl border-2 transition-all',
                 on ? 'border-white bg-white' : 'border-white/20 bg-white/5',
               ].join(' ')}
             >
