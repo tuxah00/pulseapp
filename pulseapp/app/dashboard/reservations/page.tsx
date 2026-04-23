@@ -337,7 +337,7 @@ export default function ReservationsPage() {
         </div>
         <div className="rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-4">
           <p className="text-xs text-gray-500 dark:text-gray-400">Oturdu</p>
-          <p className="mt-1 text-2xl font-bold text-purple-600 dark:text-purple-400">{seated}</p>
+          <p className="mt-1 text-2xl font-bold text-emerald-600 dark:text-emerald-400">{seated}</p>
         </div>
         <div className="rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-4">
           <p className="text-xs text-gray-500 dark:text-gray-400">Gelmedi</p>

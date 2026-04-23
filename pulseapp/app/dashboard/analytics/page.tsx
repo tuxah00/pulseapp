@@ -712,8 +712,8 @@ export default function AnalyticsPage() {
               <p className="text-xs text-gray-500 mt-1">Tekrar Gelen</p>
             </div>
             <div className="card p-4 text-center">
-              <p className="text-2xl font-bold text-purple-600">{formatCurrency(avgCLV)}</p>
-              <p className="text-xs text-gray-500 mt-1">Ortalama {customerLabel} Değeri</p>
+              <p className="text-2xl font-bold text-pulse-900 dark:text-pulse-300">{formatCurrency(avgCLV)}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Ortalama {customerLabel} Değeri</p>
             </div>
           </div>
 
@@ -1124,7 +1124,7 @@ export default function AnalyticsPage() {
                 </div>
                 <div className="card p-4">
                   <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-1">Ort. Hizmet Başına</p>
-                  <p className="text-lg font-bold text-purple-600">{formatCurrency(serviceRevenueWithEstimates.length > 0 ? Math.round(serviceRevenueWithEstimates.reduce((s, sv) => s + sv.revenue, 0) / serviceRevenueWithEstimates.length) : 0)}</p>
+                  <p className="text-lg font-bold text-pulse-900 dark:text-pulse-300">{formatCurrency(serviceRevenueWithEstimates.length > 0 ? Math.round(serviceRevenueWithEstimates.reduce((s, sv) => s + sv.revenue, 0) / serviceRevenueWithEstimates.length) : 0)}</p>
                 </div>
                 <div className="card p-4">
                   <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-1">Aktif Hizmet Sayısı</p>
