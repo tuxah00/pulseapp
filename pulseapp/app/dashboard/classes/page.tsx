@@ -387,7 +387,7 @@ export default function ClassesPage() {
         <Portal>
         <div className={`fixed inset-0 flex items-center justify-center z-[60] p-4 modal-overlay ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
           <div className={`bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-md p-6 modal-content ${isClosingModal ? 'closing' : ''}`}>
-            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
+            <h2 className="h-section mb-4">
               {editingClass ? 'Sınıfı Düzenle' : 'Yeni Sınıf Ekle'}
             </h2>
 

@@ -397,7 +397,7 @@ export default function ProtocolsPage() {
           <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none">
           <div className={`modal-content bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto pointer-events-auto ${isClosingCreate ? 'closing' : ''}`}>
             <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Yeni Tedavi Protokolü</h2>
+              <h2 className="h-section">Yeni Tedavi Protokolü</h2>
               <button onClick={() => { closeCreate(); resetForm() }} className="text-gray-400 hover:text-gray-600">
                 <X className="h-5 w-5" />
               </button>

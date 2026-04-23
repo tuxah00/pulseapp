@@ -254,7 +254,7 @@ export default function AISettingsPage() {
           <Sparkles className="w-5 h-5" />
         </div>
         <div>
-          <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">AI Asistan Tercihleri</h1>
+          <h1 className="h-page">AI Asistan Tercihleri</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">Asistanın tonu, hatırlatma varsayılanı ve işletmene özel talimatlar.</p>
         </div>
       </header>
