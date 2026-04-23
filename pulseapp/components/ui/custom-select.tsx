@@ -39,6 +39,13 @@ export function CustomSelect({
   const ref = useRef<HTMLDivElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const [pos, setPos] = useState<{ top?: number; bottom?: number; left: number; width: number }>({ left: 0, width: 0 })
+  /**
+   * Public sayfalar (auth, portal, booking) her zaman light mode kalır.
+   * Portal document.body'ye render edildiği için .public-page kuralları
+   * dışına çıkar — bu yüzden trigger'ın ataları kontrol edilip dropdown
+   * için manuel olarak light sınıflar uygulanır.
+   */
+  const [isPublicContext, setIsPublicContext] = useState(false)
   const selected = options.find(o => o.value === value)
 
   /** Dropdown max yüksekliği (max-h-52 = 13rem = 208px) */
@@ -55,6 +62,12 @@ export function CustomSelect({
     } else {
       setPos({ top: rect.bottom + 4, left: rect.left, width: rect.width })
     }
+  }, [])
+
+  useEffect(() => {
+    if (!ref.current) return
+    const inPublic = !!ref.current.closest('.public-page, .portal-layout, .booking-page')
+    setIsPublicContext(inPublic)
   }, [])
 
   useEffect(() => {
@@ -111,7 +124,12 @@ export function CustomSelect({
         <div
           ref={dropdownRef}
           style={{ position: 'fixed', top: pos.top, bottom: pos.bottom, left: pos.left, width: pos.width, zIndex: 9999 }}
-          className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xl rounded-xl overflow-hidden"
+          className={cn(
+            'border shadow-xl rounded-xl overflow-hidden',
+            isPublicContext
+              ? 'bg-white border-gray-200'
+              : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+          )}
         >
           <div className="max-h-52 overflow-y-auto py-1">
             {/* Placeholder / "Tümü" seçeneği */}
@@ -122,8 +140,12 @@ export function CustomSelect({
                 className={cn(
                   'w-full text-left px-3 py-2 text-sm transition-colors flex items-center justify-between gap-2',
                   !value
-                    ? 'bg-pulse-50 text-pulse-900 dark:bg-pulse-900/30 dark:text-pulse-300 font-medium'
-                    : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    ? isPublicContext
+                      ? 'bg-pulse-50 text-pulse-900 font-medium'
+                      : 'bg-pulse-50 text-pulse-900 dark:bg-pulse-900/30 dark:text-pulse-300 font-medium'
+                    : isPublicContext
+                      ? 'text-gray-500 hover:bg-gray-100'
+                      : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
                 )}
               >
                 <span>{placeholder || 'Tümü'}</span>
@@ -140,8 +162,12 @@ export function CustomSelect({
                 className={cn(
                   'w-full text-left px-3 py-2 text-sm transition-colors flex items-center justify-between gap-2',
                   value === opt.value
-                    ? 'bg-pulse-50 text-pulse-900 dark:bg-pulse-900/30 dark:text-pulse-300 font-medium'
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    ? isPublicContext
+                      ? 'bg-pulse-50 text-pulse-900 font-medium'
+                      : 'bg-pulse-50 text-pulse-900 dark:bg-pulse-900/30 dark:text-pulse-300 font-medium'
+                    : isPublicContext
+                      ? 'text-gray-700 hover:bg-gray-100'
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                 )}
               >
                 <span className="truncate">{opt.label}</span>

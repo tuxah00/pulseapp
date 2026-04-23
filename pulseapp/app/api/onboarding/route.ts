@@ -88,13 +88,6 @@ async function seedSectorContent(
 
 export async function POST(request: NextRequest) {
   try {
-    // Kimlik doğrulama
-    const authClient = createServerSupabaseClient()
-    const { data: { user } } = await authClient.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
-    }
-
     const body = await request.json()
     const { user_id, business_name, sector, phone, city } = body
 
@@ -105,12 +98,34 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Gönderilen user_id'nin oturum açan kullanıcıyla eşleştiğini doğrula
-    if (user_id !== user.id) {
-      return NextResponse.json({ error: 'Yetkisiz: kullanıcı doğrulaması başarısız' }, { status: 403 })
+    // Kimlik doğrulama — cookie session'ı varsa user_id ile eşleşmeli.
+    // Cookie henüz yazılmadıysa (signUp sonrası timing) admin client ile
+    // user_id'nin auth'ta gerçekten var olduğunu doğrula.
+    const authClient = createServerSupabaseClient()
+    const { data: { user } } = await authClient.auth.getUser()
+    const supabase = createAdminClient()
+
+    if (user) {
+      if (user_id !== user.id) {
+        return NextResponse.json({ error: 'Yetkisiz: kullanıcı doğrulaması başarısız' }, { status: 403 })
+      }
+    } else {
+      // Session yoksa: admin client ile user'ın var olduğunu doğrula
+      const { data: adminUser, error: adminErr } = await supabase.auth.admin.getUserById(user_id)
+      if (adminErr || !adminUser?.user) {
+        return NextResponse.json({ error: 'Yetkisiz: kullanıcı bulunamadı' }, { status: 401 })
+      }
     }
 
-    const supabase = createAdminClient()
+    // Idempotent: bu kullanıcı için zaten işletme varsa onu dön (retry güvenli)
+    const { data: existingStaff } = await supabase
+      .from('staff_members')
+      .select('business_id')
+      .eq('user_id', user_id)
+      .maybeSingle()
+    if (existingStaff?.business_id) {
+      return NextResponse.json({ business_id: existingStaff.business_id, existing: true })
+    }
 
     // Supabase fonksiyonunu çağır
     const { data, error } = await supabase.rpc('create_business_for_user', {

@@ -58,61 +58,77 @@ export default function RegisterPage() {
       },
     })
 
+    // "User already registered" — önceki denemede user oluşmuş, işletme
+    // oluşturma adımı bozulmuş. Sign-in deneyelim ve onboarding'i tamamlayalım.
+    if (authError && /already\s*registered|already\s*exists/i.test(authError.message)) {
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
+      if (signInError || !signInData.user) {
+        setError(
+          'Bu e-posta ile hesap zaten var. Farklı e-posta deneyin ya da giriş yapın.'
+        )
+        setLoading(false)
+        return
+      }
+      // Sign-in başarılı — aşağıdaki onboarding bloğunda aynı user_id ile devam edeceğiz
+      await completeOnboarding(signInData.user.id, !!signInData.session)
+      return
+    }
+
     if (authError) {
       setError(authError.message)
       setLoading(false)
       return
     }
 
-    // E-posta onayı gerekiyorsa (Supabase varsayılan ayarı)
-    if (authData.user && !authData.session) {
-      const res = await fetch('/api/onboarding', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: authData.user.id,
-          business_name: businessName,
-          sector,
-          phone,
-          city,
-        }),
-      })
+    if (authData.user) {
+      await completeOnboarding(authData.user.id, !!authData.session)
+    }
+  }
 
-      if (!res.ok) {
-        console.error('Onboarding hatası:', await res.text())
+  async function completeOnboarding(userId: string, hasSession: boolean) {
+    const res = await fetch('/api/onboarding', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: userId,
+        business_name: businessName,
+        sector,
+        phone,
+        city,
+      }),
+    })
+
+    if (!res.ok) {
+      let serverMessage = ''
+      try {
+        const j = await res.json()
+        serverMessage = j?.error || ''
+      } catch {
+        serverMessage = await res.text().catch(() => '')
       }
-
+      setError(
+        'İşletme oluşturulurken bir hata oluştu' +
+          (serverMessage ? `: ${serverMessage}` : '. Lütfen tekrar deneyin.')
+      )
       setLoading(false)
-      setError(null)
-      setNotice('Kayıt başarılı! E-posta adresinize onay linki gönderildi. Lütfen gelen kutunuzu kontrol edin.')
       return
     }
 
-    // E-posta onayı kapalıysa direkt session var
-    if (authData.user && authData.session) {
-      const res = await fetch('/api/onboarding', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: authData.user.id,
-          business_name: businessName,
-          sector,
-          phone,
-          city,
-        }),
-      })
-
-      if (!res.ok) {
-        setError('İşletme oluşturulurken bir hata oluştu.')
-        setLoading(false)
-        return
-      }
-
-      // Öncelikli sektörlerde kurulum sihirbazına yönlen; diğerleri dashboard modalı
+    // E-posta onayı kapalıysa session var → dashboard/onboarding
+    if (hasSession) {
       const isPriority = sector === 'medical_aesthetic' || sector === 'dental_clinic'
       router.push(isPriority ? '/onboarding' : '/dashboard')
       router.refresh()
+      return
     }
+
+    // E-posta onayı gerekiyorsa kullanıcıya bilgi ver
+    setLoading(false)
+    setError(null)
+    setNotice('Kayıt başarılı! E-posta adresinize onay linki gönderildi. Lütfen gelen kutunuzu kontrol edin.')
   }
 
   return (
