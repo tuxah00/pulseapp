@@ -1,74 +1,43 @@
-'use client'
-
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import WelcomeStep from './_components/welcome-step'
-import WizardShell, { WIZARD_STEPS } from './_components/wizard-shell'
+import { redirect } from 'next/navigation'
+import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { resolveActiveStaff } from '@/lib/auth/active-business'
+import { getSeedForSector } from '@/lib/config/sector-seeds'
+import type { BusinessSettings, SectorType } from '@/types'
+import WizardContainer from './_components/wizard-container'
 
 /**
- * Kurulum sihirbazı ana sayfası — client-side state makinesi.
+ * Kurulum sihirbazı sayfası — server component.
  *
- * Step index:
- *  0 = welcome
- *  1-5 = sihirbaz adımları (services, packages, workflows, rewards, campaigns)
- *  6 = completion
- *
- * Her adım DB commit'ini `/api/onboarding/wizard/*` endpoint'leri üzerinden
- * kendi içinde halleder; bu page sadece navigasyonu yönetir.
- *
- * Adım içerikleri sonraki alt-sprint'lerde dolacak — şu an iskelet + welcome var.
+ * Sektöre özel seed verilerini server'da hazırlayıp client container'a geçirir.
+ * Guard kontrolleri layout.tsx'te yapıldı; burada yalnızca veri hazırlığı.
  */
 
-export default function OnboardingWizardPage() {
-  const router = useRouter()
-  const [currentStep, setCurrentStep] = useState(0)
-  const [skipAllLoading, setSkipAllLoading] = useState(false)
+export default async function OnboardingWizardPage() {
+  const supabase = createServerSupabaseClient()
 
-  const markCompleteAndExit = async () => {
-    setSkipAllLoading(true)
-    try {
-      await fetch('/api/onboarding/wizard/complete', { method: 'POST' })
-    } catch {
-      // sessiz — yönlendirme yine yapılsın
-    }
-    router.push('/dashboard')
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/auth/login')
+
+  const result = await resolveActiveStaff(supabase, user.id)
+  if (result.status !== 'active' || !result.staffMember) {
+    redirect('/dashboard')
   }
 
-  const goNext = () => {
-    setCurrentStep(s => Math.min(s + 1, WIZARD_STEPS.length + 1))
+  const business = (result.staffMember as unknown as { businesses: { sector?: string; settings?: BusinessSettings | null } }).businesses
+  const sector = (business?.sector || 'other') as SectorType
+  const initialStep = business?.settings?.wizard_step ?? 0
+  const seed = getSeedForSector(sector)
+
+  if (!seed) {
+    // Bu yakalama defensive — layout zaten öncelikli sektör guard'ı yapıyor
+    redirect('/dashboard')
   }
 
-  const goBack = () => {
-    setCurrentStep(s => Math.max(s - 1, 0))
-  }
-
-  // Adım 0 — Karşılama
-  if (currentStep === 0) {
-    return (
-      <WelcomeStep
-        onStart={goNext}
-        onSkipAll={markCompleteAndExit}
-        skipLoading={skipAllLoading}
-      />
-    )
-  }
-
-  // Adım 1-5 — Şimdilik placeholder; sonraki alt-sprint'lerde doldurulacak
   return (
-    <WizardShell
-      currentStep={currentStep}
-      onBack={goBack}
-      onSkip={goNext}
-      onNext={goNext}
-    >
-      <div className="rounded-2xl bg-white/10 p-8 text-center backdrop-blur-sm">
-        <h2 className="text-2xl font-semibold text-white">
-          {WIZARD_STEPS[currentStep - 1]?.label}
-        </h2>
-        <p className="mt-2 text-white/70">
-          Bu adımın içeriği sonraki alt-sprint&apos;te eklenecek.
-        </p>
-      </div>
-    </WizardShell>
+    <WizardContainer
+      sector={sector}
+      seed={seed}
+      initialStep={initialStep}
+    />
   )
 }
