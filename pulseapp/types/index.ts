@@ -163,7 +163,7 @@ export type CustomerSegment = 'new' | 'regular' | 'vip' | 'risk' | 'lost'
 
 export type MessageDirection = 'inbound' | 'outbound'
 export type MessageChannel = 'sms' | 'web' | 'whatsapp'
-export type MessageType = 'text' | 'template' | 'ai_generated' | 'system'
+export type MessageType = 'text' | 'template' | 'ai_generated' | 'ai_auto_reply' | 'system'
 export type AiClassification =
   | 'appointment' | 'question' | 'complaint' | 'cancellation' | 'greeting' | 'other'
 
@@ -460,6 +460,15 @@ export interface BusinessSettings {
   review_request_delay_minutes: number
   winback_days: number
   ai_auto_reply: boolean
+  // Otomatik yanıt detayları (Faz 1 — feature/auto-responder)
+  /** off = kapalı; whitelist = sadece saat/adres/randevu link cevapları; smart = GPT-4o Mini tam yanıt */
+  auto_reply_mode?: 'off' | 'whitelist' | 'smart'
+  /** "HH:mm" formatında başlangıç/bitiş; dışında hiç yanıt gitmez */
+  auto_reply_hours?: { start: string; end: string }
+  /** Aynı müşteriye günde max bu kadar otomatik yanıt */
+  auto_reply_daily_cap?: number
+  /** Müşteriye gönderilen mesaj sonuna "— Otomatik yanıt" etiketi eklensin mi (varsayılan: true) */
+  auto_reply_signature?: boolean
   language: string
   reservation_duration_minutes: number
   shift_definitions?: ShiftDefinition[]

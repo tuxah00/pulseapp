@@ -1,6 +1,11 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendMessage } from '@/lib/messaging/send'
 
+/** Müşteri EVET yanıtı (onay) regex'i — webhook'lar kullanır */
+export const CONFIRM_REGEX = /^(EVET|E|YES|1|ONAY|GEL[İI]YORUM|TAMAM|OK)$/i
+/** Müşteri HAYIR yanıtı (iptal) regex'i — webhook'lar kullanır */
+export const DECLINE_REGEX = /^(HAYIR|H|NO|0|[İI]PTAL|GEL[Ee]M[İI]YORUM|VAZGE[CÇ])$/i
+
 /**
  * Müşterinin EVET/HAYIR yanıtını en yakın "waiting" randevusuyla eşleştir ve işle.
  * SMS ve WhatsApp webhook'larında ortaklaştırılmış mantık.
