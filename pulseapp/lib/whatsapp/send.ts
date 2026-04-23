@@ -1,6 +1,7 @@
 // RLS bypass: cron/webhook bağlamlarından çağrılır, auth session olmayabilir; messages insert için admin gerekli
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createLogger } from '@/lib/utils/logger'
+import type { MessageType } from '@/types'
 
 const log = createLogger({ module: 'whatsapp/send' })
 
@@ -9,7 +10,7 @@ interface SendWhatsAppParams {
   body: string
   businessId: string
   customerId?: string
-  messageType?: 'text' | 'template' | 'ai_generated' | 'system'
+  messageType?: MessageType
   mediaUrl?: string
   staffId?: string
   staffName?: string

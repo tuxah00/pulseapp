@@ -23,6 +23,7 @@ import { requirePermission } from '@/lib/hooks/use-require-permission'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { logAudit } from '@/lib/utils/audit'
 import EmptyState from '@/components/ui/empty-state'
+import { AUTO_REPLY_DEFAULTS } from '@/lib/ai/auto-reply/defaults'
 
 const DAY_LABELS: Record<string, string> = {
   mon: 'Pazartesi',
@@ -73,6 +74,11 @@ const DEFAULT_SETTINGS: BusinessSettings = {
   whatsapp_enabled: false,
   whatsapp_mode: 'sandbox',
   default_channel: 'auto',
+  // Otomatik yanıt varsayılanları (Faz 1)
+  auto_reply_mode: AUTO_REPLY_DEFAULTS.mode,
+  auto_reply_hours: { ...AUTO_REPLY_DEFAULTS.hours },
+  auto_reply_daily_cap: AUTO_REPLY_DEFAULTS.dailyCap,
+  auto_reply_signature: AUTO_REPLY_DEFAULTS.signature,
 }
 
 function generateTimeOptions(): string[] {
@@ -1075,21 +1081,90 @@ export default function BusinessSettingsPage() {
                 <h2 className="h-section">AI Asistan</h2>
               </div>
               <p className="text-sm text-gray-500 mb-6">
-                Claude AI ile gelen mesajlara otomatik yanıt verin.
+                Müşteri mesajlarına GPT-4o Mini ile otomatik yanıt verin. Randevu/iptal/şikayet niyetleri cevaplanmaz, yalnızca size bildirim olarak düşer.
               </p>
 
               <ToggleSetting
                 label="AI otomatik yanıt"
-                description="Gelen mesajları AI sınıflandırır ve uygun yanıt önerisi oluşturur. Randevu talepleri otomatik işlenir."
+                description="SMS ve WhatsApp'tan gelen müşteri mesajlarını otomatik cevapla."
                 checked={settings.ai_auto_reply}
                 onChange={(v) => setSettings(prev => ({ ...prev, ai_auto_reply: v }))}
               />
 
               {settings.ai_auto_reply && (
-                <div className="mt-4 rounded-lg bg-purple-50 border border-purple-100 px-4 py-3 text-sm text-purple-700">
-                  AI asistan aktif olduğunda, gelen mesajlar otomatik olarak sınıflandırılır
-                  (randevu talebi, soru, şikayet vb.) ve uygun yanıt önerisi oluşturulur.
-                  Yanıtlar onayınız olmadan gönderilmez.
+                <div className="mt-4 space-y-4">
+                  {/* Mod seçimi */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Yanıt modu</label>
+                    <CustomSelect
+                      value={settings.auto_reply_mode ?? AUTO_REPLY_DEFAULTS.mode}
+                      onChange={(v) => setSettings(prev => ({ ...prev, auto_reply_mode: v as 'off' | 'whitelist' | 'smart' }))}
+                      options={[
+                        { value: 'off', label: 'Kapalı — hiç cevap verme' },
+                        { value: 'whitelist', label: 'Beyaz liste — sabit şablonlar (adres, saat, booking link)' },
+                        { value: 'smart', label: 'Akıllı — GPT-4o Mini serbest yanıt (önerilen)' },
+                      ]}
+                    />
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Akıllı modda müşteri sorusuna işletme bağlamıyla uyumlu serbest yanıt üretilir. Beyaz liste modu daha tahmin edilebilirdir.
+                    </p>
+                  </div>
+
+                  {/* Saat aralığı */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Yanıt saatleri</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <CustomSelect
+                        value={settings.auto_reply_hours?.start ?? AUTO_REPLY_DEFAULTS.hours.start}
+                        onChange={(v) => setSettings(prev => ({
+                          ...prev,
+                          auto_reply_hours: { start: v, end: prev.auto_reply_hours?.end ?? AUTO_REPLY_DEFAULTS.hours.end },
+                        }))}
+                        options={TIME_OPTIONS.map(t => ({ value: t, label: t }))}
+                      />
+                      <CustomSelect
+                        value={settings.auto_reply_hours?.end ?? AUTO_REPLY_DEFAULTS.hours.end}
+                        onChange={(v) => setSettings(prev => ({
+                          ...prev,
+                          auto_reply_hours: { start: prev.auto_reply_hours?.start ?? AUTO_REPLY_DEFAULTS.hours.start, end: v },
+                        }))}
+                        options={TIME_OPTIONS.map(t => ({ value: t, label: t }))}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Bu saatler dışında otomatik yanıt gitmez. Mesajlar müşteri panelinde görünür, sabah personel dönebilir.
+                    </p>
+                  </div>
+
+                  {/* Günlük cap */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Günlük yanıt limiti</label>
+                    <input
+                      type="number"
+                      min={10}
+                      max={1000}
+                      value={settings.auto_reply_daily_cap ?? AUTO_REPLY_DEFAULTS.dailyCap}
+                      onChange={(e) => setSettings(prev => ({ ...prev, auto_reply_daily_cap: Math.max(10, Math.min(1000, parseInt(e.target.value) || AUTO_REPLY_DEFAULTS.dailyCap)) }))}
+                      className="input w-32"
+                    />
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Son 24 saatte toplam kaç otomatik yanıt gönderilebilir. Varsayılan: {AUTO_REPLY_DEFAULTS.dailyCap}.
+                    </p>
+                  </div>
+
+                  {/* İmza */}
+                  <ToggleSetting
+                    label={'"— Otomatik yanıt" etiketi ekle'}
+                    description="Müşteri gönderilen mesajın otomatik olduğunu bilsin. KVKK açısından önerilir."
+                    checked={settings.auto_reply_signature ?? AUTO_REPLY_DEFAULTS.signature}
+                    onChange={(v) => setSettings(prev => ({ ...prev, auto_reply_signature: v }))}
+                  />
+
+                  <div className="rounded-lg bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/40 px-4 py-3 text-sm text-purple-700 dark:text-purple-300">
+                    <strong>Güvenlik:</strong> Otomatik yanıt asla randevu oluşturmaz, iptal etmez veya ödeme yapmaz.
+                    Randevu/iptal niyetleri yakalandığında müşteriye booking link'i paylaşılır ve size bildirim düşer.
+                    Şikayetlere otomatik cevap gitmez — doğrudan size bildirim gelir.
+                  </div>
                 </div>
               )}
             </div>
