@@ -10,6 +10,7 @@ import ServicesStep, { type ServiceDraft } from './services-step'
 import PackagesStep, { type PackageDraft } from './packages-step'
 import WorkflowsStep, { type WorkflowSelection } from './workflows-step'
 import RewardsStep, { type RewardDraft } from './rewards-step'
+import CampaignsStep, { type CampaignDraft } from './campaigns-step'
 
 /**
  * Sihirbaz state makinesi — client component.
@@ -52,6 +53,8 @@ export default function WizardContainer({ seed, initialStep }: WizardContainerPr
   // Adım 4 state
   const [rewardsEnabled, setRewardsEnabled] = useState(false)
   const [selectedRewards, setSelectedRewards] = useState<RewardDraft[]>([])
+  // Adım 5 state
+  const [selectedCampaigns, setSelectedCampaigns] = useState<CampaignDraft[]>([])
 
   const markCompleteAndExit = async () => {
     setSkipAllLoading(true)
@@ -146,6 +149,14 @@ export default function WizardContainer({ seed, initialStep }: WizardContainerPr
     setSelectedRewards(rewards)
   }
 
+  const commitCampaignsAndNext = () =>
+    commitStep(
+      '/api/onboarding/wizard/campaigns',
+      { campaigns: selectedCampaigns },
+      n => (n > 0 ? `${n} taslak kampanya eklendi` : null),
+      'Kampanyalar kaydedilemedi',
+    )
+
   // Adım 0 — Karşılama
   if (currentStep === 0) {
     return (
@@ -226,20 +237,37 @@ export default function WizardContainer({ seed, initialStep }: WizardContainerPr
     )
   }
 
-  // Adım 5 — Placeholder; sonraki alt-sprint'te doldurulacak
+  // Adım 5 — Kampanyalar
+  if (currentStep === 5) {
+    return (
+      <WizardShell
+        currentStep={5}
+        onBack={goBack}
+        onSkip={goNext}
+        onNext={commitCampaignsAndNext}
+        nextLoading={commitLoading}
+      >
+        <CampaignsStep
+          seedCampaigns={seed.campaigns}
+          onCampaignsChange={setSelectedCampaigns}
+        />
+      </WizardShell>
+    )
+  }
+
+  // Adım 6 — Tamamlama placeholder (Alt-Sprint H'de konfeti ekranıyla değişecek)
   return (
     <WizardShell
       currentStep={currentStep}
       onBack={goBack}
-      onSkip={goNext}
-      onNext={goNext}
+      onSkip={markCompleteAndExit}
+      onNext={markCompleteAndExit}
+      nextLoading={skipAllLoading}
     >
       <div className="rounded-2xl bg-white/10 p-8 text-center backdrop-blur-sm">
-        <h2 className="text-2xl font-semibold text-white">
-          {WIZARD_STEPS[currentStep - 1]?.label}
-        </h2>
+        <h2 className="text-2xl font-semibold text-white">Kurulum tamamlandı</h2>
         <p className="mt-2 text-white/70">
-          Bu adımın içeriği sonraki alt-sprint&apos;te eklenecek.
+          Dashboard&apos;a yönlendiriliyorsunuz…
         </p>
       </div>
     </WizardShell>
