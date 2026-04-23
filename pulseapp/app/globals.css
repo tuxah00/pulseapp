@@ -710,3 +710,6 @@ a, button {
 .animate-welcome-cta {
   animation: wizardFadeIn 0.6s ease-out 2.2s both, wizardPulse 2.5s ease-in-out 3s infinite;
 }
+.animate-rewards-reveal {
+  animation: wizardFadeIn 0.4s ease-out both;
+}

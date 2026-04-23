@@ -9,6 +9,7 @@ import WizardShell, { WIZARD_STEPS } from './wizard-shell'
 import ServicesStep, { type ServiceDraft } from './services-step'
 import PackagesStep, { type PackageDraft } from './packages-step'
 import WorkflowsStep, { type WorkflowSelection } from './workflows-step'
+import RewardsStep, { type RewardDraft } from './rewards-step'
 
 /**
  * Sihirbaz state makinesi — client component.
@@ -48,6 +49,9 @@ export default function WizardContainer({ seed, initialStep }: WizardContainerPr
   const [selectedPackages, setSelectedPackages] = useState<PackageDraft[]>([])
   // Adım 3 state
   const [workflowSelection, setWorkflowSelection] = useState<WorkflowSelection | null>(null)
+  // Adım 4 state
+  const [rewardsEnabled, setRewardsEnabled] = useState(false)
+  const [selectedRewards, setSelectedRewards] = useState<RewardDraft[]>([])
 
   const markCompleteAndExit = async () => {
     setSkipAllLoading(true)
@@ -129,6 +133,19 @@ export default function WizardContainer({ seed, initialStep }: WizardContainerPr
     )
   }
 
+  const commitRewardsAndNext = () =>
+    commitStep(
+      '/api/onboarding/wizard/rewards',
+      { enabled: rewardsEnabled, rewards: selectedRewards },
+      n => (n > 0 ? `${n} ödül şablonu eklendi` : null),
+      'Ödüller kaydedilemedi',
+    )
+
+  const handleRewardsChange = (enabled: boolean, rewards: RewardDraft[]) => {
+    setRewardsEnabled(enabled)
+    setSelectedRewards(rewards)
+  }
+
   // Adım 0 — Karşılama
   if (currentStep === 0) {
     return (
@@ -191,7 +208,25 @@ export default function WizardContainer({ seed, initialStep }: WizardContainerPr
     )
   }
 
-  // Adım 4-5 — Placeholder; sonraki alt-sprint'lerde doldurulacak
+  // Adım 4 — Ödüller
+  if (currentStep === 4) {
+    return (
+      <WizardShell
+        currentStep={4}
+        onBack={goBack}
+        onSkip={goNext}
+        onNext={commitRewardsAndNext}
+        nextLoading={commitLoading}
+      >
+        <RewardsStep
+          seedRewards={seed.rewards}
+          onSelectionChange={handleRewardsChange}
+        />
+      </WizardShell>
+    )
+  }
+
+  // Adım 5 — Placeholder; sonraki alt-sprint'te doldurulacak
   return (
     <WizardShell
       currentStep={currentStep}
