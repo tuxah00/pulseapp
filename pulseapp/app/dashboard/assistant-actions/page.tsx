@@ -262,7 +262,7 @@ function ActionCard({
             type="button"
             onClick={() => onDecide(action, 'confirm')}
             disabled={busy}
-            className="btn-primary text-xs px-3 py-1.5 flex items-center gap-1 disabled:opacity-50"
+            className="btn-primary btn-sm flex items-center gap-1"
           >
             {busy ? (
               <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Çalıştırılıyor</>
