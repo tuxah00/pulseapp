@@ -121,15 +121,27 @@ export function CustomSelect({
         />
       </button>
 
-      {/* Dropdown panel — portal ile body'ye render edilir */}
+      {/* Dropdown panel — portal ile body'ye render edilir.
+          Public context'te 'public-page' class'ı eklenir → globals.css
+          dark mode override kuralları (.dark .public-page .bg-white vs.)
+          dropdown'a da uygulanır. Ayrıca inline background-color !important
+          override ile OS/tarayıcı dark tema etkisi bloklanır. */}
       {open && typeof document !== 'undefined' && createPortal(
         <div
           ref={dropdownRef}
-          style={{ position: 'fixed', top: pos.top, bottom: pos.bottom, left: pos.left, width: pos.width, zIndex: 9999 }}
+          style={{
+            position: 'fixed',
+            top: pos.top,
+            bottom: pos.bottom,
+            left: pos.left,
+            width: pos.width,
+            zIndex: 9999,
+            ...(isPublicContext ? { backgroundColor: '#ffffff', colorScheme: 'light' } : {}),
+          }}
           className={cn(
             'border shadow-xl rounded-xl overflow-hidden',
             isPublicContext
-              ? 'bg-white border-gray-200'
+              ? 'public-page bg-white border-gray-200 text-gray-900'
               : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
           )}
         >
