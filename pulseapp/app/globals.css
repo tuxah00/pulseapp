@@ -714,3 +714,88 @@ div:focus {
 a, button {
   -webkit-tap-highlight-color: transparent;
 }
+
+/* ── Kurulum sihirbazı (onboarding wizard) animasyonları ── */
+@keyframes wizardFadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes wizardScaleIn {
+  from { opacity: 0; transform: scale(0.85); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes wizardPulse {
+  0%, 100% { box-shadow: 0 20px 45px -12px rgba(0, 0, 0, 0.4); }
+  50%      { box-shadow: 0 25px 55px -10px rgba(255, 255, 255, 0.35); }
+}
+
+.animate-welcome-icon {
+  animation: wizardScaleIn 0.6s ease-out both;
+}
+.animate-welcome-title-1 {
+  animation: wizardFadeIn 0.8s ease-out 0.2s both;
+}
+.animate-welcome-title-2 {
+  animation: wizardFadeIn 0.8s ease-out 1s both;
+}
+.animate-welcome-sub {
+  animation: wizardFadeIn 0.8s ease-out 1.6s both;
+}
+.animate-welcome-cta {
+  animation: wizardFadeIn 0.6s ease-out 2.2s both, wizardPulse 2.5s ease-in-out 3s infinite;
+}
+.animate-rewards-reveal {
+  animation: wizardFadeIn 0.4s ease-out both;
+}
+
+/* Kart stagger — her karta inline style ile --stagger-index verilir */
+@keyframes wizardCardRise {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.wizard-card-stagger {
+  animation: wizardCardRise 0.4s ease-out both;
+  animation-delay: calc(var(--stagger-index, 0) * 60ms);
+}
+
+/* Adım geçişleri — wizard-container'da key değişimiyle remount ve slideIn */
+@keyframes wizardStepSlideIn {
+  from { opacity: 0; transform: translateX(24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.animate-wizard-step {
+  animation: wizardStepSlideIn 0.35s cubic-bezier(0.25, 0.9, 0.3, 1) both;
+}
+
+/* Hareket kısıtlaması tercih edenler için animasyonları devre dışı bırak */
+@media (prefers-reduced-motion: reduce) {
+  .animate-welcome-icon,
+  .animate-welcome-title-1,
+  .animate-welcome-title-2,
+  .animate-welcome-sub,
+  .animate-welcome-cta,
+  .animate-rewards-reveal,
+  .animate-wizard-confetti,
+  .animate-wizard-finish,
+  .animate-wizard-step,
+  .wizard-card-stagger {
+    animation: none !important;
+  }
+}
+
+/* Sihirbaz tamamlama ekranı — konfeti + kart girişi */
+@keyframes wizardConfettiFall {
+  0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(110vh) rotate(720deg); opacity: 0.15; }
+}
+@keyframes wizardFinishIn {
+  0%   { transform: scale(0.85) translateY(20px); opacity: 0; }
+  60%  { transform: scale(1.03) translateY(-4px); opacity: 1; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+.animate-wizard-confetti {
+  animation: wizardConfettiFall linear forwards;
+}
+.animate-wizard-finish {
+  animation: wizardFinishIn 0.7s cubic-bezier(0.2, 0.8, 0.25, 1) both;
+}

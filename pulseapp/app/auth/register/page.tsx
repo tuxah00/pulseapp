@@ -108,7 +108,9 @@ export default function RegisterPage() {
         return
       }
 
-      router.push('/dashboard')
+      // Öncelikli sektörlerde kurulum sihirbazına yönlen; diğerleri dashboard modalı
+      const isPriority = sector === 'medical_aesthetic' || sector === 'dental_clinic'
+      router.push(isPriority ? '/onboarding' : '/dashboard')
       router.refresh()
     }
   }
