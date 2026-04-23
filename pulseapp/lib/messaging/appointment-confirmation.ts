@@ -28,10 +28,10 @@ export async function handleAppointmentConfirmationReply(
     .order('start_time', { ascending: true })
     .limit(1)
 
-  const apt = waitingApts?.[0]
+  const apt = waitingApts?.[0] as { id: string; customers?: { name?: string | null } | null } | undefined
   if (!apt) return false
 
-  const customerName = (apt.customers as any)?.name || ''
+  const customerName = apt.customers?.name || ''
   const channelLabel = channel === 'whatsapp' ? 'WhatsApp' : 'SMS'
 
   if (isConfirm) {

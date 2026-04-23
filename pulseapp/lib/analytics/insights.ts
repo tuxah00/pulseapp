@@ -108,7 +108,45 @@ function round2(n: number): number {
   return Math.round(n * 100) / 100
 }
 
-function paidAmount(inv: any): number {
+interface InvoiceRow {
+  id?: string
+  total: number | string | null
+  paid_amount: number | string | null
+  status: string
+  items?: InvoiceItemRow[] | null
+  created_at: string
+}
+
+interface InvoiceItemRow {
+  service_name?: string | null
+  total?: number | string | null
+  quantity?: number | null
+}
+
+interface CustomerRow {
+  id: string
+  created_at: string
+  last_visit_at?: string | null
+  total_revenue?: number | string | null
+  name?: string | null
+  segment?: string | null
+}
+
+interface AppointmentRow {
+  id?: string
+  customer_id?: string | null
+  appointment_date: string
+  start_time?: string | null
+  end_time?: string | null
+  status: string
+}
+
+interface ExpenseRow {
+  amount: number | string | null
+  expense_date: string
+}
+
+function paidAmount(inv: Pick<InvoiceRow, 'paid_amount' | 'total'>): number {
   const paid = Number(inv.paid_amount ?? 0)
   if (paid > 0) return paid
   return Number(inv.total ?? 0)
@@ -141,8 +179,8 @@ export async function computeMarginAnalysis(
   const bucket = new Map<string, { revenue: number; count: number }>()
   let totalRevenue = 0
 
-  for (const inv of invoices as any[]) {
-    const items = (inv.items || []) as { service_name?: string; total?: number; quantity?: number }[]
+  for (const inv of invoices as unknown as InvoiceRow[]) {
+    const items = (inv.items || []) as InvoiceItemRow[]
     for (const item of items) {
       const key = item.service_name || 'Diğer'
       const rev = Number(item.total ?? 0)
@@ -205,7 +243,7 @@ export async function computeSeasonalTrend(
     .gte('created_at', start.toISOString())
 
   const bucket = new Map<string, number>()
-  for (const inv of (invoices || []) as any[]) {
+  for (const inv of (invoices || []) as unknown as InvoiceRow[]) {
     const d = new Date(inv.created_at)
     const key = ymKey(d)
     bucket.set(key, (bucket.get(key) || 0) + paidAmount(inv))
@@ -256,11 +294,12 @@ export async function computeCohortRetention(
 
   if (!customers || customers.length === 0) return []
 
-  const customerIds = customers.map((c: any) => c.id)
+  const customerRows = customers as unknown as CustomerRow[]
+  const customerIds = customerRows.map(c => c.id)
   const cohortMap = new Map<string, string[]>() // cohort_month → customerIds[]
   const firstDate = new Map<string, Date>() // customerId → first visit date
 
-  for (const c of customers as any[]) {
+  for (const c of customerRows) {
     const d = new Date(c.created_at)
     const key = ymKey(d)
     const arr = cohortMap.get(key) || []
@@ -279,8 +318,9 @@ export async function computeCohortRetention(
     .gte('appointment_date', start.toISOString().slice(0, 10))
 
   const aptByCustomer = new Map<string, Date[]>()
-  for (const a of (appointments || []) as any[]) {
+  for (const a of (appointments || []) as unknown as AppointmentRow[]) {
     if (a.status === 'cancelled' || a.status === 'no_show') continue
+    if (!a.customer_id) continue
     const arr = aptByCustomer.get(a.customer_id) || []
     arr.push(new Date(a.appointment_date))
     aptByCustomer.set(a.customer_id, arr)
@@ -361,17 +401,17 @@ export async function computeKpi(
       .lte('expense_date', period.to),
   ])
 
-  const invoices = (invResult.data || []) as any[]
+  const invoices = (invResult.data || []) as unknown as InvoiceRow[]
   const totalRevenue = invoices.reduce((s, inv) => s + paidAmount(inv), 0)
 
-  const expenses = (expResult.data || []) as any[]
+  const expenses = (expResult.data || []) as unknown as ExpenseRow[]
   const totalExpenses = expenses.reduce((s, e) => s + Number(e.amount || 0), 0)
   const marginPct = totalRevenue > 0
     ? round1(((totalRevenue - totalExpenses) / totalRevenue) * 100)
     : null
 
   // Doluluk (basit tahmin — 9 saat × iş günü sayısı × personel sayısı kabaca)
-  const apts = (aptResult.data || []) as any[]
+  const apts = (aptResult.data || []) as unknown as AppointmentRow[]
   let bookedMinutes = 0
   for (const apt of apts) {
     if (apt.status === 'cancelled') continue
@@ -393,7 +433,7 @@ export async function computeKpi(
     : null
 
   // Retention — 90 gün içinde son ziyaret
-  const customers = (custResult.data || []) as any[]
+  const customers = (custResult.data || []) as unknown as CustomerRow[]
   const now = Date.now()
   const ninetyDaysAgo = now - 90 * 24 * 60 * 60 * 1000
   const activeRecent = customers.filter(c => {
@@ -570,7 +610,8 @@ export async function computeStrategicRecommendations(
     .limit(20)
 
   const sixtyDaysAgo = Date.now() - 60 * 24 * 60 * 60 * 1000
-  const atRisk = (riskCustomers || []).filter((c: any) => {
+  const atRisk = ((riskCustomers || []) as unknown as CustomerRow[]).filter(c => {
+    if (!c.last_visit_at) return false
     const last = new Date(c.last_visit_at).getTime()
     return last < sixtyDaysAgo
   })
@@ -582,8 +623,8 @@ export async function computeStrategicRecommendations(
       focus: 'risk',
       title: `${atRisk.length} yüksek değerli müşteri 60+ gündür gelmedi`,
       rationale: 'VIP kaybı ciroyu doğrudan vurur.',
-      evidence: atRisk.slice(0, 3).map((c: any) =>
-        `${c.name} — ${Number(c.total_revenue).toLocaleString('tr-TR')}₺, ${Math.round((Date.now() - new Date(c.last_visit_at).getTime()) / (24 * 60 * 60 * 1000))} gün önce`,
+      evidence: atRisk.slice(0, 3).map(c =>
+        `${c.name} — ${Number(c.total_revenue).toLocaleString('tr-TR')}₺, ${c.last_visit_at ? Math.round((Date.now() - new Date(c.last_visit_at).getTime()) / (24 * 60 * 60 * 1000)) : 0} gün önce`,
       ),
       suggested_action: {
         type: 'create_campaign',
@@ -648,7 +689,7 @@ export async function computeOperationalPulse(
       .gte('created_at', fourteenDaysAgo.toISOString()),
   ])
 
-  const apts = (aptRes.data || []) as any[]
+  const apts = (aptRes.data || []) as unknown as AppointmentRow[]
 
   // Peak hour (son 30 gün, iptal/no-show hariç)
   const hourCounts = new Map<number, number>()
@@ -689,7 +730,7 @@ export async function computeOperationalPulse(
     if (a.status === 'cancelled' || a.status === 'no_show') continue
     if (a.customer_id) customersInPeriod.add(a.customer_id)
   }
-  const newCustomers = new Set(((custRes.data || []) as any[]).map(c => c.id))
+  const newCustomers = new Set(((custRes.data || []) as unknown as CustomerRow[]).map(c => c.id))
   let newCount = 0
   let returningCount = 0
   for (const id of customersInPeriod) {
@@ -706,7 +747,7 @@ export async function computeOperationalPulse(
     : null
 
   // Haftalık gelir trendi
-  const invoices = (invRes.data || []) as any[]
+  const invoices = (invRes.data || []) as unknown as InvoiceRow[]
   let lastWeek = 0
   let prevWeek = 0
   for (const inv of invoices) {

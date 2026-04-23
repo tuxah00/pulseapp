@@ -83,7 +83,7 @@ export function FileCard({ record, onClick }: FileCardProps) {
         <div className="mt-3 grid grid-cols-3 gap-2">
           {thumbnails.map((url, i) => (
             <div key={i} className="relative aspect-square rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
-              <Image src={url} alt="" fill className="object-cover" />
+              <Image src={url} alt={record.title || 'Dosya önizleme'} fill className="object-cover" />
             </div>
           ))}
         </div>

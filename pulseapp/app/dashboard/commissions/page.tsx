@@ -84,8 +84,8 @@ export default function CommissionsPage() {
       if (!res.ok) throw new Error('Veriler yüklenemedi')
       const data = await res.json()
       setEarnings(data.earnings || [])
-    } catch (e: any) {
-      toast('error', 'Hata', e.message)
+    } catch (e) {
+      toast('error', 'Hata', e instanceof Error ? e.message : 'Bilinmeyen hata')
     } finally {
       setLoading(false)
     }
@@ -122,8 +122,8 @@ export default function CommissionsPage() {
       }
       toast('system', 'Prim Hesaplandı', `${formatPeriod(calcPeriod)} dönemi güncellendi`)
       await fetchEarnings()
-    } catch (e: any) {
-      toast('error', 'Hata', e.message)
+    } catch (e) {
+      toast('error', 'Hata', e instanceof Error ? e.message : 'Bilinmeyen hata')
     } finally {
       setCalculating(false)
     }
@@ -131,7 +131,7 @@ export default function CommissionsPage() {
 
   const handleTogglePaid = async (earning: CommissionEarning) => {
     const newStatus = earning.status === 'paid' ? 'pending' : 'paid'
-    const staffName = (earning.staff_members as any)?.name || 'Personel'
+    const staffName = earning.staff_members?.name || 'Personel'
 
     const ok = await confirm({
       title: newStatus === 'paid' ? 'Ödendi Olarak İşaretle?' : 'Ödemeyi Geri Al?',
@@ -158,8 +158,8 @@ export default function CommissionsPage() {
         )
       )
       toast('system', newStatus === 'paid' ? 'Prim Ödendi ✓' : 'Ödeme Geri Alındı')
-    } catch (e: any) {
-      toast('error', 'Hata', e.message)
+    } catch (e) {
+      toast('error', 'Hata', e instanceof Error ? e.message : 'Bilinmeyen hata')
     }
   }
 
@@ -360,7 +360,7 @@ export default function CommissionsPage() {
               </thead>
               <tbody>
                 {filtered.map((earning) => {
-                  const staffName = (earning.staff_members as any)?.name || '—'
+                  const staffName = earning.staff_members?.name || '—'
                   return (
                     <tr key={earning.id} className="table-row">
                       <td className="table-cell">

@@ -1,7 +1,7 @@
 import type { createAdminClient } from '@/lib/supabase/admin'
 import { sendMessage } from '@/lib/messaging/send'
 import { matchesCampaignFilter } from '@/lib/utils/campaign-filters'
-import type { CampaignSegmentFilter } from '@/types'
+import type { CampaignSegmentFilter, MessageChannel } from '@/types'
 
 type SupabaseAdmin = ReturnType<typeof createAdminClient>
 
@@ -18,7 +18,7 @@ export async function sendCampaign(
   businessId: string,
   segmentFilter: CampaignSegmentFilter,
   messageTemplate: string,
-  channel: string,
+  channel: MessageChannel | 'auto',
 ) {
   let query = admin
     .from('customers')
@@ -75,7 +75,7 @@ export async function sendCampaign(
         businessId,
         customerId: customer.id,
         messageType: 'system',
-        channel: channel as any,
+        channel,
       })
 
       await admin
@@ -85,10 +85,10 @@ export async function sendCampaign(
         .eq('customer_id', customer.id)
 
       stats.sent++
-    } catch (e: any) {
+    } catch (e) {
       await admin
         .from('campaign_recipients')
-        .update({ status: 'failed', error_message: e?.message || 'Bilinmeyen hata' })
+        .update({ status: 'failed', error_message: e instanceof Error ? e.message : 'Bilinmeyen hata' })
         .eq('campaign_id', campaignId)
         .eq('customer_id', customer.id)
       stats.errors++

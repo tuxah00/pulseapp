@@ -22,9 +22,9 @@ Branch adı session'ın planını yansıtır:
 
 | Plan / Konu | Branch Adı |
 |-------------|-----------|
+| **Aktif geliştirme (yeni özellikler, planlar)** | `gelecek-ozellik-plan` ← varsayılan |
 | Canlıya çıkış hazırlığı | `feature/launch-prep` |
 | Faz 3 — Skill paketleri | `feature/faz3-skill-packages` |
-| Yeni bir özellik | `feature/[özellik-adı]` |
 | Hata düzeltme | `fix/[konu]` |
 | Refactor / temizlik | `refactor/[konu]` |
 
