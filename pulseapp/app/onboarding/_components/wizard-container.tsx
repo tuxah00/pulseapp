@@ -11,6 +11,7 @@ import PackagesStep, { type PackageDraft } from './packages-step'
 import WorkflowsStep, { type WorkflowSelection } from './workflows-step'
 import RewardsStep, { type RewardDraft } from './rewards-step'
 import CampaignsStep, { type CampaignDraft } from './campaigns-step'
+import CompletionStep from './completion-step'
 
 /**
  * Sihirbaz state makinesi — client component.
@@ -55,6 +56,14 @@ export default function WizardContainer({ seed, initialStep }: WizardContainerPr
   const [selectedRewards, setSelectedRewards] = useState<RewardDraft[]>([])
   // Adım 5 state
   const [selectedCampaigns, setSelectedCampaigns] = useState<CampaignDraft[]>([])
+  // Tamamlama özeti — her commit başarısı bu nesneye yazar
+  const [summary, setSummary] = useState({
+    services: 0,
+    packages: 0,
+    workflows: 0,
+    rewards: 0,
+    campaigns: 0,
+  })
 
   const markCompleteAndExit = async () => {
     setSkipAllLoading(true)
@@ -83,6 +92,7 @@ export default function WizardContainer({ seed, initialStep }: WizardContainerPr
     payload: Record<string, unknown>,
     successLabel: (inserted: number) => string | null,
     errorTitle: string,
+    summaryKey?: keyof typeof summary,
   ) => {
     setCommitLoading(true)
     try {
@@ -97,7 +107,11 @@ export default function WizardContainer({ seed, initialStep }: WizardContainerPr
         return
       }
       const data = await res.json()
-      const msg = successLabel(data.inserted ?? 0)
+      const inserted = data.inserted ?? 0
+      if (summaryKey) {
+        setSummary(prev => ({ ...prev, [summaryKey]: inserted }))
+      }
+      const msg = successLabel(inserted)
       if (msg) emitToast('system', msg)
       goNext()
     } catch {
@@ -113,6 +127,7 @@ export default function WizardContainer({ seed, initialStep }: WizardContainerPr
       { services: selectedServices },
       n => (n > 0 ? `${n} hizmet eklendi` : null),
       'Hizmetler kaydedilemedi',
+      'services',
     )
 
   const commitPackagesAndNext = () =>
@@ -121,6 +136,7 @@ export default function WizardContainer({ seed, initialStep }: WizardContainerPr
       { packages: selectedPackages },
       n => (n > 0 ? `${n} paket eklendi` : null),
       'Paketler kaydedilemedi',
+      'packages',
     )
 
   const commitWorkflowsAndNext = () => {
@@ -133,6 +149,7 @@ export default function WizardContainer({ seed, initialStep }: WizardContainerPr
       { ...workflowSelection },
       n => (n > 0 ? `${n} otomatik mesaj etkin` : null),
       'Mesaj ayarları kaydedilemedi',
+      'workflows',
     )
   }
 
@@ -142,6 +159,7 @@ export default function WizardContainer({ seed, initialStep }: WizardContainerPr
       { enabled: rewardsEnabled, rewards: selectedRewards },
       n => (n > 0 ? `${n} ödül şablonu eklendi` : null),
       'Ödüller kaydedilemedi',
+      'rewards',
     )
 
   const handleRewardsChange = (enabled: boolean, rewards: RewardDraft[]) => {
@@ -155,6 +173,7 @@ export default function WizardContainer({ seed, initialStep }: WizardContainerPr
       { campaigns: selectedCampaigns },
       n => (n > 0 ? `${n} taslak kampanya eklendi` : null),
       'Kampanyalar kaydedilemedi',
+      'campaigns',
     )
 
   // Adım 0 — Karşılama
@@ -255,21 +274,14 @@ export default function WizardContainer({ seed, initialStep }: WizardContainerPr
     )
   }
 
-  // Adım 6 — Tamamlama placeholder (Alt-Sprint H'de konfeti ekranıyla değişecek)
+  // Adım 6 — Tamamlama: konfeti + özet + dashboard'a git
   return (
-    <WizardShell
-      currentStep={currentStep}
-      onBack={goBack}
-      onSkip={markCompleteAndExit}
-      onNext={markCompleteAndExit}
-      nextLoading={skipAllLoading}
-    >
-      <div className="rounded-2xl bg-white/10 p-8 text-center backdrop-blur-sm">
-        <h2 className="text-2xl font-semibold text-white">Kurulum tamamlandı</h2>
-        <p className="mt-2 text-white/70">
-          Dashboard&apos;a yönlendiriliyorsunuz…
-        </p>
-      </div>
+    <WizardShell currentStep={currentStep} showIndicator={false} showActionBar={false}>
+      <CompletionStep
+        summary={summary}
+        onFinish={markCompleteAndExit}
+        finishLoading={skipAllLoading}
+      />
     </WizardShell>
   )
 }

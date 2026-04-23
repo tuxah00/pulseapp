@@ -713,3 +713,20 @@ a, button {
 .animate-rewards-reveal {
   animation: wizardFadeIn 0.4s ease-out both;
 }
+
+/* Sihirbaz tamamlama ekranı — konfeti + kart girişi */
+@keyframes wizardConfettiFall {
+  0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(110vh) rotate(720deg); opacity: 0.15; }
+}
+@keyframes wizardFinishIn {
+  0%   { transform: scale(0.85) translateY(20px); opacity: 0; }
+  60%  { transform: scale(1.03) translateY(-4px); opacity: 1; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+.animate-wizard-confetti {
+  animation: wizardConfettiFall linear forwards;
+}
+.animate-wizard-finish {
+  animation: wizardFinishIn 0.7s cubic-bezier(0.2, 0.8, 0.25, 1) both;
+}
