@@ -1,7 +1,8 @@
 {
-  "ignoreCommand": "if [ \"$VERCEL_GIT_COMMIT_REF\" = \"main\" ]; then exit 1; else exit 0; fi",
+  "ignoreCommand": "case \"$VERCEL_GIT_COMMIT_REF\" in claude/*) exit 0 ;; *) exit 1 ;; esac",
   "crons": [
     { "path": "/api/cron/daily", "schedule": "0 9 * * *" },
     { "path": "/api/cron/birthday", "schedule": "0 8 * * *" }
   ]
 }
+
