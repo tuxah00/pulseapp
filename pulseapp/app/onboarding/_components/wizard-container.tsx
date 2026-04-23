@@ -8,6 +8,7 @@ import WelcomeStep from './welcome-step'
 import WizardShell, { WIZARD_STEPS } from './wizard-shell'
 import ServicesStep, { type ServiceDraft } from './services-step'
 import PackagesStep, { type PackageDraft } from './packages-step'
+import WorkflowsStep, { type WorkflowSelection } from './workflows-step'
 
 /**
  * Sihirbaz state makinesi — client component.
@@ -45,6 +46,8 @@ export default function WizardContainer({ seed, initialStep }: WizardContainerPr
   const [selectedServices, setSelectedServices] = useState<ServiceDraft[]>([])
   // Adım 2 state
   const [selectedPackages, setSelectedPackages] = useState<PackageDraft[]>([])
+  // Adım 3 state
+  const [workflowSelection, setWorkflowSelection] = useState<WorkflowSelection | null>(null)
 
   const markCompleteAndExit = async () => {
     setSkipAllLoading(true)
@@ -113,6 +116,19 @@ export default function WizardContainer({ seed, initialStep }: WizardContainerPr
       'Paketler kaydedilemedi',
     )
 
+  const commitWorkflowsAndNext = () => {
+    if (!workflowSelection) {
+      goNext()
+      return Promise.resolve()
+    }
+    return commitStep(
+      '/api/onboarding/wizard/workflows',
+      { ...workflowSelection },
+      n => (n > 0 ? `${n} otomatik mesaj etkin` : null),
+      'Mesaj ayarları kaydedilemedi',
+    )
+  }
+
   // Adım 0 — Karşılama
   if (currentStep === 0) {
     return (
@@ -160,7 +176,22 @@ export default function WizardContainer({ seed, initialStep }: WizardContainerPr
     )
   }
 
-  // Adım 3-5 — Placeholder; sonraki alt-sprint'lerde doldurulacak
+  // Adım 3 — Otomatik mesajlar
+  if (currentStep === 3) {
+    return (
+      <WizardShell
+        currentStep={3}
+        onBack={goBack}
+        onSkip={goNext}
+        onNext={commitWorkflowsAndNext}
+        nextLoading={commitLoading}
+      >
+        <WorkflowsStep onSelectionChange={setWorkflowSelection} />
+      </WizardShell>
+    )
+  }
+
+  // Adım 4-5 — Placeholder; sonraki alt-sprint'lerde doldurulacak
   return (
     <WizardShell
       currentStep={currentStep}
