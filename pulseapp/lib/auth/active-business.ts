@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import type { StaffPermissions, StaffRole, StaffWritePermissions } from '@/types'
 
 /**
  * Aktif işletme yönetimi — cookie tabanlı.
@@ -15,9 +16,24 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 export const ACTIVE_BUSINESS_COOKIE = 'active_business_id'
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 30 // 30 gün
 
+/**
+ * staff_members satırının minimum garanti ettiği alanlar + dinamik select'ten
+ * gelebilecek ek kolonlar (working_hours, businesses JOIN'i vb.).
+ */
+export interface ActiveStaffRow {
+  id: string
+  business_id: string
+  role: StaffRole
+  name?: string | null
+  permissions?: StaffPermissions | null
+  write_permissions?: StaffWritePermissions | null
+  businesses?: { name?: string | null } | null
+  [key: string]: unknown
+}
+
 export interface ActiveStaffResult {
   status: 'active' | 'needs_selection' | 'needs_onboarding'
-  staffMember?: any
+  staffMember?: ActiveStaffRow
   businesses?: Array<{ id: string; name: string; role: string }>
 }
 
@@ -47,7 +63,7 @@ export async function resolveActiveStaff(
     .eq('user_id', userId)
     .eq('is_active', true)
 
-  const staffRows = (rows as any[]) ?? []
+  const staffRows = (rows as unknown as ActiveStaffRow[]) ?? []
   if (staffRows.length === 0) return { status: 'needs_onboarding' }
 
   // 1. Cookie varsa ve eşleşiyorsa
@@ -81,7 +97,7 @@ export async function resolveActiveStaffForApi(
   supabase: SupabaseClient,
   userId: string,
   selectFields: string = 'id, business_id, role, permissions, write_permissions, is_active, name'
-): Promise<{ staff: any | null; status: 'active' | 'needs_selection' | 'needs_onboarding' }> {
+): Promise<{ staff: ActiveStaffRow | null; status: 'active' | 'needs_selection' | 'needs_onboarding' }> {
   const activeBusinessId = getActiveBusinessIdFromCookie()
 
   const { data: rows } = await supabase
@@ -90,7 +106,7 @@ export async function resolveActiveStaffForApi(
     .eq('user_id', userId)
     .eq('is_active', true)
 
-  const staffRows = (rows as any[]) ?? []
+  const staffRows = (rows as unknown as ActiveStaffRow[]) ?? []
   if (staffRows.length === 0) return { staff: null, status: 'needs_onboarding' }
 
   if (activeBusinessId) {

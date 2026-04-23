@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
   for (const apt of (appointments as unknown as Appointment[]) || []) {
     if (!apt.staff_id) continue
 
-    const price = (apt.services as any)?.price ?? 0
+    const price = apt.services?.price ?? 0
     const rule = findMatchingRule(apt.staff_id, apt.service_id)
 
     let commission = 0

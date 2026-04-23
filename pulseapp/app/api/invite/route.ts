@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
   await logAuditServer({
     businessId: staff.business_id,
     staffId: staff.id,
-    staffName: staff.name,
+    staffName: staff.name ?? null,
     action: 'create',
     resource: 'staff_invitation',
     details: { email: email || null, role },
