@@ -1384,7 +1384,7 @@ function RecordsPageInner() {
       {/* ── File Description Popup ── */}
       {fileDescPopup && (
         <Portal>
-        <div className="modal-overlay fixed inset-0 z-[65] flex items-center justify-center p-4" onClick={() => setFileDescPopup(null)}>
+        <div className="modal-overlay fixed inset-0 z-[115] flex items-center justify-center p-4" onClick={() => setFileDescPopup(null)}>
           <div className="modal-content card w-full max-w-sm dark:bg-gray-900" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-1">
               <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate pr-4">{fileDescPopup.fileName}</h3>

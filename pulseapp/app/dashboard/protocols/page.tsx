@@ -373,8 +373,8 @@ export default function ProtocolsPage() {
       {/* Detail Panel — Slide-over */}
       {(selectedProtocol || isClosingDetail) && selectedProtocol && (
         <Portal>
-          <div className={`modal-overlay fixed inset-0 z-[60] ${isClosingDetail ? 'closing' : ''}`} onClick={closeDetail} onAnimationEnd={() => { if (isClosingDetail) { setSelectedProtocol(null); setIsClosingDetail(false) } }} />
-          <div className={`slide-panel fixed inset-y-0 right-0 z-[61] w-full max-w-lg bg-white dark:bg-gray-900 shadow-2xl overflow-y-auto ${isClosingDetail ? 'closing' : ''}`}>
+          <div className={`modal-overlay fixed inset-0 z-[110] ${isClosingDetail ? 'closing' : ''}`} onClick={closeDetail} onAnimationEnd={() => { if (isClosingDetail) { setSelectedProtocol(null); setIsClosingDetail(false) } }} />
+          <div className={`slide-panel fixed inset-y-0 right-0 z-[110] w-full max-w-lg bg-white dark:bg-gray-900 shadow-2xl overflow-y-auto ${isClosingDetail ? 'closing' : ''}`}>
             <div className="p-6 space-y-6">
               <DetailPanel
                 protocol={selectedProtocol}
