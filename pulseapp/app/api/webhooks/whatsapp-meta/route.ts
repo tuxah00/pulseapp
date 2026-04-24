@@ -4,12 +4,6 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { verifyMetaWebhook, handleMetaVerifyChallenge } from '@/lib/webhooks/verify-meta'
 import { processInboundMessage } from '@/lib/webhooks/process-inbound'
 import { extractMetaMessageBody, type MetaInboundMessage } from '@/lib/whatsapp/meta-cloud'
-import { createLogger } from '@/lib/utils/logger'
-
-const log = createLogger({ route: 'api/webhooks/whatsapp-meta' })
-
-/** Replay koruması: webhook payload'daki en yeni mesajın timestamp'i ile now() arasında fark 5dk'dan büyükse düşür. */
-const REPLAY_WINDOW_SECONDS = 300
 
 /**
  * Meta WhatsApp Cloud API inbound webhook
@@ -61,6 +55,8 @@ export async function POST(request: NextRequest) {
     return new NextResponse('OK', { status: 200 })
   }
 
+  const admin = createAdminClient()
+
   // Tek payload'da gelen tüm mesajları tek düzlemde topla (statuses yok sayılır — ileride delivery receipt için kullanılacak)
   const messages: MetaInboundMessage[] = []
   for (const entry of payload.entry ?? []) {
@@ -69,19 +65,6 @@ export async function POST(request: NextRequest) {
       if (change.value.messages) messages.push(...change.value.messages)
     }
   }
-
-  // T1.3 — Replay attack koruması: en yeni mesaj timestamp'i 5dk'dan eskiyse reddet.
-  // Meta timestamp unix-seconds string formatında gelir.
-  if (messages.length > 0) {
-    const nowSec = Math.floor(Date.now() / 1000)
-    const maxTs = Math.max(...messages.map((m) => Number(m.timestamp) || 0))
-    if (maxTs > 0 && Math.abs(nowSec - maxTs) > REPLAY_WINDOW_SECONDS) {
-      log.warn({ maxTs, nowSec, delta: nowSec - maxTs }, 'Meta webhook replay reddedildi (timestamp eski)')
-      return NextResponse.json({ error: 'Replay window aşıldı' }, { status: 403 })
-    }
-  }
-
-  const admin = createAdminClient()
 
   // Mesajlar birbirinden bağımsız — paralel işle (Meta webhook timeout 20sn, AI yanıtı gecikebilir)
   await Promise.all(

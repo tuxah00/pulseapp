@@ -1,7 +1,6 @@
 'use client'
 
-import { useState } from 'react'
-import { Gift, Percent, Coins, Sparkles, CalendarClock, CheckCircle2, Clock, XCircle, Loader2 } from 'lucide-react'
+import { Gift, Percent, Coins, Sparkles, CalendarClock, CheckCircle2, Clock, XCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatUntil } from '@/lib/portal/date-helpers'
 
@@ -161,55 +160,6 @@ export function RewardCard({ reward, onBook }: RewardCardProps) {
           Randevu Al ve Kullan
         </button>
       )}
-
-      {isActive && <RedeemButton rewardId={reward.id} />}
-    </div>
-  )
-}
-
-// "Şimdi Kullan" butonu — personele talep notification'ı düşürür
-function RedeemButton({ rewardId }: { rewardId: string }) {
-  const [requesting, setRequesting] = useState(false)
-  const [requested, setRequested] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const handleClick = async () => {
-    setError(null)
-    setRequesting(true)
-    try {
-      const res = await fetch(`/api/portal/rewards/${rewardId}/redeem`, { method: 'POST' })
-      const data = await res.json()
-      if (!res.ok) {
-        setError(data.error || 'Talep gönderilemedi')
-        return
-      }
-      setRequested(true)
-    } catch {
-      setError('Bağlantı hatası')
-    } finally {
-      setRequesting(false)
-    }
-  }
-
-  if (requested) {
-    return (
-      <div className="relative mt-2 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 px-3 py-2 text-xs text-emerald-800 dark:text-emerald-300">
-        Talebiniz iletildi. Personel onayını bekleyin.
-      </div>
-    )
-  }
-
-  return (
-    <div className="relative mt-2 space-y-1.5">
-      <button
-        onClick={handleClick}
-        disabled={requesting}
-        className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-pulse-200 dark:border-pulse-800 text-pulse-900 dark:text-pulse-300 bg-pulse-50 dark:bg-pulse-900/20 hover:bg-pulse-100 dark:hover:bg-pulse-900/30 text-sm font-medium transition-colors disabled:opacity-60"
-      >
-        {requesting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Gift className="w-4 h-4" />}
-        Şimdi Kullan
-      </button>
-      {error && <p className="text-xs text-red-700 dark:text-red-400">{error}</p>}
     </div>
   )
 }

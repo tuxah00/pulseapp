@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import {
-  CalendarCheck, Clock, Loader2, X, Pencil, Ban, Plus, CalendarX2, Share2, Check, Copy,
+  CalendarCheck, Clock, Loader2, X, Pencil, Ban, Plus, CalendarX2,
 } from 'lucide-react'
 import { cn, formatTime, formatDateISO } from '@/lib/utils'
 import { useConfirm } from '@/lib/hooks/use-confirm'
@@ -24,7 +24,6 @@ interface Appointment {
   end_time?: string
   status: string
   notes?: string | null
-  manage_token?: string | null
   services?: ServiceJoin | ServiceJoin[] | null
   staff_members?: StaffJoin | StaffJoin[] | null
 }
@@ -196,7 +195,6 @@ export default function PortalAppointmentsPage() {
                       >
                         <Pencil className="h-3 w-3" /> Düzenle
                       </button>
-                      {apt.manage_token && <ShareLinkButton token={apt.manage_token} />}
                       <button
                         onClick={() => handleCancel(apt)}
                         className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 text-xs font-medium hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
@@ -331,45 +329,5 @@ function EditModal({ appointment, onClose, onSaved }: {
         </div>
       </div>
     </div>
-  )
-}
-
-// Randevu yönetim linkini paylaşma butonu — clipboard veya navigator.share
-function ShareLinkButton({ token }: { token: string }) {
-  const [copied, setCopied] = useState(false)
-
-  const url = typeof window !== 'undefined' ? `${window.location.origin}/book/manage/${token}` : ''
-
-  const handleClick = async () => {
-    if (!url) return
-    if (typeof navigator !== 'undefined' && 'share' in navigator) {
-      try {
-        await (navigator as Navigator & { share: (data: ShareData) => Promise<void> }).share({
-          title: 'Randevu Linki',
-          text: 'Randevumun yönetim linki:',
-          url,
-        })
-        return
-      } catch {
-        // kullanıcı iptal etti veya share desteklenmiyor → clipboard fallback
-      }
-    }
-    try {
-      await navigator.clipboard.writeText(url)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      // fallback: select+copy fallback
-    }
-  }
-
-  return (
-    <button
-      onClick={handleClick}
-      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 text-xs font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-    >
-      {copied ? <Check className="h-3 w-3 text-green-600" /> : 'share' in (typeof navigator !== 'undefined' ? navigator : {} as Navigator) ? <Share2 className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-      {copied ? 'Kopyalandı' : 'Linki Paylaş'}
-    </button>
   )
 }

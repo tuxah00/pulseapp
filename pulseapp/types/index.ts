@@ -465,12 +465,8 @@ export interface BusinessSettings {
   auto_reply_mode?: 'off' | 'whitelist' | 'smart'
   /** "HH:mm" formatında başlangıç/bitiş; dışında hiç yanıt gitmez */
   auto_reply_hours?: { start: string; end: string }
-  /** İşletme bazlı günlük toplam otomatik yanıt üst sınırı */
+  /** Aynı müşteriye günde max bu kadar otomatik yanıt */
   auto_reply_daily_cap?: number
-  /** Müşteri bazlı günlük otomatik yanıt üst sınırı */
-  auto_reply_per_customer_cap?: number
-  /** Aynı müşteriye iki yanıt arası minimum bekleme (dakika) */
-  auto_reply_cooldown_minutes?: number
   /** Müşteriye gönderilen mesaj sonuna "— Otomatik yanıt" etiketi eklensin mi (varsayılan: true) */
   auto_reply_signature?: boolean
   language: string
@@ -507,16 +503,12 @@ export interface BusinessSettings {
   ai_permissions?: AIPermissions
   // Sektörel benchmark opt-in (Faz 5.3) — anonim agregatlar için
   benchmark_opt_in?: boolean
-  // Pilot modu — ücretli aboneliklere bağımlı özellikler (PayTR, Paraşüt, Twilio SMS/WA, otomatik cron)
-  // gizlenir; SMS/WA gönderimleri uygulama-içi bildirim olarak personele iletilir.
-  pilot_mode?: boolean
-  // Pilot başlangıç wizard'ı tamamlandı mı (true → bir daha gösterilmez)
-  pilot_setup_completed?: boolean
   // Kurulum sihirbazı (medical_aesthetic + dental_clinic için)
   wizard_completed?: boolean
   wizard_step?: number
   // Randevudan 24 saat sonra "Nasıl hissediyorsunuz?" takip mesajı
   follow_up_24h_enabled?: boolean
+  // Doğum günü SMS açık/kapalı bayrağı (birthday_sms_enabled zaten yukarıda mevcut)
   // Wizard'dan özelleştirilmiş mesaj metinleri — ilgili cron/otomasyonlar bu alanı okur
   message_templates?: {
     reminder_24h?: string

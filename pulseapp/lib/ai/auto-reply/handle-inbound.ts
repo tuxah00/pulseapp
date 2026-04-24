@@ -76,15 +76,6 @@ export async function handleInbound(params: HandleInboundParams): Promise<Handle
     settings: business.settings,
   })
   if (!guard.allowed) {
-    // T2.8 — Yanıtlanmayan mesaj için staff alert (spam sebebi: kullanıcı hatasıyla sessiz kalmasın)
-    // Mod kapalıysa alert atma (istenen davranış), diğer blokajlarda personel görsün
-    if (guard.reason !== 'ai_auto_reply_disabled' && guard.reason !== 'auto_reply_mode_off') {
-      await insertUnansweredAlert(admin, {
-        businessId, customerId, customerName,
-        reason: guard.reason ?? 'guardrail',
-        messageBody,
-      })
-    }
     return { handled: false, reason: guard.reason }
   }
 
@@ -109,16 +100,9 @@ export async function handleInbound(params: HandleInboundParams): Promise<Handle
     recentMessagesPromise,
   ])
 
-  // T2.2 — Güvensiz sınıflandırma veya kritik niyetler → otomatik yanıt verme,
-  // her durumda personel görsün. Şikayet/belirsiz durumlarda yanlış canned yanıt
-  // müşteri memnuniyetini bozar; iptal/erteleme personel tarafından işlenmeli.
-  const BLOCKED_AUTO_INTENTS = ['complaint', 'other', 'appointment_cancel', 'appointment_reschedule'] as const
-  const isBlocked = (BLOCKED_AUTO_INTENTS as readonly string[]).includes(intent)
-  if (confidence < 0.65 || isBlocked) {
-    await insertStaffNotification(admin, {
-      businessId, intent, summary, customerId, customerName, rawMessage: messageBody,
-    })
-    return { handled: false, reason: confidence < 0.65 ? 'low_confidence' : `blocked_intent:${intent}`, intent }
+  // Düşük güvenli belirsiz niyet → otomatik yanıt verme, personel görsün
+  if (confidence < 0.5 || intent === 'other') {
+    return { handled: false, reason: 'low_confidence_or_other', intent }
   }
 
   const recentMessages = ((recentRes.data ?? []) as Array<{ direction: 'inbound' | 'outbound'; content: string }>)
@@ -188,24 +172,6 @@ export async function handleInbound(params: HandleInboundParams): Promise<Handle
 
   if (!sendResult.success) {
     log.error({ businessId, channel, error: sendResult.error }, 'Otomatik yanıt gönderilemedi')
-    // T2.4 — Staff'a bildirim + retry için ai_pending_actions kuyruğuna eklenir
-    await admin.from('notifications').insert({
-      business_id: businessId,
-      type: 'ai_alert',
-      title: `Otomatik yanıt gönderilemedi: ${customerName || 'Müşteri'}`,
-      body: `${channel.toUpperCase()} mesajına cevap gönderilemedi: ${sendResult.error || 'bilinmeyen hata'}. Mesaj: "${messageBody.slice(0, 120)}"`,
-      related_id: customerId,
-      related_type: 'customer',
-    })
-    await admin.from('ai_pending_actions').insert({
-      business_id: businessId,
-      customer_id: customerId,
-      action_type: 'send_message',
-      payload: { channel, to: from, body: signed, message_type: 'ai_auto_reply' },
-      status: 'scheduled',
-      scheduled_for: new Date(Date.now() + 5 * 60_000).toISOString(), // 5 dk sonra retry
-      created_by: 'auto_reply_retry',
-    }).then(() => undefined, () => undefined) // best-effort
     return { handled: true, intent, replySent: false, reason: 'send_failed' }
   }
 
@@ -241,34 +207,6 @@ async function insertStaffNotification(
     type: 'ai_alert',
     title,
     body,
-    related_id: params.customerId,
-    related_type: 'customer',
-  })
-}
-
-/** T2.8 — Guardrail'in bloke ettiği mesajlar için staff alert. */
-async function insertUnansweredAlert(
-  admin: SupabaseClient,
-  params: {
-    businessId: string
-    customerId: string
-    customerName?: string
-    reason: string
-    messageBody: string
-  },
-) {
-  const REASON_LABELS: Record<string, string> = {
-    outside_hours: 'saat dışı',
-    cooldown: 'cooldown süresi',
-    per_customer_cap: 'müşteri cap aşıldı',
-    business_daily_cap: 'günlük cap aşıldı',
-  }
-  const reasonLabel = REASON_LABELS[params.reason] ?? params.reason
-  await admin.from('notifications').insert({
-    business_id: params.businessId,
-    type: 'ai_alert',
-    title: `Yanıtlanmayan mesaj: ${params.customerName || 'Müşteri'}`,
-    body: `Sebep: ${reasonLabel}. Mesaj: "${params.messageBody.slice(0, 120)}"`,
     related_id: params.customerId,
     related_type: 'customer',
   })

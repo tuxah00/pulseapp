@@ -4,33 +4,61 @@ import type { BusinessMemoryRow, MemoryUpsertInput, MemoryScope } from './types'
 type SupabaseAdmin = SupabaseClient<any, any, any>
 
 /**
- * Hafıza kaydı ekle veya güncelle (atomik upsert).
- *
- * T1.7 — find + insert/update pattern'i race'e açıktı. Tek SQL INSERT...ON CONFLICT
- * çağrısına dönüştürüldü; `upsert_ai_memory` RPC'si confidence max hesaplamasını
- * SQL-side yapar ve atomik upsert sağlar (migration 069).
+ * Hafıza kaydı ekle veya güncelle (upsert).
+ * Aynı (business_id, scope, scope_id, key) mevcutsa değer ve last_reinforced_at güncellenir.
  */
 export async function upsertMemory(
   admin: SupabaseAdmin,
   input: MemoryUpsertInput
 ): Promise<BusinessMemoryRow | null> {
-  const { data, error } = await admin.rpc('upsert_ai_memory', {
-    p_business_id: input.businessId,
-    p_scope: input.scope,
-    p_scope_id: input.scopeId ?? null,
-    p_key: input.key,
-    p_value: input.value,
-    p_confidence: input.confidence ?? 0.8,
-    p_source: input.source ?? 'explicit_user',
-    p_created_by_staff_id: input.createdByStaffId ?? null,
-    p_expires_at: input.expiresAt ?? null,
-  })
+  // Önce mevcut kaydı bul
+  const existing = await findMemory(
+    admin,
+    input.businessId,
+    input.scope,
+    input.scopeId ?? null,
+    input.key
+  )
 
-  if (error) {
-    console.error('upsertMemory error:', error.message)
-    return null
+  const payload: any = {
+    business_id: input.businessId,
+    scope: input.scope,
+    scope_id: input.scopeId ?? null,
+    key: input.key,
+    value: input.value,
+    confidence: input.confidence ?? 0.8,
+    source: input.source ?? 'explicit_user',
+    created_by_staff_id: input.createdByStaffId ?? null,
+    last_reinforced_at: new Date().toISOString(),
+    expires_at: input.expiresAt ?? null,
   }
-  return (data as BusinessMemoryRow | null) ?? null
+
+  if (existing) {
+    // Güncelle — confidence öncekinin max'ı ile yenininki arasında en yüksek
+    const newConfidence = Math.max(existing.confidence, payload.confidence)
+    const { data, error } = await admin
+      .from('ai_business_memory')
+      .update({ ...payload, confidence: newConfidence })
+      .eq('id', existing.id)
+      .select()
+      .maybeSingle()
+    if (error) {
+      console.error('upsertMemory update error:', error.message)
+      return null
+    }
+    return data
+  } else {
+    const { data, error } = await admin
+      .from('ai_business_memory')
+      .insert(payload)
+      .select()
+      .maybeSingle()
+    if (error) {
+      console.error('upsertMemory insert error:', error.message)
+      return null
+    }
+    return data
+  }
 }
 
 /**

@@ -11,10 +11,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
   handleAppointmentConfirmationReply,
-  handleNumericChoiceReply,
   CONFIRM_REGEX,
   DECLINE_REGEX,
-  NUMERIC_CHOICE_REGEX,
 } from '@/lib/messaging/appointment-confirmation'
 import { resolveInboundCustomer } from '@/lib/webhooks/resolve-customer'
 import { handleInbound } from '@/lib/ai/auto-reply/handle-inbound'
@@ -48,39 +46,20 @@ export async function processInboundMessage(params: ProcessInboundParams): Promi
     return
   }
 
-  // Idempotent insert: Meta/Twilio retry ettiğinde aynı mesaj iki kez işlenmez.
-  // Migration 067 ile meta_message_id / twilio_sid partial UNIQUE index var.
-  const { data: inserted, error: insertErr } = await admin
-    .from('messages')
-    .upsert(
-      {
-        business_id: customer.business_id,
-        customer_id: customer.id,
-        direction: 'inbound',
-        channel,
-        message_type: 'text',
-        content: messageBody,
-        [providerIdField]: providerMessageId,
-        twilio_status: 'received',
-      },
-      { onConflict: providerIdField, ignoreDuplicates: true },
-    )
-    .select('id')
-
-  if (insertErr) {
-    log.error({ err: insertErr, providerMessageId, channel }, 'Inbound mesaj kaydedilemedi')
-    return
-  }
-  // ignoreDuplicates=true + boş data → mesaj zaten işlenmişti (retry)
-  if (!inserted || inserted.length === 0) {
-    log.warn({ providerMessageId, channel }, 'Duplicate inbound webhook — atlandı')
-    return
-  }
+  await admin.from('messages').insert({
+    business_id: customer.business_id,
+    customer_id: customer.id,
+    direction: 'inbound',
+    channel,
+    message_type: 'text',
+    content: messageBody,
+    [providerIdField]: providerMessageId,
+    twilio_status: 'received',
+  })
 
   const trimmed = messageBody.trim().toUpperCase()
   const isConfirm = CONFIRM_REGEX.test(trimmed)
   const isDecline = DECLINE_REGEX.test(trimmed)
-  const numericMatch = trimmed.match(NUMERIC_CHOICE_REGEX)
 
   if (isConfirm || isDecline) {
     const handled = await handleAppointmentConfirmationReply(
@@ -89,17 +68,6 @@ export async function processInboundMessage(params: ProcessInboundParams): Promi
       customer.business_id,
       from,
       isConfirm,
-      confirmationChannel,
-    )
-    if (handled) return
-  } else if (numericMatch) {
-    // T2.1 — rakam yanıtı (1-5): disambiguation seçimi
-    const handled = await handleNumericChoiceReply(
-      admin,
-      customer.id,
-      customer.business_id,
-      from,
-      Number(numericMatch[1]),
       confirmationChannel,
     )
     if (handled) return

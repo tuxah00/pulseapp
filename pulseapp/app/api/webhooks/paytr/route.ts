@@ -8,19 +8,6 @@ const log = createLogger({ route: 'api/webhooks/paytr' })
 
 // POST: PayTR ödeme sonucu webhook
 export async function POST(req: NextRequest) {
-  // T3.6 — Opsiyonel IP whitelist kontrolü. PAYTR_ALLOWED_IPS env'inde virgülle ayrılmış
-  // IP listesi varsa x-forwarded-for header'ındaki client IP bu listede olmalı.
-  // Hash doğrulaması zaten var; bu ek katman replay/flood saldırılarını zorlaştırır.
-  const allowedIpsEnv = process.env.PAYTR_ALLOWED_IPS
-  if (allowedIpsEnv && allowedIpsEnv.trim().length > 0) {
-    const clientIp = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim()
-    const allowed = allowedIpsEnv.split(',').map((s) => s.trim()).filter(Boolean)
-    if (!clientIp || !allowed.includes(clientIp)) {
-      log.warn({ clientIp }, 'PayTR webhook: IP whitelist dışı reddedildi')
-      return new Response('PAYTR_ERROR: Forbidden IP', { status: 403 })
-    }
-  }
-
   let data: PaytrCallbackData
 
   try {

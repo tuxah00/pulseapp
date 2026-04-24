@@ -3,8 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { sendSMS } from '@/lib/sms/send'
 import { sendWhatsApp } from '@/lib/whatsapp/send'
 import { createLogger } from '@/lib/utils/logger'
-import { isPilotMode } from '@/lib/pilot'
-import type { BusinessSettings, MessageChannel, MessageType } from '@/types'
+import type { MessageChannel, MessageType } from '@/types'
 
 const log = createLogger({ module: 'messaging/send' })
 
@@ -56,20 +55,6 @@ export async function sendMessage(params: SendMessageParams): Promise<SendMessag
 
   // Tüm kanallara geçilen ortak metadata
   const meta = { staffId, staffName, templateName, templateParams }
-
-  // Pilot modu — Twilio/Meta entegrasyonları kapalı; mesaj 'web' kanalı olarak kaydedilir
-  // ve personele in-app bildirim düşer. Belirli kanal istense bile pilot kazanır.
-  if (await isBusinessInPilotMode(businessId)) {
-    return savePilotPendingMessage({
-      to,
-      body,
-      businessId,
-      customerId,
-      messageType,
-      requestedChannel: channel === 'auto' ? null : channel,
-      ...meta,
-    })
-  }
 
   // Belirli kanal isteniyorsa doğrudan gönder
   if (channel === 'whatsapp') {
@@ -143,82 +128,6 @@ async function resolveChannel(
 
   // Default: SMS (çoğu müşteri henüz WA opt-in yapmamış olacak)
   return hasSMS() ? 'sms' : 'whatsapp'
-}
-
-/**
- * İşletme settings'inden pilot_mode flag'ini okur. Hata durumunda false döner
- * (fail-open: pilot değilse normal akış devam eder).
- */
-async function isBusinessInPilotMode(businessId: string): Promise<boolean> {
-  try {
-    const admin = createAdminClient()
-    const { data } = await admin
-      .from('businesses')
-      .select('settings')
-      .eq('id', businessId)
-      .single()
-    return isPilotMode((data?.settings ?? null) as Pick<BusinessSettings, 'pilot_mode'> | null)
-  } catch (err) {
-    log.warn({ err, businessId }, 'Pilot mode okunamadı, normal akışa geçiliyor')
-    return false
-  }
-}
-
-/**
- * Pilot modunda mesaj — DB'ye 'web' kanalı olarak kaydet + personele bildirim düşür.
- * Personel bildirim panelinden mesajı görür ve manuel olarak (telefon/whatsapp) iletir.
- */
-async function savePilotPendingMessage(params: {
-  to: string
-  body: string
-  businessId: string
-  customerId?: string
-  messageType: MessageType
-  requestedChannel: MessageChannel | null
-  staffId?: string
-  staffName?: string
-  templateName?: string
-  templateParams?: Record<string, string>
-}): Promise<SendMessageResult> {
-  const admin = createAdminClient()
-  const { body, businessId, customerId, messageType, requestedChannel } = params
-
-  // Müşteri adı (bildirim başlığı için) — bulunamazsa telefon numarasını kullan
-  let customerName: string = params.to
-  if (customerId) {
-    const { data: customer } = await admin
-      .from('customers')
-      .select('name')
-      .eq('id', customerId)
-      .maybeSingle()
-    if (customer?.name) customerName = customer.name
-  }
-
-  await admin.from('messages').insert({
-    business_id: businessId,
-    customer_id: customerId || null,
-    direction: 'outbound',
-    channel: 'web',
-    message_type: messageType,
-    content: body,
-    staff_id: params.staffId || null,
-    staff_name: params.staffName || null,
-    template_name: params.templateName || null,
-    template_params: params.templateParams || null,
-  })
-
-  const channelLabel = requestedChannel === 'whatsapp' ? 'WhatsApp' : requestedChannel === 'sms' ? 'SMS' : 'Mesaj'
-  const preview = body.length > 200 ? body.slice(0, 200) + '…' : body
-  await admin.from('notifications').insert({
-    business_id: businessId,
-    type: 'pilot_message_pending',
-    title: `${channelLabel} bekliyor (pilot): ${customerName} — ${params.to}`,
-    body: preview,
-    related_id: customerId || null,
-    related_type: customerId ? 'customer' : null,
-  })
-
-  return { success: true, channel: 'web' }
 }
 
 function hasSMS(): boolean {

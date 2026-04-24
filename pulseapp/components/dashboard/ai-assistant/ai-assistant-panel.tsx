@@ -132,20 +132,6 @@ export default function AIAssistantPanel({ businessName, sector, plan, permissio
     }
   }, [isOpen, recorderState])
 
-  // T2.6 — Component unmount'ta kalan stream/kayıt kaynakları serbest bırakılmalı.
-  // Panel çok hızlı aç-kapat edildiğinde mediaRecorder aktif kalabilir → heap leak + mic ışığı yanık kalır.
-  useEffect(() => {
-    return () => {
-      try {
-        const rec = mediaRecorderRef.current
-        if (rec && rec.state !== 'inactive') rec.stop()
-        rec?.stream?.getTracks().forEach((t) => t.stop())
-      } catch {}
-      try { abortCtrlRef.current?.abort() } catch {}
-      chunksRef.current = []
-    }
-  }, [])
-
   // Yeni işletme sahibi için kurulum sihirbazını otomatik başlat (dashboard'da, ilk kez).
   // Sadece owner rolündeki kullanıcılara gösterilir — diğer personele kurulum mesajı gitmez.
   useEffect(() => {

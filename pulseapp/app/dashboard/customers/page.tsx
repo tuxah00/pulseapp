@@ -58,8 +58,7 @@ const GalleryTab = dynamic(() => import('@/components/customers/gallery-tab').th
 const VALID_SEGMENTS: CustomerSegment[] = ['new', 'regular', 'vip', 'risk', 'lost']
 
 export default function CustomersPage() {
-  const { businessId, staffId, staffName, loading: ctxLoading, sector, settings, writePermissions } = useBusinessContext()
-  const pilotMode = settings?.pilot_mode === true
+  const { businessId, staffId, staffName, loading: ctxLoading, sector, writePermissions } = useBusinessContext()
   const { confirm } = useConfirm()
   const searchParams = useSearchParams()
   const customerLabel = sector ? getCustomerLabel(sector) : 'Müşteriler'
@@ -1056,15 +1055,6 @@ export default function CustomersPage() {
                     </div>
                   )}
 
-                  {/* Müşteri portal daveti — pilot modda aktif */}
-                  {pilotMode && businessId && (
-                    <PortalInviteSection
-                      businessId={businessId}
-                      customerName={selectedCustomer.name}
-                      hasBirthday={!!selectedCustomer.birthday}
-                    />
-                  )}
-
                   {/* Alerjiler */}
                   <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
                     <div className="flex items-center justify-between mb-2">
@@ -1512,71 +1502,6 @@ export default function CustomersPage() {
             </div>
           </div>
         </Portal>
-      )}
-    </div>
-  )
-}
-
-// Pilot modunda müşteri detay panelinde portal davet linkini üreten bölüm.
-// Doğum tarihi yoksa kullanıcıyı uyarır (giriş için doğum tarihi gerekli).
-function PortalInviteSection({
-  businessId,
-  customerName,
-  hasBirthday,
-}: {
-  businessId: string
-  customerName: string
-  hasBirthday: boolean
-}) {
-  const [copied, setCopied] = useState(false)
-  const [shareCopied, setShareCopied] = useState(false)
-  const inviteUrl = typeof window !== 'undefined' ? `${window.location.origin}/portal/${businessId}` : ''
-  const inviteText = `Sayın ${customerName}, kişisel müşteri sayfanız hazır: ${inviteUrl}\nGiriş için telefon numaranız ve doğum tarihinizi kullanın.`
-
-  const handleCopyLink = async () => {
-    if (!inviteUrl) return
-    try {
-      await navigator.clipboard.writeText(inviteUrl)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch {}
-  }
-
-  const handleCopyMessage = async () => {
-    try {
-      await navigator.clipboard.writeText(inviteText)
-      setShareCopied(true)
-      setTimeout(() => setShareCopied(false), 2000)
-    } catch {}
-  }
-
-  return (
-    <div className="rounded-xl p-3 border border-emerald-200 dark:border-emerald-700/50 bg-emerald-50 dark:bg-emerald-900/20">
-      <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 mb-2">Müşteri Portali</p>
-      {hasBirthday ? (
-        <>
-          <p className="text-xs text-emerald-900/80 dark:text-emerald-200/80 mb-2">
-            Müşteri telefon + doğum tarihi ile portala giriş yapabilir.
-          </p>
-          <div className="flex gap-2">
-            <button
-              onClick={handleCopyLink}
-              className="flex-1 text-xs px-2.5 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 font-medium hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-colors"
-            >
-              {copied ? 'Kopyalandı!' : 'Linki Kopyala'}
-            </button>
-            <button
-              onClick={handleCopyMessage}
-              className="flex-1 text-xs px-2.5 py-1.5 rounded-lg bg-emerald-700 dark:bg-emerald-600 text-white font-medium hover:bg-emerald-800 dark:hover:bg-emerald-700 transition-colors"
-            >
-              {shareCopied ? 'Mesaj kopyalandı!' : 'Davet Mesajı'}
-            </button>
-          </div>
-        </>
-      ) : (
-        <p className="text-xs text-amber-700 dark:text-amber-300">
-          Müşterinin doğum tarihini eklemeden portala giriş yapamaz. Düzenle&apos;den doğum tarihini girin.
-        </p>
       )}
     </div>
   )

@@ -4,11 +4,10 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import {
-  ArrowLeft, Receipt, Download, Loader2, CheckCircle2, Clock, AlertTriangle, XCircle, CreditCard, Banknote,
+  ArrowLeft, Receipt, Download, Loader2, CheckCircle2, Clock, AlertTriangle, XCircle, CreditCard,
 } from 'lucide-react'
 import { cn, formatCurrency, formatDate, formatDateTime } from '@/lib/utils'
 import { printInvoicePDF } from '@/lib/utils/export'
-import PaymentClaimModal from './_components/payment-claim-modal'
 
 interface InvoiceItem {
   service_name: string
@@ -104,8 +103,6 @@ export default function PortalInvoiceDetailPage() {
   const [business, setBusiness] = useState<Business | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [claimOpen, setClaimOpen] = useState(false)
-  const [claimSent, setClaimSent] = useState(false)
 
   useEffect(() => {
     async function fetchData() {
@@ -316,46 +313,6 @@ export default function PortalInvoiceDetailPage() {
           <p className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{invoice.notes}</p>
         </div>
       )}
-
-      {/* Ödeme bildirimi butonu — fatura ödenmediyse */}
-      {invoice.status !== 'paid' && invoice.status !== 'cancelled' && (
-        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-5">
-          {claimSent ? (
-            <div className="flex items-start gap-3 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4">
-              <CheckCircle2 className="w-5 h-5 text-green-700 dark:text-green-300 mt-0.5 flex-shrink-0" />
-              <div>
-                <p className="text-sm font-medium text-green-900 dark:text-green-200">Bildiriminiz iletildi</p>
-                <p className="text-xs text-green-800/80 dark:text-green-200/80 mt-0.5">
-                  Personel onayladıktan sonra fatura ödendi olarak işaretlenecek.
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center justify-between gap-3 flex-wrap">
-              <div>
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Ödediniz mi?</h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                  Havale veya nakit yaptıysanız bildirin, personel onayını bekleyin.
-                </p>
-              </div>
-              <button
-                onClick={() => setClaimOpen(true)}
-                className="btn-primary inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm"
-              >
-                <Banknote className="w-4 h-4" /> Ödediğimi Bildir
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
-      <PaymentClaimModal
-        open={claimOpen}
-        invoiceId={invoiceId}
-        defaultAmount={remaining > 0 ? remaining : invoice.total}
-        onClose={() => setClaimOpen(false)}
-        onSubmitted={() => setClaimSent(true)}
-      />
     </div>
   )
 }

@@ -29,7 +29,6 @@ const MANAGEMENT_ITEMS: SidebarItem[] = [
   { key: 'messages', name: 'Mesajlar', href: '/dashboard/messages', iconName: 'MessageSquare' },
   { key: 'insights', name: 'İş Zekası', href: '/dashboard/insights', iconName: 'TrendingUp' },
   { key: 'assistant-actions', name: 'Asistan Aksiyonları', href: '/dashboard/assistant-actions', iconName: 'Inbox' },
-  { key: 'automations', name: 'Otomasyonlar', href: '/dashboard/automations', iconName: 'Zap' },
   { key: 'analytics', name: 'Gelir-Gider', href: '/dashboard/analytics', iconName: 'BarChart3' },
   { key: 'invoices', name: 'Faturalar', href: '/dashboard/invoices', iconName: 'Receipt' },
   { key: 'shifts', name: 'Vardiya', href: '/dashboard/shifts', iconName: 'CalendarDays' },
@@ -38,10 +37,6 @@ const MANAGEMENT_ITEMS: SidebarItem[] = [
   { key: 'audit', name: 'Denetim', href: '/dashboard/audit', iconName: 'ShieldCheck' },
   { key: 'kvkk', name: 'KVKK', href: '/dashboard/kvkk', iconName: 'Lock' },
 ]
-
-// Pilot modunda gizlenecek menü öğeleri
-// (PayTR/Twilio/Paraşüt aboneliklerine bağımlı; pilot için ya kafa karıştırıcı ya işlevsiz)
-const PILOT_HIDDEN_KEYS = new Set(['campaigns'])
 
 // Sector-specific items
 const SECTOR_ITEMS: Partial<Record<SectorType, SidebarItem[]>> = {
@@ -210,15 +205,10 @@ export function getSidebarSections(
     item.key === 'customers' ? { ...item, name: customerLabel } : item
   ).filter(item => excludeAppointments.includes(sector) ? item.key !== 'appointments' : true)
 
-  const pilotMode = settings?.pilot_mode === true
-  const managementItems = pilotMode
-    ? MANAGEMENT_ITEMS.filter(item => !PILOT_HIDDEN_KEYS.has(item.key))
-    : MANAGEMENT_ITEMS.filter(item => item.key !== 'automations') // pilot dışında otomasyon paneli gizli (cron çalışıyor)
-
   return [
     { label: 'Ana', items: filteredBase },
     ...(sectorItems.length > 0 ? [{ label: 'Sektör', items: sectorItems }] : []),
-    { label: 'Yönetim', items: managementItems },
+    { label: 'Yönetim', items: MANAGEMENT_ITEMS },
   ]
 }
 
@@ -263,7 +253,6 @@ const SIDEBAR_KEY_TO_PERM: Record<string, keyof StaffPermissions | null> = {
   messages: 'messages',
   insights: 'insights',
   'assistant-actions': 'assistant_actions',
-  automations: null, // ayrı yetki yok — sidebar item'ı pilot mode flag'iyle filtrelenir
   analytics: 'analytics',
   invoices: 'invoices',
   shifts: 'shifts',

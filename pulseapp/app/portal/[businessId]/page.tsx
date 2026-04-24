@@ -3,10 +3,8 @@ import { notFound, redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isValidUUID } from '@/lib/utils/validate'
 import { shouldUseOtp, getPortalSession } from '@/lib/portal/auth'
-import { isPilotMode } from '@/lib/pilot'
-import { PortalLoginForm, type PortalLoginMode } from './_components/portal-login-form'
+import { PortalLoginForm } from './_components/portal-login-form'
 import { Sparkles, Info } from 'lucide-react'
-import type { BusinessSettings } from '@/types'
 
 export const dynamic = 'force-dynamic'
 
@@ -49,11 +47,7 @@ export default async function PortalLoginPage({ params, searchParams }: PageProp
     redirect(`/api/portal/logout?businessId=${businessId}`)
   }
 
-  const settings = (business.settings as BusinessSettings | null) ?? null
-  const pilot = isPilotMode(settings)
-  // Pilot modda: telefon + doğum tarihi
-  // Pilot dışında: Twilio aktifse OTP, değilse direct-login
-  const mode: PortalLoginMode = pilot ? 'birthdate' : (shouldUseOtp() ? 'otp' : 'direct')
+  const useOtp = shouldUseOtp()
 
   return (
     <div className="portal-page min-h-screen relative flex items-center justify-center bg-gradient-to-br from-pulse-900 via-pulse-800 to-indigo-900 p-4 overflow-hidden">
@@ -106,14 +100,12 @@ export default async function PortalLoginPage({ params, searchParams }: PageProp
 
           <h2 className="text-lg font-semibold text-gray-900 mb-1">Hesabınıza Giriş</h2>
           <p className="text-sm text-gray-500 mb-5">
-            {mode === 'otp'
+            {useOtp
               ? 'Kayıtlı telefon numaranızı girin, size SMS ile doğrulama kodu gönderelim.'
-              : mode === 'birthdate'
-              ? 'Telefon numaranız ve doğum tarihinizle giriş yapın.'
               : 'Kayıtlı telefon numaranızı girerek portala erişin.'}
           </p>
 
-          <PortalLoginForm businessId={businessId} mode={mode} />
+          <PortalLoginForm businessId={businessId} useOtp={useOtp} />
         </div>
 
         <div className="text-center mt-5 space-y-2">
