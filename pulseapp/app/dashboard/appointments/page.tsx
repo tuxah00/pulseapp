@@ -27,7 +27,7 @@ import {
   CalendarDays,
   CalendarRange,
   Search, Filter, ArrowUpDown,
-  Users, Building2, Ban, Lock, BellRing,
+  Users, Building2, Ban, Lock, BellRing, Sparkles,
 } from 'lucide-react'
 import { formatTime, formatDate, getStatusColor, formatCurrency, cn, formatDateISO } from '@/lib/utils'
 import { STATUS_LABELS, type AppointmentStatus, type Service, type StaffMember, type WorkingHours, type BlockedSlot } from '@/types'
@@ -38,6 +38,7 @@ type AppointmentView = AppointmentRow & {
   customers: { name: string; phone: string | null } | null
   services: { name: string; price: number; duration_minutes: number } | null
   staff_members: { name: string } | null
+  campaigns: { name: string } | null
 }
 import { logAudit } from '@/lib/utils/audit'
 import { addMonthsSafe } from '@/lib/utils/date-range'
@@ -142,7 +143,7 @@ export default function AppointmentsPage() {
     async function openFromNotification() {
       const { data } = await supabase
         .from('appointments')
-        .select('*, customers(name, phone), services(name, duration_minutes, price), staff_members(name)')
+        .select('*, customers(name, phone), services(name, duration_minutes, price), staff_members(name), campaigns(name)')
         .eq('id', appointmentId!)
         .eq('business_id', businessId)
         .is('deleted_at', null)
@@ -211,7 +212,7 @@ export default function AppointmentsPage() {
 
     let query = supabase
       .from('appointments')
-      .select('*, customers(name, phone), services(name, duration_minutes, price), staff_members(name)')
+      .select('*, customers(name, phone), services(name, duration_minutes, price), staff_members(name), campaigns(name)')
       .eq('business_id', businessId)
       .is('deleted_at', null)
       .order('start_time', { ascending: true })
@@ -308,17 +309,18 @@ export default function AppointmentsPage() {
 
   // Tek hiyerarşik ESC handler — önce en üstteki katman kapanır
   useEffect(() => {
-    const anyOpen = !!(slotPopup || showModal || selectedAppointment)
+    const anyOpen = !!(slotPopup || actionMenu || isSelecting || showModal || selectedAppointment)
     if (!anyOpen) return
     const h = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return
       if (slotPopup) { setSlotPopup(null); return }
+      if (actionMenu || isSelecting) { clearSelection(); return }
       if (showModal) { setIsClosingModal(true); return }
       if (selectedAppointment) { closePanelAnimated(); return }
     }
     document.addEventListener('keydown', h)
     return () => document.removeEventListener('keydown', h)
-  }, [slotPopup, showModal, selectedAppointment, closePanelAnimated])
+  }, [slotPopup, actionMenu, isSelecting, showModal, selectedAppointment, closePanelAnimated])
 
   function changeDate(days: number) {
     let d = new Date(selectedDate + 'T12:00:00')
@@ -864,17 +866,6 @@ export default function AppointmentsPage() {
     setSelectionEnd(null)
     setActionMenu(null)
   }
-
-  // ESC ile seçimi kapat
-  useEffect(() => {
-    const h = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && (actionMenu || isSelecting)) {
-        clearSelection()
-      }
-    }
-    document.addEventListener('keydown', h)
-    return () => document.removeEventListener('keydown', h)
-  }, [actionMenu, isSelecting])
 
   async function handleRescheduleSave(e: React.FormEvent) {
     e.preventDefault()
@@ -2570,13 +2561,22 @@ export default function AppointmentsPage() {
               <div className="flex flex-col items-center gap-2 py-4">
                 <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{formatTime(selectedAppointment.start_time)}</p>
                 <p className="text-sm text-gray-500 dark:text-gray-400">{formatTime(selectedAppointment.start_time)} – {formatTime(selectedAppointment.end_time)}</p>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center justify-center gap-2">
                   <span className={`badge ${getStatusColor(selectedAppointment.status)}`}>
                     {STATUS_LABELS[selectedAppointment.status as keyof typeof STATUS_LABELS]}
                   </span>
                   {selectedAppointment.recurrence_group_id && (
                     <span className="badge bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
                       <Repeat className="h-3 w-3 mr-1" />Tekrarlayan
+                    </span>
+                  )}
+                  {selectedAppointment.campaigns?.name && (
+                    <span
+                      className="badge bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+                      title={`Kampanya: ${selectedAppointment.campaigns.name}`}
+                    >
+                      <Sparkles className="h-3 w-3 mr-1" />
+                      {selectedAppointment.campaigns.name}
                     </span>
                   )}
                 </div>
@@ -2704,7 +2704,7 @@ export default function AppointmentsPage() {
       {/* Yeni / Düzenleme Randevu Modal */}
       {showModal && (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
+        <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
           <div className={`modal-content card w-full max-w-md max-h-[90vh] overflow-y-auto ${isClosingModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="h-section">
@@ -2891,7 +2891,7 @@ export default function AppointmentsPage() {
       {/* Erteleme Modal */}
       {(rescheduleAppointment || isClosingReschedule) && (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${isClosingReschedule ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingReschedule) { setRescheduleAppointment(null); setIsClosingReschedule(false) } }}>
+        <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center p-4 ${isClosingReschedule ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingReschedule) { setRescheduleAppointment(null); setIsClosingReschedule(false) } }}>
           <div className={`modal-content card w-full max-w-sm ${isClosingReschedule ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="h-section">Randevuyu Ertele</h2>
@@ -2938,7 +2938,7 @@ export default function AppointmentsPage() {
       {/* İptal Onay Modal */}
       {(cancelConfirmAppointment || isClosingCancelConfirm) && (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${isClosingCancelConfirm ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingCancelConfirm) { setCancelConfirmAppointment(null); setIsClosingCancelConfirm(false) } }}>
+        <div className={`modal-overlay fixed inset-0 z-[115] flex items-center justify-center p-4 ${isClosingCancelConfirm ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingCancelConfirm) { setCancelConfirmAppointment(null); setIsClosingCancelConfirm(false) } }}>
           <div className={`modal-content card w-full max-w-sm ${isClosingCancelConfirm ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="h-section">Randevuyu İptal Et</h2>

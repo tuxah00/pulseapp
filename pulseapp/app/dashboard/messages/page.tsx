@@ -30,7 +30,7 @@ interface Conversation {
 
 const AI_LABELS: Record<AiClassification, { label: string; color: string; icon: React.ReactNode }> = {
   appointment: { label: 'Randevu', color: 'badge-info', icon: <Calendar className="h-3 w-3" /> },
-  question: { label: 'Soru', color: 'badge-info', icon: <HelpCircle className="h-3 w-3" /> },
+  question: { label: 'Soru', color: 'badge-neutral', icon: <HelpCircle className="h-3 w-3" /> },
   complaint: { label: 'Şikayet', color: 'badge-danger', icon: <AlertTriangle className="h-3 w-3" /> },
   cancellation: { label: 'İptal', color: 'badge-danger', icon: <X className="h-3 w-3" /> },
   greeting: { label: 'Selamlama', color: 'badge-success', icon: <MessageCircle className="h-3 w-3" /> },

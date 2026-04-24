@@ -1,3 +1,4 @@
+// RLS bypass: portal müşterisi Supabase auth user değil; business_id + customer_id filtresi her sorguda zorunlu
 import { createAdminClient } from '@/lib/supabase/admin'
 
 /**

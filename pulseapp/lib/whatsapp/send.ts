@@ -1,3 +1,4 @@
+// RLS bypass: cron/webhook bağlamlarından çağrılır, auth session olmayabilir; messages insert için admin gerekli
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createLogger } from '@/lib/utils/logger'
 import { formatTrPhone } from '@/lib/utils/phone'

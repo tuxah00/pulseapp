@@ -161,7 +161,7 @@ export default function Sidebar({ businessName, userName, sector, plan, permissi
 
       {/* ── Header ── */}
       <div className={cn(
-        'flex h-16 items-center gap-3 px-4 border-b border-white/10',
+        'flex h-16 items-center gap-3 px-4 border-b border-white/10 cursor-default',
         collapsed ? 'justify-center' : 'justify-between'
       )}>
         <div className="flex items-center gap-3 min-w-0">
@@ -171,7 +171,7 @@ export default function Sidebar({ businessName, userName, sector, plan, permissi
             </div>
             <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-green-400 ring-2 ring-white dark:ring-gray-900" />
           </div>
-          <AnimatePresence>
+          <AnimatePresence initial={false}>
             {!collapsed && (
               <motion.div
                 initial={{ opacity: 0, width: 0 }}

@@ -449,7 +449,7 @@ export default function CommissionsPage() {
       {showAddModal && (
         <Portal>
           <div
-            className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${isClosingModal ? 'closing' : ''}`}
+            className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 ${isClosingModal ? 'closing' : ''}`}
             onClick={closeModal}
             onAnimationEnd={() => {
               if (isClosingModal) { setShowAddModal(false); setIsClosingModal(false) }

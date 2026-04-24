@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+// RLS bypass: staff_invitations için RLS yok, davet linki üretimi auth owner check'inden sonra admin ile yapılır
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logAuditServer } from '@/lib/utils/audit'
 import { resolveActiveStaffForApi } from '@/lib/auth/active-business'
@@ -34,7 +35,7 @@ export async function POST(req: NextRequest) {
   await logAuditServer({
     businessId: staff.business_id,
     staffId: staff.id,
-    staffName: staff.name,
+    staffName: staff.name ?? null,
     action: 'create',
     resource: 'staff_invitation',
     details: { email: email || null, role },

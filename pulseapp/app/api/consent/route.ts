@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+// RLS bypass: public endpoint — booking formundan gelen rıza kaydı için auth session yok
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logAuditServer } from '@/lib/utils/audit'
 import { validateBody } from '@/lib/api/validate'

@@ -1,28 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requirePermission, requireWritePermission } from '@/lib/api/with-permission'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-
-async function verifyMembership(supabase: ReturnType<typeof createServerSupabaseClient>, userId: string, businessId: string) {
-  const { data } = await supabase
-    .from('staff_members')
-    .select('id, business_id')
-    .eq('user_id', userId)
-    .eq('business_id', businessId)
-    .single()
-  return data
-}
 
 // GET: Protokol detayı
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+  const auth = await requirePermission(request, 'protocols')
+  if (!auth.ok) return auth.response
+  const { businessId } = auth.ctx
   const supabase = createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
-
-  const { searchParams } = new URL(request.url)
-  const businessId = searchParams.get('businessId')
-  if (!businessId) return NextResponse.json({ error: 'businessId gerekli' }, { status: 400 })
-
-  const staff = await verifyMembership(supabase, user.id, businessId)
-  if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
 
   const { data, error } = await supabase
     .from('treatment_protocols')
@@ -48,16 +33,13 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
 // PATCH: Protokol güncelle
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+  const auth = await requireWritePermission(request, 'protocols')
+  if (!auth.ok) return auth.response
+  const { businessId } = auth.ctx
   const supabase = createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
 
   const body = await request.json()
-  const { businessId, status, notes, intervalDays } = body
-  if (!businessId) return NextResponse.json({ error: 'businessId gerekli' }, { status: 400 })
-
-  const staff = await verifyMembership(supabase, user.id, businessId)
-  if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
+  const { status, notes, intervalDays } = body
 
   const updateData: Record<string, unknown> = {}
   if (status) updateData.status = status
@@ -78,16 +60,10 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 
 // DELETE: Protokol sil
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+  const auth = await requireWritePermission(request, 'protocols')
+  if (!auth.ok) return auth.response
+  const { businessId } = auth.ctx
   const supabase = createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
-
-  const { searchParams } = new URL(request.url)
-  const businessId = searchParams.get('businessId')
-  if (!businessId) return NextResponse.json({ error: 'businessId gerekli' }, { status: 400 })
-
-  const staff = await verifyMembership(supabase, user.id, businessId)
-  if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
 
   const { error } = await supabase
     .from('treatment_protocols')

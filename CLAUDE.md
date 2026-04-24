@@ -299,6 +299,11 @@ Proje tasarım aşamasında. Aşağıdakiler **production'a açılmadan önce** 
 - [ ] `/api/ai/*` — her çağrıda `staff_members` membership kontrolü (mevcut plan + sektör izni)
 - [ ] Portal / direct-login guard — portal sayfalarının dashboard auth bypass'i olmaması
 - [ ] `Zod` validasyon eksik 10+ API route için şemalar yaz (öncelik: müşteri, randevu, fatura, mesaj)
+- [x] `/api/invoices/payments` GET — cross-tenant açığı kapatıldı (2026-04-24): `businessId` zorunlu + staff membership kontrolü + sorgu filtresi
+- [x] `/api/invoices/payments` POST — cross-tenant kontrolü + `staff_id`/`staff_name` artık auth context'ten türetiliyor (audit log bütünlüğü), fazla ödeme/sıfır total guard'ları, `ipAddress` audit log'a eklendi (2026-04-25)
+- [x] `/api/appointments/[id]` PATCH — drag-drop için atomic RPC (`move_appointment` — advisory lock + FOR UPDATE); permission kontrolü eklendi (2026-04-25)
+- [x] `/api/protocols/[id]` — `requirePermission`/`requireWritePermission` pattern'ine geçirildi (2026-04-25)
+- [x] `/api/records` GET — `customerId` UUID validation (2026-04-25)
 
 ### Kod Borcu (Gecikebilir, Yayın Öncesi Hafifletilmeli)
 - [ ] `any` tip temizliği — AI route'ları, analytics, commissions modülünde yaygın
@@ -334,13 +339,16 @@ Aşağıdaki migration'lar Supabase SQL Editor'de manuel olarak çalıştırılm
 - `062_pgvector_embeddings.sql` → **✅ Uygulandı (2026-04-23)** — `vector` extension + `ai_embeddings` tablosu + IVFFlat index + `search_embeddings()` RPC + KVKK cascade
 - `063_ai_conversation_summary.sql` → **✅ Uygulandı (2026-04-23)** — `ai_conversations.summary`, `summary_updated_at`, `message_count_at_summary` kolonları
 - `064_ai_event_queue.sql` → **✅ Uygulandı (2026-04-23)** — `ai_event_queue` tablosu + RLS + index'ler (Faz 4 — proaktif danışman olayları)
+- `064_invoice_stock_tracking.sql` → **✅ Uygulandı (2026-04-24)** — `invoices.stock_deducted_at timestamptz` kolonu + partial index (stok düşümü idempotency)
+- `064b_customers_phone_unique.sql` → **✅ Uygulandı (2026-04-24)** — `customers(business_id, phone)` unique partial index (TOCTOU duplicate müşteri engeli) + mevcut duplicate temizliği
 - `065_ai_insights.sql` → **✅ Uygulandı (2026-04-23)** — `ai_insights` tablosu + RLS + index'ler (Faz 4 — insight kartları)
 - `066_sector_benchmarks_aggregate.sql` → **✅ Uygulandı (2026-04-23)** — `sector_benchmarks_aggregate` tablosu + unique index (sector+metric+period) + RLS public read (Faz 5 — anonim sektörel benchmark, sample_size >= 20 şartı)
+- `070_move_appointment_rpc.sql` → **✅ Uygulandı (2026-04-25)** — drag-drop randevu taşıma için atomic RPC (advisory lock + FOR UPDATE ile TOCTOU kapanır)
 
 ### Migration Numaralandırma Kuralı (2026-04-18'den itibaren)
 Aynı numaraya denk gelen migration'lar `a/b/c` harf suffix'i ile ayrılır. Alfabetik sıralama doğru çalışma sırasını korur.
 Örnek: `036a_fix_rewards_type_constraint.sql` → `036b_referral_status_simplify.sql`
 
-Mevcut a/b çiftleri: `036a/036b`, `037a/037b`, `040a/040b`, `049a/049b`, `050a/050b`, `053a/053b`, `054a/054b`.
+Mevcut a/b çiftleri: `036a/036b`, `037a/037b`, `040a/040b`, `049a/049b`, `050a/050b`, `053a/053b`, `054a/054b`, `064/064b`.
 
-Son migration numarası: `066_sector_benchmarks_aggregate.sql` (2026-04-23, Faz 5).
+Son migration numarası: `070_move_appointment_rpc.sql` (2026-04-25, güvenlik review Tier 2).

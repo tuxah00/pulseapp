@@ -11,7 +11,7 @@ export default function AIAssistantButton({ onClick }: Props) {
   return (
     <motion.button
       onClick={onClick}
-      className="fixed bottom-6 right-6 z-[55] w-14 h-14 rounded-full bg-gradient-to-br from-purple-600 to-indigo-600 text-white shadow-lg hover:shadow-xl flex items-center justify-center group"
+      className="fixed bottom-6 right-6 z-[55] w-14 h-14 rounded-full bg-pulse-900 text-white shadow-lg shadow-pulse-900/25 hover:shadow-xl hover:bg-pulse-800 transition-colors flex items-center justify-center group ring-1 ring-pulse-900/10"
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
       initial={{ scale: 0, opacity: 0 }}

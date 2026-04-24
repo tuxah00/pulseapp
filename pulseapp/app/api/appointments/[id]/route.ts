@@ -1,21 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireWritePermission } from '@/lib/api/with-permission'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { validateBody } from '@/lib/api/validate'
 import { appointmentPatchSchema } from '@/lib/schemas'
-
-async function verifyMembership(
-  supabase: ReturnType<typeof createServerSupabaseClient>,
-  userId: string,
-  businessId: string,
-) {
-  const { data } = await supabase
-    .from('staff_members')
-    .select('id, business_id')
-    .eq('user_id', userId)
-    .eq('business_id', businessId)
-    .single()
-  return data
-}
 
 function timeToMinutes(t: string): number {
   const [h, m] = t.slice(0, 5).split(':').map(Number)
@@ -30,19 +17,18 @@ function calculateEndTime(start: string, durationMinutes: number): string {
 }
 
 // PATCH: Randevu güncelle (drag-drop için tarih/saat taşıma dahil)
+// Atomic koruma: move_appointment RPC fonksiyonu advisory lock ile TOCTOU race'ini engeller.
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+  const auth = await requireWritePermission(request, 'appointments')
+  if (!auth.ok) return auth.response
+  const { businessId } = auth.ctx
   const supabase = createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
 
   const result = await validateBody(request, appointmentPatchSchema)
   if (!result.ok) return result.response
-  const { businessId, appointment_date, start_time, end_time } = result.data
+  const { appointment_date, start_time, end_time } = result.data
 
-  const staff = await verifyMembership(supabase, user.id, businessId)
-  if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
-
-  // Mevcut randevuyu çek (süre, personel için)
+  // Mevcut randevuyu çek (süre, personel için) — businessId cross-tenant filtre
   const { data: existing, error: fetchErr } = await supabase
     .from('appointments')
     .select('id, business_id, staff_id, start_time, end_time, appointment_date, services(duration_minutes)')
@@ -55,65 +41,64 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     return NextResponse.json({ error: 'Randevu bulunamadı' }, { status: 404 })
   }
 
-  const updateData: Record<string, unknown> = {}
-  if (appointment_date) updateData.appointment_date = appointment_date
-
+  // Yeni tarih/saat değerlerini hesapla
+  const newDate = appointment_date ?? existing.appointment_date
+  let newStart = existing.start_time
+  let newEnd = existing.end_time
   if (start_time) {
-    updateData.start_time = start_time
+    newStart = start_time
     if (end_time) {
-      updateData.end_time = end_time
+      newEnd = end_time
     } else {
-      // Mevcut süreyi koruyarak end_time hesapla
       const currentDuration =
         timeToMinutes(existing.end_time) - timeToMinutes(existing.start_time)
       const duration =
         currentDuration > 0
           ? currentDuration
           : ((existing.services as unknown as { duration_minutes: number } | null)?.duration_minutes ?? 30)
-      updateData.end_time = calculateEndTime(start_time, duration)
+      newEnd = calculateEndTime(start_time, duration)
     }
   } else if (end_time) {
-    updateData.end_time = end_time
+    newEnd = end_time
   }
 
-  // Çakışma kontrolü (aynı personel için)
-  const newDate = (updateData.appointment_date as string) ?? existing.appointment_date
-  const newStart = (updateData.start_time as string) ?? existing.start_time
-  const newEnd = (updateData.end_time as string) ?? existing.end_time
+  // Atomic RPC — advisory lock + FOR UPDATE ile race koşulsuz conflict check + update
+  const { data: rpcResult, error: rpcErr } = await supabase.rpc('move_appointment', {
+    p_appointment_id: params.id,
+    p_business_id: businessId,
+    p_new_date: newDate,
+    p_new_start: newStart.slice(0, 5), // HH:MM formatına indir (TIME kolonu)
+    p_new_end: newEnd.slice(0, 5),
+  })
 
-  if (existing.staff_id) {
-    const { data: dayApts } = await supabase
-      .from('appointments')
-      .select('id, start_time, end_time')
-      .eq('business_id', businessId)
-      .eq('staff_id', existing.staff_id)
-      .eq('appointment_date', newDate)
-      .in('status', ['pending', 'confirmed'])
-      .is('deleted_at', null)
+  if (rpcErr) {
+    return NextResponse.json({ error: rpcErr.message }, { status: 500 })
+  }
 
-    const conflict = (dayApts ?? []).some((apt) => {
-      if (apt.id === params.id) return false
-      return (
-        timeToMinutes(newStart) < timeToMinutes(apt.end_time) &&
-        timeToMinutes(apt.start_time) < timeToMinutes(newEnd)
-      )
-    })
-    if (conflict) {
-      return NextResponse.json(
-        { error: 'Bu personelin bu saatte başka bir randevusu var.' },
-        { status: 409 },
-      )
+  const res = rpcResult as { ok: boolean; error?: string } | null
+  if (!res?.ok) {
+    switch (res?.error) {
+      case 'forbidden':
+        return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
+      case 'not_found':
+        return NextResponse.json({ error: 'Randevu bulunamadı' }, { status: 404 })
+      case 'conflict':
+        return NextResponse.json(
+          { error: 'Bu personelin bu saatte başka bir randevusu var.' },
+          { status: 409 },
+        )
+      default:
+        return NextResponse.json({ error: 'Taşıma başarısız' }, { status: 500 })
     }
   }
 
-  const { data, error } = await supabase
+  // Güncel randevuyu döndür
+  const { data: updated } = await supabase
     .from('appointments')
-    .update(updateData)
+    .select('*')
     .eq('id', params.id)
     .eq('business_id', businessId)
-    .select()
     .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ appointment: data })
+  return NextResponse.json({ appointment: updated })
 }

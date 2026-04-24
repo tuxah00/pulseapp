@@ -1,3 +1,4 @@
+// RLS bypass: onboarding — staff_members kaydı henüz yok, RLS kullanıcıyı işletmeye bağlayamaz
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { getSeedForSector } from '@/lib/config/sector-seeds'
@@ -86,14 +87,9 @@ async function seedSectorContent(
 }
 
 export async function POST(request: NextRequest) {
+  let stage = 'init'
   try {
-    // Kimlik doğrulama
-    const authClient = createServerSupabaseClient()
-    const { data: { user } } = await authClient.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
-    }
-
+    stage = 'parse-body'
     const body = await request.json()
     const { user_id, business_name, sector, phone, city } = body
 
@@ -104,13 +100,54 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Gönderilen user_id'nin oturum açan kullanıcıyla eşleştiğini doğrula
-    if (user_id !== user.id) {
-      return NextResponse.json({ error: 'Yetkisiz: kullanıcı doğrulaması başarısız' }, { status: 403 })
+    // Env değişkenleri hızlı doğrulama — deploy'da eksik olursa hemen belli olsun
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.error('[onboarding] Eksik env: NEXT_PUBLIC_SUPABASE_URL veya SUPABASE_SERVICE_ROLE_KEY')
+      return NextResponse.json(
+        { error: 'Sunucu yapılandırma hatası: Supabase env değişkenleri eksik.' },
+        { status: 500 }
+      )
     }
 
+    stage = 'create-admin-client'
     const supabase = createAdminClient()
 
+    // Kimlik doğrulama — cookie session'ı varsa user_id ile eşleşmeli.
+    // Cookie henüz yazılmadıysa (signUp sonrası timing) admin client ile
+    // user_id'nin auth'ta gerçekten var olduğunu doğrula.
+    stage = 'auth-check'
+    try {
+      const authClient = createServerSupabaseClient()
+      const { data: { user } } = await authClient.auth.getUser()
+      if (user) {
+        if (user_id !== user.id) {
+          return NextResponse.json({ error: 'Yetkisiz: kullanıcı doğrulaması başarısız' }, { status: 403 })
+        }
+      } else {
+        const { data: adminUser, error: adminErr } = await supabase.auth.admin.getUserById(user_id)
+        if (adminErr || !adminUser?.user) {
+          return NextResponse.json({ error: 'Yetkisiz: kullanıcı bulunamadı' }, { status: 401 })
+        }
+      }
+    } catch (authThrow) {
+      console.error('[onboarding] Auth kontrol sırasında throw:', authThrow)
+      // Auth kontrolünü atlamak yerine hata dön ki client retry etmesin
+      const msg = authThrow instanceof Error ? authThrow.message : 'bilinmeyen'
+      return NextResponse.json({ error: `Auth kontrolü başarısız: ${msg}` }, { status: 500 })
+    }
+
+    stage = 'check-existing-staff'
+    // Idempotent: bu kullanıcı için zaten işletme varsa onu dön (retry güvenli)
+    const { data: existingStaff } = await supabase
+      .from('staff_members')
+      .select('business_id')
+      .eq('user_id', user_id)
+      .maybeSingle()
+    if (existingStaff?.business_id) {
+      return NextResponse.json({ business_id: existingStaff.business_id, existing: true })
+    }
+
+    stage = 'rpc-create-business'
     // Supabase fonksiyonunu çağır
     const { data, error } = await supabase.rpc('create_business_for_user', {
       p_user_id: user_id,
@@ -121,25 +158,33 @@ export async function POST(request: NextRequest) {
     })
 
     if (error) {
+      console.error('[onboarding] RPC create_business_for_user hatası:', error)
       log.error({ err: error }, 'İşletme oluşturma hatası')
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json(
+        { error: `İşletme oluşturma hatası: ${error.message || error.code || 'RPC başarısız'}` },
+        { status: 500 }
+      )
     }
 
+    stage = 'seed-sector-content'
     // Sektör bazlı örnek içerikleri yükle (hizmet, paket, otomatik mesaj)
     try {
       if (data) {
         await seedSectorContent(supabase, data as string, sector as SectorType)
       }
     } catch (seedErr) {
+      console.error('[onboarding] Seed hatası:', seedErr)
       log.error({ err: seedErr }, 'Seed içerik ekleme hatası')
       // Seed başarısız olsa da onboarding'i bitir
     }
 
     return NextResponse.json({ business_id: data })
   } catch (err) {
-    log.error({ err }, 'Onboarding hatası')
+    console.error(`[onboarding] Hata (stage=${stage}):`, err)
+    log.error({ err, stage }, 'Onboarding hatası')
+    const msg = err instanceof Error ? err.message : 'bilinmeyen hata'
     return NextResponse.json(
-      { error: 'Sunucu hatası.' },
+      { error: `Sunucu hatası (${stage}): ${msg}` },
       { status: 500 }
     )
   }

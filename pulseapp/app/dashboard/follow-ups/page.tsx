@@ -7,7 +7,7 @@ import { requirePermission, requireSectorModule } from '@/lib/hooks/use-require-
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import {
-  Plus, ClipboardCheck, Search, Loader2, Calendar, Send, Ban, Clock, CheckCircle, XCircle,
+  Plus, ClipboardCheck, Search, Loader2, Calendar, Send, Clock, CheckCircle, XCircle,
   X, MessageCircle, MessageSquare, CalendarClock, User, FileText, ExternalLink, History, Save
 } from 'lucide-react'
 import { CustomSelect } from '@/components/ui/custom-select'
@@ -38,14 +38,14 @@ interface FollowUp {
   treatment_protocols?: { id: string; name: string } | null
 }
 
-const STATUS_CONFIG: Record<FollowUpStatus, { bg: string; text: string; icon: typeof Clock }> = {
-  pending: { bg: 'bg-yellow-50 dark:bg-yellow-900/20', text: 'text-yellow-600 dark:text-yellow-400', icon: Clock },
-  in_progress: { bg: 'bg-blue-50 dark:bg-blue-900/20', text: 'text-blue-600 dark:text-blue-400', icon: MessageCircle },
-  sent: { bg: 'bg-indigo-50 dark:bg-indigo-900/20', text: 'text-indigo-600 dark:text-indigo-400', icon: Send },
-  no_response: { bg: 'bg-orange-50 dark:bg-orange-900/20', text: 'text-orange-600 dark:text-orange-400', icon: MessageSquare },
-  done: { bg: 'bg-green-50 dark:bg-green-900/20', text: 'text-green-600 dark:text-green-400', icon: CheckCircle },
-  rescheduled: { bg: 'bg-purple-50 dark:bg-purple-900/20', text: 'text-purple-600 dark:text-purple-400', icon: CalendarClock },
-  cancelled: { bg: 'bg-gray-50 dark:bg-gray-800', text: 'text-gray-500 dark:text-gray-400', icon: XCircle },
+const STATUS_CONFIG: Record<FollowUpStatus, { badge: string; bg: string; text: string; icon: typeof Clock }> = {
+  pending: { badge: 'badge-warning', bg: 'bg-yellow-50 dark:bg-yellow-900/20', text: 'text-yellow-600 dark:text-yellow-400', icon: Clock },
+  in_progress: { badge: 'badge-info', bg: 'bg-blue-50 dark:bg-blue-900/20', text: 'text-blue-600 dark:text-blue-400', icon: MessageCircle },
+  sent: { badge: 'badge-info', bg: 'bg-indigo-50 dark:bg-indigo-900/20', text: 'text-indigo-600 dark:text-indigo-400', icon: Send },
+  no_response: { badge: 'badge-danger', bg: 'bg-orange-50 dark:bg-orange-900/20', text: 'text-orange-600 dark:text-orange-400', icon: MessageSquare },
+  done: { badge: 'badge-success', bg: 'bg-green-50 dark:bg-green-900/20', text: 'text-green-600 dark:text-green-400', icon: CheckCircle },
+  rescheduled: { badge: 'badge-info', bg: 'bg-purple-50 dark:bg-purple-900/20', text: 'text-purple-600 dark:text-purple-400', icon: CalendarClock },
+  cancelled: { badge: 'badge-neutral', bg: 'bg-gray-50 dark:bg-gray-800', text: 'text-gray-500 dark:text-gray-400', icon: XCircle },
 }
 
 const ALL_STATUSES: FollowUpStatus[] = ['pending', 'in_progress', 'sent', 'no_response', 'done', 'rescheduled', 'cancelled']
@@ -352,7 +352,7 @@ export default function FollowUpsPage() {
                     </p>
                   </div>
                   <div className="flex-shrink-0">
-                    <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${sc.bg} ${sc.text}`}>
+                    <span className={`${sc.badge} inline-flex items-center gap-1`}>
                       <Icon className="h-3 w-3" /> {FOLLOW_UP_STATUS_LABELS[f.status]}
                     </span>
                   </div>
@@ -373,7 +373,7 @@ export default function FollowUpsPage() {
       {/* Create Modal */}
       {(showCreate || closingCreate) && (
         <Portal>
-          <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${closingCreate ? 'closing' : ''}`}
+          <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 ${closingCreate ? 'closing' : ''}`}
             onClick={() => setClosingCreate(true)}
             onAnimationEnd={() => { if (closingCreate) { setShowCreate(false); setClosingCreate(false); resetForm() } }}>
             <div className={`modal-content card w-full max-w-lg dark:bg-gray-900 ${closingCreate ? 'closing' : ''}`} onClick={e => e.stopPropagation()}>
@@ -424,7 +424,7 @@ export default function FollowUpsPage() {
       {/* Detail Modal */}
       {detailItem && (
         <Portal>
-          <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${closingDetail ? 'closing' : ''}`}
+          <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 ${closingDetail ? 'closing' : ''}`}
             onClick={() => setClosingDetail(true)}
             onAnimationEnd={() => { if (closingDetail) { setDetailItem(null); setClosingDetail(false); setEditMode(false) } }}>
             <div className={`modal-content card w-full max-w-2xl max-h-[90vh] overflow-y-auto dark:bg-gray-900 ${closingDetail ? 'closing' : ''}`} onClick={e => e.stopPropagation()}>
@@ -436,7 +436,7 @@ export default function FollowUpsPage() {
                       const sc = STATUS_CONFIG[detailItem.status]
                       const Icon = sc.icon
                       return (
-                        <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${sc.bg} ${sc.text}`}>
+                        <span className={`${sc.badge} inline-flex items-center gap-1`}>
                           <Icon className="h-3 w-3" /> {FOLLOW_UP_STATUS_LABELS[detailItem.status]}
                         </span>
                       )
@@ -456,7 +456,7 @@ export default function FollowUpsPage() {
               {/* Links */}
               <div className="flex flex-wrap gap-2 mb-4">
                 {detailItem.customers?.id && (
-                  <Link href={`/dashboard/customers?id=${detailItem.customers.id}`} className="text-xs px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 inline-flex items-center gap-1.5 transition-colors">
+                  <Link href={`/dashboard/customers?customerId=${detailItem.customers.id}`} className="text-xs px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 inline-flex items-center gap-1.5 transition-colors">
                     <User className="h-3.5 w-3.5" /> {customerLabel} Profili
                     <ExternalLink className="h-3 w-3 opacity-60" />
                   </Link>
@@ -468,13 +468,13 @@ export default function FollowUpsPage() {
                   </Link>
                 )}
                 {detailItem.appointments?.id && (
-                  <Link href={`/dashboard/appointments?id=${detailItem.appointments.id}`} className="text-xs px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 inline-flex items-center gap-1.5 transition-colors">
+                  <Link href={`/dashboard/appointments?appointmentId=${detailItem.appointments.id}`} className="text-xs px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 inline-flex items-center gap-1.5 transition-colors">
                     <Calendar className="h-3.5 w-3.5" /> Randevu
                     <ExternalLink className="h-3 w-3 opacity-60" />
                   </Link>
                 )}
                 {detailItem.treatment_protocols?.id && (
-                  <Link href={`/dashboard/protocols?id=${detailItem.treatment_protocols.id}`} className="text-xs px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 inline-flex items-center gap-1.5 transition-colors">
+                  <Link href={`/dashboard/protocols?protocolId=${detailItem.treatment_protocols.id}`} className="text-xs px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 inline-flex items-center gap-1.5 transition-colors">
                     <ClipboardCheck className="h-3.5 w-3.5" /> Protokol
                     <ExternalLink className="h-3 w-3 opacity-60" />
                   </Link>
@@ -482,6 +482,8 @@ export default function FollowUpsPage() {
               </div>
 
               {/* Content */}
+              {/* key değişince fadeIn animasyonu tetiklenir */}
+              <div key={editMode ? 'edit' : 'view'} className="animate-fade-in">
               {!editMode ? (
                 <div className="space-y-4">
                   {detailItem.message && (
@@ -533,7 +535,7 @@ export default function FollowUpsPage() {
                           return (
                             <div key={i} className="text-xs">
                               <div className="flex items-center gap-2">
-                                <span className={`px-2 py-0.5 rounded-full ${sc.bg} ${sc.text}`}>{FOLLOW_UP_STATUS_LABELS[h.status]}</span>
+                                <span className={sc.badge}>{FOLLOW_UP_STATUS_LABELS[h.status]}</span>
                                 <span className="text-gray-500 dark:text-gray-400">{formatDateTime(h.changed_at)}</span>
                                 {h.staff_name && <span className="text-gray-400">· {h.staff_name}</span>}
                               </div>
@@ -570,12 +572,10 @@ export default function FollowUpsPage() {
                   </div>
                 </div>
               )}
+              </div>{/* /animate-fade-in */}
 
               {/* Footer */}
-              <div className="flex justify-between gap-2 mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
-                <button onClick={() => setClosingDetail(true)} className="btn-secondary inline-flex items-center gap-1.5">
-                  <Ban className="h-4 w-4" /> Kapat
-                </button>
+              <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
                 {editMode ? (
                   <div className="flex gap-2">
                     <button onClick={() => setEditMode(false)} className="btn-secondary">Vazgeç</button>

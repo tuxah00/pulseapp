@@ -1,3 +1,4 @@
+// RLS bypass: cron/webhook bağlamlarından çağrılır, auth session olmayabilir; customer preferred_channel lookup için admin gerekli
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendSMS } from '@/lib/sms/send'
 import { sendWhatsApp } from '@/lib/whatsapp/send'

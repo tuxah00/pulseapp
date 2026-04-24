@@ -119,7 +119,7 @@ export function FollowUpQuickModal({
   return (
     <Portal>
     <div
-      className={cn('fixed inset-0 z-[120] bg-black/50 dark:bg-black/70 flex items-end sm:items-center justify-center p-0 sm:p-4 modal-overlay', closing && 'closing')}
+      className={cn('fixed inset-0 z-[115] flex items-end sm:items-center justify-center p-0 sm:p-4 modal-overlay', closing && 'closing')}
       onClick={handleClose}
       onAnimationEnd={onAnimEnd}
     >

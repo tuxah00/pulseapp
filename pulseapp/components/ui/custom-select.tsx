@@ -39,6 +39,13 @@ export function CustomSelect({
   const ref = useRef<HTMLDivElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const [pos, setPos] = useState<{ top?: number; bottom?: number; left: number; width: number }>({ left: 0, width: 0 })
+  /**
+   * Public sayfalar (auth, portal, booking) her zaman light mode kalır.
+   * Portal document.body'ye render edildiği için .public-page kuralları
+   * dışına çıkar — bu yüzden trigger'ın ataları kontrol edilip dropdown
+   * için manuel olarak light sınıflar uygulanır.
+   */
+  const [isPublicContext, setIsPublicContext] = useState(false)
   const selected = options.find(o => o.value === value)
 
   /** Dropdown max yüksekliği (max-h-52 = 13rem = 208px) */
@@ -56,6 +63,14 @@ export function CustomSelect({
       setPos({ top: rect.bottom + 4, left: rect.left, width: rect.width })
     }
   }, [])
+
+  // Her açılışta public context'i yeniden kontrol et — mount sonrası
+  // portal render anında da doğru olması garanti
+  useEffect(() => {
+    if (!ref.current) return
+    const inPublic = !!ref.current.closest('.public-page, .portal-layout, .booking-page')
+    setIsPublicContext(inPublic)
+  }, [open])
 
   useEffect(() => {
     if (!open) return
@@ -106,48 +121,78 @@ export function CustomSelect({
         />
       </button>
 
-      {/* Dropdown panel — portal ile body'ye render edilir */}
+      {/* Dropdown panel — portal ile body'ye render edilir.
+          Public context'te DIŞ wrapper'a 'public-page' class'ı verilir,
+          İÇ panele 'bg-white' verilir → globals.css'teki
+          `.dark .public-page .bg-white` descendant selector'ü eşleşir.
+          (Aynı element üzerinde olurlarsa descendant selector eşleşmez ve
+          global `.dark .bg-white !important` kuralı dropdown'ı koyulaştırır.) */}
       {open && typeof document !== 'undefined' && createPortal(
         <div
           ref={dropdownRef}
-          style={{ position: 'fixed', top: pos.top, bottom: pos.bottom, left: pos.left, width: pos.width, zIndex: 9999 }}
-          className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xl rounded-xl overflow-hidden"
+          style={{
+            position: 'fixed',
+            top: pos.top,
+            bottom: pos.bottom,
+            left: pos.left,
+            width: pos.width,
+            zIndex: 9999,
+            ...(isPublicContext ? { colorScheme: 'light' } : {}),
+          }}
+          className={isPublicContext ? 'public-page' : undefined}
         >
-          <div className="max-h-52 overflow-y-auto py-1">
-            {/* Placeholder / "Tümü" seçeneği */}
-            {placeholder !== undefined && (
-              <button
-                type="button"
-                onClick={() => { onChange(''); setOpen(false) }}
-                className={cn(
-                  'w-full text-left px-3 py-2 text-sm transition-colors flex items-center justify-between gap-2',
-                  !value
-                    ? 'bg-pulse-50 text-pulse-900 dark:bg-pulse-900/30 dark:text-pulse-300 font-medium'
-                    : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-                )}
-              >
-                <span>{placeholder || 'Tümü'}</span>
-                {!value && <Check className="h-3.5 w-3.5 flex-shrink-0" />}
-              </button>
+          <div
+            className={cn(
+              'border shadow-xl rounded-xl overflow-hidden',
+              isPublicContext
+                ? 'bg-white border-gray-200 text-gray-900'
+                : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
             )}
+          >
+            <div className="max-h-52 overflow-y-auto py-1">
+              {/* Placeholder / "Tümü" seçeneği */}
+              {placeholder !== undefined && (
+                <button
+                  type="button"
+                  onClick={() => { onChange(''); setOpen(false) }}
+                  className={cn(
+                    'w-full text-left px-3 py-2 text-sm transition-colors flex items-center justify-between gap-2',
+                    !value
+                      ? isPublicContext
+                        ? 'bg-pulse-50 text-pulse-900 font-medium'
+                        : 'bg-pulse-50 text-pulse-900 dark:bg-pulse-900/30 dark:text-pulse-300 font-medium'
+                      : isPublicContext
+                        ? 'text-gray-500 hover:bg-gray-100'
+                        : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  )}
+                >
+                  <span>{placeholder || 'Tümü'}</span>
+                  {!value && <Check className="h-3.5 w-3.5 flex-shrink-0" />}
+                </button>
+              )}
 
-            {/* Seçenekler */}
-            {options.map(opt => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => { onChange(opt.value); setOpen(false) }}
-                className={cn(
-                  'w-full text-left px-3 py-2 text-sm transition-colors flex items-center justify-between gap-2',
-                  value === opt.value
-                    ? 'bg-pulse-50 text-pulse-900 dark:bg-pulse-900/30 dark:text-pulse-300 font-medium'
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                )}
-              >
-                <span className="truncate">{opt.label}</span>
-                {value === opt.value && <Check className="h-3.5 w-3.5 flex-shrink-0" />}
-              </button>
-            ))}
+              {/* Seçenekler */}
+              {options.map(opt => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => { onChange(opt.value); setOpen(false) }}
+                  className={cn(
+                    'w-full text-left px-3 py-2 text-sm transition-colors flex items-center justify-between gap-2',
+                    value === opt.value
+                      ? isPublicContext
+                        ? 'bg-pulse-50 text-pulse-900 font-medium'
+                        : 'bg-pulse-50 text-pulse-900 dark:bg-pulse-900/30 dark:text-pulse-300 font-medium'
+                      : isPublicContext
+                        ? 'text-gray-700 hover:bg-gray-100'
+                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  )}
+                >
+                  <span className="truncate">{opt.label}</span>
+                  {value === opt.value && <Check className="h-3.5 w-3.5 flex-shrink-0" />}
+                </button>
+              ))}
+            </div>
           </div>
         </div>,
         document.body

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Image from 'next/image'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { requirePermission, requireSectorModule } from '@/lib/hooks/use-require-permission'
 import { getTreatmentNotesPlaceholder } from '@/lib/config/sector-labels'
@@ -44,6 +45,8 @@ export default function ProtocolsPage() {
   requireSectorModule(sector, 'protocols')
   requirePermission(permissions, 'protocols')
   const { confirm } = useConfirm()
+  const searchParams = useSearchParams()
+  const router = useRouter()
 
   // State
   const [protocols, setProtocols] = useState<TreatmentProtocol[]>([])
@@ -105,6 +108,22 @@ export default function ProtocolsPage() {
   useEffect(() => { fetchProtocols() }, [fetchProtocols])
   useEffect(() => { fetchMeta() }, [fetchMeta])
   useEffect(() => { setPage(0) }, [statusFilter])
+
+  // URL ?protocolId= → protokolü çekip detay panelinde aç (Takipler deep-link)
+  // One-shot: aynı protocolId için tekrar tetiklenmez; URL temizliği fetch sonrasına alındı
+  const protocolDeepLinkConsumed = useRef<string | null>(null)
+  useEffect(() => {
+    const protocolId = searchParams?.get('protocolId')
+    if (!protocolId || !businessId || ctxLoading) return
+    if (protocolDeepLinkConsumed.current === protocolId) return
+    protocolDeepLinkConsumed.current = protocolId
+    fetch(`/api/protocols/${protocolId}`)
+      .then(r => r.json())
+      .then(json => {
+        if (json.protocol) setSelectedProtocol(json.protocol)
+        router.replace('/dashboard/protocols', { scroll: false })
+      })
+  }, [searchParams, businessId, ctxLoading]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!showCreate) return
@@ -206,7 +225,7 @@ export default function ProtocolsPage() {
       // Refresh list and detail in parallel
       const [, detailJson] = await Promise.all([
         fetchProtocols(),
-        fetch(`/api/protocols/${protocolId}?businessId=${businessId}`).then(r => r.json()),
+        fetch(`/api/protocols/${protocolId}`).then(r => r.json()),
       ])
       if (detailJson.protocol) setSelectedProtocol(detailJson.protocol)
       window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Kaydedildi' } }))
@@ -221,7 +240,7 @@ export default function ProtocolsPage() {
     try {
       const [, detailJson] = await Promise.all([
         fetchProtocols(),
-        fetch(`/api/protocols/${protocolId}?businessId=${businessId}`).then(r => r.json()),
+        fetch(`/api/protocols/${protocolId}`).then(r => r.json()),
       ])
       if (detailJson.protocol) setSelectedProtocol(detailJson.protocol)
     } catch { /* ignore */ }
@@ -238,7 +257,7 @@ export default function ProtocolsPage() {
     })
     if (!ok) return
     try {
-      const res = await fetch(`/api/protocols/${protocolId}?businessId=${businessId}`, { method: 'DELETE' })
+      const res = await fetch(`/api/protocols/${protocolId}`, { method: 'DELETE' })
       if (!res.ok) {
         const json = await res.json().catch(() => ({}))
         window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: json.error || 'Silinemedi' } }))
@@ -373,8 +392,8 @@ export default function ProtocolsPage() {
       {/* Detail Panel — Slide-over */}
       {(selectedProtocol || isClosingDetail) && selectedProtocol && (
         <Portal>
-          <div className={`modal-overlay fixed inset-0 z-[60] bg-black/50 dark:bg-black/70 ${isClosingDetail ? 'closing' : ''}`} onClick={closeDetail} onAnimationEnd={() => { if (isClosingDetail) { setSelectedProtocol(null); setIsClosingDetail(false) } }} />
-          <div className={`slide-panel fixed inset-y-0 right-0 z-[61] w-full max-w-lg bg-white dark:bg-gray-900 shadow-2xl overflow-y-auto ${isClosingDetail ? 'closing' : ''}`}>
+          <div className={`modal-overlay fixed inset-0 z-[110] ${isClosingDetail ? 'closing' : ''}`} onClick={closeDetail} onAnimationEnd={() => { if (isClosingDetail) { setSelectedProtocol(null); setIsClosingDetail(false) } }} />
+          <div className={`slide-panel fixed inset-y-0 right-0 z-[110] w-full max-w-lg bg-white dark:bg-gray-900 shadow-2xl overflow-y-auto ${isClosingDetail ? 'closing' : ''}`}>
             <div className="p-6 space-y-6">
               <DetailPanel
                 protocol={selectedProtocol}
@@ -393,11 +412,11 @@ export default function ProtocolsPage() {
       {/* Create Modal */}
       {(showCreate || isClosingCreate) && (
         <Portal>
-          <div className={`modal-overlay fixed inset-0 z-[60] bg-black/50 dark:bg-black/70 ${isClosingCreate ? 'closing' : ''}`} onClick={() => { closeCreate(); resetForm() }} onAnimationEnd={() => { if (isClosingCreate) { setShowCreate(false); setIsClosingCreate(false) } }} />
+          <div className={`modal-overlay fixed inset-0 z-[60] ${isClosingCreate ? 'closing' : ''}`} onClick={() => { closeCreate(); resetForm() }} onAnimationEnd={() => { if (isClosingCreate) { setShowCreate(false); setIsClosingCreate(false) } }} />
           <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none">
           <div className={`modal-content bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto pointer-events-auto ${isClosingCreate ? 'closing' : ''}`}>
             <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Yeni Tedavi Protokolü</h2>
+              <h2 className="h-section">Yeni Tedavi Protokolü</h2>
               <button onClick={() => { closeCreate(); resetForm() }} className="text-gray-400 hover:text-gray-600">
                 <X className="h-5 w-5" />
               </button>

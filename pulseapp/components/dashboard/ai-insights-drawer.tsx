@@ -242,8 +242,8 @@ export function AIInsightsDrawer({ open, onClose }: AIInsightsDrawerProps) {
       {/* Backdrop */}
       <div
         className={cn(
-          'fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm',
-          closing ? 'animate-out fade-out duration-200' : 'animate-in fade-in duration-200',
+          'modal-overlay z-[110] backdrop-blur-sm',
+          closing && 'closing',
         )}
         onClick={handleClose}
       />
@@ -251,10 +251,10 @@ export function AIInsightsDrawer({ open, onClose }: AIInsightsDrawerProps) {
       {/* Panel */}
       <div
         className={cn(
-          'fixed right-0 top-0 bottom-0 z-[61] w-full max-w-sm',
+          'slide-panel !max-w-sm',
           'bg-white dark:bg-gray-950 border-l border-gray-200 dark:border-gray-800',
           'flex flex-col shadow-2xl',
-          closing ? 'animate-out slide-out-to-right duration-200' : 'animate-in slide-in-from-right duration-200',
+          closing && 'closing',
         )}
       >
         {/* Header */}

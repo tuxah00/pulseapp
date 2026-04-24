@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { MSG } from './messages'
 import { phoneField } from './customer'
+import { isValidCustomerBirthday } from '@/lib/utils/birthday'
 
 /**
  * Public + portal endpoint'leri için Zod şemaları.
@@ -142,3 +143,78 @@ export const portalReviewCreateSchema = z.object({
 })
 
 export type PortalReviewCreateInput = z.infer<typeof portalReviewCreateSchema>
+
+// ---------------------------------------------------------------------------
+// /api/portal/otp + /api/portal/direct-login — OTP isteme / atlamalı giriş
+// ---------------------------------------------------------------------------
+
+export const portalPhoneLookupSchema = z.object({
+  businessId: UUID,
+  phone: phoneField,
+})
+
+export type PortalPhoneLookupInput = z.infer<typeof portalPhoneLookupSchema>
+
+// ---------------------------------------------------------------------------
+// /api/portal/verify — OTP doğrulama
+// ---------------------------------------------------------------------------
+
+export const portalVerifySchema = z.object({
+  businessId: UUID,
+  phone: phoneField,
+  otp: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/, 'Geçersiz kod formatı'),
+})
+
+export type PortalVerifyInput = z.infer<typeof portalVerifySchema>
+
+// ---------------------------------------------------------------------------
+// /api/portal/appointments/[id] — randevu tarih/saat güncelleme
+// ---------------------------------------------------------------------------
+
+export const portalAppointmentUpdateSchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, MSG.INVALID_DATE_FORMAT),
+  startTime: z.string().regex(/^\d{2}:\d{2}$/, MSG.INVALID_TIME_FORMAT),
+  endTime: z.string().regex(/^\d{2}:\d{2}$/, MSG.INVALID_TIME_FORMAT),
+})
+
+export type PortalAppointmentUpdateInput = z.infer<typeof portalAppointmentUpdateSchema>
+
+// ---------------------------------------------------------------------------
+// /api/portal/profile — müşteri profil güncelleme (PATCH)
+// ---------------------------------------------------------------------------
+
+export const portalChannelValues = ['sms', 'whatsapp', 'auto'] as const
+
+export const portalProfileUpdateSchema = z
+  .object({
+    name: z.string().trim().min(2, MSG.TOO_SHORT(2)).max(200, MSG.TOO_LONG(200)).optional(),
+    email: z
+      .union([
+        z.string().trim().email(MSG.INVALID_EMAIL),
+        z.literal('').transform(() => null),
+        z.null(),
+      ])
+      .optional(),
+    birthday: z
+      .union([
+        z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/, 'Doğum tarihi YYYY-AA-GG formatında olmalı')
+          .refine(isValidCustomerBirthday, { message: MSG.BIRTHDAY_MIN_AGE }),
+        z.literal('').transform(() => null),
+        z.null(),
+      ])
+      .optional(),
+    preferred_channel: z
+      .union([z.enum(portalChannelValues), z.null()])
+      .optional(),
+  })
+  .refine(
+    (val) => Object.keys(val).length > 0,
+    { message: 'Güncellenecek alan yok' },
+  )
+
+export type PortalProfileUpdateInput = z.infer<typeof portalProfileUpdateSchema>

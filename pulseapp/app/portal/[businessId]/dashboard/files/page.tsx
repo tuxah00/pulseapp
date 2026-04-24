@@ -181,18 +181,21 @@ export default function PortalFilesPage() {
             <EmptyCard icon={ImageIcon} title="Fotoğraf yok" description="Bu kategoride fotoğraf bulunmuyor." />
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-              {filteredPhotos.map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => setActivePhoto(p)}
-                  className="relative aspect-square rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 hover:ring-2 hover:ring-pulse-900 transition-all group"
-                >
-                  <NextImage src={p.photo_url} alt="" fill className="object-cover group-hover:scale-105 transition-transform" />
-                  <span className="absolute bottom-2 left-2 text-[10px] font-medium px-2 py-0.5 rounded-full bg-black/60 text-white capitalize">
-                    {PHOTO_FILTERS.find((f) => f.key === p.photo_type)?.label || p.photo_type}
-                  </span>
-                </button>
-              ))}
+              {filteredPhotos.map((p) => {
+                const label = PHOTO_FILTERS.find((f) => f.key === p.photo_type)?.label
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => setActivePhoto(p)}
+                    className="relative aspect-square rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 hover:ring-2 hover:ring-pulse-900 transition-all group"
+                  >
+                    <NextImage src={p.photo_url} alt={label || 'Fotoğraf'} fill className="object-cover group-hover:scale-105 transition-transform" />
+                    <span className="absolute bottom-2 left-2 text-[10px] font-medium px-2 py-0.5 rounded-full bg-black/60 text-white capitalize">
+                      {label || p.photo_type}
+                    </span>
+                  </button>
+                )
+              })}
             </div>
           )}
         </div>

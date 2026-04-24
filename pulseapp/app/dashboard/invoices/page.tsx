@@ -165,12 +165,13 @@ export default function InvoicesPage() {
   }, [businessId])
 
   const fetchPayments = useCallback(async (invoiceId: string) => {
+    if (!businessId) return
     setLoadingPayments(true)
     const res = await fetch(`/api/invoices/payments?invoiceId=${invoiceId}`)
     const json = await res.json()
     setPayments(json.payments || [])
     setLoadingPayments(false)
-  }, [])
+  }, [businessId])
 
   useEffect(() => {
     if (!ctxLoading) {
@@ -323,8 +324,7 @@ export default function InvoicesPage() {
         payment_type: selectedInvoice.payment_type === 'installment' ? 'installment' : 'payment',
         installment_number: selectedInvoice.payment_type === 'installment' ? (payments.filter(p => p.payment_type === 'installment').length + 1) : null,
         notes: payNotes || null,
-        staff_id: staffId,
-        staff_name: staffName,
+        // staff_id/staff_name backend'de auth context'ten türetilir (audit log bütünlüğü)
       }),
     })
     const json = await res.json()
@@ -953,8 +953,8 @@ export default function InvoicesPage() {
                         <div className={cn('absolute -left-2.5 top-1 h-2 w-2 rounded-full', p.payment_type === 'refund' ? 'bg-red-400' : 'bg-green-400')} />
                         <div className="flex items-start justify-between">
                           <div>
-                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                              {formatCurrency(p.amount)}
+                            <p className={cn('text-sm font-medium', p.payment_type === 'refund' ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-gray-100')}>
+                              {p.payment_type === 'refund' ? '-' : ''}{formatCurrency(p.amount)}
                               <span className="ml-1.5 text-xs font-normal text-gray-500 dark:text-gray-400">
                                 {PAYMENT_TYPE_LABELS[p.payment_type] || p.payment_type}
                                 {p.installment_number && ` #${p.installment_number}`}
@@ -1079,7 +1079,7 @@ export default function InvoicesPage() {
       {/* Fatura Oluştur Modal */}
       {(showCreateModal || isClosingCreateModal) && (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center bg-black/50 dark:bg-black/70 p-4 ${isClosingCreateModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingCreateModal) { setShowCreateModal(false); setIsClosingCreateModal(false) } }}>
+        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 ${isClosingCreateModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingCreateModal) { setShowCreateModal(false); setIsClosingCreateModal(false) } }}>
           <div className={`modal-content card w-full max-w-lg max-h-[90vh] overflow-y-auto dark:bg-gray-900 ${isClosingCreateModal ? 'closing' : ''}`}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="h-section">Yeni Fatura Oluştur</h2>

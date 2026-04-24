@@ -1,24 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { withAuth } from '@/lib/api/with-permission'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
 
-// GET — Tekil sohbet + mesajları
-export const GET = withAuth(async (req: NextRequest, ctx) => {
+// GET — Tekil sohbet + mesajları (RLS staff_id'yi filtreler, ctx gerekmez)
+export const GET = withAuth(async (req: NextRequest, _ctx) => {
   const rl = checkRateLimit(req, RATE_LIMITS.aiAssistant)
   if (rl.limited) return rl.response
 
   const id = req.nextUrl.pathname.split('/').pop()
   if (!id) return NextResponse.json({ error: 'ID gerekli' }, { status: 400 })
 
-  const admin = createAdminClient()
+  // RLS: ai_conversations_staff_access + ai_messages_via_conversation — başka staff'ın sohbeti "bulunamadı" olarak döner
+  const supabase = createServerSupabaseClient()
 
-  // Verify ownership
-  const { data: conv } = await admin
+  const { data: conv } = await supabase
     .from('ai_conversations')
     .select('id, title, is_onboarding, metadata, created_at')
     .eq('id', id)
-    .eq('staff_id', ctx.staffId)
     .single()
 
   if (!conv) {
@@ -26,7 +25,7 @@ export const GET = withAuth(async (req: NextRequest, ctx) => {
   }
 
   // Get messages
-  const { data: messages } = await admin
+  const { data: messages } = await supabase
     .from('ai_messages')
     .select('id, role, content, tool_calls, tool_name, tool_result, created_at')
     .eq('conversation_id', id)
@@ -35,30 +34,30 @@ export const GET = withAuth(async (req: NextRequest, ctx) => {
   return NextResponse.json({ conversation: conv, messages: messages || [] })
 })
 
-// DELETE — Sohbeti sil
-export const DELETE = withAuth(async (req: NextRequest, ctx) => {
+// DELETE — Sohbeti sil (RLS staff_id'yi filtreler, ctx gerekmez)
+export const DELETE = withAuth(async (req: NextRequest, _ctx) => {
   const rl = checkRateLimit(req, RATE_LIMITS.aiAssistant)
   if (rl.limited) return rl.response
 
   const id = req.nextUrl.pathname.split('/').pop()
   if (!id) return NextResponse.json({ error: 'ID gerekli' }, { status: 400 })
 
-  const admin = createAdminClient()
+  // RLS: ai_conversations_staff_access — başka staff'ın sohbetini DELETE eşleşmeden döner
+  const supabase = createServerSupabaseClient()
 
-  // Verify ownership before delete
-  const { data: conv } = await admin
+  const { data: deleted, error } = await supabase
     .from('ai_conversations')
-    .select('id')
+    .delete()
     .eq('id', id)
-    .eq('staff_id', ctx.staffId)
-    .single()
+    .select('id')
+    .maybeSingle()
 
-  if (!conv) {
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+  if (!deleted) {
     return NextResponse.json({ error: 'Sohbet bulunamadı' }, { status: 404 })
   }
-
-  // Messages cascade deleted via FK
-  await admin.from('ai_conversations').delete().eq('id', id)
 
   return NextResponse.json({ success: true })
 })

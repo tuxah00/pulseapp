@@ -110,7 +110,7 @@ export function PortalShell({ businessId, business, customer, showTreatments, re
         )}
       >
         {/* İşletme hero */}
-        <div className="p-5 border-b border-gray-100 bg-gradient-to-br from-pulse-900/5 via-transparent to-purple-500/5">
+        <div className="p-5 border-b border-gray-100 bg-pulse-900/5">
           <div className="flex items-center gap-3">
             {business.logo_url ? (
               <Image src={business.logo_url} alt={business.name} width={40} height={40} className="rounded-xl object-cover" />

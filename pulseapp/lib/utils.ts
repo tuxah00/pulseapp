@@ -112,13 +112,13 @@ export function getSegmentColor(segment: string): string {
 
 export function getStatusColor(status: string): string {
   const colors: Record<string, string> = {
-    pending: 'bg-yellow-100 text-yellow-700',
-    confirmed: 'bg-blue-100 text-blue-700',
-    completed: 'bg-green-100 text-green-700',
-    cancelled: 'bg-gray-100 text-gray-500',
-    no_show: 'bg-red-100 text-red-700',
+    pending: 'badge-warning',
+    confirmed: 'badge-info',
+    completed: 'badge-success',
+    cancelled: 'badge-neutral',
+    no_show: 'badge-danger',
   }
-  return colors[status] || 'bg-gray-100 text-gray-700'
+  return colors[status] || 'badge-neutral'
 }
 
 // ── Yıldız hesaplama ──

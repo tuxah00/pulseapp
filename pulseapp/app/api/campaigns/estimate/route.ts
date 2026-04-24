@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { getStaffInfo } from '@/app/api/campaigns/route'
+import { getStaffInfo } from '@/lib/campaigns/staff'
 import { matchesCampaignFilter } from '@/lib/utils/campaign-filters'
 import type { CustomerSegment } from '@/types'
 
