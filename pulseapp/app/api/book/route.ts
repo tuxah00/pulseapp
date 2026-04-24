@@ -68,6 +68,13 @@ export async function POST(req: NextRequest) {
     notes,
   } = parsed.data
 
+  // Kampanya attribution: ?c=<campaign_recipient_id>
+  const campaignRecipientIdRaw = req.nextUrl.searchParams.get('c')
+  const campaignRecipientId =
+    campaignRecipientIdRaw && isValidUUID(campaignRecipientIdRaw)
+      ? campaignRecipientIdRaw
+      : null
+
   // Geçmiş tarih kontrolü
   if (date < new Date().toISOString().slice(0, 10)) {
     return NextResponse.json(
@@ -139,6 +146,7 @@ export async function POST(req: NextRequest) {
       source: 'web',
       // auto-assign bloğunda zaten çekildiyse duplicate services sorgusunu önler
       ...(resolvedDuration !== undefined && { durationMinutes: resolvedDuration }),
+      ...(campaignRecipientId && { campaignRecipientId }),
     })
     return NextResponse.json({ success: true, appointment_id: booking.appointmentId })
   } catch (e: unknown) {

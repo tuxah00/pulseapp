@@ -46,7 +46,9 @@ export async function sendCampaign(
 
   const stats = { total_recipients: filtered.length, sent: 0, errors: 0 }
 
-  const [, { data: bizRow }] = await Promise.all([
+  // Recipient ID'lerini almak için insert'i select ile yap.
+  // Her recipient'in ID'si {LINK} rendering'de attribution query param'ı olarak kullanılır.
+  const [recipientInsertResult, { data: bizRow }] = await Promise.all([
     filtered.length > 0
       ? admin.from('campaign_recipients').insert(
           filtered.map((c) => ({
@@ -56,17 +58,35 @@ export async function sendCampaign(
             customer_phone: c.phone,
             status: 'pending',
           })),
-        )
-      : Promise.resolve(null),
+        ).select('id, customer_id')
+      : Promise.resolve({ data: null } as const),
     admin.from('businesses').select('name').eq('id', businessId).single(),
   ])
 
   const bizName = bizRow?.name || ''
 
+  // customer_id → recipient_id eşleme tablosu
+  const recipientByCustomer = new Map<string, string>()
+  for (const row of (recipientInsertResult.data ?? []) as Array<{ id: string; customer_id: string }>) {
+    recipientByCustomer.set(row.customer_id, row.id)
+  }
+
+  // {LINK} için base URL (NEXT_PUBLIC_APP_URL zorunlu env — CLAUDE.md)
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL || '').replace(/\/$/, '')
+
   for (const customer of filtered) {
+    const recipientId = recipientByCustomer.get(customer.id) || ''
+    // Attribution link: /book/<businessId>?c=<recipient_id>
+    // Public booking sayfası query param'ı koruyarak POST /api/book?c=... yapar
+    const bookingLink = appUrl && recipientId
+      ? `${appUrl}/book/${businessId}?c=${recipientId}`
+      : ''
+
     const body = messageTemplate
       .replace(/\{name\}/gi, customer.name)
       .replace(/\{businessName\}/gi, bizName)
+      .replace(/\{LINK\}/gi, bookingLink)
+      .replace(/\{link\}/gi, bookingLink)
 
     try {
       await sendMessage({

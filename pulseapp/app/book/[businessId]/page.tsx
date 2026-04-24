@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import Image from 'next/image'
-import { useParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 import {
   CheckCircle2, ChevronLeft, Loader2, Clock, Calendar,
   User, Phone, AlertCircle, Bell, MapPin, Zap, CalendarPlus, UserCircle2,
@@ -81,6 +81,9 @@ function getTodayStr(): string {
 export default function BookingPage() {
   const params = useParams()
   const businessId = params.businessId as string
+  const searchParams = useSearchParams()
+  // Kampanya attribution — SMS'teki link ?c=<recipient_id> ile gelir, POST /api/book'a forward'lanır
+  const campaignRecipientId = searchParams?.get('c') || null
 
   const [business, setBusiness] = useState<BusinessData | null>(null)
   const [services, setServices] = useState<ServiceData[]>([])
@@ -211,7 +214,9 @@ export default function BookingPage() {
     try {
       // Normal randevu (tarih/saat seçiliyse)
       if (hasNormalBooking) {
-        const res = await fetch(`/api/book?businessId=${businessId}`, {
+        const qs = new URLSearchParams({ businessId })
+        if (campaignRecipientId) qs.set('c', campaignRecipientId)
+        const res = await fetch(`/api/book?${qs.toString()}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

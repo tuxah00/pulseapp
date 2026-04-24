@@ -1,6 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { normalizePhone, phoneOrFilter } from '@/lib/utils/phone'
 
+/** Attribution: mesaj → randevu window süresi (gün). Plan: 7 gün */
+const MESSAGE_ATTRIBUTION_WINDOW_DAYS = 7
+
 export interface CreateBookingInput {
   businessId: string
   name: string
@@ -18,6 +21,12 @@ export interface CreateBookingInput {
    * iletilirse createBooking içinde services tekrar sorgulanmaz.
    */
   durationMinutes?: number
+  /**
+   * Attribution — kampanya SMS'i sonucu gelen randevu.
+   * Public booking route `?c=<campaign_recipient_id>` query param'ı ile alır;
+   * createBooking içinde campaigns tablosundan campaign_id çözülür.
+   */
+  campaignRecipientId?: string | null
 }
 
 export interface CreateBookingResult {
@@ -42,6 +51,7 @@ export async function createBooking(
     businessId, name, phone, serviceId, staffId,
     date, startTime, notes, source = 'web', withManageToken = false,
     durationMinutes: providedDuration,
+    campaignRecipientId,
   } = input
 
   // Hizmet — `durationMinutes` dışarıdan sağlanmışsa sorguyu atla
@@ -128,6 +138,28 @@ export async function createBooking(
     customerId = newCust.id
   }
 
+  // Kampanya attribution: recipient_id geldiyse campaign_id çözülür
+  // Cross-tenant koruması: recipient aynı businessId'ye ait kampanyaya bağlı olmalı
+  let resolvedCampaignId: string | null = null
+  let validCampaignRecipientId: string | null = null
+  if (campaignRecipientId) {
+    const { data: recipient } = await supabase
+      .from('campaign_recipients')
+      .select('id, campaign_id, campaigns!inner(business_id)')
+      .eq('id', campaignRecipientId)
+      .maybeSingle()
+    // Supabase nested select: campaigns tek obje olarak dönebilir
+    const campaigns = recipient?.campaigns as unknown
+    const recipientBusinessId = Array.isArray(campaigns)
+      ? (campaigns as Array<{ business_id: string }>)[0]?.business_id
+      : (campaigns as { business_id: string } | null | undefined)?.business_id
+    if (recipient && recipientBusinessId === businessId) {
+      resolvedCampaignId = recipient.campaign_id
+      validCampaignRecipientId = recipient.id
+    }
+    // Geçersiz recipient → sessizce yok say (public endpoint, hatayla çökmesin)
+  }
+
   // Randevu insert
   const apptData: Record<string, unknown> = {
     business_id: businessId,
@@ -144,6 +176,10 @@ export async function createBooking(
     review_requested: false,
   }
   if (staffId) apptData.staff_id = staffId
+  if (resolvedCampaignId) {
+    apptData.campaign_id = resolvedCampaignId
+    apptData.campaign_recipient_id = validCampaignRecipientId
+  }
   if (withManageToken) {
     apptData.manage_token = crypto.randomUUID()
     apptData.token_expires_at = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
@@ -155,6 +191,23 @@ export async function createBooking(
     .select('id, manage_token')
     .single()
   if (apptErr || !appt) throw Object.assign(new Error('Randevu oluşturulamadı'), { status: 500 })
+
+  // Mesaj attribution (window): son 7 gün içinde bu müşteriye gönderilen
+  // ve henüz hiçbir randevuya bağlanmamış outbound mesajları bu randevuya bağla.
+  // direct attribution (recipient_id üzerinden) zaten yukarıda çözüldüğü için
+  // kampanya recipient'i olan randevularda window'u atla (çift sayım olmasın).
+  if (!resolvedCampaignId) {
+    const windowStart = new Date(Date.now() - MESSAGE_ATTRIBUTION_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString()
+    await supabase
+      .from('messages')
+      .update({ related_appointment_id: appt.id, attributed_via: 'window' })
+      .eq('business_id', businessId)
+      .eq('customer_id', customerId)
+      .eq('direction', 'outbound')
+      .is('related_appointment_id', null)
+      .gte('created_at', windowStart)
+      .then(() => undefined, () => undefined)
+  }
 
   // Bildirim — await ile bekle; fire-and-forget olursa Vercel handler kapanmadan önce kaybolabilir
   await supabase.from('notifications').insert({
