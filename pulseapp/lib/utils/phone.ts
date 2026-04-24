@@ -16,3 +16,21 @@ export function normalizePhone(phone: string): string {
 export function phoneOrFilter(normalized: string): string {
   return `phone.eq.${normalized},phone.eq.0${normalized},phone.eq.+90${normalized}`
 }
+
+/**
+ * TR telefon numarasını E.164 / Meta / Twilio formatlarına dönüştürür.
+ * - E.164 (default): `+905XXXXXXXXX` — Twilio SMS/WhatsApp için
+ * - 'digits': `905XXXXXXXXX` (+ işareti olmadan) — Meta Cloud API için
+ *
+ * Zaten + ile başlayan non-TR numaralar aynen döndürülür (defensive).
+ */
+export function formatTrPhone(phone: string, format: 'e164' | 'digits' = 'e164'): string {
+  const cleaned = phone.replace(/\D/g, '')
+  let digits: string
+  if (cleaned.startsWith('90') && cleaned.length === 12) digits = cleaned
+  else if (cleaned.startsWith('0') && cleaned.length === 11) digits = `9${cleaned.slice(1)}`
+  else if (cleaned.length === 10) digits = `90${cleaned}`
+  else if (!phone.startsWith('+')) return `+${cleaned}` // yabancı numara — olduğu gibi E.164
+  else return phone
+  return format === 'e164' ? `+${digits}` : digits
+}

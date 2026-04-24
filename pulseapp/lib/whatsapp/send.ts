@@ -1,5 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createLogger } from '@/lib/utils/logger'
+import { formatTrPhone } from '@/lib/utils/phone'
+import { sendMetaText, sendMetaTemplate } from '@/lib/whatsapp/meta-cloud'
 import type { MessageType } from '@/types'
 
 const log = createLogger({ module: 'whatsapp/send' })
@@ -23,41 +25,68 @@ interface SendWhatsAppResult {
   error?: string
 }
 
+type WhatsAppProvider = 'twilio' | 'meta'
+
 /**
- * WhatsApp mesajı gönderme utility (Twilio WhatsApp API)
- * Mesajı Twilio üzerinden WhatsApp kanalıyla gönderir ve messages tablosuna kaydeder.
+ * Unified WhatsApp mesaj gönderimi — provider dispatcher.
  *
- * Twilio WhatsApp sandbox: https://www.twilio.com/docs/whatsapp/sandbox
- * Production: Meta Business onayı + Twilio WA sender ayarı gerekir.
+ * `WHATSAPP_PROVIDER` env ile sağlayıcı seçilir: `twilio` (varsayılan) veya `meta`.
+ * Her iki yolda da mesaj `messages` tablosuna kaydedilir (aynı şema).
  */
 export async function sendWhatsApp(params: SendWhatsAppParams): Promise<SendWhatsAppResult> {
-  const {
-    to, body, businessId, customerId, messageType = 'text', mediaUrl,
-    staffId, staffName, templateName, templateParams,
-  } = params
+  const provider: WhatsAppProvider = process.env.WHATSAPP_PROVIDER === 'meta' ? 'meta' : 'twilio'
 
+  const result =
+    provider === 'meta'
+      ? await sendViaMeta(params)
+      : await sendViaTwilio(params)
+
+  if (result.success && result.messageSid) {
+    await persistOutboundMessage({ params, messageId: result.messageSid, provider })
+  }
+  return result
+}
+
+async function sendViaMeta(params: SendWhatsAppParams): Promise<SendWhatsAppResult> {
+  // Meta sağlayıcısı şu an media göndermiyor (Faz 2.1 kapsamı) — parametre verilirse uyar
+  if (params.mediaUrl) {
+    log.warn({ businessId: params.businessId }, 'Meta provider mediaUrl desteklemiyor, text olarak gönderiliyor')
+  }
+
+  if (params.templateName) {
+    const bodyParams = params.templateParams ? Object.values(params.templateParams) : undefined
+    const res = await sendMetaTemplate({
+      to: params.to,
+      templateName: params.templateName,
+      bodyParams,
+    })
+    return { success: res.success, messageSid: res.messageId, error: res.error }
+  }
+
+  const res = await sendMetaText({ to: params.to, body: params.body })
+  return { success: res.success, messageSid: res.messageId, error: res.error }
+}
+
+async function sendViaTwilio(params: SendWhatsAppParams): Promise<SendWhatsAppResult> {
   const accountSid = process.env.TWILIO_ACCOUNT_SID
   const authToken = process.env.TWILIO_AUTH_TOKEN
   const waNumber = process.env.TWILIO_WHATSAPP_NUMBER
 
   if (!accountSid || !authToken || !waNumber) {
-    log.warn({ businessId }, 'Twilio WhatsApp credentials eksik, mesaj atlanıyor')
+    log.warn({ businessId: params.businessId }, 'Twilio WhatsApp credentials eksik, mesaj atlanıyor')
     return { success: false, error: 'WhatsApp yapılandırılmamış' }
   }
 
   const credentials = Buffer.from(`${accountSid}:${authToken}`).toString('base64')
-  const toNormalized = normalizeWhatsAppNumber(to)
+  const toNormalized = formatTrPhone(params.to, 'e164')
 
   try {
     const formParams: Record<string, string> = {
       To: `whatsapp:${toNormalized}`,
       From: `whatsapp:${waNumber}`,
-      Body: body,
+      Body: params.body,
     }
-
-    if (mediaUrl) {
-      formParams.MediaUrl = mediaUrl
-    }
+    if (params.mediaUrl) formParams.MediaUrl = params.mediaUrl
 
     const response = await fetch(
       `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`,
@@ -68,51 +97,45 @@ export async function sendWhatsApp(params: SendWhatsAppParams): Promise<SendWhat
           'Content-Type': 'application/x-www-form-urlencoded',
         },
         body: new URLSearchParams(formParams),
-      }
+      },
     )
 
     const data = await response.json()
-
     if (!response.ok) {
-      log.error({ businessId, twilio: data }, 'Twilio WhatsApp hatası')
+      log.error({ businessId: params.businessId, twilio: data }, 'Twilio WhatsApp hatası')
       return { success: false, error: data.message || 'WhatsApp mesajı gönderilemedi' }
     }
-
-    // Messages tablosuna kaydet
-    const admin = createAdminClient()
-    await admin.from('messages').insert({
-      business_id: businessId,
-      customer_id: customerId || null,
-      direction: 'outbound',
-      channel: 'whatsapp',
-      message_type: messageType,
-      content: body,
-      twilio_sid: data.sid,
-      twilio_status: data.status,
-      meta_message_id: data.sid,
-      staff_id: staffId || null,
-      staff_name: staffName || null,
-      template_name: templateName || null,
-      template_params: templateParams || null,
-    })
 
     return { success: true, messageSid: data.sid }
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'WhatsApp gönderilemedi'
-    log.error({ err, businessId }, 'WhatsApp gönderme hatası')
+    log.error({ err, businessId: params.businessId }, 'WhatsApp gönderme hatası')
     return { success: false, error: message }
   }
 }
 
-/**
- * Telefon numarasını WhatsApp formatına normalize eder.
- * Twilio WA format: whatsapp:+905XXXXXXXXX
- */
-export function normalizeWhatsAppNumber(phone: string): string {
-  const cleaned = phone.replace(/\D/g, '')
-  if (cleaned.startsWith('90') && cleaned.length === 12) return `+${cleaned}`
-  if (cleaned.startsWith('0') && cleaned.length === 11) return `+9${cleaned}`
-  if (cleaned.length === 10) return `+90${cleaned}`
-  if (!phone.startsWith('+')) return `+${cleaned}`
-  return phone
+async function persistOutboundMessage(input: {
+  params: SendWhatsAppParams
+  messageId: string
+  provider: WhatsAppProvider
+}): Promise<void> {
+  const { params, messageId, provider } = input
+  const admin = createAdminClient()
+  await admin.from('messages').insert({
+    business_id: params.businessId,
+    customer_id: params.customerId || null,
+    direction: 'outbound',
+    channel: 'whatsapp',
+    message_type: params.messageType || 'text',
+    content: params.body,
+    // Twilio için eski kolonlar doldurulur; Meta için yalnızca meta_message_id
+    twilio_sid: provider === 'twilio' ? messageId : null,
+    twilio_status: provider === 'twilio' ? 'queued' : null,
+    meta_message_id: messageId,
+    staff_id: params.staffId || null,
+    staff_name: params.staffName || null,
+    template_name: params.templateName || null,
+    template_params: params.templateParams || null,
+  })
 }
+
