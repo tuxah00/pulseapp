@@ -11,8 +11,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
   handleAppointmentConfirmationReply,
+  handleNumericChoiceReply,
   CONFIRM_REGEX,
   DECLINE_REGEX,
+  NUMERIC_CHOICE_REGEX,
 } from '@/lib/messaging/appointment-confirmation'
 import { resolveInboundCustomer } from '@/lib/webhooks/resolve-customer'
 import { handleInbound } from '@/lib/ai/auto-reply/handle-inbound'
@@ -78,6 +80,7 @@ export async function processInboundMessage(params: ProcessInboundParams): Promi
   const trimmed = messageBody.trim().toUpperCase()
   const isConfirm = CONFIRM_REGEX.test(trimmed)
   const isDecline = DECLINE_REGEX.test(trimmed)
+  const numericMatch = trimmed.match(NUMERIC_CHOICE_REGEX)
 
   if (isConfirm || isDecline) {
     const handled = await handleAppointmentConfirmationReply(
@@ -86,6 +89,17 @@ export async function processInboundMessage(params: ProcessInboundParams): Promi
       customer.business_id,
       from,
       isConfirm,
+      confirmationChannel,
+    )
+    if (handled) return
+  } else if (numericMatch) {
+    // T2.1 — rakam yanıtı (1-5): disambiguation seçimi
+    const handled = await handleNumericChoiceReply(
+      admin,
+      customer.id,
+      customer.business_id,
+      from,
+      Number(numericMatch[1]),
       confirmationChannel,
     )
     if (handled) return

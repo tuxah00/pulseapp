@@ -53,6 +53,17 @@ async function sendViaMeta(params: SendWhatsAppParams): Promise<SendWhatsAppResu
     log.warn({ businessId: params.businessId }, 'Meta provider mediaUrl desteklemiyor, text olarak gönderiliyor')
   }
 
+  // T2.3 — Meta 24 saat kuralı: serbest text ancak son inbound mesajdan sonraki 24h içinde
+  // gönderilebilir; dışında onaylı template zorunlu. Template yoksa send'i reddet +
+  // staff alert düşür — sessiz fail yerine görünür sorun.
+  if (!params.templateName && params.customerId) {
+    const withinWindow = await isInsideMeta24hWindow(params.businessId, params.customerId)
+    if (!withinWindow) {
+      await notifyStaffTemplateNeeded(params)
+      return { success: false, error: '24 saat penceresi dışı — onaylı template gerekli' }
+    }
+  }
+
   if (params.templateName) {
     const bodyParams = params.templateParams ? Object.values(params.templateParams) : undefined
     const res = await sendMetaTemplate({
@@ -112,6 +123,37 @@ async function sendViaTwilio(params: SendWhatsAppParams): Promise<SendWhatsAppRe
     log.error({ err, businessId: params.businessId }, 'WhatsApp gönderme hatası')
     return { success: false, error: message }
   }
+}
+
+/** T2.3 — Son inbound WhatsApp mesajı 24 saat içinde mi? */
+async function isInsideMeta24hWindow(businessId: string, customerId: string): Promise<boolean> {
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('messages')
+    .select('created_at')
+    .eq('business_id', businessId)
+    .eq('customer_id', customerId)
+    .eq('channel', 'whatsapp')
+    .eq('direction', 'inbound')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (!data) return false
+  const lastInboundMs = new Date(data.created_at as string).getTime()
+  return Date.now() - lastInboundMs < 24 * 60 * 60_000
+}
+
+async function notifyStaffTemplateNeeded(params: SendWhatsAppParams): Promise<void> {
+  const admin = createAdminClient()
+  await admin.from('notifications').insert({
+    business_id: params.businessId,
+    type: 'ai_alert',
+    title: 'WhatsApp 24 saat penceresi dışı',
+    body: `Mesaj gönderilemedi — onaylı template gerekli. İçerik: "${params.body.slice(0, 120)}"`,
+    related_id: params.customerId ?? null,
+    related_type: params.customerId ? 'customer' : null,
+  })
 }
 
 async function persistOutboundMessage(input: {
