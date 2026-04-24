@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, Suspense, useMemo } from 'react'
 import NextImage from 'next/image'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useDebounce } from '@/lib/hooks/use-debounce'
 import {
@@ -384,6 +384,7 @@ function ImageLightbox({ images, initialIndex, onClose, metadata }: {
 
 function RecordsPageInner() {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const rawType = searchParams.get('type')
   const recordType: RecordType = isValidType(rawType) ? rawType : DEFAULT_TYPE
 
@@ -431,6 +432,8 @@ function RecordsPageInner() {
   const [sortField, setSortField] = useState<string | null>(null)
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('')
+  // Takipler deep-link: ?customerId= ile gelen müşteri filtresi
+  const [filterCustomerId, setFilterCustomerId] = useState<string>('')
   const [uploadFiles, setUploadFiles] = useState<File[]>([])
   const [fileDescriptions, setFileDescriptions] = useState<string[]>([])
   const [uploading, setUploading] = useState(false)
@@ -458,12 +461,21 @@ function RecordsPageInner() {
   // Reset page when search changes
   useEffect(() => { setPage(0) }, [debouncedSearch])
 
+  // URL ?customerId= → müşteri filtresi ayarla ve URL temizle (Takipler deep-link)
+  useEffect(() => {
+    const cid = searchParams?.get('customerId')
+    if (!cid || ctxLoading) return
+    setFilterCustomerId(cid)
+    router.replace('/dashboard/records', { scroll: false })
+  }, [searchParams, ctxLoading]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const fetchRecords = useCallback(async () => {
     if (!businessId) return
     setLoading(true)
 
     const params = new URLSearchParams({ businessId, type: recordType })
     if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim())
+    if (filterCustomerId) params.set('customerId', filterCustomerId)
     params.set('page', String(page))
     params.set('pageSize', String(PAGE_SIZE))
 
@@ -482,7 +494,7 @@ function RecordsPageInner() {
       setDbError(null)
     }
     setLoading(false)
-  }, [businessId, recordType, debouncedSearch, page])
+  }, [businessId, recordType, debouncedSearch, filterCustomerId, page])
 
   useEffect(() => {
     if (!ctxLoading) {
