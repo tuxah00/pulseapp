@@ -153,6 +153,22 @@ export default function CustomersPage() {
     }
   }, [searchParams])
 
+  // URL ?customerId= → o müşteriyi çekip slide-over panelinde aç (Takipler deep-link)
+  useEffect(() => {
+    const customerId = searchParams?.get('customerId')
+    if (!customerId || !businessId || ctxLoading) return
+    supabase
+      .from('customers')
+      .select('*')
+      .eq('id', customerId)
+      .eq('business_id', businessId)
+      .single()
+      .then(({ data }) => {
+        if (data) setSelectedCustomer(data)
+      })
+    router.replace('/dashboard/customers', { scroll: false })
+  }, [searchParams, businessId, ctxLoading]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const fetchCustomers = useCallback(async () => {
     if (!businessId) return
     let query = supabase

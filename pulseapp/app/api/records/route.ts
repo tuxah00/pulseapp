@@ -12,6 +12,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const type = searchParams.get('type')
   const search = searchParams.get('search') || ''
+  const customerId = searchParams.get('customerId') || ''
   const { page, pageSize, from, to } = parsePaginationParams(searchParams)
 
   if (!type) {
@@ -28,6 +29,9 @@ export async function GET(req: NextRequest) {
 
   if (search) {
     query = query.ilike('title', `%${search}%`)
+  }
+  if (customerId) {
+    query = query.eq('customer_id', customerId)
   }
 
   const { data, count, error } = await query.range(from, to)

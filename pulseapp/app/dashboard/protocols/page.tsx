@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Image from 'next/image'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { requirePermission, requireSectorModule } from '@/lib/hooks/use-require-permission'
 import { getTreatmentNotesPlaceholder } from '@/lib/config/sector-labels'
@@ -44,6 +45,8 @@ export default function ProtocolsPage() {
   requireSectorModule(sector, 'protocols')
   requirePermission(permissions, 'protocols')
   const { confirm } = useConfirm()
+  const searchParams = useSearchParams()
+  const router = useRouter()
 
   // State
   const [protocols, setProtocols] = useState<TreatmentProtocol[]>([])
@@ -105,6 +108,16 @@ export default function ProtocolsPage() {
   useEffect(() => { fetchProtocols() }, [fetchProtocols])
   useEffect(() => { fetchMeta() }, [fetchMeta])
   useEffect(() => { setPage(0) }, [statusFilter])
+
+  // URL ?protocolId= → protokolü çekip detay panelinde aç (Takipler deep-link)
+  useEffect(() => {
+    const protocolId = searchParams?.get('protocolId')
+    if (!protocolId || !businessId || ctxLoading) return
+    fetch(`/api/protocols/${protocolId}?businessId=${businessId}`)
+      .then(r => r.json())
+      .then(json => { if (json.protocol) setSelectedProtocol(json.protocol) })
+    router.replace('/dashboard/protocols', { scroll: false })
+  }, [searchParams, businessId, ctxLoading]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!showCreate) return

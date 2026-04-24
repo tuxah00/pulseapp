@@ -7,7 +7,7 @@ import { requirePermission, requireSectorModule } from '@/lib/hooks/use-require-
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import {
-  Plus, ClipboardCheck, Search, Loader2, Calendar, Send, Ban, Clock, CheckCircle, XCircle,
+  Plus, ClipboardCheck, Search, Loader2, Calendar, Send, Clock, CheckCircle, XCircle,
   X, MessageCircle, MessageSquare, CalendarClock, User, FileText, ExternalLink, History, Save
 } from 'lucide-react'
 import { CustomSelect } from '@/components/ui/custom-select'
@@ -456,7 +456,7 @@ export default function FollowUpsPage() {
               {/* Links */}
               <div className="flex flex-wrap gap-2 mb-4">
                 {detailItem.customers?.id && (
-                  <Link href={`/dashboard/customers?id=${detailItem.customers.id}`} className="text-xs px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 inline-flex items-center gap-1.5 transition-colors">
+                  <Link href={`/dashboard/customers?customerId=${detailItem.customers.id}`} className="text-xs px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 inline-flex items-center gap-1.5 transition-colors">
                     <User className="h-3.5 w-3.5" /> {customerLabel} Profili
                     <ExternalLink className="h-3 w-3 opacity-60" />
                   </Link>
@@ -468,13 +468,13 @@ export default function FollowUpsPage() {
                   </Link>
                 )}
                 {detailItem.appointments?.id && (
-                  <Link href={`/dashboard/appointments?id=${detailItem.appointments.id}`} className="text-xs px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 inline-flex items-center gap-1.5 transition-colors">
+                  <Link href={`/dashboard/appointments?appointmentId=${detailItem.appointments.id}`} className="text-xs px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 inline-flex items-center gap-1.5 transition-colors">
                     <Calendar className="h-3.5 w-3.5" /> Randevu
                     <ExternalLink className="h-3 w-3 opacity-60" />
                   </Link>
                 )}
                 {detailItem.treatment_protocols?.id && (
-                  <Link href={`/dashboard/protocols?id=${detailItem.treatment_protocols.id}`} className="text-xs px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 inline-flex items-center gap-1.5 transition-colors">
+                  <Link href={`/dashboard/protocols?protocolId=${detailItem.treatment_protocols.id}`} className="text-xs px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 inline-flex items-center gap-1.5 transition-colors">
                     <ClipboardCheck className="h-3.5 w-3.5" /> Protokol
                     <ExternalLink className="h-3 w-3 opacity-60" />
                   </Link>
@@ -482,6 +482,8 @@ export default function FollowUpsPage() {
               </div>
 
               {/* Content */}
+              {/* key değişince fadeIn animasyonu tetiklenir */}
+              <div key={editMode ? 'edit' : 'view'} className="animate-fade-in">
               {!editMode ? (
                 <div className="space-y-4">
                   {detailItem.message && (
@@ -570,12 +572,10 @@ export default function FollowUpsPage() {
                   </div>
                 </div>
               )}
+              </div>{/* /animate-fade-in */}
 
               {/* Footer */}
-              <div className="flex justify-between gap-2 mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
-                <button onClick={() => setClosingDetail(true)} className="btn-secondary inline-flex items-center gap-1.5">
-                  <Ban className="h-4 w-4" /> Kapat
-                </button>
+              <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
                 {editMode ? (
                   <div className="flex gap-2">
                     <button onClick={() => setEditMode(false)} className="btn-secondary">Vazgeç</button>
