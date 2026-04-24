@@ -109,7 +109,7 @@ export default function WizardShell({
               type="button"
               onClick={onBack}
               disabled={!onBack}
-              className="rounded-lg px-4 py-2 text-sm font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
+              className="cursor-pointer rounded-lg px-4 py-2 text-sm font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
             >
               {backLabel}
             </button>
@@ -119,7 +119,7 @@ export default function WizardShell({
                   type="button"
                   onClick={onSkip}
                   disabled={nextLoading}
-                  className="rounded-lg px-4 py-2 text-sm font-medium text-white/70 transition-colors hover:text-white disabled:opacity-50"
+                  className="cursor-pointer rounded-lg px-4 py-2 text-sm font-medium text-white/70 transition-colors hover:text-white disabled:opacity-50"
                 >
                   {skipLabel}
                 </button>
@@ -128,7 +128,7 @@ export default function WizardShell({
                 type="button"
                 onClick={onNext}
                 disabled={nextDisabled || nextLoading}
-                className="rounded-lg bg-white px-6 py-2.5 text-sm font-semibold text-pulse-900 shadow-lg transition-all hover:bg-white/95 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50"
+                className="cursor-pointer rounded-lg bg-white px-6 py-2.5 text-sm font-semibold text-pulse-900 shadow-lg transition-all hover:bg-white/95 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {nextLoading ? 'Kaydediliyor…' : `${nextLabel} →`}
               </button>

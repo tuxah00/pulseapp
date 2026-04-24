@@ -114,7 +114,7 @@ export default function ServicesStep({ seedServices, onServicesChange }: Service
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 items-start">
         {seedServices.map((s, idx) => {
           const state = seedState[s.key]
           const isSelected = state?.selected ?? false
@@ -123,7 +123,7 @@ export default function ServicesStep({ seedServices, onServicesChange }: Service
               key={s.key}
               style={{ ['--stagger-index' as string]: idx }}
               className={[
-                'wizard-card-stagger relative overflow-hidden rounded-xl border-2 transition-all duration-200',
+                'wizard-card-stagger relative overflow-hidden rounded-xl border-2 transition-all duration-200 cursor-default',
                 isSelected
                   ? 'border-white bg-white text-pulse-900 shadow-xl'
                   : 'border-white/20 bg-white/5 text-white hover:-translate-y-0.5 hover:border-white/40 hover:bg-white/10',
@@ -133,7 +133,7 @@ export default function ServicesStep({ seedServices, onServicesChange }: Service
                 type="button"
                 onClick={() => updateSeed(s.key, { selected: !isSelected })}
                 aria-pressed={isSelected}
-                className="flex w-full items-start justify-between gap-2 p-4 text-left"
+                className="flex w-full cursor-pointer items-start justify-between gap-2 p-4 text-left"
               >
                 <div className="flex-1">
                   <h3 className="font-semibold">{s.name}</h3>
@@ -222,7 +222,7 @@ export default function ServicesStep({ seedServices, onServicesChange }: Service
               <button
                 type="button"
                 onClick={() => removeCustom(c.id)}
-                className="rounded-md p-1.5 text-red-500 hover:bg-red-50"
+                className="cursor-pointer rounded-md p-1.5 text-red-500 hover:bg-red-50"
                 aria-label="Sil"
               >
                 <Trash2 size={16} />
@@ -235,7 +235,7 @@ export default function ServicesStep({ seedServices, onServicesChange }: Service
       <button
         type="button"
         onClick={addCustom}
-        className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-white/30 px-4 py-3 text-sm font-medium text-white/80 transition-all hover:border-white/60 hover:bg-white/5 hover:text-white"
+        className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-white/30 px-4 py-3 text-sm font-medium text-white/80 transition-all hover:border-white/60 hover:bg-white/5 hover:text-white"
       >
         <Plus size={16} />
         Özel hizmet ekle

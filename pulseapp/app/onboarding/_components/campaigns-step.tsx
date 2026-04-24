@@ -90,7 +90,7 @@ export default function CampaignsStep({ seedCampaigns, onCampaignsChange }: Camp
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 items-start">
         {seedCampaigns.map((c, i) => {
           const state = seedState[i]
           const isSelected = state?.selected ?? false
@@ -99,7 +99,7 @@ export default function CampaignsStep({ seedCampaigns, onCampaignsChange }: Camp
               key={`${c.name}-${i}`}
               style={{ ['--stagger-index' as string]: i }}
               className={[
-                'wizard-card-stagger overflow-hidden rounded-xl border-2 transition-all duration-200',
+                'wizard-card-stagger cursor-default overflow-hidden rounded-xl border-2 transition-all duration-200',
                 isSelected
                   ? 'border-white bg-white text-pulse-900 shadow-xl'
                   : 'border-white/20 bg-white/5 text-white hover:-translate-y-0.5 hover:border-white/40 hover:bg-white/10',
@@ -109,7 +109,7 @@ export default function CampaignsStep({ seedCampaigns, onCampaignsChange }: Camp
                 type="button"
                 onClick={() => updateSeed(i, { selected: !isSelected })}
                 aria-pressed={isSelected}
-                className="flex w-full items-start gap-3 p-4 text-left"
+                className="flex w-full cursor-pointer items-start gap-3 p-4 text-left"
               >
                 <div
                   className={[
