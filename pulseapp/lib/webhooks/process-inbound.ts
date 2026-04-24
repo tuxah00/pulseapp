@@ -46,16 +46,34 @@ export async function processInboundMessage(params: ProcessInboundParams): Promi
     return
   }
 
-  await admin.from('messages').insert({
-    business_id: customer.business_id,
-    customer_id: customer.id,
-    direction: 'inbound',
-    channel,
-    message_type: 'text',
-    content: messageBody,
-    [providerIdField]: providerMessageId,
-    twilio_status: 'received',
-  })
+  // Idempotent insert: Meta/Twilio retry ettiğinde aynı mesaj iki kez işlenmez.
+  // Migration 067 ile meta_message_id / twilio_sid partial UNIQUE index var.
+  const { data: inserted, error: insertErr } = await admin
+    .from('messages')
+    .upsert(
+      {
+        business_id: customer.business_id,
+        customer_id: customer.id,
+        direction: 'inbound',
+        channel,
+        message_type: 'text',
+        content: messageBody,
+        [providerIdField]: providerMessageId,
+        twilio_status: 'received',
+      },
+      { onConflict: providerIdField, ignoreDuplicates: true },
+    )
+    .select('id')
+
+  if (insertErr) {
+    log.error({ err: insertErr, providerMessageId, channel }, 'Inbound mesaj kaydedilemedi')
+    return
+  }
+  // ignoreDuplicates=true + boş data → mesaj zaten işlenmişti (retry)
+  if (!inserted || inserted.length === 0) {
+    log.warn({ providerMessageId, channel }, 'Duplicate inbound webhook — atlandı')
+    return
+  }
 
   const trimmed = messageBody.trim().toUpperCase()
   const isConfirm = CONFIRM_REGEX.test(trimmed)

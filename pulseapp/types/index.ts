@@ -465,8 +465,12 @@ export interface BusinessSettings {
   auto_reply_mode?: 'off' | 'whitelist' | 'smart'
   /** "HH:mm" formatında başlangıç/bitiş; dışında hiç yanıt gitmez */
   auto_reply_hours?: { start: string; end: string }
-  /** Aynı müşteriye günde max bu kadar otomatik yanıt */
+  /** İşletme bazlı günlük toplam otomatik yanıt üst sınırı */
   auto_reply_daily_cap?: number
+  /** Müşteri bazlı günlük otomatik yanıt üst sınırı */
+  auto_reply_per_customer_cap?: number
+  /** Aynı müşteriye iki yanıt arası minimum bekleme (dakika) */
+  auto_reply_cooldown_minutes?: number
   /** Müşteriye gönderilen mesaj sonuna "— Otomatik yanıt" etiketi eklensin mi (varsayılan: true) */
   auto_reply_signature?: boolean
   language: string

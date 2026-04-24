@@ -12,7 +12,14 @@ export function verifyTwilioWebhook(
 ): NextResponse | null {
   const authToken = process.env.TWILIO_AUTH_TOKEN
   if (!authToken) {
-    console.warn('TWILIO_AUTH_TOKEN tanımlı değil — webhook doğrulaması atlanıyor')
+    if (process.env.NODE_ENV === 'production') {
+      // Production'da env eksikse saldırgan payload enjekte edebilir — katı reddet.
+      return NextResponse.json(
+        { error: 'Webhook doğrulama yapılandırılmamış' },
+        { status: 503 },
+      )
+    }
+    console.warn('TWILIO_AUTH_TOKEN tanımlı değil — webhook doğrulaması atlanıyor (dev only)')
     return null
   }
 

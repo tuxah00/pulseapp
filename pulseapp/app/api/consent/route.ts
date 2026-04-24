@@ -14,6 +14,20 @@ export async function POST(req: NextRequest) {
   const { businessId, customerId, customerPhone, consentType, method, ipAddress, notes } = parsed.data
 
   const admin = createAdminClient()
+
+  // T1.6 — Cross-tenant injection koruması: customerId verilmişse business_id eşleşmesi zorunlu.
+  // Saldırgan başka işletmenin müşterisine kendi businessId ile sahte KVKK onayı enjekte edemez.
+  if (customerId) {
+    const { data: cust } = await admin
+      .from('customers')
+      .select('business_id')
+      .eq('id', customerId)
+      .maybeSingle()
+    if (!cust || cust.business_id !== businessId) {
+      return NextResponse.json({ error: 'Müşteri bu işletmeye ait değil' }, { status: 403 })
+    }
+  }
+
   const ip = ipAddress || req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || null
 
   const { data, error } = await admin

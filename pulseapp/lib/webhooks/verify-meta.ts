@@ -14,7 +14,13 @@ export function verifyMetaWebhook(
 ): NextResponse | null {
   const appSecret = process.env.META_WA_APP_SECRET
   if (!appSecret) {
-    console.warn('META_WA_APP_SECRET tanımlı değil — webhook doğrulaması atlanıyor')
+    if (process.env.NODE_ENV === 'production') {
+      return NextResponse.json(
+        { error: 'Webhook doğrulama yapılandırılmamış' },
+        { status: 503 },
+      )
+    }
+    console.warn('META_WA_APP_SECRET tanımlı değil — webhook doğrulaması atlanıyor (dev only)')
     return null
   }
 
