@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
         .from('staff_members')
         .select('id')
         .eq('business_id', businessId)
-        .eq('status', 'active'),
+        .eq('is_active', true),
       admin
         .from('appointments')
         .select('id, appointment_date, start_time, end_time, status')
