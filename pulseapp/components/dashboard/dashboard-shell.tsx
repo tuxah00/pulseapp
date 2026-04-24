@@ -7,7 +7,9 @@ import { motion } from 'framer-motion'
 import { SidebarProvider, useSidebar } from '@/lib/hooks/sidebar-context'
 import Sidebar from './sidebar'
 import TopBar from './top-bar'
+import PilotBanner from './pilot-banner'
 import SuccessNotification from '@/components/ui/success-notification'
+import { isPilotMode } from '@/lib/pilot'
 
 const CommandPalette = dynamic(() => import('./command-palette'), {
   ssr: false,
@@ -127,6 +129,7 @@ function DashboardShellInner({
           userName={userName}
           onOpenCommand={() => setCommandOpen(true)}
         />
+        <PilotBanner active={isPilotMode(settings)} />
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
           {children}
         </div>

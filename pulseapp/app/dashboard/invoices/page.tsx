@@ -54,7 +54,8 @@ const PAYMENT_TYPE_LABELS: Record<string, string> = {
 }
 
 export default function InvoicesPage() {
-  const { businessId, staffId, staffName, sector, loading: ctxLoading, permissions } = useBusinessContext()
+  const { businessId, staffId, staffName, sector, settings, loading: ctxLoading, permissions } = useBusinessContext()
+  const pilot = settings?.pilot_mode === true
   const customerLabel = getCustomerLabelSingular(sector ?? undefined)
   const PAGE_SIZE = 50
   const [page, setPage] = useState(0)
@@ -1006,7 +1007,8 @@ export default function InvoicesPage() {
                 )}
               </div>
 
-              {/* e-Fatura */}
+              {/* e-Fatura — pilot modunda gizli (Paraşüt aboneliği yok) */}
+              {!pilot && (
               <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
                 <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">e-Fatura</p>
                 {selectedInvoice.efatura_id ? (
@@ -1037,6 +1039,7 @@ export default function InvoicesPage() {
                   </div>
                 )}
               </div>
+              )}
 
               {/* Aksiyonlar */}
               <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-2">

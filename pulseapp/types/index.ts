@@ -507,6 +507,11 @@ export interface BusinessSettings {
   ai_permissions?: AIPermissions
   // Sektörel benchmark opt-in (Faz 5.3) — anonim agregatlar için
   benchmark_opt_in?: boolean
+  // Pilot modu — ücretli aboneliklere bağımlı özellikler (PayTR, Paraşüt, Twilio SMS/WA, otomatik cron)
+  // gizlenir; SMS/WA gönderimleri uygulama-içi bildirim olarak personele iletilir.
+  pilot_mode?: boolean
+  // Pilot başlangıç wizard'ı tamamlandı mı (true → bir daha gösterilmez)
+  pilot_setup_completed?: boolean
 }
 
 export type AIAssistantTone = 'samimi' | 'formal' | 'kisa'

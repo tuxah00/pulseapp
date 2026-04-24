@@ -8,8 +8,10 @@ import {
   CreditCard, CheckCircle2, Loader2, Zap, Star,
   Crown, AlertCircle, ExternalLink, Receipt,
 } from 'lucide-react'
-import { PLAN_LABELS, PLAN_PRICES, type PlanType } from '@/types'
+import { PLAN_LABELS, PLAN_PRICES, type PlanType, type BusinessSettings } from '@/types'
 import { formatCurrency } from '@/lib/utils'
+import { isPilotMode } from '@/lib/pilot'
+import { Rocket } from 'lucide-react'
 
 interface PaymentRecord {
   id: string
@@ -66,6 +68,7 @@ export default function BillingPage() {
     subscription_status: string
     subscription_ends_at: string | null
     trial_ends_at: string | null
+    settings?: BusinessSettings | null
   } | null>(null)
   const [payments, setPayments] = useState<PaymentRecord[]>([])
   const [loading, setLoading] = useState(true)
@@ -76,7 +79,7 @@ export default function BillingPage() {
   const fetchData = useCallback(async () => {
     if (!businessId) return
     const [bizRes, payRes] = await Promise.all([
-      supabase.from('businesses').select('subscription_plan, subscription_status, subscription_ends_at, trial_ends_at').eq('id', businessId).single(),
+      supabase.from('businesses').select('subscription_plan, subscription_status, subscription_ends_at, trial_ends_at, settings').eq('id', businessId).single(),
       supabase.from('payments').select('*').eq('business_id', businessId).order('created_at', { ascending: false }).limit(10),
     ])
     if (bizRes.data) setBusiness(bizRes.data as typeof business)
@@ -120,6 +123,33 @@ export default function BillingPage() {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2 className="h-8 w-8 animate-spin text-pulse-900" />
+      </div>
+    )
+  }
+
+  // Pilot modu — ödeme akışı gizli, açıklama kartı gösterilir
+  if (isPilotMode(business?.settings)) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="h-page">Abonelik & Ödeme</h1>
+          <p className="mt-1 text-sm text-gray-500">Plan yönetimi ve ödeme geçmişi</p>
+        </div>
+        <div className="card bg-gradient-to-br from-amber-50 to-amber-50/30 dark:from-amber-900/20 dark:to-amber-900/5 border border-amber-200 dark:border-amber-800/50 p-6">
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center shrink-0">
+              <Rocket className="w-5 h-5 text-amber-700 dark:text-amber-300" />
+            </div>
+            <div className="flex-1">
+              <h2 className="text-lg font-semibold text-amber-900 dark:text-amber-200">Pilot süresi</h2>
+              <p className="mt-1 text-sm text-amber-900/80 dark:text-amber-200/80 leading-relaxed">
+                Bu süreçte tüm özellikler ücretsiz kullanılır; ödeme alınmaz. Pilot tamamlandığında işletmeniz için
+                uygun planı değerlendirebileceksiniz. SMS, WhatsApp, e-fatura ve otomatik mesajlaşma şu an devre dışı —
+                mesajlar uygulama içi bildirim olarak personele iletilir.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     )
   }
