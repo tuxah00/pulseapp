@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { normalizePhone, phoneOrFilter } from '@/lib/utils/phone'
+import { normalizePhone, toE164Phone } from '@/lib/utils/phone'
 
 export interface CreateBookingInput {
   businessId: string
@@ -96,23 +96,13 @@ export async function createBooking(
   const { data: conflicts } = await q
   if (conflicts?.length) throw Object.assign(new Error('Bu saat dolu. Lütfen başka bir saat seçin.'), { status: 409 })
 
-  // Müşteri upsert
-  const normalizedPhone = normalizePhone(phone)
-  const { data: existing } = await supabase
+  // Müşteri upsert — E.164 formatında sakla, TOCTOU yarışını önle
+  // uq_customers_business_phone unique index ile eşzamanlı insert'leri engeller
+  const normalizedPhone = toE164Phone(normalizePhone(phone))
+  const { data: customer, error: custErr } = await supabase
     .from('customers')
-    .select('id')
-    .eq('business_id', businessId)
-    .or(phoneOrFilter(normalizedPhone))
-    .eq('is_active', true)
-    .limit(1)
-
-  let customerId: string
-  if (existing?.length) {
-    customerId = existing[0].id
-  } else {
-    const { data: newCust, error: custErr } = await supabase
-      .from('customers')
-      .insert({
+    .upsert(
+      {
         business_id: businessId,
         name: name.trim(),
         phone: normalizedPhone,
@@ -121,12 +111,13 @@ export async function createBooking(
         total_revenue: 0,
         total_no_shows: 0,
         is_active: true,
-      })
-      .select('id')
-      .single()
-    if (custErr || !newCust) throw Object.assign(new Error('Müşteri oluşturulamadı'), { status: 500 })
-    customerId = newCust.id
-  }
+      },
+      { onConflict: 'business_id,phone', ignoreDuplicates: false }
+    )
+    .select('id')
+    .single()
+  if (custErr || !customer) throw Object.assign(new Error('Müşteri oluşturulamadı'), { status: 500 })
+  const customerId = customer.id
 
   // Randevu insert
   const apptData: Record<string, unknown> = {

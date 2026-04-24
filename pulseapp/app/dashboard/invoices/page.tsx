@@ -164,12 +164,13 @@ export default function InvoicesPage() {
   }, [businessId])
 
   const fetchPayments = useCallback(async (invoiceId: string) => {
+    if (!businessId) return
     setLoadingPayments(true)
-    const res = await fetch(`/api/invoices/payments?invoiceId=${invoiceId}`)
+    const res = await fetch(`/api/invoices/payments?invoiceId=${invoiceId}&businessId=${businessId}`)
     const json = await res.json()
     setPayments(json.payments || [])
     setLoadingPayments(false)
-  }, [])
+  }, [businessId])
 
   useEffect(() => {
     if (!ctxLoading) {
@@ -952,8 +953,8 @@ export default function InvoicesPage() {
                         <div className={cn('absolute -left-2.5 top-1 h-2 w-2 rounded-full', p.payment_type === 'refund' ? 'bg-red-400' : 'bg-green-400')} />
                         <div className="flex items-start justify-between">
                           <div>
-                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                              {formatCurrency(p.amount)}
+                            <p className={cn('text-sm font-medium', p.payment_type === 'refund' ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-gray-100')}>
+                              {p.payment_type === 'refund' ? '-' : ''}{formatCurrency(p.amount)}
                               <span className="ml-1.5 text-xs font-normal text-gray-500 dark:text-gray-400">
                                 {PAYMENT_TYPE_LABELS[p.payment_type] || p.payment_type}
                                 {p.installment_number && ` #${p.installment_number}`}

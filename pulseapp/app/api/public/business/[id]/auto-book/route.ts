@@ -5,6 +5,7 @@ import { isValidUUID } from '@/lib/utils/validate'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/api/rate-limit'
 import { validateBody } from '@/lib/api/validate'
 import { autoBookSchema } from '@/lib/schemas'
+import { toE164Phone } from '@/lib/utils/phone'
 import type { WorkingHours } from '@/types'
 
 const DAY_KEYS: Record<number, keyof WorkingHours> = {
@@ -199,24 +200,15 @@ export async function POST(
         if (!isFree) continue
 
         // Müsait slot+personel bulundu — randevu oluştur
-        const normalizedPhone = '+90' + phone
+        // phone schema tarafından 5XXXXXXXXX formatına normalize edilmiş gelir
+        const normalizedPhone = toE164Phone(phone)
 
-        // Müşteriyi bul veya oluştur
-        const { data: existingCustomers } = await supabase
+        // Müşteriyi bul veya oluştur — upsert ile TOCTOU yarışı engellenir
+        // uq_customers_business_phone unique index çakışmasında var olanı döner
+        const { data: customer, error: custErr } = await supabase
           .from('customers')
-          .select('id')
-          .eq('business_id', params.id)
-          .eq('phone', normalizedPhone)
-          .limit(1)
-
-        let customerId: string
-
-        if (existingCustomers && existingCustomers.length > 0) {
-          customerId = existingCustomers[0].id
-        } else {
-          const { data: newCustomer, error: custErr } = await supabase
-            .from('customers')
-            .insert({
+          .upsert(
+            {
               business_id: params.id,
               name: name.trim(),
               phone: normalizedPhone,
@@ -225,15 +217,16 @@ export async function POST(
               total_revenue: 0,
               total_no_shows: 0,
               is_active: true,
-            })
-            .select('id')
-            .single()
+            },
+            { onConflict: 'business_id,phone', ignoreDuplicates: false }
+          )
+          .select('id')
+          .single()
 
-          if (custErr || !newCustomer) {
-            return NextResponse.json({ error: 'Müşteri oluşturulamadı' }, { status: 500 })
-          }
-          customerId = newCustomer.id
+        if (custErr || !customer) {
+          return NextResponse.json({ error: 'Müşteri oluşturulamadı' }, { status: 500 })
         }
+        const customerId = customer.id
 
         // Personel adını çek
         const { data: staffInfo } = await supabase

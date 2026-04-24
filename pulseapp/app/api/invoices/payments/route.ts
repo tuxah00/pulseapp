@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { logAuditServer } from '@/lib/utils/audit'
 
 // GET: Faturanın ödeme geçmişi
 export async function GET(req: NextRequest) {
@@ -9,12 +10,24 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url)
   const invoiceId = searchParams.get('invoiceId')
+  const businessId = searchParams.get('businessId')
   if (!invoiceId) return NextResponse.json({ error: 'invoiceId gerekli' }, { status: 400 })
+  if (!businessId) return NextResponse.json({ error: 'businessId gerekli' }, { status: 400 })
+
+  // Cross-tenant koruma: kullanıcının bu işletmeye yetkisi var mı?
+  const { data: membership } = await supabase
+    .from('staff_members')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('business_id', businessId)
+    .single()
+  if (!membership) return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
 
   const { data, error } = await supabase
     .from('invoice_payments')
     .select('*')
     .eq('invoice_id', invoiceId)
+    .eq('business_id', businessId)
     .order('created_at', { ascending: true })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -34,7 +47,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'invoice_id, amount ve method gerekli' }, { status: 400 })
   }
 
-  // Faturayı getir
+  // Faturayı getir (stock_deducted_at dahil)
   const { data: invoice, error: invoiceError } = await supabase
     .from('invoices')
     .select('*')
@@ -82,14 +95,14 @@ export async function POST(req: NextRequest) {
   // paid_amount güncelle (2 ondalık yuvarlama — floating point hatalarını engeller)
   const newPaidAmount = Math.max(0, Math.round((currentPaid + paymentAmount) * 100) / 100)
 
-  // Status otomatik belirle (0.01₺ epsilon ile float precision koruması)
-  let newStatus = invoice.status
-  if (newPaidAmount + 0.01 >= invoiceTotal) {
-    newStatus = 'paid'
-  } else if (newPaidAmount > 0) {
-    newStatus = 'partial'
-  } else {
+  // Status otomatik belirle — sıfırlama ve iade sonrası doğru geçiş
+  let newStatus: string
+  if (newPaidAmount <= 0) {
     newStatus = 'pending'
+  } else if (newPaidAmount + 0.01 >= invoiceTotal) {
+    newStatus = 'paid'
+  } else {
+    newStatus = 'partial'
   }
 
   const updateObj: Record<string, unknown> = {
@@ -103,6 +116,14 @@ export async function POST(req: NextRequest) {
     updateObj.payment_method = method
   }
 
+  // Stok idempotency: iade sonrası yeniden ödeme çift düşmeyi önler
+  // stock_deducted_at dolu ise stok zaten düşülmüş; boşsa henüz düşülmemiş
+  if (newStatus === 'paid' && !invoice.stock_deducted_at) {
+    updateObj.stock_deducted_at = new Date().toISOString()
+  } else if (isRefund && invoice.stock_deducted_at) {
+    updateObj.stock_deducted_at = null
+  }
+
   const { data: updatedInvoice, error: updateError } = await supabase
     .from('invoices')
     .update(updateObj)
@@ -112,8 +133,8 @@ export async function POST(req: NextRequest) {
 
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 })
 
-  // Fatura tam ödendiyse stok düş (POS'tan gelen faturalarda POS zaten düşürdüğü için atla)
-  if (newStatus === 'paid' && invoice.status !== 'paid' && !invoice.pos_transaction_id && updatedInvoice?.items) {
+  // Stok düş: sadece ilk kez paid olduğunda ve POS'tan gelmemişse
+  if (newStatus === 'paid' && !invoice.stock_deducted_at && !invoice.pos_transaction_id && updatedInvoice?.items) {
     const items = updatedInvoice.items as Array<{ product_id?: string; type?: string; quantity: number }>
     for (const item of items) {
       if (item.product_id && item.type === 'product') {
@@ -143,8 +164,8 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // İade durumunda stok geri yükle (daha önce düşürülmüşse)
-  if (isRefund && invoice.status === 'paid' && !invoice.pos_transaction_id && updatedInvoice?.items) {
+  // Stok geri yükle: iade yapıldığında ve daha önce düşürülmüşse
+  if (isRefund && invoice.stock_deducted_at && !invoice.pos_transaction_id && updatedInvoice?.items) {
     const items = updatedInvoice.items as Array<{ product_id?: string; type?: string; quantity: number }>
     for (const item of items) {
       if (item.product_id && item.type === 'product') {
@@ -173,6 +194,23 @@ export async function POST(req: NextRequest) {
       }
     }
   }
+
+  // Audit log
+  await logAuditServer({
+    businessId: invoice.business_id,
+    staffId: staff_id || null,
+    staffName: staff_name || null,
+    action: isRefund ? 'update' : 'pay',
+    resource: 'invoice',
+    resourceId: invoice_id,
+    details: {
+      amount: Math.abs(amount),
+      method,
+      payment_type,
+      new_paid_amount: newPaidAmount,
+      new_status: newStatus,
+    },
+  })
 
   return NextResponse.json({ payment, invoice: updatedInvoice })
 }
