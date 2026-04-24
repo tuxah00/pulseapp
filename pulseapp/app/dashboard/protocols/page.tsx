@@ -110,13 +110,19 @@ export default function ProtocolsPage() {
   useEffect(() => { setPage(0) }, [statusFilter])
 
   // URL ?protocolId= → protokolü çekip detay panelinde aç (Takipler deep-link)
+  // One-shot: aynı protocolId için tekrar tetiklenmez; URL temizliği fetch sonrasına alındı
+  const protocolDeepLinkConsumed = useRef<string | null>(null)
   useEffect(() => {
     const protocolId = searchParams?.get('protocolId')
     if (!protocolId || !businessId || ctxLoading) return
-    fetch(`/api/protocols/${protocolId}?businessId=${businessId}`)
+    if (protocolDeepLinkConsumed.current === protocolId) return
+    protocolDeepLinkConsumed.current = protocolId
+    fetch(`/api/protocols/${protocolId}`)
       .then(r => r.json())
-      .then(json => { if (json.protocol) setSelectedProtocol(json.protocol) })
-    router.replace('/dashboard/protocols', { scroll: false })
+      .then(json => {
+        if (json.protocol) setSelectedProtocol(json.protocol)
+        router.replace('/dashboard/protocols', { scroll: false })
+      })
   }, [searchParams, businessId, ctxLoading]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -219,7 +225,7 @@ export default function ProtocolsPage() {
       // Refresh list and detail in parallel
       const [, detailJson] = await Promise.all([
         fetchProtocols(),
-        fetch(`/api/protocols/${protocolId}?businessId=${businessId}`).then(r => r.json()),
+        fetch(`/api/protocols/${protocolId}`).then(r => r.json()),
       ])
       if (detailJson.protocol) setSelectedProtocol(detailJson.protocol)
       window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Kaydedildi' } }))
@@ -234,7 +240,7 @@ export default function ProtocolsPage() {
     try {
       const [, detailJson] = await Promise.all([
         fetchProtocols(),
-        fetch(`/api/protocols/${protocolId}?businessId=${businessId}`).then(r => r.json()),
+        fetch(`/api/protocols/${protocolId}`).then(r => r.json()),
       ])
       if (detailJson.protocol) setSelectedProtocol(detailJson.protocol)
     } catch { /* ignore */ }
@@ -251,7 +257,7 @@ export default function ProtocolsPage() {
     })
     if (!ok) return
     try {
-      const res = await fetch(`/api/protocols/${protocolId}?businessId=${businessId}`, { method: 'DELETE' })
+      const res = await fetch(`/api/protocols/${protocolId}`, { method: 'DELETE' })
       if (!res.ok) {
         const json = await res.json().catch(() => ({}))
         window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: json.error || 'Silinemedi' } }))

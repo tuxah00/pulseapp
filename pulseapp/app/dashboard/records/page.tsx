@@ -1,6 +1,6 @@
 ﻿'use client'
 
-import { useState, useEffect, useCallback, Suspense, useMemo } from 'react'
+import { useState, useEffect, useCallback, useRef, Suspense, useMemo } from 'react'
 import NextImage from 'next/image'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
@@ -462,9 +462,13 @@ function RecordsPageInner() {
   useEffect(() => { setPage(0) }, [debouncedSearch])
 
   // URL ?customerId= → müşteri filtresi ayarla ve URL temizle (Takipler deep-link)
+  // One-shot: aynı customerId için tekrar tetiklenmez
+  const recordsDeepLinkConsumed = useRef<string | null>(null)
   useEffect(() => {
     const cid = searchParams?.get('customerId')
     if (!cid || ctxLoading) return
+    if (recordsDeepLinkConsumed.current === cid) return
+    recordsDeepLinkConsumed.current = cid
     setFilterCustomerId(cid)
     router.replace('/dashboard/records', { scroll: false })
   }, [searchParams, ctxLoading]) // eslint-disable-line react-hooks/exhaustive-deps

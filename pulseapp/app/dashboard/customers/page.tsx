@@ -1,6 +1,6 @@
 ﻿'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useDebounce } from '@/lib/hooks/use-debounce'
@@ -154,9 +154,13 @@ export default function CustomersPage() {
   }, [searchParams])
 
   // URL ?customerId= → o müşteriyi çekip slide-over panelinde aç (Takipler deep-link)
+  // One-shot: aynı customerId param'ı için yalnızca bir kez çalışır, back-button ile stale param yeniden tetiklenmez
+  const deepLinkConsumed = useRef<string | null>(null)
   useEffect(() => {
     const customerId = searchParams?.get('customerId')
     if (!customerId || !businessId || ctxLoading) return
+    if (deepLinkConsumed.current === customerId) return
+    deepLinkConsumed.current = customerId
     supabase
       .from('customers')
       .select('*')
@@ -165,8 +169,9 @@ export default function CustomersPage() {
       .single()
       .then(({ data }) => {
         if (data) setSelectedCustomer(data)
+        // URL temizliği fetch sonrasına alındı — history pollution yok
+        router.replace('/dashboard/customers', { scroll: false })
       })
-    router.replace('/dashboard/customers', { scroll: false })
   }, [searchParams, businessId, ctxLoading]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchCustomers = useCallback(async () => {

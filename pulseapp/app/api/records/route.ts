@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { requirePermission } from '@/lib/api/with-permission'
 import { validateBody, parsePaginationParams } from '@/lib/api/validate'
 import { recordCreateSchema } from '@/lib/schemas'
+import { isValidUUID } from '@/lib/utils/validate'
 
 export async function GET(req: NextRequest) {
   const auth = await requirePermission(req, 'records')
@@ -30,7 +31,11 @@ export async function GET(req: NextRequest) {
   if (search) {
     query = query.ilike('title', `%${search}%`)
   }
+  // customerId UUID formatında olmalı — malformed ID DB hatasına değil 400'e dönsün
   if (customerId) {
+    if (!isValidUUID(customerId)) {
+      return NextResponse.json({ error: 'Geçersiz customerId' }, { status: 400 })
+    }
     query = query.eq('customer_id', customerId)
   }
 

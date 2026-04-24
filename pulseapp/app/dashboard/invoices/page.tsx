@@ -166,7 +166,7 @@ export default function InvoicesPage() {
   const fetchPayments = useCallback(async (invoiceId: string) => {
     if (!businessId) return
     setLoadingPayments(true)
-    const res = await fetch(`/api/invoices/payments?invoiceId=${invoiceId}&businessId=${businessId}`)
+    const res = await fetch(`/api/invoices/payments?invoiceId=${invoiceId}`)
     const json = await res.json()
     setPayments(json.payments || [])
     setLoadingPayments(false)
@@ -323,8 +323,7 @@ export default function InvoicesPage() {
         payment_type: selectedInvoice.payment_type === 'installment' ? 'installment' : 'payment',
         installment_number: selectedInvoice.payment_type === 'installment' ? (payments.filter(p => p.payment_type === 'installment').length + 1) : null,
         notes: payNotes || null,
-        staff_id: staffId,
-        staff_name: staffName,
+        // staff_id/staff_name backend'de auth context'ten türetilir (audit log bütünlüğü)
       }),
     })
     const json = await res.json()
