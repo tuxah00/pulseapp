@@ -343,7 +343,7 @@ Aşağıdaki migration'lar Supabase SQL Editor'de manuel olarak çalıştırılm
 - `064b_customers_phone_unique.sql` → **✅ Uygulandı (2026-04-24)** — `customers(business_id, phone)` unique partial index (TOCTOU duplicate müşteri engeli) + mevcut duplicate temizliği
 - `065_ai_insights.sql` → **✅ Uygulandı (2026-04-23)** — `ai_insights` tablosu + RLS + index'ler (Faz 4 — insight kartları)
 - `066_sector_benchmarks_aggregate.sql` → **✅ Uygulandı (2026-04-23)** — `sector_benchmarks_aggregate` tablosu + unique index (sector+metric+period) + RLS public read (Faz 5 — anonim sektörel benchmark, sample_size >= 20 şartı)
-- `070_move_appointment_rpc.sql` → **⏳ Bekliyor (Supabase PAT süresi doldu — kullanıcı yeni token ile çalıştıracak)** — drag-drop randevu taşıma için atomic RPC (advisory lock + FOR UPDATE ile TOCTOU kapanır)
+- `070_move_appointment_rpc.sql` → **✅ Uygulandı (2026-04-25)** — drag-drop randevu taşıma için atomic RPC (advisory lock + FOR UPDATE ile TOCTOU kapanır)
 
 ### Migration Numaralandırma Kuralı (2026-04-18'den itibaren)
 Aynı numaraya denk gelen migration'lar `a/b/c` harf suffix'i ile ayrılır. Alfabetik sıralama doğru çalışma sırasını korur.
