@@ -3,17 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logAuditServer } from '@/lib/utils/audit'
 import { sendCampaign } from '@/lib/campaigns/send'
-
-export async function getStaffInfo(supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>) {
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
-  const { data: staff } = await supabase
-    .from('staff_members')
-    .select('id, name, business_id')
-    .eq('user_id', user.id)
-    .single()
-  return staff
-}
+import { getStaffInfo } from '@/lib/campaigns/staff'
 
 // GET — Kampanya listesi
 export async function GET(request: NextRequest) {
