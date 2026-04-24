@@ -8,7 +8,7 @@ import { logAudit } from '@/lib/utils/audit'
 import {
   Loader2, TrendingUp, TrendingDown, Users, Calendar,
   DollarSign, AlertTriangle, Clock, Star, UserCheck, Minus,
-  BarChart3, PieChart, Activity, Plus, X, Wallet, Download, Layers, Sparkles, Gem,
+  BarChart3, PieChart, Activity, Plus, X, Wallet, Download, Layers, Sparkles,
   Megaphone, MessageSquare,
 } from 'lucide-react'
 import { formatCurrency, cn, formatDateISO } from '@/lib/utils'
@@ -30,12 +30,28 @@ import { CustomSelect } from '@/components/ui/custom-select'
 import EmptyState from '@/components/ui/empty-state'
 import { getCustomerLabelSingular, getCustomerLabel } from '@/lib/config/sector-modules'
 import { addMonthsSafe } from '@/lib/utils/date-range'
-import { PulseValuePanel } from '@/components/dashboard/analytics/pulse-value/pulse-value-panel'
+import SeasonalChart from '@/components/dashboard/insights/seasonal-chart'
+import CohortHeatmap from '@/components/dashboard/insights/cohort-heatmap'
+import QuadrantTable from '@/components/dashboard/insights/quadrant-table'
+import type { InsightsSummary } from '@/lib/analytics/insights'
 import {
   Area, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip as RTooltip, XAxis, YAxis,
 } from 'recharts'
 
-type AnalyticsTab = 'overview' | 'staff' | 'customers' | 'sources' | 'services' | 'expenses' | 'forecast' | 'pulse_value'
+/**
+ * Gelir-Gider paneli — 4 bölüm.
+ *
+ * Eski 8 tab yapısı:
+ *   overview, staff, customers, sources, services, expenses, forecast, pulse_value
+ * Yeni 4 bölüm:
+ *   1. summary    — Özet + Trend + Tahmin + Sezonsal grafik
+ *   2. breakdown  — Gelir Kırılımı (Hizmet + Kaynak)
+ *   3. finance    — Gelir-Gider Yönetimi (manuel kayıt formu + tablo)
+ *   4. people     — Personel & Müşteri (+ Kohort + BCG Quadrant)
+ *
+ * PulseApp Katkısı sekmesi kaldırıldı (test artığıydı).
+ */
+type AnalyticsTab = 'summary' | 'breakdown' | 'finance' | 'people'
 
 type AnalyticsAppointment = AppointmentRow & {
   services: { name: string; price: number } | null
@@ -87,8 +103,12 @@ export default function AnalyticsPage() {
   const { confirm } = useConfirm()
   const [loading, setLoading] = useState(true)
   const [period, setPeriod] = useState<'week' | 'month' | 'year'>('month')
-  const [activeTab, setActiveTab] = useState<AnalyticsTab>('overview')
+  const [activeTab, setActiveTab] = useState<AnalyticsTab>('summary')
   const [exportingPDF, setExportingPDF] = useState(false)
+
+  // Sezonsal + kohort + quadrant verisi (İş Zekası özetinden), people + summary tab açıldığında yüklenir
+  const [insightsSummary, setInsightsSummary] = useState<InsightsSummary | null>(null)
+  const [insightsLoading, setInsightsLoading] = useState(false)
 
   const [appointments, setAppointments] = useState<AnalyticsAppointment[]>([])
   const [prevAppointments, setPrevAppointments] = useState<PrevAppointment[]>([])
@@ -280,6 +300,30 @@ export default function AnalyticsPage() {
   }
 
   useEffect(() => { if (!ctxLoading) fetchData() }, [fetchData, ctxLoading])
+
+  // Varsayılan "Özet & Trend" sekmesi açıldığında forecast + insights summary'yi yükle
+  useEffect(() => {
+    if (ctxLoading || !businessId) return
+    if (activeTab === 'summary' || activeTab === 'people') {
+      if (!insightsSummary && !insightsLoading) {
+        setInsightsLoading(true)
+        fetch(`/api/insights/summary?businessId=${businessId}`)
+          .then(r => r.json())
+          .then(d => setInsightsSummary(d))
+          .catch(() => {})
+          .finally(() => setInsightsLoading(false))
+      }
+    }
+    if (activeTab === 'summary' && !forecastData && !forecastLoading) {
+      setForecastLoading(true)
+      fetch('/api/analytics/forecast?months=3')
+        .then(r => r.json())
+        .then(d => setForecastData(d))
+        .catch(() => {})
+        .finally(() => setForecastLoading(false))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, businessId, ctxLoading])
 
   requirePermission(permissions, 'analytics')
 
@@ -522,52 +566,69 @@ export default function AnalyticsPage() {
           value={completed.length} color="blue" />
       </div>
 
-      {/* Sekmeler — tüm sekmeler direkt görünür */}
+      {/* Sekmeler — 4 bölüm */}
       <div className="sticky top-14 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 bg-gray-50 dark:bg-gray-950 flex flex-wrap gap-1 border-b border-gray-200 dark:border-gray-700">
         {(() => {
           const tabsToShow = [
-            ['overview', 'Özet', <BarChart3 key="o" className="h-3.5 w-3.5" />],
-            ['staff', 'Personel', <Users key="s" className="h-3.5 w-3.5" />],
-            ['customers', customerLabelPlural, <UserCheck key="c" className="h-3.5 w-3.5" />],
-            ['expenses', 'Gelir-Gider', <Wallet key="e" className="h-3.5 w-3.5" />],
-            ['sources', 'Kaynak', <PieChart key="sr" className="h-3.5 w-3.5" />],
-            ['services', 'Hizmet', <Layers key="sv" className="h-3.5 w-3.5" />],
-            ['forecast', 'Tahmin', <Sparkles key="f" className="h-3.5 w-3.5" />],
-            ['pulse_value', 'PulseApp Katkısı', <Gem key="pv" className="h-3.5 w-3.5" />],
+            ['summary', 'Özet & Trend', <BarChart3 key="o" className="h-3.5 w-3.5" />],
+            ['breakdown', 'Gelir Kırılımı', <PieChart key="br" className="h-3.5 w-3.5" />],
+            ['finance', 'Gelir-Gider Yönetimi', <Wallet key="e" className="h-3.5 w-3.5" />],
+            ['people', `Personel & ${customerLabelPlural}`, <Users key="s" className="h-3.5 w-3.5" />],
           ] as const
 
-          const renderTab = ([key, label, icon]: readonly [string, string, React.ReactElement]) => {
-            const isPulseValue = key === 'pulse_value'
-            return (
-              <button key={key} onClick={() => {
-                setActiveTab(key as AnalyticsTab)
-                if (key === 'forecast' && !forecastData && !forecastLoading) {
-                  setForecastLoading(true)
-                  fetch('/api/analytics/forecast?months=3')
-                    .then(r => r.json())
-                    .then(d => setForecastData(d))
-                    .catch(() => {})
-                    .finally(() => setForecastLoading(false))
-                }
-              }}
-                className={cn('flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors',
-                  activeTab === key
-                    ? 'border-pulse-900 text-pulse-900 dark:text-pulse-400'
-                    : isPulseValue
-                      ? 'border-transparent text-pulse-900/75 dark:text-pulse-400/80 hover:text-pulse-900 dark:hover:text-pulse-300'
-                      : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-                )}>
-                {icon}{label}
-              </button>
-            )
+          const handleTabClick = (key: AnalyticsTab) => {
+            setActiveTab(key)
+            // Özet & Trend → forecast + sezonsal grafik için lazy fetch
+            if (key === 'summary') {
+              if (!forecastData && !forecastLoading) {
+                setForecastLoading(true)
+                fetch('/api/analytics/forecast?months=3')
+                  .then(r => r.json())
+                  .then(d => setForecastData(d))
+                  .catch(() => {})
+                  .finally(() => setForecastLoading(false))
+              }
+              if (!insightsSummary && !insightsLoading && businessId) {
+                setInsightsLoading(true)
+                fetch(`/api/insights/summary?businessId=${businessId}`)
+                  .then(r => r.json())
+                  .then(d => setInsightsSummary(d))
+                  .catch(() => {})
+                  .finally(() => setInsightsLoading(false))
+              }
+            }
+            // Personel & Müşteri → kohort + quadrant için lazy fetch
+            if (key === 'people' && !insightsSummary && !insightsLoading && businessId) {
+              setInsightsLoading(true)
+              fetch(`/api/insights/summary?businessId=${businessId}`)
+                .then(r => r.json())
+                .then(d => setInsightsSummary(d))
+                .catch(() => {})
+                .finally(() => setInsightsLoading(false))
+            }
           }
+
+          const renderTab = ([key, label, icon]: readonly [string, string, React.ReactElement]) => (
+            <button
+              key={key}
+              onClick={() => handleTabClick(key as AnalyticsTab)}
+              className={cn(
+                'flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors',
+                activeTab === key
+                  ? 'border-pulse-900 text-pulse-900 dark:text-pulse-400'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200',
+              )}
+            >
+              {icon}{label}
+            </button>
+          )
 
           return <>{tabsToShow.map(renderTab)}</>
         })()}
       </div>
 
-      {/* Genel Bakış Sekmesi */}
-      {activeTab === 'overview' && (
+      {/* 1. Bölüm — Özet & Trend (overview + forecast + sezonsal) */}
+      {activeTab === 'summary' && (
         <div className="space-y-6">
           {/* İkinci KPI satırı */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -639,12 +700,36 @@ export default function AnalyticsPage() {
               </div>
             )}
           </div>
+
+          {/* Sezonsal Gelir Grafiği (İş Zekası özetinden) */}
+          {insightsSummary?.seasonal?.monthly && insightsSummary.seasonal.monthly.length > 0 && (
+            <div className="card p-4">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Sezonsal Gelir Paterni</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Son 12 ayın aylık gelir trendi + sektörel sezon işaretleri</p>
+                </div>
+              </div>
+              <SeasonalChart data={insightsSummary.seasonal.monthly} />
+            </div>
+          )}
+
+          {insightsLoading && !insightsSummary && (
+            <div className="card p-6 flex items-center justify-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Sezonsal grafik yükleniyor…
+            </div>
+          )}
         </div>
       )}
 
-      {/* Personel Sekmesi */}
-      {activeTab === 'staff' && (
-        <div>
+      {/* 4. Bölüm — Personel & Müşteri */}
+      {activeTab === 'people' && (
+        <div className="space-y-6">
+          <section>
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+              <Users className="h-4 w-4" /> Personel Karnesi
+            </h3>
           {staffStats.length === 0 ? (
             <EmptyState
               icon={<Users className="h-7 w-7" />}
@@ -695,12 +780,14 @@ export default function AnalyticsPage() {
               })}
             </div>
           )}
-        </div>
-      )}
+          </section>
 
-      {/* Müşteriler Sekmesi */}
-      {activeTab === 'customers' && (
-        <div className="space-y-6">
+          {/* Müşteri Özet Kartları */}
+          <section>
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+              <UserCheck className="h-4 w-4" /> {customerLabelPlural} Analizi
+            </h3>
+            <div className="space-y-6">
           {/* Müşteri Özet Kartları */}
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="card p-4 text-center">
@@ -775,11 +862,45 @@ export default function AnalyticsPage() {
               </div>
             </div>
           )}
+            </div>
+          </section>
+
+          {/* Kohort Retansiyon + BCG Quadrant (İş Zekası özetinden) */}
+          {insightsSummary && (
+            <>
+              {insightsSummary.cohort && insightsSummary.cohort.length > 0 && (
+                <section>
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                    <Activity className="h-4 w-4" /> Kohort Retansiyon
+                  </h3>
+                  <div className="card p-4">
+                    <CohortHeatmap cohort={insightsSummary.cohort} />
+                  </div>
+                </section>
+              )}
+
+              {insightsSummary.margin && insightsSummary.margin.length > 0 && (
+                <section>
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                    <Layers className="h-4 w-4" /> Hizmet Performans Matrisi
+                  </h3>
+                  <QuadrantTable rows={insightsSummary.margin} />
+                </section>
+              )}
+            </>
+          )}
+
+          {insightsLoading && !insightsSummary && (
+            <div className="card p-6 flex items-center justify-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Kohort ve hizmet matrisi yükleniyor…
+            </div>
+          )}
         </div>
       )}
 
-      {/* Giderler Sekmesi */}
-      {activeTab === 'expenses' && (
+      {/* 3. Bölüm — Gelir-Gider Yönetimi (expenses + income form + table) */}
+      {activeTab === 'finance' && (
         <div className="space-y-6">
           {/* Kar-Zarar Özeti */}
           <div className="grid grid-cols-3 gap-4">
@@ -1104,8 +1225,8 @@ export default function AnalyticsPage() {
         </div>
       )}
 
-      {/* Hizmet Sekmesi */}
-      {activeTab === 'services' && (
+      {/* 2. Bölüm (hizmet) — Gelir Kırılımı */}
+      {activeTab === 'breakdown' && (
         <div className="space-y-5">
           {serviceRevenueWithEstimates.length === 0 ? (
             <EmptyState
@@ -1177,8 +1298,8 @@ export default function AnalyticsPage() {
         </div>
       )}
 
-      {/* Kaynak Sekmesi */}
-      {activeTab === 'sources' && (
+      {/* 2. Bölüm (kaynak) — Gelir Kırılımı devamı */}
+      {activeTab === 'breakdown' && (
         <div className="space-y-6">
           <div className="grid grid-cols-3 gap-4">
             {([
@@ -1226,8 +1347,8 @@ export default function AnalyticsPage() {
         </div>
       )}
 
-      {/* Tahmin Sekmesi */}
-      {activeTab === 'forecast' && (
+      {/* 1. Bölüm (tahmin) — Özet & Trend devamı */}
+      {activeTab === 'summary' && (
         <div className="space-y-6">
           {forecastLoading && (
             <div className="flex items-center justify-center py-16">
@@ -1470,10 +1591,6 @@ export default function AnalyticsPage() {
         </div>
       )}
 
-      {/* PulseApp Kazandırdıkları Sekmesi */}
-      {activeTab === 'pulse_value' && (
-        <PulseValuePanel from={periodStart} to={periodEnd} />
-      )}
     </div>
   )
 }

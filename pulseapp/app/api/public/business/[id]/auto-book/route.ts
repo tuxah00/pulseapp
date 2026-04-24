@@ -72,7 +72,33 @@ export async function POST(
   if (!result.ok) return result.response
   const { name, phone, serviceId, staffId, notes } = result.data
 
+  // Kampanya attribution: ?c=<campaign_recipient_id>
+  const campaignRecipientIdRaw = req.nextUrl.searchParams.get('c')
+  const campaignRecipientId =
+    campaignRecipientIdRaw && isValidUUID(campaignRecipientIdRaw)
+      ? campaignRecipientIdRaw
+      : null
+
   const supabase = createAdminClient()
+
+  // Recipient geldiyse campaign_id çöz (cross-tenant koruma: recipient aynı işletmeye ait olmalı)
+  let resolvedCampaignId: string | null = null
+  let validCampaignRecipientId: string | null = null
+  if (campaignRecipientId) {
+    const { data: recipient } = await supabase
+      .from('campaign_recipients')
+      .select('id, campaign_id, campaigns!inner(business_id)')
+      .eq('id', campaignRecipientId)
+      .maybeSingle()
+    const campaigns = recipient?.campaigns as unknown
+    const recipientBusinessId = Array.isArray(campaigns)
+      ? (campaigns as Array<{ business_id: string }>)[0]?.business_id
+      : (campaigns as { business_id: string } | null | undefined)?.business_id
+    if (recipient && recipientBusinessId === params.id) {
+      resolvedCampaignId = recipient.campaign_id
+      validCampaignRecipientId = recipient.id
+    }
+  }
 
   // İşletme bilgisi
   const { data: business } = await supabase
@@ -236,28 +262,49 @@ export async function POST(
           .single()
 
         // Randevu oluştur
+        const apptPayload: Record<string, unknown> = {
+          business_id: params.id,
+          customer_id: customerId,
+          service_id: serviceId,
+          staff_id: sid,
+          appointment_date: dateStr,
+          start_time: slot,
+          end_time: endTime,
+          status: 'pending',
+          source: 'web',
+          notes: notes || null,
+          reminder_24h_sent: false,
+          reminder_2h_sent: false,
+          review_requested: false,
+        }
+        if (resolvedCampaignId) {
+          apptPayload.campaign_id = resolvedCampaignId
+          apptPayload.campaign_recipient_id = validCampaignRecipientId
+        }
+
         const { data: appointment, error: apptErr } = await supabase
           .from('appointments')
-          .insert({
-            business_id: params.id,
-            customer_id: customerId,
-            service_id: serviceId,
-            staff_id: sid,
-            appointment_date: dateStr,
-            start_time: slot,
-            end_time: endTime,
-            status: 'pending',
-            source: 'web',
-            notes: notes || null,
-            reminder_24h_sent: false,
-            reminder_2h_sent: false,
-            review_requested: false,
-          })
+          .insert(apptPayload)
           .select('id')
           .single()
 
         if (apptErr || !appointment) {
           return NextResponse.json({ error: 'Randevu oluşturulamadı' }, { status: 500 })
+        }
+
+        // Mesaj attribution (window): kampanya attribution yoksa son 7 gün
+        // içindeki outbound mesajları bu randevuya bağla (ROI ölçümü için)
+        if (!resolvedCampaignId) {
+          const windowStart = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+          await supabase
+            .from('messages')
+            .update({ related_appointment_id: appointment.id, attributed_via: 'window' })
+            .eq('business_id', params.id)
+            .eq('customer_id', customerId)
+            .eq('direction', 'outbound')
+            .is('related_appointment_id', null)
+            .gte('created_at', windowStart)
+            .then(() => undefined, () => undefined)
         }
 
         // Bildirim

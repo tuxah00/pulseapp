@@ -422,6 +422,40 @@ ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'tutoring';
 -- customer_photos_public_read RLS policy (anon SELECT — is_public = true)
 ```
 
+34. **Kampanya attribution** (`066b_campaign_attribution.sql`): ✅ Uygulandı (2026-04-24)
+```sql
+-- appointments.campaign_id UUID FK → campaigns(id) ON DELETE SET NULL
+-- appointments.campaign_recipient_id UUID FK → campaign_recipients(id) ON DELETE SET NULL
+-- idx_appointments_campaign partial index (campaign_id IS NOT NULL)
+-- idx_appointments_campaign_recipient partial index (campaign_recipient_id IS NOT NULL)
+-- Public booking ?c=<recipient_id> query param'ı ile kampanya → randevu attribution'ı
+```
+
+35. **Mesaj → randevu attribution** (`067_messages_appointment_link.sql`): ✅ Uygulandı (2026-04-24)
+```sql
+-- messages.related_appointment_id UUID FK → appointments(id) ON DELETE SET NULL
+-- messages.attributed_via text CHECK ('direct','window','manual')
+-- idx_messages_related_appt partial index (related_appointment_id IS NOT NULL)
+-- idx_messages_template_attribution partial index (business_id, template_name) WHERE template_name IS NOT NULL AND related_appointment_id IS NOT NULL
+-- Workflow/cron mesajlarının randevuya dönüşümünü ölçer (İş Zekası ROI endpoint'leri)
+```
+
+36. **Waitlist doldurma takibi** (`068_waitlist_filled_appointment.sql`): ✅ Uygulandı (2026-04-24)
+```sql
+-- waitlist_entries.filled_appointment_id UUID FK → appointments(id) ON DELETE SET NULL
+-- waitlist_entries.filled_at timestamptz
+-- idx_waitlist_filled partial index (business_id, filled_at) WHERE filled_appointment_id IS NOT NULL
+-- Bekleme listesinden hangi randevuların doldurulduğunu izler
+```
+
+37. **Kampanya kısa kod** (`069_campaign_recipient_short_code.sql`): ✅ Uygulandı (2026-04-24)
+```sql
+-- campaign_recipients.short_code TEXT UNIQUE (8 karakter, /r/<code> redirect URL)
+-- idx_campaign_recipients_short_code partial index (short_code IS NOT NULL)
+-- Kampanya linklerinde UUID (~72 char) yerine /r/<code> (~8 char) — SMS karakter tasarrufu
+-- app/r/[code]/page.tsx kısa kodu çözerek /book/<businessId>?c=<recipientId> yönlendirmesi yapar
+```
+
 ## Faz 2: Estetik Klinik Özellik Seti (2026-04-04)
 
 ### Yeni Tablolar

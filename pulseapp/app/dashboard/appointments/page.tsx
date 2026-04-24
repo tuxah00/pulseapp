@@ -27,7 +27,7 @@ import {
   CalendarDays,
   CalendarRange,
   Search, Filter, ArrowUpDown,
-  Users, Building2, Ban, Lock, BellRing,
+  Users, Building2, Ban, Lock, BellRing, Sparkles,
 } from 'lucide-react'
 import { formatTime, formatDate, getStatusColor, formatCurrency, cn, formatDateISO } from '@/lib/utils'
 import { STATUS_LABELS, type AppointmentStatus, type Service, type StaffMember, type WorkingHours, type BlockedSlot } from '@/types'
@@ -38,6 +38,7 @@ type AppointmentView = AppointmentRow & {
   customers: { name: string; phone: string | null } | null
   services: { name: string; price: number; duration_minutes: number } | null
   staff_members: { name: string } | null
+  campaigns: { name: string } | null
 }
 import { logAudit } from '@/lib/utils/audit'
 import { addMonthsSafe } from '@/lib/utils/date-range'
@@ -142,7 +143,7 @@ export default function AppointmentsPage() {
     async function openFromNotification() {
       const { data } = await supabase
         .from('appointments')
-        .select('*, customers(name, phone), services(name, duration_minutes, price), staff_members(name)')
+        .select('*, customers(name, phone), services(name, duration_minutes, price), staff_members(name), campaigns(name)')
         .eq('id', appointmentId!)
         .eq('business_id', businessId)
         .is('deleted_at', null)
@@ -211,7 +212,7 @@ export default function AppointmentsPage() {
 
     let query = supabase
       .from('appointments')
-      .select('*, customers(name, phone), services(name, duration_minutes, price), staff_members(name)')
+      .select('*, customers(name, phone), services(name, duration_minutes, price), staff_members(name), campaigns(name)')
       .eq('business_id', businessId)
       .is('deleted_at', null)
       .order('start_time', { ascending: true })
@@ -2560,13 +2561,22 @@ export default function AppointmentsPage() {
               <div className="flex flex-col items-center gap-2 py-4">
                 <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{formatTime(selectedAppointment.start_time)}</p>
                 <p className="text-sm text-gray-500 dark:text-gray-400">{formatTime(selectedAppointment.start_time)} – {formatTime(selectedAppointment.end_time)}</p>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center justify-center gap-2">
                   <span className={`badge ${getStatusColor(selectedAppointment.status)}`}>
                     {STATUS_LABELS[selectedAppointment.status as keyof typeof STATUS_LABELS]}
                   </span>
                   {selectedAppointment.recurrence_group_id && (
                     <span className="badge bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
                       <Repeat className="h-3 w-3 mr-1" />Tekrarlayan
+                    </span>
+                  )}
+                  {selectedAppointment.campaigns?.name && (
+                    <span
+                      className="badge bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+                      title={`Kampanya: ${selectedAppointment.campaigns.name}`}
+                    >
+                      <Sparkles className="h-3 w-3 mr-1" />
+                      {selectedAppointment.campaigns.name}
                     </span>
                   )}
                 </div>
