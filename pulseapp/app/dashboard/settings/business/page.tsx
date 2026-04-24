@@ -1151,6 +1151,38 @@ export default function BusinessSettingsPage() {
                     </p>
                   </div>
 
+                  {/* Müşteri başına günlük cap */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Müşteri başına günlük limit</label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={50}
+                      value={settings.auto_reply_per_customer_cap ?? AUTO_REPLY_DEFAULTS.perCustomerDailyCap}
+                      onChange={(e) => setSettings(prev => ({ ...prev, auto_reply_per_customer_cap: Math.max(1, Math.min(50, parseInt(e.target.value) || AUTO_REPLY_DEFAULTS.perCustomerDailyCap)) }))}
+                      className="input w-32"
+                    />
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Aynı müşteriye son 24 saatte max kaç otomatik yanıt. Varsayılan: {AUTO_REPLY_DEFAULTS.perCustomerDailyCap}.
+                    </p>
+                  </div>
+
+                  {/* Cooldown */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">İki yanıt arası cooldown (dakika)</label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={120}
+                      value={settings.auto_reply_cooldown_minutes ?? AUTO_REPLY_DEFAULTS.cooldownMinutes}
+                      onChange={(e) => setSettings(prev => ({ ...prev, auto_reply_cooldown_minutes: Math.max(0, Math.min(120, parseInt(e.target.value) || AUTO_REPLY_DEFAULTS.cooldownMinutes)) }))}
+                      className="input w-32"
+                    />
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Aynı müşteriye iki otomatik yanıt arası minimum bekleme süresi. Varsayılan: {AUTO_REPLY_DEFAULTS.cooldownMinutes} dk.
+                    </p>
+                  </div>
+
                   {/* İmza */}
                   <ToggleSetting
                     label={'"— Otomatik yanıt" etiketi ekle'}
