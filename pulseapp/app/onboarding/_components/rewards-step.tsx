@@ -130,14 +130,14 @@ export default function RewardsStep({ seedRewards, onSelectionChange }: RewardsS
           role="switch"
           aria-checked={rewardsEnabled}
           className={[
-            'relative h-7 w-12 shrink-0 rounded-full transition-colors',
+            'relative h-7 w-12 shrink-0 rounded-full p-0.5 transition-colors',
             rewardsEnabled ? 'bg-pulse-900' : 'bg-white/20',
           ].join(' ')}
         >
           <span
             className={[
-              'absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform',
-              rewardsEnabled ? 'translate-x-[22px]' : 'translate-x-0.5',
+              'block h-6 w-6 rounded-full bg-white shadow transition-transform duration-200',
+              rewardsEnabled ? 'translate-x-5' : 'translate-x-0',
             ].join(' ')}
           />
         </button>

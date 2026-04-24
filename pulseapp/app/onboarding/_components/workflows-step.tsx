@@ -167,14 +167,14 @@ export default function WorkflowsStep({ onSelectionChange }: WorkflowsStepProps)
                   role="switch"
                   aria-checked={on}
                   className={[
-                    'relative h-6 w-11 shrink-0 rounded-full transition-colors',
+                    'relative h-6 w-11 shrink-0 rounded-full p-0.5 transition-colors',
                     on ? 'bg-pulse-900' : 'bg-white/20',
                   ].join(' ')}
                 >
                   <span
                     className={[
-                      'absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform',
-                      on ? 'translate-x-[22px]' : 'translate-x-0.5',
+                      'block h-5 w-5 rounded-full bg-white shadow transition-transform duration-200',
+                      on ? 'translate-x-5' : 'translate-x-0',
                     ].join(' ')}
                   />
                 </button>
