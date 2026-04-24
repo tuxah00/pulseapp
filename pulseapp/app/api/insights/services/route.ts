@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
         .eq('is_active', true),
       admin
         .from('appointments')
-        .select('id, service_id, service_name, status, appointment_date')
+        .select('id, service_id, status, appointment_date')
         .eq('business_id', businessId)
         .is('deleted_at', null)
         .in('status', ['completed', 'confirmed'])
@@ -80,9 +80,7 @@ export async function GET(request: NextRequest) {
 
     // Seans sayımı → randevu başına 1 seans
     for (const apt of appointmentsRes.data ?? []) {
-      const row =
-        (apt.service_id && byId.get(apt.service_id as string)) ||
-        (apt.service_name && byName.get(apt.service_name as string))
+      const row = apt.service_id ? byId.get(apt.service_id as string) : undefined
       if (row) row.sessionCount += 1
     }
 

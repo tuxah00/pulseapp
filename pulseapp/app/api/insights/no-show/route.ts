@@ -23,10 +23,10 @@ export async function GET(request: NextRequest) {
   const admin = createAdminClient()
 
   try {
-    const [appointmentsRes, businessRes, riskyCustRes] = await Promise.all([
+    const [appointmentsRes, businessRes, riskyCustRes, staffRes] = await Promise.all([
       admin
         .from('appointments')
-        .select('id, status, staff_id, staff_name, appointment_date')
+        .select('id, status, staff_id, appointment_date')
         .eq('business_id', businessId)
         .is('deleted_at', null)
         .in('status', ['completed', 'no_show', 'cancelled'])
@@ -42,11 +42,20 @@ export async function GET(request: NextRequest) {
         .select('id')
         .eq('business_id', businessId)
         .gt('no_show_score', 40),
+      admin
+        .from('staff_members')
+        .select('id, name')
+        .eq('business_id', businessId)
+        .eq('is_active', true),
     ])
 
     if (appointmentsRes.error) throw appointmentsRes.error
     if (businessRes.error) throw businessRes.error
     if (riskyCustRes.error) throw riskyCustRes.error
+
+    const staffNameMap = new Map<string, string>(
+      (staffRes.data ?? []).map((s) => [s.id as string, s.name as string])
+    )
 
     const all = appointmentsRes.data ?? []
     // Payda: no-show sayımı için tamamlanan + no-show toplamı mantıklı
@@ -63,7 +72,7 @@ export async function GET(request: NextRequest) {
     >()
     for (const a of relevant) {
       const key = (a.staff_id as string | null) || '__unassigned__'
-      const name = (a.staff_name as string | null) || 'Atanmamış'
+      const name = (a.staff_id && staffNameMap.get(a.staff_id as string)) || 'Atanmamış'
       const s = staffStats.get(key) ?? { staffName: name, total: 0, noShows: 0 }
       s.total += 1
       if (a.status === 'no_show') s.noShows += 1
