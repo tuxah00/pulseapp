@@ -164,44 +164,47 @@ export default function PackagesStep({ seedPackages, onPackagesChange }: Package
                 </div>
               </button>
 
-              {isSelected && (
-                <div className="grid grid-cols-3 gap-2 border-t border-gray-200 px-4 pb-4 pt-3">
-                  <label className="flex flex-col gap-1 text-xs text-gray-500">
-                    <span>Seans</span>
-                    <input
-                      type="number"
-                      min={1}
-                      max={50}
-                      value={state.sessions_total}
-                      onChange={e => updateSeed(key, { sessions_total: Number(e.target.value) || 1 })}
-                      className="rounded-md border border-gray-200 bg-gray-50 px-2 py-1 text-sm text-gray-900 focus:border-pulse-500 focus:outline-none"
-                    />
-                  </label>
-                  <label className="flex flex-col gap-1 text-xs text-gray-500">
-                    <span>Fiyat (₺)</span>
-                    <input
-                      type="number"
-                      min={0}
-                      value={state.price}
-                      onChange={e => updateSeed(key, { price: Number(e.target.value) || 0 })}
-                      className="rounded-md border border-gray-200 bg-gray-50 px-2 py-1 text-sm text-gray-900 focus:border-pulse-500 focus:outline-none"
-                    />
-                  </label>
-                  <label className="flex flex-col gap-1 text-xs text-gray-500">
-                    <span>Geçerlilik (gün)</span>
-                    <input
-                      type="number"
-                      min={0}
-                      value={state.validity_days ?? 0}
-                      onChange={e => {
-                        const val = Number(e.target.value) || 0
-                        updateSeed(key, { validity_days: val > 0 ? val : null })
-                      }}
-                      className="rounded-md border border-gray-200 bg-gray-50 px-2 py-1 text-sm text-gray-900 focus:border-pulse-500 focus:outline-none"
-                    />
-                  </label>
+              {/* Smooth accordion — always in DOM, grid-rows animates height */}
+              <div className={['grid transition-all duration-300 ease-in-out', isSelected ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'].join(' ')}>
+                <div className="min-h-0 overflow-hidden">
+                  <div className="grid grid-cols-3 gap-2 border-t border-gray-200 px-4 pb-4 pt-3">
+                    <label className="flex flex-col gap-1 text-xs text-gray-500">
+                      <span>Seans</span>
+                      <input
+                        type="number"
+                        min={1}
+                        max={50}
+                        value={state.sessions_total}
+                        onChange={e => updateSeed(key, { sessions_total: Number(e.target.value) || 1 })}
+                        className="rounded-md border border-gray-200 bg-gray-50 px-2 py-1 text-sm text-gray-900 focus:border-pulse-500 focus:outline-none"
+                      />
+                    </label>
+                    <label className="flex flex-col gap-1 text-xs text-gray-500">
+                      <span>Fiyat (₺)</span>
+                      <input
+                        type="number"
+                        min={0}
+                        value={state.price}
+                        onChange={e => updateSeed(key, { price: Number(e.target.value) || 0 })}
+                        className="rounded-md border border-gray-200 bg-gray-50 px-2 py-1 text-sm text-gray-900 focus:border-pulse-500 focus:outline-none"
+                      />
+                    </label>
+                    <label className="flex flex-col gap-1 text-xs text-gray-500">
+                      <span>Geçerlilik (gün)</span>
+                      <input
+                        type="number"
+                        min={0}
+                        value={state.validity_days ?? 0}
+                        onChange={e => {
+                          const val = Number(e.target.value) || 0
+                          updateSeed(key, { validity_days: val > 0 ? val : null })
+                        }}
+                        className="rounded-md border border-gray-200 bg-gray-50 px-2 py-1 text-sm text-gray-900 focus:border-pulse-500 focus:outline-none"
+                      />
+                    </label>
+                  </div>
                 </div>
-              )}
+              </div>
             </div>
           )
         })}

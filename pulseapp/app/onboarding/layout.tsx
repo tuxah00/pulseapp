@@ -57,7 +57,7 @@ export default async function OnboardingLayout({
   }
 
   return (
-    <div className="public-page min-h-screen bg-gradient-to-br from-pulse-900 via-pulse-800 to-pulse-700">
+    <div className="public-page min-h-screen cursor-default bg-gradient-to-br from-pulse-900 via-pulse-800 to-pulse-700">
       {children}
     </div>
   )

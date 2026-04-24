@@ -155,35 +155,38 @@ export default function CampaignsStep({ seedCampaigns, onCampaignsChange }: Camp
                 </div>
               </button>
 
-              {isSelected && (
-                <div className="space-y-3 border-t border-gray-200 px-4 pb-4 pt-3">
-                  {c.discountPercent != null && (
-                    <label className="flex items-center gap-2 text-xs text-gray-500">
-                      <span>İndirim (%)</span>
-                      <input
-                        type="number"
-                        min={0}
-                        max={100}
-                        value={state.discountPercent ?? 0}
-                        onChange={e => updateSeed(i, { discountPercent: Number(e.target.value) || 0 })}
-                        className="w-20 rounded-md border border-gray-200 bg-gray-50 px-2 py-1 text-sm text-gray-900 focus:border-pulse-500 focus:outline-none"
+              {/* Smooth accordion — always in DOM, grid-rows animates height */}
+              <div className={['grid transition-all duration-300 ease-in-out', isSelected ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'].join(' ')}>
+                <div className="min-h-0 overflow-hidden">
+                  <div className="space-y-3 border-t border-gray-200 px-4 pb-4 pt-3">
+                    {c.discountPercent != null && (
+                      <label className="flex items-center gap-2 text-xs text-gray-500">
+                        <span>İndirim (%)</span>
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          value={state.discountPercent ?? 0}
+                          onChange={e => updateSeed(i, { discountPercent: Number(e.target.value) || 0 })}
+                          className="w-20 rounded-md border border-gray-200 bg-gray-50 px-2 py-1 text-sm text-gray-900 focus:border-pulse-500 focus:outline-none"
+                        />
+                      </label>
+                    )}
+                    <label className="block text-xs font-medium text-gray-600">
+                      Mesaj metni
+                      <textarea
+                        rows={3}
+                        value={state.messageTemplate}
+                        onChange={e => updateSeed(i, { messageTemplate: e.target.value })}
+                        className="mt-1 w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-pulse-500 focus:outline-none"
                       />
                     </label>
-                  )}
-                  <label className="block text-xs font-medium text-gray-600">
-                    Mesaj metni
-                    <textarea
-                      rows={3}
-                      value={state.messageTemplate}
-                      onChange={e => updateSeed(i, { messageTemplate: e.target.value })}
-                      className="mt-1 w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-pulse-500 focus:outline-none"
-                    />
-                  </label>
-                  <p className="text-[10px] text-gray-500">
-                    Değişkenler: {'{name}'} (müşteri adı), {'{link}'} (kampanya/randevu bağlantısı)
-                  </p>
+                    <p className="text-[10px] text-gray-500">
+                      Değişkenler: {'{name}'} (müşteri adı), {'{link}'} (kampanya/randevu bağlantısı)
+                    </p>
+                  </div>
                 </div>
-              )}
+              </div>
             </div>
           )
         })}

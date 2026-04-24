@@ -200,30 +200,33 @@ export default function RewardsStep({ seedRewards, onSelectionChange }: RewardsS
                   </div>
                 </button>
 
-                {isSelected && (r.rewardType === 'discount_percent' || r.rewardType === 'discount_amount' || r.rewardType === 'points') && (
-                  <div className="flex items-center gap-2 border-t border-gray-200 px-4 pb-4 pt-3">
-                    <label className="flex items-center gap-1.5 text-xs text-gray-500">
-                      <span>Değer</span>
-                      <input
-                        type="number"
-                        min={0}
-                        value={state.value}
-                        onChange={e => updateSeed(i, { value: Number(e.target.value) || 0 })}
-                        className="w-20 rounded-md border border-gray-200 bg-gray-50 px-2 py-1 text-sm text-gray-900 focus:border-pulse-500 focus:outline-none"
-                      />
-                    </label>
-                    <label className="flex items-center gap-1.5 text-xs text-gray-500">
-                      <span>Geçerlilik (gün)</span>
-                      <input
-                        type="number"
-                        min={1}
-                        value={state.validDays}
-                        onChange={e => updateSeed(i, { validDays: Number(e.target.value) || 30 })}
-                        className="w-20 rounded-md border border-gray-200 bg-gray-50 px-2 py-1 text-sm text-gray-900 focus:border-pulse-500 focus:outline-none"
-                      />
-                    </label>
+                {/* Smooth accordion — always in DOM, grid-rows animates height */}
+                <div className={['grid transition-all duration-300 ease-in-out', isSelected && (r.rewardType === 'discount_percent' || r.rewardType === 'discount_amount' || r.rewardType === 'points') ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'].join(' ')}>
+                  <div className="min-h-0 overflow-hidden">
+                    <div className="flex items-center gap-2 border-t border-gray-200 px-4 pb-4 pt-3">
+                      <label className="flex items-center gap-1.5 text-xs text-gray-500">
+                        <span>Değer</span>
+                        <input
+                          type="number"
+                          min={0}
+                          value={state.value}
+                          onChange={e => updateSeed(i, { value: Number(e.target.value) || 0 })}
+                          className="w-20 rounded-md border border-gray-200 bg-gray-50 px-2 py-1 text-sm text-gray-900 focus:border-pulse-500 focus:outline-none"
+                        />
+                      </label>
+                      <label className="flex items-center gap-1.5 text-xs text-gray-500">
+                        <span>Geçerlilik (gün)</span>
+                        <input
+                          type="number"
+                          min={1}
+                          value={state.validDays}
+                          onChange={e => updateSeed(i, { validDays: Number(e.target.value) || 30 })}
+                          className="w-20 rounded-md border border-gray-200 bg-gray-50 px-2 py-1 text-sm text-gray-900 focus:border-pulse-500 focus:outline-none"
+                        />
+                      </label>
+                    </div>
                   </div>
-                )}
+                </div>
               </div>
             )
           })}
