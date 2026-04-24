@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   let query = admin
     .from('appointments')
     .select(`
-      id, appointment_date, start_time, end_time, status, notes,
+      id, appointment_date, start_time, end_time, status, notes, manage_token,
       services(id, name, price, duration_minutes),
       staff_members(id, name)
     `)
