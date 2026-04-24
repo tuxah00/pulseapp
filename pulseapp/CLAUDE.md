@@ -448,6 +448,14 @@ ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'tutoring';
 -- Bekleme listesinden hangi randevuların doldurulduğunu izler
 ```
 
+37. **Kampanya kısa kod** (`069_campaign_recipient_short_code.sql`): ✅ Uygulandı (2026-04-24)
+```sql
+-- campaign_recipients.short_code TEXT UNIQUE (8 karakter, /r/<code> redirect URL)
+-- idx_campaign_recipients_short_code partial index (short_code IS NOT NULL)
+-- Kampanya linklerinde UUID (~72 char) yerine /r/<code> (~8 char) — SMS karakter tasarrufu
+-- app/r/[code]/page.tsx kısa kodu çözerek /book/<businessId>?c=<recipientId> yönlendirmesi yapar
+```
+
 ## Faz 2: Estetik Klinik Özellik Seti (2026-04-04)
 
 ### Yeni Tablolar

@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { useParams, useSearchParams } from 'next/navigation'
 import {
   CheckCircle2, ChevronLeft, Loader2, Clock, Calendar,
-  User, Phone, AlertCircle, Bell, MapPin, Zap, CalendarPlus, UserCircle2,
+  User, Phone, AlertCircle, Bell, MapPin, Zap, CalendarPlus, UserCircle2, Sparkles,
 } from 'lucide-react'
 import type { WorkingHours } from '@/types'
 import { getInitials } from '@/lib/utils'
@@ -88,6 +88,7 @@ export default function BookingPage() {
   const [business, setBusiness] = useState<BusinessData | null>(null)
   const [services, setServices] = useState<ServiceData[]>([])
   const [staff, setStaff] = useState<StaffData[]>([])
+  const [campaignInfo, setCampaignInfo] = useState<{ name: string; description: string | null } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -202,6 +203,26 @@ export default function BookingPage() {
     fetchData()
   }, [businessId])
 
+  // Kampanya bilgisi (banner için): linkte ?c=<recipient_id> varsa kampanyayı çöz
+  useEffect(() => {
+    if (!campaignRecipientId) return
+    let cancelled = false
+    async function fetchCampaign() {
+      try {
+        const res = await fetch(
+          `/api/public/campaign-info?c=${campaignRecipientId}&businessId=${businessId}`,
+        )
+        if (!res.ok || cancelled) return
+        const data = await res.json()
+        if (!cancelled) setCampaignInfo({ name: data.name, description: data.description })
+      } catch {
+        // Sessiz geç — banner görünmez, randevu akışı çalışmaya devam eder
+      }
+    }
+    fetchCampaign()
+    return () => { cancelled = true }
+  }, [businessId, campaignRecipientId])
+
   async function handleSubmit() {
     if (!selectedServiceId || !customerName || !customerPhone) return
     // En az biri olmalı: ya normal tarih/saat ya da bekleme listesi
@@ -311,6 +332,10 @@ export default function BookingPage() {
         {/* Business Header */}
         <BusinessHeader business={business} />
 
+        {campaignInfo && (
+          <CampaignBanner name={campaignInfo.name} description={campaignInfo.description} />
+        )}
+
         <div className="mt-4 bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center">
           <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-green-100 mb-6">
             <CheckCircle2 className="h-10 w-10 text-green-500" />
@@ -370,6 +395,10 @@ export default function BookingPage() {
     <div>
       {/* Business Header */}
       <BusinessHeader business={business} />
+
+      {campaignInfo && (
+        <CampaignBanner name={campaignInfo.name} description={campaignInfo.description} />
+      )}
 
       {/* Step Indicator */}
       <div className="mt-4 bg-white rounded-2xl shadow-sm border border-gray-200 px-6 py-4">
@@ -878,6 +907,27 @@ function SummaryRow({ label, value, highlight }: { label: string; value: string;
     <div className="flex justify-between items-center">
       <span className="text-gray-500">{label}</span>
       <span className={`font-medium ${highlight ? 'text-blue-600' : 'text-gray-900'}`}>{value}</span>
+    </div>
+  )
+}
+
+function CampaignBanner({ name, description }: { name: string; description: string | null }) {
+  return (
+    <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 flex items-start gap-3">
+      <div className="flex-shrink-0 flex h-10 w-10 items-center justify-center rounded-full bg-amber-100">
+        <Sparkles className="h-5 w-5 text-amber-600" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-700">
+          Size özel kampanya
+        </p>
+        <p className="mt-0.5 text-sm font-semibold text-amber-900">{name}</p>
+        {description && (
+          <p className="mt-1 text-xs text-amber-800 leading-relaxed whitespace-pre-wrap">
+            {description}
+          </p>
+        )}
+      </div>
     </div>
   )
 }

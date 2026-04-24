@@ -1,6 +1,7 @@
 import type { createAdminClient } from '@/lib/supabase/admin'
 import { sendMessage } from '@/lib/messaging/send'
 import { matchesCampaignFilter } from '@/lib/utils/campaign-filters'
+import { generateShortCode } from '@/lib/utils/short-code'
 import type { CampaignSegmentFilter, MessageChannel } from '@/types'
 
 type SupabaseAdmin = ReturnType<typeof createAdminClient>
@@ -48,6 +49,7 @@ export async function sendCampaign(
 
   // Recipient ID'lerini almak için insert'i select ile yap.
   // Her recipient'in ID'si {LINK} rendering'de attribution query param'ı olarak kullanılır.
+  // short_code: 8 karakterli URL-safe kod, /r/<code> formatında kısa link üretir.
   const [recipientInsertResult, { data: bizRow }] = await Promise.all([
     filtered.length > 0
       ? admin.from('campaign_recipients').insert(
@@ -57,30 +59,29 @@ export async function sendCampaign(
             customer_name: c.name,
             customer_phone: c.phone,
             status: 'pending',
+            short_code: generateShortCode(),
           })),
-        ).select('id, customer_id')
+        ).select('id, customer_id, short_code')
       : Promise.resolve({ data: null } as const),
     admin.from('businesses').select('name').eq('id', businessId).single(),
   ])
 
   const bizName = bizRow?.name || ''
 
-  // customer_id → recipient_id eşleme tablosu
-  const recipientByCustomer = new Map<string, string>()
-  for (const row of (recipientInsertResult.data ?? []) as Array<{ id: string; customer_id: string }>) {
-    recipientByCustomer.set(row.customer_id, row.id)
+  // customer_id → short_code eşleme tablosu ({LINK} rendering için)
+  const shortCodeByCustomer = new Map<string, string>()
+  for (const row of (recipientInsertResult.data ?? []) as Array<{ id: string; customer_id: string; short_code: string | null }>) {
+    if (row.short_code) shortCodeByCustomer.set(row.customer_id, row.short_code)
   }
 
   // {LINK} için base URL (NEXT_PUBLIC_APP_URL zorunlu env — CLAUDE.md)
   const appUrl = (process.env.NEXT_PUBLIC_APP_URL || '').replace(/\/$/, '')
 
   for (const customer of filtered) {
-    const recipientId = recipientByCustomer.get(customer.id) || ''
-    // Attribution link: /book/<businessId>?c=<recipient_id>
-    // Public booking sayfası query param'ı koruyarak POST /api/book?c=... yapar
-    const bookingLink = appUrl && recipientId
-      ? `${appUrl}/book/${businessId}?c=${recipientId}`
-      : ''
+    const shortCode = shortCodeByCustomer.get(customer.id) || ''
+    // Kısa link: /r/<short_code> → app/r/[code]/page.tsx redirect handler
+    // Eski link yaklaşımı (/book/<uuid>?c=<uuid>) yerine yaklaşık 65 karakter tasarruf.
+    const bookingLink = appUrl && shortCode ? `${appUrl}/r/${shortCode}` : ''
 
     const body = messageTemplate
       .replace(/\{name\}/gi, customer.name)
