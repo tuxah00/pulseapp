@@ -124,6 +124,7 @@
     @apply text-gray-900 antialiased dark:text-gray-100;
     /* Nötraller lacivert yönünde çok hafif tinted — impeccable cohesion prensibi */
     background-color: oklch(98% 0.006 245);
+    cursor: default;
   }
   .dark body {
     background-color: oklch(14% 0.015 245);

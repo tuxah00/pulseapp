@@ -23,7 +23,7 @@ export default function WelcomeStep({ onStart, onSkipAll, skipLoading = false }:
         type="button"
         onClick={onSkipAll}
         disabled={skipLoading}
-        className="absolute right-6 top-6 text-sm text-white/70 transition-colors hover:text-white disabled:opacity-50"
+        className="absolute right-6 top-6 cursor-pointer text-sm text-white/70 transition-colors hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
       >
         {skipLoading ? 'Atlanıyor…' : 'Daha sonra yap →'}
       </button>
@@ -50,7 +50,7 @@ export default function WelcomeStep({ onStart, onSkipAll, skipLoading = false }:
         <button
           type="button"
           onClick={onStart}
-          className="animate-welcome-cta mt-12 rounded-xl bg-white px-10 py-4 text-base font-semibold text-pulse-900 shadow-2xl transition-all hover:scale-105 hover:bg-white/95"
+          className="animate-welcome-cta mt-12 cursor-pointer rounded-xl bg-white px-10 py-4 text-base font-semibold text-pulse-900 shadow-2xl transition-all hover:scale-105 hover:bg-white/95"
         >
           Başla →
         </button>

@@ -104,7 +104,7 @@ export default function RewardsStep({ seedRewards, onSelectionChange }: RewardsS
       {/* Ana toggle */}
       <div
         className={[
-          'flex items-center gap-4 rounded-2xl border-2 p-5 transition-all',
+          'flex cursor-default items-center gap-4 rounded-2xl border-2 p-5 transition-all',
           rewardsEnabled ? 'border-white bg-white' : 'border-white/20 bg-white/5',
         ].join(' ')}
       >
@@ -130,7 +130,7 @@ export default function RewardsStep({ seedRewards, onSelectionChange }: RewardsS
           role="switch"
           aria-checked={rewardsEnabled}
           className={[
-            'relative h-7 w-12 shrink-0 rounded-full p-0.5 transition-colors',
+            'relative h-7 w-12 shrink-0 cursor-pointer rounded-full p-0.5 transition-colors',
             rewardsEnabled ? 'bg-pulse-900' : 'bg-white/20',
           ].join(' ')}
         >
@@ -145,7 +145,7 @@ export default function RewardsStep({ seedRewards, onSelectionChange }: RewardsS
 
       {/* Preset kartlar — yalnızca toggle açıkken */}
       {rewardsEnabled && (
-        <div className="animate-rewards-reveal grid grid-cols-1 gap-3 md:grid-cols-2">
+        <div className="animate-rewards-reveal grid grid-cols-1 gap-3 md:grid-cols-2 items-start">
           {seedRewards.map((r, i) => {
             const state = seedState[i]
             const isSelected = state?.selected ?? false
@@ -154,7 +154,7 @@ export default function RewardsStep({ seedRewards, onSelectionChange }: RewardsS
                 key={`${r.name}-${i}`}
                 style={{ ['--stagger-index' as string]: i }}
                 className={[
-                  'wizard-card-stagger relative overflow-hidden rounded-xl border-2 transition-all duration-200',
+                  'wizard-card-stagger relative cursor-default overflow-hidden rounded-xl border-2 transition-all duration-200',
                   isSelected
                     ? 'border-white bg-white text-pulse-900 shadow-xl'
                     : 'border-white/20 bg-white/5 text-white hover:-translate-y-0.5 hover:border-white/40 hover:bg-white/10',
@@ -164,7 +164,7 @@ export default function RewardsStep({ seedRewards, onSelectionChange }: RewardsS
                   type="button"
                   onClick={() => updateSeed(i, { selected: !isSelected })}
                   aria-pressed={isSelected}
-                  className="flex w-full items-start gap-3 p-4 text-left"
+                  className="flex w-full cursor-pointer items-start gap-3 p-4 text-left"
                 >
                   <div className="flex-1">
                     <h3 className="font-semibold">{r.name}</h3>
@@ -200,30 +200,33 @@ export default function RewardsStep({ seedRewards, onSelectionChange }: RewardsS
                   </div>
                 </button>
 
-                {isSelected && (r.rewardType === 'discount_percent' || r.rewardType === 'discount_amount' || r.rewardType === 'points') && (
-                  <div className="flex items-center gap-2 border-t border-gray-200 px-4 pb-4 pt-3">
-                    <label className="flex items-center gap-1.5 text-xs text-gray-500">
-                      <span>Değer</span>
-                      <input
-                        type="number"
-                        min={0}
-                        value={state.value}
-                        onChange={e => updateSeed(i, { value: Number(e.target.value) || 0 })}
-                        className="w-20 rounded-md border border-gray-200 bg-gray-50 px-2 py-1 text-sm text-gray-900 focus:border-pulse-500 focus:outline-none"
-                      />
-                    </label>
-                    <label className="flex items-center gap-1.5 text-xs text-gray-500">
-                      <span>Geçerlilik (gün)</span>
-                      <input
-                        type="number"
-                        min={1}
-                        value={state.validDays}
-                        onChange={e => updateSeed(i, { validDays: Number(e.target.value) || 30 })}
-                        className="w-20 rounded-md border border-gray-200 bg-gray-50 px-2 py-1 text-sm text-gray-900 focus:border-pulse-500 focus:outline-none"
-                      />
-                    </label>
+                {/* Smooth accordion — always in DOM, grid-rows animates height */}
+                <div className={['grid transition-all duration-300 ease-in-out', isSelected && (r.rewardType === 'discount_percent' || r.rewardType === 'discount_amount' || r.rewardType === 'points') ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'].join(' ')}>
+                  <div className="min-h-0 overflow-hidden">
+                    <div className="flex items-center gap-2 border-t border-gray-200 px-4 pb-4 pt-3">
+                      <label className="flex items-center gap-1.5 text-xs text-gray-500">
+                        <span>Değer</span>
+                        <input
+                          type="number"
+                          min={0}
+                          value={state.value}
+                          onChange={e => updateSeed(i, { value: Number(e.target.value) || 0 })}
+                          className="w-20 rounded-md border border-gray-200 bg-gray-50 px-2 py-1 text-sm text-gray-900 focus:border-pulse-500 focus:outline-none"
+                        />
+                      </label>
+                      <label className="flex items-center gap-1.5 text-xs text-gray-500">
+                        <span>Geçerlilik (gün)</span>
+                        <input
+                          type="number"
+                          min={1}
+                          value={state.validDays}
+                          onChange={e => updateSeed(i, { validDays: Number(e.target.value) || 30 })}
+                          className="w-20 rounded-md border border-gray-200 bg-gray-50 px-2 py-1 text-sm text-gray-900 focus:border-pulse-500 focus:outline-none"
+                        />
+                      </label>
+                    </div>
                   </div>
-                )}
+                </div>
               </div>
             )
           })}

@@ -114,7 +114,7 @@ export default function ServicesStep({ seedServices, onServicesChange }: Service
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 items-start">
         {seedServices.map((s, idx) => {
           const state = seedState[s.key]
           const isSelected = state?.selected ?? false
@@ -123,7 +123,7 @@ export default function ServicesStep({ seedServices, onServicesChange }: Service
               key={s.key}
               style={{ ['--stagger-index' as string]: idx }}
               className={[
-                'wizard-card-stagger relative overflow-hidden rounded-xl border-2 transition-all duration-200',
+                'wizard-card-stagger relative overflow-hidden rounded-xl border-2 transition-all duration-200 cursor-default',
                 isSelected
                   ? 'border-white bg-white text-pulse-900 shadow-xl'
                   : 'border-white/20 bg-white/5 text-white hover:-translate-y-0.5 hover:border-white/40 hover:bg-white/10',
@@ -133,7 +133,7 @@ export default function ServicesStep({ seedServices, onServicesChange }: Service
                 type="button"
                 onClick={() => updateSeed(s.key, { selected: !isSelected })}
                 aria-pressed={isSelected}
-                className="flex w-full items-start justify-between gap-2 p-4 text-left"
+                className="flex w-full cursor-pointer items-start justify-between gap-2 p-4 text-left"
               >
                 <div className="flex-1">
                   <h3 className="font-semibold">{s.name}</h3>
@@ -153,32 +153,35 @@ export default function ServicesStep({ seedServices, onServicesChange }: Service
                 </div>
               </button>
 
-              {isSelected && (
-                <div className="flex items-center gap-2 border-t border-gray-200 px-4 pb-4 pt-3">
-                  <label className="flex flex-1 items-center gap-1.5">
-                    <span className="text-xs font-medium text-gray-500">₺</span>
-                    <input
-                      type="number"
-                      min={0}
-                      value={state.price}
-                      onChange={e => updateSeed(s.key, { price: Number(e.target.value) || 0 })}
-                      className="w-full rounded-md border border-gray-200 bg-gray-50 px-2 py-1 text-sm text-gray-900 focus:border-pulse-500 focus:outline-none"
-                    />
-                  </label>
-                  <label className="flex items-center gap-1.5">
-                    <Clock size={12} className="text-gray-500" />
-                    <input
-                      type="number"
-                      min={5}
-                      step={5}
-                      value={state.duration_minutes}
-                      onChange={e => updateSeed(s.key, { duration_minutes: Number(e.target.value) || 0 })}
-                      className="w-16 rounded-md border border-gray-200 bg-gray-50 px-2 py-1 text-sm text-gray-900 focus:border-pulse-500 focus:outline-none"
-                    />
-                    <span className="text-xs text-gray-500">dk</span>
-                  </label>
+              {/* Smooth accordion — always in DOM, grid-rows animates height */}
+              <div className={['grid transition-all duration-300 ease-in-out', isSelected ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'].join(' ')}>
+                <div className="min-h-0 overflow-hidden">
+                  <div className="flex items-center gap-2 border-t border-gray-200 px-4 pb-4 pt-3">
+                    <label className="flex flex-1 items-center gap-1.5">
+                      <span className="text-xs font-medium text-gray-500">₺</span>
+                      <input
+                        type="number"
+                        min={0}
+                        value={state.price}
+                        onChange={e => updateSeed(s.key, { price: Number(e.target.value) || 0 })}
+                        className="w-full rounded-md border border-gray-200 bg-gray-50 px-2 py-1 text-sm text-gray-900 focus:border-pulse-500 focus:outline-none"
+                      />
+                    </label>
+                    <label className="flex items-center gap-1.5">
+                      <Clock size={12} className="text-gray-500" />
+                      <input
+                        type="number"
+                        min={5}
+                        step={5}
+                        value={state.duration_minutes}
+                        onChange={e => updateSeed(s.key, { duration_minutes: Number(e.target.value) || 0 })}
+                        className="w-16 rounded-md border border-gray-200 bg-gray-50 px-2 py-1 text-sm text-gray-900 focus:border-pulse-500 focus:outline-none"
+                      />
+                      <span className="text-xs text-gray-500">dk</span>
+                    </label>
+                  </div>
                 </div>
-              )}
+              </div>
             </div>
           )
         })}
@@ -222,7 +225,7 @@ export default function ServicesStep({ seedServices, onServicesChange }: Service
               <button
                 type="button"
                 onClick={() => removeCustom(c.id)}
-                className="rounded-md p-1.5 text-red-500 hover:bg-red-50"
+                className="cursor-pointer rounded-md p-1.5 text-red-500 hover:bg-red-50"
                 aria-label="Sil"
               >
                 <Trash2 size={16} />
@@ -235,7 +238,7 @@ export default function ServicesStep({ seedServices, onServicesChange }: Service
       <button
         type="button"
         onClick={addCustom}
-        className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-white/30 px-4 py-3 text-sm font-medium text-white/80 transition-all hover:border-white/60 hover:bg-white/5 hover:text-white"
+        className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-white/30 px-4 py-3 text-sm font-medium text-white/80 transition-all hover:border-white/60 hover:bg-white/5 hover:text-white"
       >
         <Plus size={16} />
         Özel hizmet ekle

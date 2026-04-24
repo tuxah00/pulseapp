@@ -115,5 +115,41 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Post-update recheck: update ile conflict-check arasına başka bir randevu girmiş olabilir
+  // Çakışma tespit edilirse güncellemeyi geri al (check-update-recheck pattern)
+  if (existing.staff_id) {
+    const { data: postConflicts } = await supabase
+      .from('appointments')
+      .select('id, start_time, end_time')
+      .eq('business_id', businessId)
+      .eq('staff_id', existing.staff_id)
+      .eq('appointment_date', newDate)
+      .neq('id', params.id)
+      .in('status', ['pending', 'confirmed'])
+      .is('deleted_at', null)
+
+    const hasPostConflict = (postConflicts ?? []).some((apt) =>
+      timeToMinutes(newStart) < timeToMinutes(apt.end_time) &&
+      timeToMinutes(apt.start_time) < timeToMinutes(newEnd)
+    )
+
+    if (hasPostConflict) {
+      // Rollback: eski konuma geri dön
+      await supabase
+        .from('appointments')
+        .update({
+          appointment_date: existing.appointment_date,
+          start_time: existing.start_time,
+          end_time: existing.end_time,
+        })
+        .eq('id', params.id)
+      return NextResponse.json(
+        { error: 'Çakışma oluştu, taşıma iptal edildi.' },
+        { status: 409 },
+      )
+    }
+  }
+
   return NextResponse.json({ appointment: data })
 }

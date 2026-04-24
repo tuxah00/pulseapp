@@ -101,7 +101,7 @@ export default function CompletionStep({ summary, onFinish, finishLoading }: Com
           type="button"
           onClick={onFinish}
           disabled={finishLoading}
-          className="mt-6 w-full rounded-xl bg-pulse-900 px-6 py-3 text-base font-semibold text-white shadow-lg transition hover:bg-pulse-800 disabled:cursor-not-allowed disabled:opacity-60"
+          className="mt-6 w-full cursor-pointer rounded-xl bg-pulse-900 px-6 py-3 text-base font-semibold text-white shadow-lg transition hover:bg-pulse-800 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {finishLoading ? 'Açılıyor…' : "Dashboard'a git"}
         </button>

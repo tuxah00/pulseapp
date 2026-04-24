@@ -156,7 +156,7 @@ export default function WorkflowsStep({ onSelectionChange }: WorkflowsStepProps)
               key={p.key}
               style={{ ['--stagger-index' as string]: idx }}
               className={[
-                'wizard-card-stagger overflow-hidden rounded-xl border-2 transition-all',
+                'wizard-card-stagger cursor-default overflow-hidden rounded-xl border-2 transition-all',
                 on ? 'border-white bg-white' : 'border-white/20 bg-white/5',
               ].join(' ')}
             >
@@ -167,7 +167,7 @@ export default function WorkflowsStep({ onSelectionChange }: WorkflowsStepProps)
                   role="switch"
                   aria-checked={on}
                   className={[
-                    'relative h-6 w-11 shrink-0 rounded-full p-0.5 transition-colors',
+                    'relative h-6 w-11 shrink-0 cursor-pointer rounded-full p-0.5 transition-colors',
                     on ? 'bg-pulse-900' : 'bg-white/20',
                   ].join(' ')}
                 >
@@ -181,7 +181,7 @@ export default function WorkflowsStep({ onSelectionChange }: WorkflowsStepProps)
                 <button
                   type="button"
                   onClick={() => setExpanded(isOpen ? null : p.key)}
-                  className="flex flex-1 items-start justify-between gap-2 text-left"
+                  className="flex flex-1 cursor-pointer items-start justify-between gap-2 text-left"
                 >
                   <div>
                     <p className={['font-semibold', on ? 'text-pulse-900' : 'text-white'].join(' ')}>
