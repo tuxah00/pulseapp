@@ -68,7 +68,7 @@ export function CustomSelect({
   // portal render anında da doğru olması garanti
   useEffect(() => {
     if (!ref.current) return
-    const inPublic = !!ref.current.closest('.public-page, .portal-layout, .booking-page')
+    const inPublic = !!ref.current.closest('.public-page, .portal-layout')
     setIsPublicContext(inPublic)
   }, [open])
 

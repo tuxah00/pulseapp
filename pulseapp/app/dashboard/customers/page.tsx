@@ -292,9 +292,14 @@ export default function CustomersPage() {
         return
       }
     }
+    const isFirstCustomer = !editingCustomer && customers.length === 0
     setSaving(false); setShowModal(false)
     await fetchCustomers()
-    window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: editingCustomer ? 'Kaydedildi' : 'Oluşturuldu' } }))
+    window.dispatchEvent(new CustomEvent('pulse-toast', {
+      detail: isFirstCustomer
+        ? { type: 'customer', title: '🎉 İlk müşteriniz eklendi!', body: 'Harika başlangıç — müşteri listeniz büyüyor.' }
+        : { type: 'success', title: editingCustomer ? 'Kaydedildi' : 'Oluşturuldu' }
+    }))
     await logAudit({
       businessId: businessId!,
       staffId,

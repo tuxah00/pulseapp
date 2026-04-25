@@ -830,16 +830,16 @@ export default function KasaPage() {
           {/* İndirim + KDV + Toplamlar */}
           {cart.length > 0 && (
             <div className="flex-shrink-0 border-t border-gray-200 dark:border-gray-700 pt-3 space-y-2">
-              {/* İndirim ve KDV — sağa hizalı tek satır */}
-              <div className="flex items-center justify-end gap-3">
-                <div className="flex items-center gap-1">
-                  <label className="text-xs text-gray-500 whitespace-nowrap">İndirim</label>
+              {/* İndirim + KDV — iki ayrı satır, label solda sabit, kontroller sağda */}
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500 w-14 shrink-0">İndirim</span>
                   <input
                     type="number"
                     min="0"
                     value={discountAmount || ''}
                     onChange={(e) => setDiscountAmount(parseFloat(e.target.value) || 0)}
-                    className="input w-16 text-xs py-1 px-2"
+                    className="input flex-1 text-right text-sm"
                     placeholder="0"
                   />
                   <CustomSelect
@@ -849,10 +849,11 @@ export default function KasaPage() {
                       { value: 'fixed', label: '₺' },
                       { value: 'percentage', label: '%' },
                     ]}
+                    className="w-16 shrink-0"
                   />
                 </div>
-                <div className="flex items-center gap-1">
-                  <label className="text-xs text-gray-500 whitespace-nowrap">KDV</label>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500 w-14 shrink-0">KDV</span>
                   <CustomSelect
                     value={String(taxRate)}
                     onChange={v => setTaxRate(Number(v))}
@@ -862,6 +863,7 @@ export default function KasaPage() {
                       { value: '10', label: '%10' },
                       { value: '20', label: '%20' },
                     ]}
+                    className="flex-1"
                   />
                 </div>
               </div>

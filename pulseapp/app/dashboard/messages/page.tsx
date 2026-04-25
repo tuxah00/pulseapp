@@ -11,6 +11,7 @@ import {
   Bot, User, ChevronLeft, Clock, ArrowDownCircle,
   Sparkles, Calendar, HelpCircle, AlertTriangle,
   MessageCircle, X, Filter, Smartphone, FileText,
+  CheckSquare, Square, CheckCheck,
 } from 'lucide-react'
 import { formatPhone, cn } from '@/lib/utils'
 import EmptyState from '@/components/ui/empty-state'
@@ -71,6 +72,8 @@ export default function MessagesPage() {
   const [aiSuggestion, setAiSuggestion] = useState<string | null>(null)
   const [aiLoading, setAiLoading] = useState(false)
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false)
+  const [bulkMode, setBulkMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -190,6 +193,35 @@ export default function MessagesPage() {
       supabase.removeChannel(channel)
     }
   }, [businessId, selectedCustomer, fetchConversations, supabase])
+
+  async function handleBulkMarkRead() {
+    if (!businessId || selectedIds.size === 0) return
+    const ids = Array.from(selectedIds)
+    await Promise.all(ids.map(customerId =>
+      supabase
+        .from('messages')
+        .update({ twilio_status: 'read' })
+        .eq('business_id', businessId)
+        .eq('customer_id', customerId)
+        .eq('direction', 'inbound')
+    ))
+    setBulkMode(false)
+    setSelectedIds(new Set())
+    fetchConversations()
+    window.dispatchEvent(new CustomEvent('pulse-toast', {
+      detail: { type: 'system', title: `${ids.length} konuşma okundu olarak işaretlendi` }
+    }))
+  }
+
+  function toggleBulkSelect(customerId: string, e: React.MouseEvent) {
+    e.stopPropagation()
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(customerId)) next.delete(customerId)
+      else next.add(customerId)
+      return next
+    })
+  }
 
   function selectConversation(conv: Conversation) {
     setSelectedCustomer(conv.customer)
@@ -374,10 +406,42 @@ export default function MessagesPage() {
           <div className="flex-shrink-0 border-b border-gray-200 dark:border-gray-700 p-4">
             <div className="flex items-center justify-between mb-3">
               <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Mesajlar</h1>
-              <span className="badge-brand">
-                {conversations.length} konuşma
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="badge-brand">
+                  {conversations.length} konuşma
+                </span>
+                <button
+                  onClick={() => { setBulkMode(b => !b); setSelectedIds(new Set()) }}
+                  aria-label={bulkMode ? 'Toplu seçimi iptal et' : 'Toplu seç'}
+                  className={cn(
+                    'flex h-7 w-7 items-center justify-center rounded-lg transition-colors',
+                    bulkMode
+                      ? 'bg-pulse-900 text-white'
+                      : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-300'
+                  )}
+                >
+                  <CheckSquare className="h-4 w-4" />
+                </button>
+              </div>
             </div>
+
+            {/* Toplu İşlem Çubuğu */}
+            {bulkMode && (
+              <div className="flex items-center gap-2 mb-3 p-2 bg-pulse-50 dark:bg-pulse-900/20 rounded-lg border border-pulse-200 dark:border-pulse-800">
+                <span className="text-xs font-medium text-pulse-900 dark:text-pulse-300 flex-1">
+                  {selectedIds.size > 0 ? `${selectedIds.size} konuşma seçildi` : 'Konuşma seçin'}
+                </span>
+                {selectedIds.size > 0 && (
+                  <button
+                    onClick={handleBulkMarkRead}
+                    className="flex items-center gap-1 text-xs font-medium text-pulse-900 dark:text-pulse-300 hover:text-pulse-700 transition-colors"
+                  >
+                    <CheckCheck className="h-3.5 w-3.5" />
+                    Okundu İşaretle
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* Arama */}
             <div className="relative">
@@ -461,12 +525,32 @@ export default function MessagesPage() {
             ) : (
               <div>
                 {filteredConversations.map((conv) => (
-                  <button
+                  <div
                     key={conv.customer.id}
-                    onClick={() => selectConversation(conv)}
                     className={cn(
-                      'w-full flex items-start gap-3 px-4 py-3 text-left transition-colors bg-white dark:!bg-gray-950 hover:bg-gray-50 dark:hover:!bg-gray-900 border-b border-gray-100 dark:border-gray-800',
-                      selectedCustomer?.id === conv.customer.id && 'bg-pulse-50 hover:bg-pulse-50 dark:bg-pulse-900/20 dark:hover:bg-pulse-900/20'
+                      'flex items-center border-b border-gray-100 dark:border-gray-800',
+                      selectedIds.has(conv.customer.id) && 'bg-pulse-50 dark:bg-pulse-900/20'
+                    )}
+                  >
+                    {/* Bulk Mode Checkbox */}
+                    {bulkMode && (
+                      <button
+                        onClick={(e) => toggleBulkSelect(conv.customer.id, e)}
+                        aria-label={selectedIds.has(conv.customer.id) ? 'Seçimi kaldır' : 'Seç'}
+                        className="flex-shrink-0 pl-3 py-3 text-gray-400 hover:text-pulse-900 dark:hover:text-pulse-300 transition-colors"
+                      >
+                        {selectedIds.has(conv.customer.id)
+                          ? <CheckSquare className="h-4 w-4 text-pulse-900 dark:text-pulse-300" />
+                          : <Square className="h-4 w-4" />
+                        }
+                      </button>
+                    )}
+                  <button
+                    onClick={() => !bulkMode && selectConversation(conv)}
+                    className={cn(
+                      'flex-1 flex items-start gap-3 px-4 py-3 text-left transition-colors bg-white dark:!bg-gray-950 hover:bg-gray-50 dark:hover:!bg-gray-900',
+                      selectedCustomer?.id === conv.customer.id && !bulkMode && 'bg-pulse-50 hover:bg-pulse-50 dark:bg-pulse-900/20 dark:hover:bg-pulse-900/20',
+                      bulkMode && 'cursor-default hover:bg-transparent dark:hover:bg-transparent'
                     )}
                   >
                     {/* Avatar */}
@@ -523,6 +607,7 @@ export default function MessagesPage() {
                       )}
                     </div>
                   </button>
+                  </div>
                 ))}
               </div>
             )}
@@ -540,6 +625,7 @@ export default function MessagesPage() {
               <div className="flex-shrink-0 flex items-center gap-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-3">
                 <button
                   onClick={goBackToList}
+                  aria-label="Konuşma listesine dön"
                   className="lg:hidden flex h-9 w-9 items-center justify-center rounded-lg hover:bg-gray-100"
                 >
                   <ChevronLeft className="h-5 w-5 text-gray-600" />
@@ -559,6 +645,7 @@ export default function MessagesPage() {
                     href={`/dashboard/customers`}
                     className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                     title="Müşteri profili"
+                    aria-label="Müşteri profili"
                   >
                     <User className="h-4 w-4" />
                   </a>

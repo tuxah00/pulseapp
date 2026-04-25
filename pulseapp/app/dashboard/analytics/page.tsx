@@ -97,7 +97,7 @@ function getPeriodDates(period: 'week' | 'month' | 'year', offset = 0): { start:
 }
 
 export default function AnalyticsPage() {
-  const { businessId, staffId, staffName, sector, loading: ctxLoading, permissions } = useBusinessContext()
+  const { businessId, staffId, staffName, sector, plan, loading: ctxLoading, permissions } = useBusinessContext()
   const customerLabel = getCustomerLabelSingular(sector ?? undefined)
   const customerLabelPlural = sector ? getCustomerLabel(sector) : 'Müşteriler'
   const { confirm } = useConfirm()
@@ -156,6 +156,11 @@ export default function AnalyticsPage() {
   // Custom interval for expenses too
   const [expCustomDays, setExpCustomDays] = useState('7')
 
+  // Primler (komisyon kazançları)
+  type CommissionEarning = { id: string; staff_members: { name: string } | null; commission_total: number; period: string; status: string }
+  const [commissions, setCommissions] = useState<CommissionEarning[]>([])
+  const [commissionsLoading, setCommissionsLoading] = useState(false)
+
   const supabase = createClient()
 
   const fetchData = useCallback(async () => {
@@ -210,12 +215,27 @@ export default function AnalyticsPage() {
     setIncomesLoading(false)
   }, [businessId, period])
 
+  const fetchCommissions = useCallback(async () => {
+    if (!businessId || !permissions?.commissions) return
+    setCommissionsLoading(true)
+    const { start } = getPeriodDates(period, 0)
+    // commission_earnings period formatı: YYYY-MM
+    const periodStr = start.slice(0, 7)
+    try {
+      const res = await fetch(`/api/commissions/earnings?period=${periodStr}`)
+      const json = await res.json()
+      setCommissions(json.earnings || [])
+    } catch { /* komisyon bilgisi opsiyonel */ }
+    finally { setCommissionsLoading(false) }
+  }, [businessId, period, permissions])
+
   useEffect(() => {
     if (businessId) {
       fetchExpenses()
       fetchIncome()
+      fetchCommissions()
     }
-  }, [fetchExpenses, fetchIncome, businessId])
+  }, [fetchExpenses, fetchIncome, fetchCommissions, businessId])
 
   async function handleAddExpense(e: React.FormEvent) {
     e.preventDefault()
@@ -356,6 +376,19 @@ export default function AnalyticsPage() {
   const manualIncome = expandedIncomes.reduce((s, i) => s + i.amount, 0)
   const totalExpenses = expandedExpenses.reduce((s, e) => s + e.amount, 0)
   const totalRevenue = appointmentRevenue + invoiceOnlyRevenue + manualIncome
+
+  // Primler (komisyon) toplamı — sadece commissions modülü açıksa
+  const commissionTotal = commissions.reduce((s, c) => s + (c.commission_total || 0), 0)
+
+  // PulseApp abonelik gideri — plana göre aylık; dönem uzunluğuna orantılanır
+  const PLAN_MONTHLY_PRICES: Record<string, number> = { starter: 499, standard: 999, pro: 1999 }
+  const planMonthlyPrice = PLAN_MONTHLY_PRICES[plan ?? 'starter'] ?? 499
+  const pulseappCost = period === 'week' ? Math.round(planMonthlyPrice / 4.33)
+    : period === 'year' ? planMonthlyPrice * 12
+    : planMonthlyPrice
+
+  // Gerçek toplam gider: manuel + primler + PulseApp
+  const grandTotalExpenses = totalExpenses + commissionTotal + pulseappCost
 
   const completionRate = total > 0 ? Math.round((completed.length / total) * 100) : 0
   const noShowRate = total > 0 ? Math.round((noShow.length / total) * 100) : 0
@@ -559,9 +592,9 @@ export default function AnalyticsPage() {
         <KPICard icon={<DollarSign className="h-5 w-5" />} label={invoiceOnlyRevenue > 0 ? 'Toplam Gelir' : 'Gelir'}
           value={formatCurrency(totalRevenue)} trend={revenueTrend} color="green" currency />
         <KPICard icon={<TrendingDown className="h-5 w-5" />} label="Toplam Gider"
-          value={formatCurrency(totalExpenses)} color="amber" currency />
+          value={formatCurrency(grandTotalExpenses)} color="amber" currency />
         <KPICard icon={<Wallet className="h-5 w-5" />} label="Net Kâr"
-          value={formatCurrency(totalRevenue - totalExpenses)} color={(totalRevenue - totalExpenses) >= 0 ? 'blue' : 'red'} currency />
+          value={formatCurrency(totalRevenue - grandTotalExpenses)} color={(totalRevenue - grandTotalExpenses) >= 0 ? 'blue' : 'red'} currency />
         <KPICard icon={<UserCheck className="h-5 w-5" />} label="Tamamlanan"
           value={completed.length} color="blue" />
       </div>
@@ -920,12 +953,19 @@ export default function AnalyticsPage() {
             </div>
             <div className="card p-4 text-center">
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Toplam Gider</p>
-              <p className="text-xl font-bold text-red-600">{formatCurrency(totalExpenses)}</p>
+              <p className="text-xl font-bold text-red-600">{formatCurrency(grandTotalExpenses)}</p>
+              {(commissionTotal > 0 || pulseappCost > 0) && (
+                <p className="text-[10px] text-gray-400 mt-1">
+                  {commissionTotal > 0 && `Primler: ${formatCurrency(commissionTotal)}`}
+                  {commissionTotal > 0 && pulseappCost > 0 && ' · '}
+                  {pulseappCost > 0 && `PulseApp: ${formatCurrency(pulseappCost)}`}
+                </p>
+              )}
             </div>
             <div className="card p-4 text-center">
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Net Kâr</p>
               {(() => {
-                const net = totalRevenue - totalExpenses
+                const net = totalRevenue - grandTotalExpenses
                 return <p className={cn('text-xl font-bold', net >= 0 ? 'text-pulse-900 dark:text-pulse-400' : 'text-red-600')}>{formatCurrency(net)}</p>
               })()}
             </div>
@@ -1123,9 +1163,9 @@ export default function AnalyticsPage() {
           )}
 
           {/* Gider Listesi */}
-          {expensesLoading ? (
+          {expensesLoading || commissionsLoading ? (
             <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-pulse-900" /></div>
-          ) : expenses.length === 0 ? (
+          ) : (expenses.length === 0 && commissionTotal === 0) ? (
             <EmptyState
               icon={<Wallet className="h-7 w-7" />}
               title="Gider kaydı yok"
@@ -1162,11 +1202,39 @@ export default function AnalyticsPage() {
                       </td>
                     </tr>
                   ))}
+                  {/* Prim satırları (komisyon kazançları) */}
+                  {commissions.map(c => (
+                    <tr key={`commission-${c.id}`} className="table-row bg-amber-50/40 dark:bg-amber-900/10">
+                      <td className="table-cell text-gray-500 dark:text-gray-400 whitespace-nowrap">—</td>
+                      <td className="table-cell font-medium text-gray-900 dark:text-gray-100">
+                        Personel Primi
+                        <span className={cn('ml-1.5 text-[10px] rounded-full px-1.5 py-0.5 font-medium', c.status === 'paid' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400')}>
+                          {c.status === 'paid' ? 'Ödendi' : 'Bekliyor'}
+                        </span>
+                      </td>
+                      <td className="table-cell text-gray-500 dark:text-gray-400">{c.staff_members?.name ?? '—'}</td>
+                      <td className="table-cell text-right font-medium text-red-600">{formatCurrency(c.commission_total)}</td>
+                      <td className="table-cell"></td>
+                    </tr>
+                  ))}
+                  {/* PulseApp abonelik gideri */}
+                  <tr className="table-row bg-blue-50/40 dark:bg-blue-900/10">
+                    <td className="table-cell text-gray-500 dark:text-gray-400 whitespace-nowrap">—</td>
+                    <td className="table-cell font-medium text-gray-900 dark:text-gray-100">
+                      Yazılım Aboneliği
+                      <span className="ml-1.5 badge-info text-[10px]">Sistem</span>
+                    </td>
+                    <td className="table-cell text-gray-500 dark:text-gray-400">
+                      PulseApp {plan ? plan.charAt(0).toUpperCase() + plan.slice(1) : 'Starter'} Plan
+                    </td>
+                    <td className="table-cell text-right font-medium text-red-600">{formatCurrency(pulseappCost)}</td>
+                    <td className="table-cell"></td>
+                  </tr>
                 </tbody>
                 <tfoot className="table-head-row">
                   <tr>
                     <td colSpan={3} className="table-cell font-semibold text-gray-700 dark:text-gray-300 text-right">Toplam Gider</td>
-                    <td className="table-cell text-right font-bold text-red-600">{formatCurrency(totalExpenses)}</td>
+                    <td className="table-cell text-right font-bold text-red-600">{formatCurrency(grandTotalExpenses)}</td>
                     <td></td>
                   </tr>
                 </tfoot>
@@ -1177,7 +1245,7 @@ export default function AnalyticsPage() {
           {/* Gelir Listesi */}
           {incomesLoading ? (
             <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-pulse-900" /></div>
-          ) : incomes.length > 0 && (
+          ) : (completed.length > 0 || incomes.length > 0) && (
             <div>
               <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">{periodLabel} Gelirleri</h3>
               <div className="table-wrapper">
@@ -1192,6 +1260,17 @@ export default function AnalyticsPage() {
                     </tr>
                   </thead>
                   <tbody>
+                    {/* Randevu geliri özet satırı */}
+                    {completed.length > 0 && (
+                      <tr className="table-row">
+                        <td className="table-cell text-gray-500 dark:text-gray-400 whitespace-nowrap">—</td>
+                        <td className="table-cell font-medium text-gray-900 dark:text-gray-100">Randevular</td>
+                        <td className="table-cell text-gray-500 dark:text-gray-400">{completed.length} tamamlanan randevu</td>
+                        <td className="table-cell text-right font-medium text-green-600">{formatCurrency(appointmentRevenue)}</td>
+                        <td className="table-cell"></td>
+                      </tr>
+                    )}
+                    {/* Manuel gelir satırları */}
                     {incomes.map(income => (
                       <tr key={income.id} className="table-row">
                         <td className="table-cell text-gray-500 dark:text-gray-400 whitespace-nowrap">
@@ -1213,8 +1292,8 @@ export default function AnalyticsPage() {
                   </tbody>
                   <tfoot className="table-head-row">
                     <tr>
-                      <td colSpan={3} className="table-cell font-semibold text-gray-700 dark:text-gray-300 text-right">Toplam Gelir (Manuel)</td>
-                      <td className="table-cell text-right font-bold text-green-600">{formatCurrency(manualIncome)}</td>
+                      <td colSpan={3} className="table-cell font-semibold text-gray-700 dark:text-gray-300 text-right">Toplam Gelir</td>
+                      <td className="table-cell text-right font-bold text-green-600">{formatCurrency(totalRevenue)}</td>
                       <td></td>
                     </tr>
                   </tfoot>

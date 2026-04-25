@@ -40,6 +40,11 @@ export default function RootLayout({
             __html: `if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){});})}`,
           }}
         />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){var html=document.documentElement;function k(e){if(e.key==='Tab'||(e.key&&e.key.indexOf('Arrow')===0))html.classList.add('using-keyboard');}function m(){html.classList.remove('using-keyboard');}document.addEventListener('keydown',k,true);document.addEventListener('mousedown',m,true);document.addEventListener('pointerdown',m,true);document.addEventListener('touchstart',m,true);})();`,
+          }}
+        />
       </head>
       <body>{children}</body>
     </html>

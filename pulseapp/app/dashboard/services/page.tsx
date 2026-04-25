@@ -5,7 +5,8 @@ import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { requirePermission } from '@/lib/hooks/use-require-permission'
-import { Plus, Pencil, Trash2, Loader2, Banknote, LayoutList, LayoutGrid, ArrowUpDown, X } from 'lucide-react'
+import { useDebounce } from '@/lib/hooks/use-debounce'
+import { Plus, Pencil, Trash2, Loader2, Banknote, LayoutList, LayoutGrid, ArrowUpDown, X, Search } from 'lucide-react'
 import { formatCurrency, cn } from '@/lib/utils'
 import { Portal } from '@/components/ui/portal'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
@@ -34,6 +35,8 @@ export default function ServicesPage() {
   const [error, setError] = useState<string | null>(null)
   const [viewMode, setViewMode] = useViewMode('services', 'list')
   const { confirm } = useConfirm()
+  const [searchQuery, setSearchQuery] = useState('')
+  const debouncedSearch = useDebounce(searchQuery, 300)
   const [sortField, setSortField] = useState<string | null>(null)
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const [contraindications, setContraindications] = useState<any[]>([])
@@ -240,6 +243,10 @@ export default function ServicesPage() {
       })
     : services
 
+  const filteredServices = debouncedSearch
+    ? sortedServices.filter(s => s.name.toLowerCase().includes(debouncedSearch.toLowerCase()))
+    : sortedServices
+
   return (
     <div>
       {/* Başlık */}
@@ -251,6 +258,17 @@ export default function ServicesPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Arama */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Hizmet ara…"
+              className="input pl-9 py-2 w-40 sm:w-52"
+            />
+          </div>
           <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
             <ToolbarPopover icon={<ArrowUpDown className="h-4 w-4" />} label="Sırala" active={sortField !== null}>
               <SortPopoverContent options={[{ value: 'name', label: 'İsim' }, { value: 'price', label: 'Fiyat' }, { value: 'duration_minutes', label: 'Süre' }]} sortField={sortField} sortDir={sortDir} onSortField={setSortField} onSortDir={setSortDir} />
@@ -278,11 +296,18 @@ export default function ServicesPage() {
           title="Henüz hizmet eklenmemiş"
           action={{ label: 'İlk Hizmeti Ekle', onClick: openNewModal, icon: <Plus className="h-4 w-4" /> }}
         />
+      ) : filteredServices.length === 0 ? (
+        <EmptyState
+          icon={<Search className="h-8 w-8" />}
+          title="Hizmet bulunamadı"
+          description={`"${debouncedSearch}" ile eşleşen hizmet yok.`}
+          action={{ label: 'Aramayı Temizle', onClick: () => setSearchQuery(''), icon: <X className="h-4 w-4" /> }}
+        />
       ) : (
         <div key={viewMode} className="view-transition">
         {viewMode === 'list' ? (
         <AnimatedList className="space-y-3">
-          {sortedServices.map((service) => (
+          {filteredServices.map((service) => (
             <AnimatedItem
               key={service.id}
               className="card flex items-center gap-4 p-4 hover:shadow-md transition-shadow"
@@ -303,15 +328,15 @@ export default function ServicesPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <button onClick={() => openEditModal(service)} className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"><Pencil className="h-4 w-4" /></button>
-                <button onClick={() => handleDelete(service)} className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 transition-colors"><Trash2 className="h-4 w-4" /></button>
+                <button onClick={() => openEditModal(service)} aria-label="Düzenle" className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"><Pencil className="h-4 w-4" /></button>
+                <button onClick={() => handleDelete(service)} aria-label="Sil" className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 transition-colors"><Trash2 className="h-4 w-4" /></button>
               </div>
             </AnimatedItem>
           ))}
         </AnimatedList>
       ) : (
         <AnimatedList className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
-          {sortedServices.map((service) => (
+          {filteredServices.map((service) => (
             <AnimatedItem key={service.id} className="card flex aspect-square flex-col justify-between p-4 hover:shadow-md transition-shadow">
               <div className="flex flex-col items-center gap-1 text-center">
                 <h3 className="h-section truncate w-full">{service.name}</h3>
@@ -327,8 +352,8 @@ export default function ServicesPage() {
                 )}
               </div>
               <div className="mt-3 flex items-center justify-center gap-2">
-                <button onClick={() => openEditModal(service)} className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"><Pencil className="h-3.5 w-3.5" /></button>
-                <button onClick={() => handleDelete(service)} className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 transition-colors"><Trash2 className="h-3.5 w-3.5" /></button>
+                <button onClick={() => openEditModal(service)} aria-label="Düzenle" className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"><Pencil className="h-3.5 w-3.5" /></button>
+                <button onClick={() => handleDelete(service)} aria-label="Sil" className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 transition-colors"><Trash2 className="h-3.5 w-3.5" /></button>
               </div>
             </AnimatedItem>
           ))}

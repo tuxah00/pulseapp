@@ -229,7 +229,7 @@ Her yeni bileşen veya sayfa yazıldığında KULLANICININ SÖYLEMESİNE GEREK K
 3. **Input/select elemanları**: `.input` class kullanmayan her form elemanı explicit `dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600` almalı
 4. **Badge ve durum renkleri**: Açık renkli badge'ler (bg-blue-100, bg-green-100 vb.) dark modda semi-transparent olmalı: `dark:bg-blue-900/30 dark:text-blue-300`
 5. **CSS @layer spesifite kuralı**: `globals.css`'teki dark mode override'ları `@layer base` içinde. Bunları geçmek için ya `@layer base` içine (dark mode kurallarından sonra) ekle ya da `.dark .booking-page .xyz` gibi daha spesifik (0,3,0) selector kullan
-6. **Public sayfalar (booking vb.)**: Dark mode dashboard class'larından izole edilmeli — `.dark .booking-page .xyz` şeklinde tersine override kullanılır (bkz. `globals.css` booking-page bölümü)
+6. **Public sayfalar**: `.portal-layout` ve `.public-page` class'lı sayfalar light modda kalır (bkz. `globals.css`). `booking-page` artık dark mode destekliyor — `dark:` prefix'li Tailwind class'ları kullan.
 
 **Kural**: Herhangi bir sayfada veya bileşende dark mode sorunu görürsen (hover çakışması, metin görünmez, kart çok koyu/açık), bunu kullanıcı söylemeden tespit edip düzelt.
 

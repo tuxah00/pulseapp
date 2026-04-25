@@ -152,7 +152,7 @@
   .btn-primary {
     @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium text-white
            bg-pulse-900 hover:bg-pulse-800
-           transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-pulse-900 focus:ring-offset-2
+           transition-[background-color,box-shadow,transform] duration-200 outline-none
            disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98];
     box-shadow: 0 1px 2px rgba(25, 61, 143, 0.2);
   }
@@ -162,9 +162,9 @@
 
   .btn-secondary {
     @apply inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5
-           text-sm font-medium text-gray-700 transition-all duration-200
+           text-sm font-medium text-gray-700 transition-[background-color,border-color,box-shadow,transform] duration-200
            hover:bg-gray-50 hover:border-gray-300
-           focus:outline-none focus:ring-2 focus:ring-pulse-900 focus:ring-offset-2
+           outline-none
            active:scale-[0.98] dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200
            dark:hover:bg-gray-700 dark:hover:border-gray-600;
   }
@@ -172,7 +172,7 @@
   .btn-danger {
     @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium text-white
            bg-red-500 hover:bg-red-600
-           transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2
+           transition-[background-color,box-shadow,transform] duration-200 outline-none
            disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98];
     box-shadow: 0 1px 2px rgba(239, 68, 68, 0.2);
   }
@@ -295,7 +295,7 @@
   .btn-success {
     @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium text-white
            bg-green-500 hover:bg-green-600
-           transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2
+           transition-[background-color,box-shadow,transform] duration-200 outline-none
            disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98];
     box-shadow: 0 1px 2px rgba(34, 197, 94, 0.2);
   }
@@ -419,11 +419,10 @@
   .dark .hover\:bg-gray-100:hover { background-color: #374151 !important; }
 }
 
-/* ── Public sayfalar: müşteri tarafı her zaman light kalmalı ── */
-/* booking-page (randevu alma), portal-layout (müşteri portalı), public-page (diğer public sayfalar) */
+/* ── Public sayfalar: portal ve diğer public sayfalar her zaman light kalmalı ── */
+/* portal-layout (müşteri portalı), public-page (diğer public sayfalar) */
+/* booking-page (randevu alma) artık dark mode destekliyor */
 /* color-scheme: light ile tarayıcı dark mode form elemanlarını engeller */
-.booking-page,
-.booking-page *,
 .portal-layout,
 .portal-layout *,
 .public-page,
@@ -432,84 +431,58 @@
 }
 
 /* Daha yüksek spesifite (0,3,0) ile dashboard dark mode kurallarını ezer */
-.dark .booking-page .bg-white,
-.dark .booking-page .hover\:bg-white:hover,
 .dark .portal-layout .bg-white,
 .dark .portal-layout .hover\:bg-white:hover,
 .dark .public-page .bg-white,
 .dark .public-page .hover\:bg-white:hover     { background-color: #ffffff !important; }
 
-.dark .booking-page .bg-gray-50,
-.dark .booking-page .hover\:bg-gray-50:hover,
 .dark .portal-layout .bg-gray-50,
 .dark .portal-layout .hover\:bg-gray-50:hover,
 .dark .public-page .bg-gray-50,
 .dark .public-page .hover\:bg-gray-50:hover   { background-color: #f9fafb !important; }
 
-.dark .booking-page .bg-gray-100,
-.dark .booking-page .hover\:bg-gray-100:hover,
 .dark .portal-layout .bg-gray-100,
 .dark .portal-layout .hover\:bg-gray-100:hover,
 .dark .public-page .bg-gray-100,
 .dark .public-page .hover\:bg-gray-100:hover  { background-color: #f3f4f6 !important; }
 
-.dark .booking-page .bg-blue-50,
 .dark .portal-layout .bg-blue-50,
 .dark .public-page .bg-blue-50   { background-color: #eff6ff !important; }
-.dark .booking-page .bg-blue-500,
 .dark .portal-layout .bg-blue-500,
 .dark .public-page .bg-blue-500  { background-color: #3b82f6 !important; }
-.dark .booking-page .bg-red-50,
 .dark .portal-layout .bg-red-50,
 .dark .public-page .bg-red-50    { background-color: #fef2f2 !important; }
-.dark .booking-page .bg-green-50,
 .dark .portal-layout .bg-green-50,
 .dark .public-page .bg-green-50  { background-color: #f0fdf4 !important; }
-.dark .booking-page .bg-amber-50,
 .dark .portal-layout .bg-amber-50,
 .dark .public-page .bg-amber-50  { background-color: #fffbeb !important; }
 
-.dark .booking-page .text-gray-900,
 .dark .portal-layout .text-gray-900,
 .dark .public-page .text-gray-900 { color: #111827 !important; }
-.dark .booking-page .text-gray-700,
 .dark .portal-layout .text-gray-700,
 .dark .public-page .text-gray-700 { color: #374151 !important; }
-.dark .booking-page .text-gray-600,
 .dark .portal-layout .text-gray-600,
 .dark .public-page .text-gray-600 { color: #4b5563 !important; }
-.dark .booking-page .text-gray-500,
 .dark .portal-layout .text-gray-500,
 .dark .public-page .text-gray-500 { color: #6b7280 !important; }
-.dark .booking-page .text-gray-400,
 .dark .portal-layout .text-gray-400,
 .dark .public-page .text-gray-400 { color: #9ca3af !important; }
-.dark .booking-page .text-white,
 .dark .portal-layout .text-white,
 .dark .public-page .text-white    { color: #ffffff !important; }
 
-.dark .booking-page .border-gray-100,
 .dark .portal-layout .border-gray-100,
 .dark .public-page .border-gray-100 { border-color: #f3f4f6 !important; }
-.dark .booking-page .border-gray-200,
 .dark .portal-layout .border-gray-200,
 .dark .public-page .border-gray-200 { border-color: #e5e7eb !important; }
-.dark .booking-page .border-blue-500,
 .dark .portal-layout .border-blue-500,
 .dark .public-page .border-blue-500 { border-color: #3b82f6 !important; }
-.dark .booking-page .border-red-100,
 .dark .portal-layout .border-red-100,
 .dark .public-page .border-red-100  { border-color: #fee2e2 !important; }
-.dark .booking-page .border-green-200,
 .dark .portal-layout .border-green-200,
 .dark .public-page .border-green-200 { border-color: #bbf7d0 !important; }
-.dark .booking-page .border-red-200,
 .dark .portal-layout .border-red-200,
 .dark .public-page .border-red-200   { border-color: #fecaca !important; }
 
-.dark .booking-page input,
-.dark .booking-page textarea,
-.dark .booking-page select,
 .dark .portal-layout input,
 .dark .portal-layout textarea,
 .dark .portal-layout select,
@@ -520,8 +493,6 @@
   color: #111827 !important;
   border-color: #e5e7eb !important;
 }
-.dark .booking-page input::placeholder,
-.dark .booking-page textarea::placeholder,
 .dark .portal-layout input::placeholder,
 .dark .portal-layout textarea::placeholder,
 .dark .public-page input::placeholder,
@@ -681,18 +652,28 @@
 .dark ::-webkit-scrollbar-thumb { background: #374151; }
 .dark ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
 
-/* ── Micro-interaction: focus-visible ring ──
+/* ── Micro-interaction: focus ring ──
    Yalnızca gerçek etkileşim elementlerinde ring göster (WCAG).
-   Grafik/tablo/decorative div'lerde outline oluşmaz. */
-button:focus-visible,
-a:focus-visible,
-input:focus-visible,
-textarea:focus-visible,
-select:focus-visible,
-[role="button"]:focus-visible,
-[role="link"]:focus-visible,
-[role="menuitem"]:focus-visible,
-[role="tab"]:focus-visible {
+   Grafik/tablo/decorative div'lerde outline oluşmaz.
+
+   NOT: `:focus-visible` yerine `:focus` kullanılıyor. Sebep: Chrome'un
+   `:focus-visible` heuristic'i mousedown anında 1ms boyunca `true` olup
+   sonra `false`'a dönebiliyor — bu flicker'a yol açıyordu. `.using-keyboard`
+   flag'i (app/layout.tsx inline script) tamamen bizim JS kontrolümüzde;
+   yalnızca Tab/Arrow tuşlarında eklenir, mousedown/touch'da temizlenir.
+   Ayrıca browser'ın native `:focus-visible` outline'ı bastırılır. */
+*:focus-visible {
+  outline: none;
+}
+.using-keyboard button:focus:not(:active),
+.using-keyboard a:focus:not(:active),
+.using-keyboard input:focus,
+.using-keyboard textarea:focus,
+.using-keyboard select:focus,
+.using-keyboard [role="button"]:focus:not(:active),
+.using-keyboard [role="link"]:focus:not(:active),
+.using-keyboard [role="menuitem"]:focus:not(:active),
+.using-keyboard [role="tab"]:focus:not(:active) {
   outline: 2px solid var(--pulse-primary);
   outline-offset: 2px;
 }
