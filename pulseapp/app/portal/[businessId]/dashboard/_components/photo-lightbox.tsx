@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import Image from 'next/image'
 import { X, Calendar, Tag, Folder, ArrowRight } from 'lucide-react'
 
@@ -32,6 +33,10 @@ interface PhotoLightboxProps {
 }
 
 export function PhotoLightbox({ photo, onClose, onOpenRecord }: PhotoLightboxProps) {
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => { setMounted(true) }, [])
+
   useEffect(() => {
     if (!photo) return
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -39,12 +44,12 @@ export function PhotoLightbox({ photo, onClose, onOpenRecord }: PhotoLightboxPro
     return () => document.removeEventListener('keydown', onKey)
   }, [photo, onClose])
 
-  if (!photo) return null
+  if (!photo || !mounted) return null
 
   const taken = photo.taken_at || photo.created_at
   const takenDate = taken ? new Date(taken).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }) : ''
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-[110] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4"
       onClick={onClose}
@@ -111,6 +116,7 @@ export function PhotoLightbox({ photo, onClose, onOpenRecord }: PhotoLightboxPro
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
