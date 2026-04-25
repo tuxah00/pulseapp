@@ -2640,25 +2640,27 @@ export default function AppointmentsPage() {
 
               {/* Bilgiler */}
               <div className="space-y-3">
-                <DetailRow label={customerLabel} value={selectedAppointment.customers?.name || 'İsimsiz'} />
+                <DetailRow label={customerLabel} value={
+                  <div className="flex items-center gap-2">
+                    <span>{selectedAppointment.customers?.name || 'İsimsiz'}</span>
+                    {selectedAppointment.customer_id && (
+                      <Link
+                        href={`/dashboard/customers?customerId=${selectedAppointment.customer_id}`}
+                        className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                        title={`${customerLabel} profiline git`}
+                      >
+                        <User className="h-3 w-3" />
+                        Profil
+                        <ExternalLink className="h-2.5 w-2.5 opacity-60" />
+                      </Link>
+                    )}
+                  </div>
+                } />
                 {selectedAppointment.customers?.phone && (
                   <DetailRow label="Telefon" value={
-                    <div className="flex items-center gap-2">
-                      <a href={`tel:${selectedAppointment.customers.phone}`} className="text-pulse-900 hover:underline flex items-center gap-1">
-                        <Phone className="h-3 w-3" />{selectedAppointment.customers.phone}
-                      </a>
-                      {selectedAppointment.customer_id && (
-                        <Link
-                          href={`/dashboard/customers?customerId=${selectedAppointment.customer_id}`}
-                          className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                          title={`${customerLabel} profiline git`}
-                        >
-                          <User className="h-3 w-3" />
-                          Profil
-                          <ExternalLink className="h-2.5 w-2.5 opacity-60" />
-                        </Link>
-                      )}
-                    </div>
+                    <a href={`tel:${selectedAppointment.customers.phone}`} className="text-pulse-900 hover:underline flex items-center gap-1">
+                      <Phone className="h-3 w-3" />{selectedAppointment.customers.phone}
+                    </a>
                   } />
                 )}
                 <DetailRow label="Tarih" value={formatDate(selectedAppointment.appointment_date)} />
