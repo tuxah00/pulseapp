@@ -25,6 +25,58 @@ const PHOTO_FILTERS: Array<{ key: string; label: string; match: (t: string) => b
   { key: 'progress', label: 'Süreç', match: (t) => t === 'progress' },
 ]
 
+// Hasta Dosyaları (records) içindeki resim/röntgen dosyalarını saptamak için
+// MIME ve uzantı kontrolü; sadece görsel olanlar Fotoğraflar sekmesine alınır.
+const IMAGE_EXT_RE = /\.(jpe?g|png|webp|gif|heic|heif|bmp|tiff?|dcm)(\?|$)/i
+
+function isImageFile(name: string | undefined, url: string, mime: string | undefined): boolean {
+  if (mime) {
+    if (mime.startsWith('image/')) return true
+    if (mime === 'application/dicom') return true
+  }
+  const target = (name || '') + ' ' + url
+  return IMAGE_EXT_RE.test(target)
+}
+
+// Records'tan gelen bir resmin mevcut filtrelerden hangisine düştüğünü belirler.
+// .dcm/dicom → röntgen, isminde panoramic/panoramik → panoramik, isminde rontgen/röntgen/xray → röntgen,
+// kalan tüm resimler → süreç.
+function classifyRecordPhoto(name: string | undefined, url: string, mime: string | undefined): string {
+  const lower = ((name || '') + ' ' + url).toLowerCase()
+  if (mime === 'application/dicom' || /\.dcm(\?|$)/i.test(url) || (name && /\.dcm$/i.test(name))) return 'xray'
+  if (/panoramic|panoramik/.test(lower)) return 'panoramic'
+  if (/r[öo]ntgen|x-?ray/.test(lower)) return 'xray'
+  return 'progress'
+}
+
+// Records arrayini gez ve içindeki resim/röntgen dosyalarını synthetic PhotoRow'a dönüştür.
+function extractRecordPhotos(records: PortalRecord[]): PhotoRow[] {
+  const out: PhotoRow[] = []
+  for (const rec of records) {
+    const data = (rec.data || {}) as Record<string, unknown>
+    const fileUrls = Array.isArray(data.file_urls) ? (data.file_urls as string[]) : []
+    const fileMeta = Array.isArray(data.file_metadata)
+      ? (data.file_metadata as Array<{ name?: string; type?: string }>)
+      : []
+    fileUrls.forEach((url, i) => {
+      if (!url || typeof url !== 'string') return
+      const meta = fileMeta[i] || {}
+      if (!isImageFile(meta.name, url, meta.type)) return
+      out.push({
+        id: `rec-${rec.id}-${i}`,
+        photo_url: url,
+        photo_type: classifyRecordPhoto(meta.name, url, meta.type),
+        taken_at: rec.created_at,
+        notes: meta.name || null,
+        is_from_record: true,
+        record_id: rec.id,
+        record_title: rec.title,
+      })
+    })
+  }
+  return out
+}
+
 export default function PortalFilesPage() {
   const params = useParams()
   const searchParams = useSearchParams()
@@ -77,20 +129,25 @@ export default function PortalFilesPage() {
   const title = getFilesPageTitle(sector)
   const subtitle = getFilesPageSubtitle(sector)
 
+  // customer_photos + records'taki resim dosyaları birleşik liste
+  const allPhotos = useMemo<PhotoRow[]>(() => {
+    return [...photos, ...extractRecordPhotos(records)]
+  }, [photos, records])
+
   const filteredPhotos = useMemo(() => {
     const f = PHOTO_FILTERS.find((x) => x.key === photoFilter)
-    if (!f) return photos
-    return photos.filter((p) => f.match(p.photo_type))
-  }, [photos, photoFilter])
+    if (!f) return allPhotos
+    return allPhotos.filter((p) => f.match(p.photo_type))
+  }, [allPhotos, photoFilter])
 
   // Aktif filtrenin hangi tipleri içerdiğini say
   const photoCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: photos.length }
-    for (const p of photos) {
+    const counts: Record<string, number> = { all: allPhotos.length }
+    for (const p of allPhotos) {
       counts[p.photo_type] = (counts[p.photo_type] || 0) + 1
     }
     return counts
-  }, [photos])
+  }, [allPhotos])
 
   return (
     <div className="max-w-4xl mx-auto space-y-5">
@@ -129,9 +186,9 @@ export default function PortalFilesPage() {
         >
           <ImageIcon className="h-4 w-4" />
           Fotoğraflar
-          {photos.length > 0 && (
+          {allPhotos.length > 0 && (
             <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-pulse-900/10 dark:bg-pulse-900/30 text-pulse-900 dark:text-pulse-300">
-              {photos.length}
+              {allPhotos.length}
             </span>
           )}
         </button>
@@ -152,10 +209,10 @@ export default function PortalFilesPage() {
       ) : (
         <div>
           {/* Filtreler */}
-          {photos.length > 0 && (
+          {allPhotos.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-4">
               {PHOTO_FILTERS.map((f) => {
-                const count = f.key === 'all' ? photos.length : (photoCounts[f.key] || 0)
+                const count = f.key === 'all' ? allPhotos.length : (photoCounts[f.key] || 0)
                 if (f.key !== 'all' && count === 0) return null
                 return (
                   <button
@@ -192,6 +249,12 @@ export default function PortalFilesPage() {
                     <span className="absolute bottom-2 left-2 text-[10px] font-medium px-2 py-0.5 rounded-full bg-black/60 text-white capitalize">
                       {label || p.photo_type}
                     </span>
+                    {p.is_from_record && (
+                      <span className="absolute top-2 left-2 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-500/90 text-white flex items-center gap-1 shadow">
+                        <Folder className="h-2.5 w-2.5" />
+                        Dosya
+                      </span>
+                    )}
                   </button>
                 )
               })}
@@ -208,7 +271,18 @@ export default function PortalFilesPage() {
           setActivePhoto({ id: `rec-${url}`, photo_url: url, photo_type: 'progress' })
         }}
       />
-      <PhotoLightbox photo={activePhoto} onClose={() => setActivePhoto(null)} />
+      <PhotoLightbox
+        photo={activePhoto}
+        onClose={() => setActivePhoto(null)}
+        onOpenRecord={(recordId) => {
+          const target = records.find((r) => r.id === recordId)
+          if (target) {
+            setActivePhoto(null)
+            setTab('records')
+            setActiveRecord(target)
+          }
+        }}
+      />
     </div>
   )
 }

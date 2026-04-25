@@ -504,6 +504,9 @@ export interface BusinessSettings {
   ai_permissions?: AIPermissions
   // Sektörel benchmark opt-in (Faz 5.3) — anonim agregatlar için
   benchmark_opt_in?: boolean
+  // Personel etiket havuzu (örn. ["Doktor","Hemşire","Asistan","Resepsiyon"])
+  // Onboarding'de sektör default'u ile dolar; staff sayfasından düzenlenebilir.
+  staff_tag_options?: string[]
   // Kurulum sihirbazı (medical_aesthetic + dental_clinic için)
   wizard_completed?: boolean
   wizard_step?: number
@@ -669,8 +672,19 @@ export interface StaffMember {
   write_permissions?: StaffWritePermissions | null
   tutorial_progress: TutorialProgress | null
   is_active: boolean
+  /** Mesleki etiketler (örn. ["Doktor","Asistan"]). Etiket havuzu BusinessSettings.staff_tag_options içindedir. */
+  tags?: string[]
+  /** API yanıtlarında staff_services join'inden türetilir; doğrudan kolon değil. */
+  service_ids?: string[]
   created_at: string
   updated_at: string
+}
+
+export interface StaffService {
+  staff_id: string
+  service_id: string
+  business_id: string
+  created_at: string
 }
 
 export interface Service {

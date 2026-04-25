@@ -38,6 +38,13 @@ export const CORE_TUTORIAL_TOPICS: TutorialTopic[] = [
       'Müşteri kartına tıklayınca Bilgiler ve Geçmiş sekmeleri açılır. Yeni randevu oluşturmadan önce müşteri kaydı gereklidir.',
   },
   {
+    pageKey: 'consultations',
+    path: '/dashboard/consultations',
+    title: 'Ön Konsültasyon',
+    skeleton:
+      'Müşterilerin işletmeye gelmeden önce gönderdiği konsültasyon taleplerini buradan incele. Uygun bulduğunu tek tıkla randevuya dönüştür, ek bilgi gerekenlere mesaj at, uygun olmayanları arşivle.',
+  },
+  {
     pageKey: 'waitlist',
     path: '/dashboard/waitlist',
     title: 'Bekleme Listesi',
