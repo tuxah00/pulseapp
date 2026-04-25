@@ -69,6 +69,7 @@ const PERMISSION_LABELS: Record<keyof StaffPermissions, string> = {
   commissions: 'Prim & Komisyon',
   audit: 'Denetim',
   kvkk: 'KVKK',
+  consultations: 'Ön Konsültasyon',
 }
 
 const PERMISSION_DESCRIPTIONS: Record<keyof StaffPermissions, string> = {
@@ -103,12 +104,13 @@ const PERMISSION_DESCRIPTIONS: Record<keyof StaffPermissions, string> = {
   commissions: 'Personel primleri ve komisyon hesaplama',
   audit: 'Sistem denetim kayıtları',
   kvkk: 'KVKK onay kayıtları ve veri silme talepleri',
+  consultations: 'Ön konsültasyon talep listesi ve kararlar',
 }
 
 const PERMISSION_CATEGORIES: { label: string; keys: (keyof StaffPermissions)[] }[] = [
   {
     label: 'Randevu & Müşteri',
-    keys: ['dashboard', 'appointments', 'customers', 'waitlist', 'reservations', 'classes', 'records', 'portfolio', 'follow_ups'],
+    keys: ['dashboard', 'appointments', 'customers', 'waitlist', 'consultations', 'reservations', 'classes', 'records', 'portfolio', 'follow_ups'],
   },
   {
     label: 'Finans',

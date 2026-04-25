@@ -77,10 +77,11 @@ const PERMISSION_LABELS: Record<keyof StaffPermissions, string> = {
   commissions: 'Prim & Komisyon',
   audit: 'Denetim',
   kvkk: 'KVKK',
+  consultations: 'Ön Konsültasyon',
 }
 
 const PERMISSION_CATEGORIES: { label: string; keys: (keyof StaffPermissions)[] }[] = [
-  { label: 'Ana', keys: ['dashboard', 'appointments', 'customers', 'waitlist'] },
+  { label: 'Ana', keys: ['dashboard', 'appointments', 'customers', 'waitlist', 'consultations'] },
   { label: 'İçerik', keys: ['records', 'protocols', 'follow_ups', 'portfolio', 'classes', 'memberships', 'packages', 'reservations', 'orders', 'rewards'] },
   { label: 'Yönetim', keys: ['services', 'staff', 'shifts', 'messages', 'analytics', 'insights', 'assistant_actions', 'reviews', 'inventory', 'pos', 'invoices', 'commissions', 'campaigns', 'workflows', 'audit', 'kvkk', 'settings'] },
 ]

@@ -72,7 +72,21 @@ export async function GET(request: NextRequest) {
           continue
         }
 
-        // 3) customer hard delete — cascade trigger'lar bağımlı tabloları temizler
+        // 3a) Ön konsültasyon fotoğraflarını Storage'tan temizle (cascade DB'yi siler ama Storage kalır)
+        try {
+          const { data: consults } = await admin
+            .from('consultation_requests')
+            .select('photo_urls')
+            .eq('customer_id', req.customer_id)
+          const photoPaths = (consults || []).flatMap(c =>
+            ((c.photo_urls as { path: string }[]) || []).map(p => p.path).filter(Boolean)
+          )
+          if (photoPaths.length > 0) {
+            await admin.storage.from('customer-photos').remove(photoPaths)
+          }
+        } catch { /* Storage temizliği kritik değil */ }
+
+        // 3b) customer hard delete — cascade trigger'lar bağımlı tabloları temizler
         const { error: delErr } = await admin
           .from('customers')
           .delete()
