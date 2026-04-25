@@ -4,6 +4,7 @@ import { requirePortalSession } from '@/lib/portal/guards'
 import { validateBody } from '@/lib/api/validate'
 import { portalDataDeletionSchema } from '@/lib/schemas'
 import { createLogger } from '@/lib/utils/logger'
+import { logPortalAction, getClientIp } from '@/lib/portal/audit'
 
 const log = createLogger({ route: 'api/portal/data-deletion' })
 
@@ -92,6 +93,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Talep oluşturulamadı' }, { status: 500 })
   }
 
+  await logPortalAction({
+    customerId,
+    businessId,
+    action: 'data_deletion_request',
+    resource: 'data_deletion_request',
+    resourceId: created.id,
+    details: { reasonCategory, scheduledDeletionAt: scheduledDeletionAt.toISOString() },
+    ipAddress: getClientIp(request),
+  })
+
   return NextResponse.json({ request: created })
 }
 
@@ -128,6 +139,15 @@ export async function DELETE(request: NextRequest) {
     log.error({ err: error, businessId, customerId, phase: 'cancel' }, 'Silme talebi iptal edilemedi')
     return NextResponse.json({ error: 'Talep iptal edilemedi' }, { status: 500 })
   }
+
+  await logPortalAction({
+    customerId,
+    businessId,
+    action: 'data_deletion_cancel',
+    resource: 'data_deletion_request',
+    resourceId: existing.id,
+    ipAddress: getClientIp(request),
+  })
 
   return NextResponse.json({ ok: true })
 }

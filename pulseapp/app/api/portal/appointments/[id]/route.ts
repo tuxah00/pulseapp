@@ -4,6 +4,7 @@ import { requirePortalSession } from '@/lib/portal/guards'
 import { isValidUUID } from '@/lib/utils/validate'
 import { validateBody } from '@/lib/api/validate'
 import { portalAppointmentUpdateSchema } from '@/lib/schemas'
+import { logPortalAction, getClientIp } from '@/lib/portal/audit'
 
 const TERMINAL_STATUSES = ['cancelled', 'completed', 'no_show'] as const
 
@@ -72,6 +73,19 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     return NextResponse.json({ error: 'Güncelleme başarısız' }, { status: 500 })
   }
 
+  await logPortalAction({
+    customerId,
+    businessId,
+    action: 'appointment_reschedule',
+    resource: 'appointment',
+    resourceId: params.id,
+    details: {
+      from: { date: appointment.appointment_date, startTime: appointment.start_time },
+      to: { date, startTime, endTime },
+    },
+    ipAddress: getClientIp(request),
+  })
+
   return NextResponse.json({ success: true })
 }
 
@@ -111,6 +125,15 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
   if (updateError) {
     return NextResponse.json({ error: 'İptal işlemi başarısız' }, { status: 500 })
   }
+
+  await logPortalAction({
+    customerId,
+    businessId,
+    action: 'appointment_cancel',
+    resource: 'appointment',
+    resourceId: params.id,
+    ipAddress: getClientIp(request),
+  })
 
   return NextResponse.json({ success: true })
 }
