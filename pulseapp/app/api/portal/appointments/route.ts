@@ -77,24 +77,20 @@ export async function POST(request: NextRequest) {
 
   const admin = createAdminClient()
 
-  // Hizmet bilgisini çek — süre için
-  const { data: service, error: svcErr } = await admin
-    .from('services')
-    .select('id, name, duration_minutes, price')
-    .eq('id', serviceId)
-    .eq('business_id', businessId)
-    .single()
+  // Bağımsız sorgular paralel çalışır — 3 serial RTT → 1 paralel RTT
+  const [
+    { data: service, error: svcErr },
+    { data: business },
+    { data: customerForNotif },
+  ] = await Promise.all([
+    admin.from('services').select('id, name, duration_minutes, price').eq('id', serviceId).eq('business_id', businessId).single(),
+    admin.from('businesses').select('working_hours').eq('id', businessId).single(),
+    admin.from('customers').select('name').eq('id', customerId).single(),
+  ])
 
   if (svcErr || !service) {
     return NextResponse.json({ error: 'Hizmet bulunamadı' }, { status: 404 })
   }
-
-  // Çalışma saati kontrolü
-  const { data: business } = await admin
-    .from('businesses')
-    .select('working_hours')
-    .eq('id', businessId)
-    .single()
 
   const whError = checkWorkingHours(
     business?.working_hours as Parameters<typeof checkWorkingHours>[0],
@@ -163,25 +159,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Randevu oluşturulamadı' }, { status: 500 })
   }
 
-  // Müşteri adını bildirim için çek
-  const { data: customer } = await admin
-    .from('customers')
-    .select('name')
-    .eq('id', customerId)
-    .single()
-
-  // İşletmeye bildirim
-  await admin.from('notifications').insert({
+  // İşletmeye bildirim (fire-and-forget)
+  admin.from('notifications').insert({
     business_id: businessId,
     type: 'appointment',
     title: 'Yeni Online Randevu',
-    body: `${customer?.name || 'Müşteri'} — ${service.name} — ${date} ${startTime}`,
+    body: `${customerForNotif?.name || 'Müşteri'} — ${service.name} — ${date} ${startTime}`,
     related_id: appt.id,
     related_type: 'appointment',
     is_read: false,
   }).then(() => undefined, () => undefined)
 
-  await logPortalAction({
+  // Audit log (fire-and-forget — log hatası müşteriye HTTP 500 döndürmemeli)
+  logPortalAction({
     customerId,
     businessId,
     action: 'appointment_create',

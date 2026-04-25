@@ -1,7 +1,9 @@
 'use client'
 
+import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import Image from 'next/image'
-import { FileText, Image as ImageIcon, Folder, ChevronRight } from 'lucide-react'
+import { X, FileText, Image as ImageIcon, Folder, ChevronRight } from 'lucide-react'
 
 export interface PortalRecord {
   id: string
@@ -29,6 +31,63 @@ const TYPE_ICONS: Record<string, typeof Folder> = {
   vehicle: Folder,
   diet_plan: FileText,
   student: FileText,
+}
+
+// Kayıt alanlarının Türkçe etiket karşılıkları
+const FIELD_LABELS: Record<string, string> = {
+  category: 'Kategori',
+  priority: 'Öncelik',
+  diagnosis: 'Tanı',
+  treatment: 'Tedavi',
+  notes: 'Notlar',
+  note: 'Not',
+  complaint: 'Şikayet',
+  blood_type: 'Kan Grubu',
+  allergies: 'Alerjiler',
+  medications: 'İlaçlar',
+  anamnesis: 'Anamnez',
+  status: 'Durum',
+  tooth_number: 'Diş Numarası',
+  procedure: 'Prosedür',
+  next_visit: 'Sonraki Ziyaret',
+  doctor: 'Hekim',
+  technician: 'Teknisyen',
+  lab: 'Laboratuvar',
+  material: 'Materyal',
+  color: 'Renk',
+  shade: 'Ton',
+  description: 'Açıklama',
+  type: 'Tür',
+  severity: 'Şiddet',
+  session: 'Seans',
+  duration: 'Süre',
+  result: 'Sonuç',
+  recommendation: 'Öneri',
+  dosage: 'Doz',
+  frequency: 'Sıklık',
+  weight: 'Ağırlık',
+  height: 'Boy',
+  bmi: 'VKİ',
+  age: 'Yaş',
+  gender: 'Cinsiyet',
+  occupation: 'Meslek',
+  address: 'Adres',
+  species: 'Tür',
+  breed: 'Irk',
+  owner: 'Sahip',
+  vaccine: 'Aşı',
+  microchip: 'Mikroçip',
+  court: 'Mahkeme',
+  case_number: 'Dosya No',
+  hearing_date: 'Duruşma Tarihi',
+  diet_plan: 'Beslenme Planı',
+}
+
+function fieldLabel(key: string): string {
+  return (
+    FIELD_LABELS[key] ||
+    key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+  )
 }
 
 function isImageUrl(url: string): boolean {
@@ -99,53 +158,71 @@ interface FileDetailModalProps {
 }
 
 export function FileDetailModal({ record, onClose, onImageClick }: FileDetailModalProps) {
-  if (!record) return null
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => { setMounted(true) }, [])
+
+  // ESC ile kapat
+  useEffect(() => {
+    if (!record) return
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [record, onClose])
+
+  if (!record || !mounted) return null
 
   const { file_urls = [], file_metadata = [], ...fields } = (record.data || {}) as any
   const files: string[] = Array.isArray(file_urls) ? file_urls : []
   const fieldEntries = Object.entries(fields).filter(
-    ([k, v]) => !['file_urls', 'file_metadata', 'created_by_staff_id', 'created_by_staff_name'].includes(k) && v !== null && v !== undefined && v !== ''
+    ([k, v]) =>
+      !['file_urls', 'file_metadata', 'created_by_staff_id', 'created_by_staff_name'].includes(k) &&
+      v !== null && v !== undefined && v !== ''
   )
 
-  return (
+  const content = (
     <div
-      className="fixed inset-0 z-[100] bg-black/60 dark:bg-black/70 flex items-center justify-center p-4 modal-overlay"
+      className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4 modal-overlay"
       onClick={onClose}
     >
       <div
         className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto modal-content"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 px-5 py-4 flex items-center justify-between">
+        {/* Başlık */}
+        <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 px-5 py-4 flex items-start justify-between rounded-t-2xl">
           <div>
-            <p className="text-[11px] font-medium text-pulse-900 dark:text-pulse-300 uppercase tracking-wide">
+            <p className="text-[11px] font-semibold text-pulse-900 dark:text-pulse-300 uppercase tracking-widest">
               {TYPE_LABELS[record.type] || 'Dosya'}
             </p>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mt-0.5">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mt-0.5 leading-tight">
               {record.title}
             </h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{formatDate(record.created_at)}</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{formatDate(record.created_at)}</p>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800"
+            className="p-2 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 dark:hover:text-gray-200 transition-colors flex-shrink-0 ml-4"
             aria-label="Kapat"
           >
-            ✕
+            <X className="h-4 w-4" />
           </button>
         </div>
 
         <div className="p-5 space-y-5">
+          {/* Detay alanları */}
           {fieldEntries.length > 0 && (
             <div className="space-y-2">
-              <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Detaylar</h4>
-              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <h4 className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest">
+                Detaylar
+              </h4>
+              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {fieldEntries.map(([k, v]) => (
-                  <div key={k} className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
-                    <dt className="text-[11px] font-medium text-gray-500 dark:text-gray-400 capitalize">
-                      {k.replace(/_/g, ' ')}
+                  <div key={k} className="bg-gray-50 dark:bg-gray-800/60 rounded-xl p-3 border border-gray-100 dark:border-gray-700/50">
+                    <dt className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+                      {fieldLabel(k)}
                     </dt>
-                    <dd className="text-sm text-gray-900 dark:text-gray-100 mt-0.5 break-words">
+                    <dd className="text-sm text-gray-900 dark:text-gray-100 mt-1 font-medium break-words">
                       {typeof v === 'object' ? JSON.stringify(v) : String(v)}
                     </dd>
                   </div>
@@ -154,9 +231,10 @@ export function FileDetailModal({ record, onClose, onImageClick }: FileDetailMod
             </div>
           )}
 
+          {/* Dosyalar */}
           {files.length > 0 && (
             <div className="space-y-2">
-              <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+              <h4 className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest">
                 Dosyalar ({files.length})
               </h4>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -167,7 +245,7 @@ export function FileDetailModal({ record, onClose, onImageClick }: FileDetailMod
                     <button
                       key={i}
                       onClick={() => onImageClick?.(url)}
-                      className="relative aspect-square rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 hover:ring-2 hover:ring-pulse-900 transition-all"
+                      className="relative aspect-square rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 hover:ring-2 hover:ring-pulse-900 transition-all"
                     >
                       <Image src={url} alt={meta?.name || ''} fill className="object-cover" />
                     </button>
@@ -177,10 +255,10 @@ export function FileDetailModal({ record, onClose, onImageClick }: FileDetailMod
                       href={url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="aspect-square rounded-lg bg-gray-50 dark:bg-gray-800/50 flex flex-col items-center justify-center p-3 hover:bg-pulse-900/5 dark:hover:bg-pulse-900/20 transition-colors border border-gray-100 dark:border-gray-800"
+                      className="aspect-square rounded-xl bg-gray-50 dark:bg-gray-800/60 flex flex-col items-center justify-center p-3 hover:bg-pulse-900/5 dark:hover:bg-pulse-900/20 transition-colors border border-gray-100 dark:border-gray-700/50"
                     >
-                      <FileText className="h-8 w-8 text-pulse-900/60 dark:text-pulse-300" />
-                      <span className="mt-2 text-[11px] text-gray-700 dark:text-gray-300 text-center line-clamp-2 break-all">
+                      <FileText className="h-8 w-8 text-pulse-900/50 dark:text-pulse-300" />
+                      <span className="mt-2 text-[11px] text-gray-600 dark:text-gray-300 text-center line-clamp-2 break-all font-medium">
                         {meta?.name || 'Dosya'}
                       </span>
                     </a>
@@ -191,13 +269,17 @@ export function FileDetailModal({ record, onClose, onImageClick }: FileDetailMod
           )}
 
           {fieldEntries.length === 0 && files.length === 0 && (
-            <div className="text-center py-8">
-              <ImageIcon className="h-10 w-10 text-gray-300 dark:text-gray-700 mx-auto mb-2" />
-              <p className="text-sm text-gray-500 dark:text-gray-400">Bu kayıtta henüz detay yok.</p>
+            <div className="text-center py-10">
+              <div className="h-12 w-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mx-auto mb-3">
+                <ImageIcon className="h-6 w-6 text-gray-300 dark:text-gray-600" />
+              </div>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Bu kayıtta henüz detay yok.</p>
             </div>
           )}
         </div>
       </div>
     </div>
   )
+
+  return createPortal(content, document.body)
 }
