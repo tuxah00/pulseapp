@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { CalendarPlus, X, Loader2, Check } from 'lucide-react'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { cn, formatCurrency } from '@/lib/utils'
@@ -182,7 +183,7 @@ export default function BookingModal({
 
   if (!open) return null
 
-  return (
+  return createPortal(
     <div
       className={cn('modal-overlay fixed inset-0 z-[60] bg-black/40 flex items-center justify-center p-4', closing && 'closing')}
       onClick={handleClose}
@@ -374,6 +375,7 @@ export default function BookingModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

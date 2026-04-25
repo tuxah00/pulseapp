@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { CreditCard, X, Loader2 } from 'lucide-react'
 import { cn, formatCurrency } from '@/lib/utils'
 
@@ -80,7 +81,7 @@ export default function PaymentIframeModal({
 
   if (!open) return null
 
-  return (
+  return createPortal(
     <div
       className={cn('modal-overlay fixed inset-0 z-[60] bg-black/50 flex items-center justify-center p-4', closing && 'closing')}
       onClick={handleClose}
@@ -138,6 +139,7 @@ export default function PaymentIframeModal({
           ) : null}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
