@@ -50,6 +50,7 @@ const ROUTE_LABELS: Record<string, string> = {
   kvkk: 'KVKK',
   'follow-ups': 'Takipler',
   waitlist: 'Bekleme Listesi',
+  consultations: 'Ön Konsültasyon',
   campaigns: 'Kampanyalar',
   'assistant-actions': 'Asistan Aksiyonları',
   insights: 'İş Zekası',
