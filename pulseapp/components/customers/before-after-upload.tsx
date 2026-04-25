@@ -9,6 +9,13 @@ interface BeforeAfterUploadProps {
   customerId: string
   /** Opsiyonel — randevu detayından açılırsa fotoğraflar bu randevuya bağlanır. */
   appointmentId?: string
+  /**
+   * Yüklenmesine izin verilen fotoğraf tipleri.
+   * Verilmezse hepsi açık. Randevu durumuna göre kısıtlamak için kullan:
+   * - confirmed → ['before','progress']
+   * - completed → undefined (hepsi)
+   */
+  allowedTypes?: Array<'before' | 'after' | 'progress'>
   open: boolean
   onClose: () => void
   onUploaded: () => void
@@ -21,12 +28,19 @@ type Slot = 'before' | 'after' | 'single'
  * Aynı `pair_id` altında before + after birlikte yüklenir (galeride yan yana eşleştirilir).
  * `pair_id` non-FK UUID; protocol_sessions FK'sından bağımsız çalışır.
  */
-export function BeforeAfterUpload({ customerId, appointmentId, open, onClose, onUploaded }: BeforeAfterUploadProps) {
-  const [mode, setMode] = useState<'pair' | 'single'>('pair')
+export function BeforeAfterUpload({ customerId, appointmentId, allowedTypes, open, onClose, onUploaded }: BeforeAfterUploadProps) {
+  // Pair mode'a izin var mı? After yoksa → sadece single
+  const pairAllowed = !allowedTypes || (allowedTypes.includes('before') && allowedTypes.includes('after'))
+  const initialMode: 'pair' | 'single' = pairAllowed ? 'pair' : 'single'
+  const initialSingleType: 'before' | 'after' | 'progress' = !allowedTypes
+    ? 'progress'
+    : (allowedTypes.includes('progress') ? 'progress' : allowedTypes[0])
+
+  const [mode, setMode] = useState<'pair' | 'single'>(initialMode)
   const [beforeFile, setBeforeFile] = useState<File | null>(null)
   const [afterFile, setAfterFile] = useState<File | null>(null)
   const [singleFile, setSingleFile] = useState<File | null>(null)
-  const [singleType, setSingleType] = useState<'before' | 'after' | 'progress'>('progress')
+  const [singleType, setSingleType] = useState<'before' | 'after' | 'progress'>(initialSingleType)
   const [notes, setNotes] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -44,8 +58,9 @@ export function BeforeAfterUpload({ customerId, appointmentId, open, onClose, on
   useEffect(() => {
     if (open) {
       setBeforeFile(null); setAfterFile(null); setSingleFile(null)
-      setSingleType('progress'); setNotes(''); setError(null); setMode('pair')
+      setSingleType(initialSingleType); setNotes(''); setError(null); setMode(initialMode)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
   function requestClose() {
@@ -143,28 +158,31 @@ export function BeforeAfterUpload({ customerId, appointmentId, open, onClose, on
           </button>
         </div>
 
-        <div className="flex gap-2 mb-4">
-          <button
-            type="button"
-            onClick={() => setMode('pair')}
-            className={cn(
-              'flex-1 py-2 rounded-lg text-sm font-medium border',
-              mode === 'pair' ? 'border-pulse-900 bg-pulse-50 text-pulse-900 dark:bg-pulse-900/20 dark:text-pulse-300' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'
-            )}
-          >
-            Öncesi / Sonrası Çifti
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode('single')}
-            className={cn(
-              'flex-1 py-2 rounded-lg text-sm font-medium border',
-              mode === 'single' ? 'border-pulse-900 bg-pulse-50 text-pulse-900 dark:bg-pulse-900/20 dark:text-pulse-300' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'
-            )}
-          >
-            Tekil
-          </button>
-        </div>
+        {/* Mode toggle yalnızca pair'e izin varsa görünür */}
+        {pairAllowed && (
+          <div className="flex gap-2 mb-4">
+            <button
+              type="button"
+              onClick={() => setMode('pair')}
+              className={cn(
+                'flex-1 py-2 rounded-lg text-sm font-medium border',
+                mode === 'pair' ? 'border-pulse-900 bg-pulse-50 text-pulse-900 dark:bg-pulse-900/20 dark:text-pulse-300' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'
+              )}
+            >
+              Öncesi / Sonrası Çifti
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('single')}
+              className={cn(
+                'flex-1 py-2 rounded-lg text-sm font-medium border',
+                mode === 'single' ? 'border-pulse-900 bg-pulse-50 text-pulse-900 dark:bg-pulse-900/20 dark:text-pulse-300' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'
+              )}
+            >
+              Tekil
+            </button>
+          </div>
+        )}
 
         {mode === 'pair' ? (
           <div className="grid grid-cols-2 gap-3">
@@ -177,7 +195,9 @@ export function BeforeAfterUpload({ customerId, appointmentId, open, onClose, on
             <div>
               <label className="label">Tür</label>
               <div className="flex gap-2">
-                {(['before', 'after', 'progress'] as const).map(t => (
+                {(['before', 'after', 'progress'] as const)
+                  .filter(t => !allowedTypes || allowedTypes.includes(t))
+                  .map(t => (
                   <button
                     key={t}
                     type="button"

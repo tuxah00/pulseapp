@@ -2661,6 +2661,7 @@ export default function AppointmentsPage() {
                   <GalleryTab
                     customerId={selectedAppointment.customer_id}
                     appointmentId={selectedAppointment.id}
+                    appointmentStatus={selectedAppointment.status as 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show'}
                     filterByAppointment
                     canWrite={writePermissions?.appointments ?? permissions?.appointments ?? false}
                   />

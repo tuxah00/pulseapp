@@ -2,11 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
-import { Camera, Globe2, ImageOff, Loader2, Plus, Sparkles, Trash2 } from 'lucide-react'
+import { Camera, Clock, Globe2, ImageOff, Loader2, Plus, Sparkles, Trash2, XCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { BeforeAfterUpload } from './before-after-upload'
 import { PhotoLightbox, type LightboxPhoto } from '@/app/portal/[businessId]/dashboard/_components/photo-lightbox'
+
+type AppointmentStatusForGallery = 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show'
 
 interface Photo extends LightboxPhoto {
   pair_id?: string | null
@@ -27,6 +29,14 @@ interface GalleryTabProps {
   appointmentId?: string
   /** appointmentId varsa true: yalnızca o randevunun fotoğraflarını listele. */
   filterByAppointment?: boolean
+  /**
+   * Randevu durumu — verilirse foto yükleme bu kurallara göre kısıtlanır:
+   * - pending  → Foto bölümü gizli (onay bekliyor mesajı)
+   * - confirmed → Sadece "öncesi" + "süreç" yüklenebilir
+   * - completed → Hepsi (öncesi + sonrası + süreç)
+   * - cancelled / no_show → Foto bölümü gizli
+   */
+  appointmentStatus?: AppointmentStatusForGallery
 }
 
 function toast(type: 'success' | 'error', title: string, body?: string) {
@@ -36,7 +46,7 @@ function toast(type: 'success' | 'error', title: string, body?: string) {
 
 interface Pair { key: string; before?: Photo; after?: Photo }
 
-export function GalleryTab({ customerId, canWrite, appointmentId, filterByAppointment }: GalleryTabProps) {
+export function GalleryTab({ customerId, canWrite, appointmentId, filterByAppointment, appointmentStatus }: GalleryTabProps) {
   const { confirm } = useConfirm()
   const [photos, setPhotos] = useState<Photo[]>([])
   const [loading, setLoading] = useState(true)
@@ -44,6 +54,15 @@ export function GalleryTab({ customerId, canWrite, appointmentId, filterByAppoin
   const [active, setActive] = useState<LightboxPhoto | null>(null)
   const [busyIds, setBusyIds] = useState<Set<string>>(new Set())
   const [analyzingPair, setAnalyzingPair] = useState<string | null>(null)
+
+  // Status'e göre yükleme kısıtı
+  const uploadAllowedTypes: Array<'before' | 'after' | 'progress'> | undefined = (() => {
+    if (!appointmentStatus) return undefined // randevu bağlamı yok → hepsi açık
+    if (appointmentStatus === 'confirmed') return ['before', 'progress']
+    if (appointmentStatus === 'completed') return undefined // hepsi
+    return [] // pending / cancelled / no_show → yükleme yok
+  })()
+  const canUpload = canWrite && (uploadAllowedTypes === undefined || uploadAllowedTypes.length > 0)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -154,6 +173,38 @@ export function GalleryTab({ customerId, canWrite, appointmentId, filterByAppoin
     }
   }
 
+  // Pending: hiç gösterme — onay bekleniyor mesajı
+  if (appointmentStatus === 'pending') {
+    return (
+      <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-4 flex items-start gap-3">
+        <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+        <div className="text-sm">
+          <p className="font-medium text-amber-900 dark:text-amber-200">Onay bekleniyor</p>
+          <p className="text-xs text-amber-800 dark:text-amber-300 mt-0.5">
+            Randevu onaylandığında öncesi fotoğrafları yüklenebilecek.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  // Cancelled / no-show: hiç gösterme — bilgilendir
+  if (appointmentStatus === 'cancelled' || appointmentStatus === 'no_show') {
+    return (
+      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/40 p-4 flex items-start gap-3">
+        <XCircle className="h-5 w-5 text-gray-400 flex-shrink-0 mt-0.5" />
+        <div className="text-sm">
+          <p className="font-medium text-gray-700 dark:text-gray-300">
+            {appointmentStatus === 'cancelled' ? 'Randevu iptal edildi' : 'Randevu gerçekleşmedi'}
+          </p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            Bu randevuya fotoğraf eklenemiyor.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
@@ -161,8 +212,13 @@ export function GalleryTab({ customerId, canWrite, appointmentId, filterByAppoin
           <Camera className="h-4 w-4 text-pulse-900" />
           Galeri
           {!loading && <span className="text-xs text-gray-500 dark:text-gray-400">({photos.length})</span>}
+          {appointmentStatus === 'confirmed' && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-medium">
+              Sadece Öncesi
+            </span>
+          )}
         </div>
-        {canWrite && (
+        {canUpload && (
           <button onClick={() => setUploadOpen(true)} className="btn-primary text-xs py-1.5">
             <Plus className="h-3.5 w-3.5 mr-1" />Fotoğraf Ekle
           </button>
@@ -261,6 +317,7 @@ export function GalleryTab({ customerId, canWrite, appointmentId, filterByAppoin
       <BeforeAfterUpload
         customerId={customerId}
         appointmentId={appointmentId}
+        allowedTypes={uploadAllowedTypes}
         open={uploadOpen}
         onClose={() => setUploadOpen(false)}
         onUploaded={load}
