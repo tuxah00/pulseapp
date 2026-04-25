@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { Sparkles, Package, CalendarClock, CheckCircle2 } from 'lucide-react'
+import { Package, CalendarClock, CheckCircle2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   TreatmentProgressCard,
@@ -130,7 +130,6 @@ export default function PortalTreatmentsPage() {
               <SectionHeader
                 title="Aktif Tedavi Protokolleri"
                 subtitle="Seans planın ve ilerlemen burada görünür."
-                icon={Sparkles}
               />
               <div className="space-y-4">
                 {activeProtocols.map((p) => (
