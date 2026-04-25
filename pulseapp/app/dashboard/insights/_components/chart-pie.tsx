@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
 import { formatCurrency } from '@/lib/utils'
 
@@ -50,6 +51,7 @@ export default function ChartPie({
   colors = DEFAULT_COLORS,
   maxSlices = 6,
 }: Props) {
+  const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | undefined>(undefined)
   const total = data.reduce((s, d) => s + d.value, 0)
   if (!data.length || total <= 0) {
     return (
@@ -76,7 +78,14 @@ export default function ChartPie({
       : sorted
 
   return (
-    <div className="h-64 w-full">
+    <div
+      className="h-64 w-full"
+      onMouseMove={e => {
+        const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect()
+        setTooltipPos({ x: e.clientX - rect.left + 14, y: e.clientY - rect.top - 10 })
+      }}
+      onMouseLeave={() => setTooltipPos(undefined)}
+    >
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie
@@ -102,6 +111,7 @@ export default function ChartPie({
             ))}
           </Pie>
           <Tooltip
+            position={tooltipPos}
             content={({ active, payload }) => {
               if (!active || !payload || !payload.length) return null
               const row = payload[0].payload as PieDatum
