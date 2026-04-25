@@ -1,66 +1,29 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { AlertTriangle, TrendingUp, CheckCircle, RefreshCw, Lightbulb } from 'lucide-react'
-
-interface Insight {
-  type: 'warning' | 'opportunity' | 'success'
-  text: string
-}
-
-interface Action {
-  label: string
-  type: string
-}
+import { TrendingUp, RefreshCw, ArrowUp, ArrowDown } from 'lucide-react'
+import { formatCurrency } from '@/lib/utils'
 
 interface InsightsData {
   period: string
   stats: {
     appointments: number
     new_customers: number
-    no_shows: number
-    top_service: string | null
-    risk_customers: number
+    risk_entered: number
+    risk_exited: number
+    weekly_revenue: number
   }
-  insights: Insight[]
-  actions: Action[]
-}
-
-const INSIGHT_CONFIG = {
-  warning: {
-    icon: AlertTriangle,
-    bg: 'bg-amber-50 dark:bg-amber-900/20',
-    border: 'border-amber-200 dark:border-amber-800',
-    iconColor: 'text-amber-500',
-    textColor: 'text-amber-800 dark:text-amber-200',
-  },
-  opportunity: {
-    icon: Lightbulb,
-    bg: 'bg-blue-50 dark:bg-blue-900/20',
-    border: 'border-blue-200 dark:border-blue-800',
-    iconColor: 'text-blue-500',
-    textColor: 'text-blue-800 dark:text-blue-200',
-  },
-  success: {
-    icon: CheckCircle,
-    bg: 'bg-green-50 dark:bg-green-900/20',
-    border: 'border-green-200 dark:border-green-800',
-    iconColor: 'text-green-500',
-    textColor: 'text-green-800 dark:text-green-200',
-  },
 }
 
 export default function WeeklyInsights() {
   const [data, setData] = useState<InsightsData | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [open, setOpen] = useState(false)
 
-  const CACHE_KEY = 'pulse_weekly_insights'
-  const CACHE_TTL = 60 * 60 * 1000 // 1 saat
+  const CACHE_KEY = 'pulse_weekly_insights_v2'
+  const CACHE_TTL = 30 * 60 * 1000 // 30 dk
 
   async function load(force = false) {
-    // Cache kontrolü (zorla yenileme değilse)
     if (!force) {
       try {
         const cached = localStorage.getItem(CACHE_KEY)
@@ -68,7 +31,6 @@ export default function WeeklyInsights() {
           const { data: d, ts } = JSON.parse(cached)
           if (Date.now() - ts < CACHE_TTL) {
             setData(d)
-            setOpen(true)
             return
           }
         }
@@ -85,47 +47,27 @@ export default function WeeklyInsights() {
         localStorage.setItem(CACHE_KEY, JSON.stringify({ data: json, ts: Date.now() }))
       } catch { /* localStorage dolu olabilir */ }
       setData(json)
-      setOpen(true)
     } catch (err) {
       console.error('Weekly insights fetch error:', err)
-      setError('AI raporu şu an alınamıyor. Daha sonra tekrar deneyin.')
+      setError('Rapor alınamıyor.')
     } finally {
       setLoading(false)
     }
   }
 
-  // İlk yüklemede cache'ten veya API'den çek
   useEffect(() => { load() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!open && !loading && !data) {
-    return (
-      <button
-        onClick={() => load()}
-        className="card w-full text-left hover:border-blue-300 transition-colors border-dashed border-2"
-      >
-        <div className="flex items-center gap-3 py-2">
-          <div className="h-9 w-9 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
-            <TrendingUp className="h-5 w-5 text-blue-600" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-gray-900">Haftalık AI Raporu</p>
-            <p className="text-xs text-gray-400">İşletmenizin geçen haftasını analiz et</p>
-          </div>
-        </div>
-      </button>
-    )
-  }
-
   return (
-    <div className="card space-y-4">
+    <div className="card space-y-3">
+      {/* Başlık */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
-            <TrendingUp className="h-4 w-4 text-blue-600" />
+          <div className="h-7 w-7 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+            <TrendingUp className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-gray-900">Haftalık AI Raporu</p>
-            {data?.period && <p className="text-xs text-gray-400">{data.period}</p>}
+            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Haftalık Rapor</p>
+            {data?.period && <p className="text-[11px] text-gray-400">{data.period}</p>}
           </div>
         </div>
         <button
@@ -138,68 +80,63 @@ export default function WeeklyInsights() {
         </button>
       </div>
 
+      {/* Yükleniyor */}
       {loading && (
-        <div className="flex items-center gap-2 py-4 text-sm text-gray-400">
-          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600" />
-          AI raporu hazırlanıyor...
+        <div className="flex items-center gap-2 py-3 text-xs text-gray-400">
+          <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-blue-500" />
+          Hesaplanıyor...
         </div>
       )}
 
+      {/* Hata */}
       {error && !loading && (
         <p className="text-xs text-red-500 bg-red-50 dark:bg-red-900/20 p-2 rounded-lg">{error}</p>
       )}
 
+      {/* İstatistikler */}
       {data && !loading && (
-        <>
-          {/* Özet istatistikler */}
-          <div className="grid grid-cols-3 gap-2">
-            <div className="text-center p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-              <p className="text-lg font-bold text-gray-900">{data.stats.appointments}</p>
-              <p className="text-xs text-gray-400">Randevu</p>
-            </div>
-            <div className="text-center p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-              <p className="text-lg font-bold text-gray-900">+{data.stats.new_customers}</p>
-              <p className="text-xs text-gray-400">Yeni Müşteri</p>
-            </div>
-            <div className={`text-center p-2 rounded-lg ${data.stats.risk_customers > 0 ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-gray-50 dark:bg-gray-700/50'}`}>
-              <p className={`text-lg font-bold ${data.stats.risk_customers > 0 ? 'text-amber-600' : 'text-gray-900'}`}>
-                {data.stats.risk_customers}
-              </p>
-              <p className="text-xs text-gray-400">Risk Müşteri</p>
+        <div className="grid grid-cols-2 gap-2">
+          {/* Randevu */}
+          <div className="bg-gray-50 dark:bg-gray-800/60 rounded-xl p-3">
+            <p className="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Randevu</p>
+            <p className="text-xl font-bold tabular-nums text-gray-900 dark:text-gray-100">{data.stats.appointments}</p>
+          </div>
+
+          {/* Yeni Müşteri */}
+          <div className="bg-gray-50 dark:bg-gray-800/60 rounded-xl p-3">
+            <p className="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Yeni Müşteri</p>
+            <p className="text-xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400">+{data.stats.new_customers}</p>
+          </div>
+
+          {/* Riskli Müşteri */}
+          <div className={`rounded-xl p-3 ${
+            data.stats.risk_entered > 0
+              ? 'bg-amber-50 dark:bg-amber-900/20'
+              : 'bg-gray-50 dark:bg-gray-800/60'
+          }`}>
+            <p className="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1.5">Riskli Müşteri</p>
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-1">
+                <ArrowUp className="h-3 w-3 text-red-500 shrink-0" />
+                <span className="text-sm font-semibold tabular-nums text-red-600 dark:text-red-400">{data.stats.risk_entered}</span>
+                <span className="text-[10px] text-gray-400">riskli oldu</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <ArrowDown className="h-3 w-3 text-emerald-500 shrink-0" />
+                <span className="text-sm font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">{data.stats.risk_exited}</span>
+                <span className="text-[10px] text-gray-400">geri döndü</span>
+              </div>
             </div>
           </div>
 
-          {/* AI İçgörüler */}
-          {data.insights.length > 0 && (
-            <div className="space-y-2">
-              {data.insights.map((insight, i) => {
-                const cfg = INSIGHT_CONFIG[insight.type]
-                const Icon = cfg.icon
-                return (
-                  <div key={i} className={`flex gap-2.5 p-2.5 rounded-lg border ${cfg.bg} ${cfg.border}`}>
-                    <Icon className={`h-4 w-4 mt-0.5 shrink-0 ${cfg.iconColor}`} />
-                    <p className={`text-xs leading-relaxed ${cfg.textColor}`}>{insight.text}</p>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-
-          {/* Önerilenler aksiyonlar */}
-          {data.actions.length > 0 && (
-            <div className="space-y-1.5 border-t border-gray-100 dark:border-gray-700 pt-3">
-              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Önerilen Aksiyonlar</p>
-              {data.actions.map((action, i) => (
-                <button
-                  key={i}
-                  className="w-full text-left text-xs px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-                >
-                  {action.label}
-                </button>
-              ))}
-            </div>
-          )}
-        </>
+          {/* Haftalık Gelir */}
+          <div className="bg-gray-50 dark:bg-gray-800/60 rounded-xl p-3">
+            <p className="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Randevu Geliri</p>
+            <p className="text-base font-bold tabular-nums text-gray-900 dark:text-gray-100 leading-tight">
+              {formatCurrency(data.stats.weekly_revenue)}
+            </p>
+          </div>
+        </div>
       )}
     </div>
   )
