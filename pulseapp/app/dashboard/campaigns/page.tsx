@@ -370,7 +370,7 @@ export default function CampaignsPage() {
                       )}
                     </div>
 
-                    <div className="flex items-center gap-1 flex-shrink-0">
+                    <div className="flex items-center gap-1 flex-shrink-0 self-center">
                       {canSend && (
                         <button onClick={() => handleSendNow(c)}
                           className="text-xs px-2.5 py-1 rounded-lg bg-pulse-900 text-white hover:bg-pulse-800 flex items-center gap-1">
