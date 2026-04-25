@@ -2605,6 +2605,27 @@ export default function AppointmentsPage() {
                 </div>
               </div>
 
+              {/* Pending randevu için hızlı onay banner'ı */}
+              {selectedAppointment.status === 'pending' && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800 p-4 flex items-start gap-3">
+                  <div className="flex-shrink-0 mt-0.5">
+                    <BellRing className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">Onay Bekliyor</p>
+                    <p className="text-xs text-amber-800 dark:text-amber-300 mt-0.5">
+                      Müşteri online randevu aldı. Onaylamak için aşağıdaki butona basın.
+                    </p>
+                    <button
+                      onClick={async () => { await updateStatus(selectedAppointment.id, 'confirmed'); setSelectedAppointment(null) }}
+                      className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 text-sm font-medium transition-colors"
+                    >
+                      <CheckCircle className="h-4 w-4" /> Şimdi Onayla
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Bilgiler */}
               <div className="space-y-3">
                 <DetailRow label={customerLabel} value={selectedAppointment.customers?.name || 'İsimsiz'} />
