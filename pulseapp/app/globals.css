@@ -681,22 +681,28 @@
 .dark ::-webkit-scrollbar-thumb { background: #374151; }
 .dark ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
 
-/* ── Micro-interaction: focus-visible ring ──
+/* ── Micro-interaction: focus ring ──
    Yalnızca gerçek etkileşim elementlerinde ring göster (WCAG).
    Grafik/tablo/decorative div'lerde outline oluşmaz.
-   `.using-keyboard` flag'i app/layout.tsx'teki inline script tarafından
-   yalnızca Tab veya Arrow tuşu kullanıldığında set edilir; mousedown/touch
-   event'inde temizlenir. Bu sayede ESC sonrası veya fare tıklamasında
-   outline görünmez. */
-.using-keyboard button:focus-visible,
-.using-keyboard a:focus-visible,
-.using-keyboard input:focus-visible,
-.using-keyboard textarea:focus-visible,
-.using-keyboard select:focus-visible,
-.using-keyboard [role="button"]:focus-visible,
-.using-keyboard [role="link"]:focus-visible,
-.using-keyboard [role="menuitem"]:focus-visible,
-.using-keyboard [role="tab"]:focus-visible {
+
+   NOT: `:focus-visible` yerine `:focus` kullanılıyor. Sebep: Chrome'un
+   `:focus-visible` heuristic'i mousedown anında 1ms boyunca `true` olup
+   sonra `false`'a dönebiliyor — bu flicker'a yol açıyordu. `.using-keyboard`
+   flag'i (app/layout.tsx inline script) tamamen bizim JS kontrolümüzde;
+   yalnızca Tab/Arrow tuşlarında eklenir, mousedown/touch'da temizlenir.
+   Ayrıca browser'ın native `:focus-visible` outline'ı bastırılır. */
+*:focus-visible {
+  outline: none;
+}
+.using-keyboard button:focus:not(:active),
+.using-keyboard a:focus:not(:active),
+.using-keyboard input:focus,
+.using-keyboard textarea:focus,
+.using-keyboard select:focus,
+.using-keyboard [role="button"]:focus:not(:active),
+.using-keyboard [role="link"]:focus:not(:active),
+.using-keyboard [role="menuitem"]:focus:not(:active),
+.using-keyboard [role="tab"]:focus:not(:active) {
   outline: 2px solid var(--pulse-primary);
   outline-offset: 2px;
 }
