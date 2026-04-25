@@ -1,13 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
+import { useState, useEffect, useCallback } from 'react'
+import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import {
   ArrowLeft, Receipt, Download, Loader2, CheckCircle2, Clock, AlertTriangle, XCircle, CreditCard,
 } from 'lucide-react'
 import { cn, formatCurrency, formatDate, formatDateTime } from '@/lib/utils'
 import { printInvoicePDF } from '@/lib/utils/export'
+import PaymentIframeModal from '../../_components/payment-iframe-modal'
 
 interface InvoiceItem {
   service_name: string
@@ -103,27 +104,52 @@ export default function PortalInvoiceDetailPage() {
   const [business, setBusiness] = useState<Business | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [paymentOpen, setPaymentOpen] = useState(false)
+  const searchParams = useSearchParams()
+
+  const fetchData = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/portal/invoices/${invoiceId}`)
+      if (!res.ok) {
+        setError('Fatura bulunamadı')
+        return
+      }
+      const data = await res.json()
+      setInvoice(data.invoice)
+      setPayments(data.payments || [])
+      setBusiness(data.business)
+    } catch {
+      setError('Bağlantı hatası')
+    } finally {
+      setLoading(false)
+    }
+  }, [invoiceId])
 
   useEffect(() => {
-    async function fetchData() {
-      try {
-        const res = await fetch(`/api/portal/invoices/${invoiceId}`)
-        if (!res.ok) {
-          setError('Fatura bulunamadı')
-          return
-        }
-        const data = await res.json()
-        setInvoice(data.invoice)
-        setPayments(data.payments || [])
-        setBusiness(data.business)
-      } catch {
-        setError('Bağlantı hatası')
-      } finally {
-        setLoading(false)
-      }
-    }
     fetchData()
-  }, [invoiceId])
+  }, [fetchData])
+
+  // PayTR ödeme dönüşü query param'ı: ?payment=success|failed
+  useEffect(() => {
+    const status = searchParams?.get('payment')
+    if (status === 'success') {
+      window.dispatchEvent(new CustomEvent('pulse-toast', {
+        detail: {
+          type: 'payment',
+          title: 'Ödeme alındı',
+          body: 'Ödemeniz başarıyla tamamlandı. Faturanız güncelleniyor.',
+        },
+      }))
+    } else if (status === 'failed') {
+      window.dispatchEvent(new CustomEvent('pulse-toast', {
+        detail: {
+          type: 'error',
+          title: 'Ödeme başarısız',
+          body: 'Ödeme tamamlanamadı. Lütfen tekrar deneyin.',
+        },
+      }))
+    }
+  }, [searchParams])
 
   const handleDownload = () => {
     if (!invoice || !business) return
@@ -229,6 +255,22 @@ export default function PortalInvoiceDetailPage() {
             Son ödeme tarihi: <span className="font-medium text-gray-700 dark:text-gray-300">{formatDate(invoice.due_date)}</span>
           </div>
         )}
+
+        {remaining > 0 && invoice.status !== 'cancelled' && (
+          <div className="mt-5 pt-5 border-t border-gray-100 dark:border-gray-800">
+            <button
+              type="button"
+              onClick={() => setPaymentOpen(true)}
+              className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-pulse-900 text-white font-semibold hover:bg-pulse-800 transition-colors"
+            >
+              <CreditCard className="h-4 w-4" />
+              Şimdi Öde · {formatCurrency(remaining)}
+            </button>
+            <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400 text-center">
+              Güvenli PayTR altyapısıyla kart ile ödeme
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden">
@@ -313,6 +355,13 @@ export default function PortalInvoiceDetailPage() {
           <p className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{invoice.notes}</p>
         </div>
       )}
+
+      <PaymentIframeModal
+        invoiceId={invoiceId}
+        open={paymentOpen}
+        onClose={() => setPaymentOpen(false)}
+        onCompleted={fetchData}
+      />
     </div>
   )
 }
