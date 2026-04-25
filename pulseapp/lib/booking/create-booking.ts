@@ -246,7 +246,7 @@ export async function createBooking(
     business_id: businessId,
     type: 'appointment',
     title: 'Yeni Online Randevu',
-    message: `${name.trim()} — ${serviceName} — ${date} ${startTime}`,
+    body: `${name.trim()} — ${serviceName} — ${date} ${startTime}`,
     related_id: appt.id,
     related_type: 'appointment',
     is_read: false,

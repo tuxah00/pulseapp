@@ -124,18 +124,16 @@ export async function POST(req: NextRequest) {
       .eq('is_active', true)
 
     if (staffList && staffList.length > 0) {
-      const notifications = staffList.map(s => ({
+      // notifications tablosu business-level (per-staff değil) — tek satır yeterli
+      await supabase.from('notifications').insert({
         business_id: businessId,
-        staff_id: s.id,
-        user_id: s.user_id,
         type: 'consultation_request',
         title: 'Yeni Ön Konsültasyon Talebi',
         body: `${fullName} adlı aday değerlendirme bekliyor.`,
-        resource: 'consultation_request',
-        resource_id: request.id,
+        related_type: 'consultation_request',
+        related_id: request.id,
         is_read: false,
-      }))
-      await supabase.from('notifications').insert(notifications)
+      })
     }
   } catch { /* bildirim hatası kritik değil */ }
 
