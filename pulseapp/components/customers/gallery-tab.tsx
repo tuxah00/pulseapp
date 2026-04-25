@@ -23,6 +23,10 @@ interface AIAnalysis {
 interface GalleryTabProps {
   customerId: string
   canWrite: boolean
+  /** Opsiyonel — randevu detayından açılırsa bu randevuya bağlı fotoğraflar yüklenir/listelenir. */
+  appointmentId?: string
+  /** appointmentId varsa true: yalnızca o randevunun fotoğraflarını listele. */
+  filterByAppointment?: boolean
 }
 
 function toast(type: 'success' | 'error', title: string, body?: string) {
@@ -32,7 +36,7 @@ function toast(type: 'success' | 'error', title: string, body?: string) {
 
 interface Pair { key: string; before?: Photo; after?: Photo }
 
-export function GalleryTab({ customerId, canWrite }: GalleryTabProps) {
+export function GalleryTab({ customerId, canWrite, appointmentId, filterByAppointment }: GalleryTabProps) {
   const { confirm } = useConfirm()
   const [photos, setPhotos] = useState<Photo[]>([])
   const [loading, setLoading] = useState(true)
@@ -44,7 +48,9 @@ export function GalleryTab({ customerId, canWrite }: GalleryTabProps) {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/photos?customerId=${customerId}`)
+      const params = new URLSearchParams({ customerId })
+      if (filterByAppointment && appointmentId) params.set('appointmentId', appointmentId)
+      const res = await fetch(`/api/photos?${params.toString()}`)
       const json = await res.json()
       if (res.ok) setPhotos(json.photos || [])
       else toast('error', 'Fotoğraflar yüklenemedi', json.error)
@@ -53,7 +59,7 @@ export function GalleryTab({ customerId, canWrite }: GalleryTabProps) {
     } finally {
       setLoading(false)
     }
-  }, [customerId])
+  }, [customerId, appointmentId, filterByAppointment])
 
   useEffect(() => { load() }, [load])
 
@@ -254,6 +260,7 @@ export function GalleryTab({ customerId, canWrite }: GalleryTabProps) {
 
       <BeforeAfterUpload
         customerId={customerId}
+        appointmentId={appointmentId}
         open={uploadOpen}
         onClose={() => setUploadOpen(false)}
         onUploaded={load}

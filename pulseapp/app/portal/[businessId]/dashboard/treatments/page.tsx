@@ -107,7 +107,7 @@ export default function PortalTreatmentsPage() {
       ) : isEmpty ? (
         <div className="bg-gradient-to-br from-pulse-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800 rounded-2xl border border-pulse-100 dark:border-gray-800 p-10 text-center">
           <div className="h-14 w-14 rounded-full bg-white dark:bg-gray-900 shadow flex items-center justify-center mx-auto mb-3">
-            <Sparkles className="h-7 w-7 text-pulse-900 dark:text-pulse-300" />
+            <Package className="h-7 w-7 text-pulse-900 dark:text-pulse-300" />
           </div>
           <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
             Henüz aktif bir tedavi veya paketin yok.

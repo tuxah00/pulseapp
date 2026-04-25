@@ -33,6 +33,7 @@ import { formatTime, formatDate, getStatusColor, formatCurrency, cn, formatDateI
 import { STATUS_LABELS, type AppointmentStatus, type Service, type StaffMember, type WorkingHours, type BlockedSlot } from '@/types'
 import type { AppointmentRow } from '@/types/db'
 import { FollowUpQuickModal } from '@/components/dashboard/follow-up-quick-modal'
+import { GalleryTab } from '@/components/customers/gallery-tab'
 
 type AppointmentView = AppointmentRow & {
   customers: { name: string; phone: string | null } | null
@@ -57,7 +58,7 @@ const UNRESOLVED_BORDER = 'opacity-50'
 const UNRESOLVED_BORDER_ONLY = 'bg-red-50/40 dark:bg-red-950/10 border-red-100 dark:border-red-900/30'
 
 export default function AppointmentsPage() {
-  const { businessId, staffId: currentStaffId, staffName: currentStaffName, sector, loading: ctxLoading } = useBusinessContext()
+  const { businessId, staffId: currentStaffId, staffName: currentStaffName, sector, permissions, writePermissions, loading: ctxLoading } = useBusinessContext()
   const customerLabel = getCustomerLabelSingular(sector ?? undefined)
   const { confirm } = useConfirm()
   const [appointments, setAppointments] = useState<AppointmentView[]>([])
@@ -2653,6 +2654,18 @@ export default function AppointmentsPage() {
                   </div>
                 )}
               </div>
+
+              {/* Öncesi/Sonrası Fotoğraflar — yalnızca müşteriye bağlı randevularda */}
+              {selectedAppointment.customer_id && (
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                  <GalleryTab
+                    customerId={selectedAppointment.customer_id}
+                    appointmentId={selectedAppointment.id}
+                    filterByAppointment
+                    canWrite={writePermissions?.appointments ?? permissions?.appointments ?? false}
+                  />
+                </div>
+              )}
 
               {/* Aksiyonlar */}
               <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-2">
