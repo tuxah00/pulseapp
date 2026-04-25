@@ -683,16 +683,17 @@
 
 /* ── Micro-interaction: focus-visible ring ──
    Yalnızca gerçek etkileşim elementlerinde ring göster (WCAG).
-   Grafik/tablo/decorative div'lerde outline oluşmaz. */
-button:focus-visible,
-a:focus-visible,
+   Grafik/tablo/decorative div'lerde outline oluşmaz.
+   `:not(:active)` Chrome'un mousedown sırasındaki kısa flicker'ını engeller. */
+button:focus-visible:not(:active),
+a:focus-visible:not(:active),
 input:focus-visible,
 textarea:focus-visible,
 select:focus-visible,
-[role="button"]:focus-visible,
-[role="link"]:focus-visible,
-[role="menuitem"]:focus-visible,
-[role="tab"]:focus-visible {
+[role="button"]:focus-visible:not(:active),
+[role="link"]:focus-visible:not(:active),
+[role="menuitem"]:focus-visible:not(:active),
+[role="tab"]:focus-visible:not(:active) {
   outline: 2px solid var(--pulse-primary);
   outline-offset: 2px;
 }
