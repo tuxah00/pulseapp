@@ -27,7 +27,13 @@ export async function GET(request: NextRequest) {
   if (photoType) query = query.eq('photo_type', photoType)
 
   const { data, error } = await query
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    // Migration 075 henüz uygulanmadıysa appointment_id kolonu yok — boş liste dön
+    if (appointmentId && error.message?.includes('appointment_id')) {
+      return NextResponse.json({ photos: [] })
+    }
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
   return NextResponse.json({ photos: data })
 }
 
@@ -45,27 +51,34 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = createServerSupabaseClient()
-  const { data, error } = await supabase
-    .from('customer_photos')
-    .insert({
-      business_id: businessId,
-      customer_id: customerId,
-      protocol_id: protocolId || null,
-      session_id: sessionId || null,
-      appointment_id: appointmentId || null,
-      pair_id: pairId || null,
-      photo_url: photoUrl,
-      photo_type: photoType,
-      tags: tags || [],
-      notes: notes || null,
-      taken_at: takenAt || new Date().toISOString().split('T')[0],
-      uploaded_by: staffId,
-      is_public: typeof isPublic === 'boolean' ? isPublic : false,
-      ai_analysis: aiAnalysis ?? null,
-    })
-    .select()
-    .single()
 
+  const insertData: Record<string, unknown> = {
+    business_id: businessId,
+    customer_id: customerId,
+    protocol_id: protocolId || null,
+    session_id: sessionId || null,
+    pair_id: pairId || null,
+    photo_url: photoUrl,
+    photo_type: photoType,
+    tags: tags || [],
+    notes: notes || null,
+    taken_at: takenAt || new Date().toISOString().split('T')[0],
+    uploaded_by: staffId,
+    is_public: typeof isPublic === 'boolean' ? isPublic : false,
+    ai_analysis: aiAnalysis ?? null,
+  }
+  // Migration 075 uygulandıktan sonra appointment_id aktif olur
+  if (appointmentId) insertData.appointment_id = appointmentId
+
+  let result = await supabase.from('customer_photos').insert(insertData).select().single()
+
+  // Migration 075 henüz uygulanmadıysa appointment_id kolonu yok — olmadan yeniden dene
+  if (result.error?.message?.includes('appointment_id')) {
+    delete insertData.appointment_id
+    result = await supabase.from('customer_photos').insert(insertData).select().single()
+  }
+
+  const { data, error } = result
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ photo: data }, { status: 201 })
 }
