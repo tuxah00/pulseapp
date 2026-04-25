@@ -152,7 +152,7 @@
   .btn-primary {
     @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium text-white
            bg-pulse-900 hover:bg-pulse-800
-           transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-pulse-900 focus-visible:ring-offset-2
+           transition-all duration-200 focus:outline-none
            disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98];
     box-shadow: 0 1px 2px rgba(25, 61, 143, 0.2);
   }
@@ -164,7 +164,7 @@
     @apply inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5
            text-sm font-medium text-gray-700 transition-all duration-200
            hover:bg-gray-50 hover:border-gray-300
-           focus:outline-none focus-visible:ring-2 focus-visible:ring-pulse-900 focus-visible:ring-offset-2
+           focus:outline-none
            active:scale-[0.98] dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200
            dark:hover:bg-gray-700 dark:hover:border-gray-600;
   }
@@ -172,7 +172,7 @@
   .btn-danger {
     @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium text-white
            bg-red-500 hover:bg-red-600
-           transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2
+           transition-all duration-200 focus:outline-none
            disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98];
     box-shadow: 0 1px 2px rgba(239, 68, 68, 0.2);
   }
@@ -295,7 +295,7 @@
   .btn-success {
     @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium text-white
            bg-green-500 hover:bg-green-600
-           transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-2
+           transition-all duration-200 focus:outline-none
            disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98];
     box-shadow: 0 1px 2px rgba(34, 197, 94, 0.2);
   }
@@ -684,16 +684,19 @@
 /* ── Micro-interaction: focus-visible ring ──
    Yalnızca gerçek etkileşim elementlerinde ring göster (WCAG).
    Grafik/tablo/decorative div'lerde outline oluşmaz.
-   `:not(:active)` Chrome'un mousedown sırasındaki kısa flicker'ını engeller. */
-button:focus-visible:not(:active),
-a:focus-visible:not(:active),
-input:focus-visible,
-textarea:focus-visible,
-select:focus-visible,
-[role="button"]:focus-visible:not(:active),
-[role="link"]:focus-visible:not(:active),
-[role="menuitem"]:focus-visible:not(:active),
-[role="tab"]:focus-visible:not(:active) {
+   `.using-keyboard` flag'i app/layout.tsx'teki inline script tarafından
+   yalnızca Tab veya Arrow tuşu kullanıldığında set edilir; mousedown/touch
+   event'inde temizlenir. Bu sayede ESC sonrası veya fare tıklamasında
+   outline görünmez. */
+.using-keyboard button:focus-visible,
+.using-keyboard a:focus-visible,
+.using-keyboard input:focus-visible,
+.using-keyboard textarea:focus-visible,
+.using-keyboard select:focus-visible,
+.using-keyboard [role="button"]:focus-visible,
+.using-keyboard [role="link"]:focus-visible,
+.using-keyboard [role="menuitem"]:focus-visible,
+.using-keyboard [role="tab"]:focus-visible {
   outline: 2px solid var(--pulse-primary);
   outline-offset: 2px;
 }
