@@ -23,7 +23,10 @@ export async function getCustomerVisiblePhotos(businessId: string, customerId: s
   const admin = createAdminClient()
   return admin
     .from('customer_photos')
-    .select('id, photo_url, photo_type, tags, notes, taken_at, protocol_id, session_id, created_at')
+    .select(`
+      id, photo_url, photo_type, tags, notes, taken_at, protocol_id, session_id, created_at,
+      protocol:treatment_protocols(id, name, service:services(id, name))
+    `)
     .eq('business_id', businessId)
     .eq('customer_id', customerId)
     .eq('is_customer_visible', true)
