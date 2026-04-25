@@ -126,8 +126,16 @@ function DashboardShellInner({
         // Aksiyon butonu — Sonner'da resmi CTA mekanizması
         ...(route && {
           action: {
-            label: 'Aç',
+            label: 'Git →',
             onClick: () => router.push(route),
+          },
+          actionButtonStyle: {
+            backgroundColor: '#193d8f',
+            color: '#ffffff',
+            fontWeight: '600',
+            fontSize: '12px',
+            padding: '4px 10px',
+            borderRadius: '6px',
           },
         }),
       })
