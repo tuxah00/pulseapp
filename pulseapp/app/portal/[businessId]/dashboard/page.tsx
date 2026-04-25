@@ -5,8 +5,9 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import {
   CalendarCheck, Gift, Loader2, Plus, ChevronRight, Sparkles,
-  Users, Trophy, TrendingUp, AlertCircle, Clock, Megaphone, Folder,
+  Users, Trophy, TrendingUp, AlertCircle, Clock, PartyPopper, Folder,
 } from 'lucide-react'
+import confetti from 'canvas-confetti'
 import { cn } from '@/lib/utils'
 import { PortalHero } from './_components/portal-hero'
 import { SuggestionCard, type PortalSuggestion } from './_components/suggestion-card'
@@ -177,6 +178,36 @@ export default function PortalOverviewPage() {
     })()
   }, [reloadKey])
 
+  // Kampanya açılış konfetisi — bir session'da bir kez patlar
+  useEffect(() => {
+    if (loading) return
+    if (campaigns.length === 0) return
+    if (typeof window === 'undefined') return
+    if (sessionStorage.getItem('campaign-confetti-shown')) return
+
+    const timer = setTimeout(() => {
+      try {
+        const shapes = ['🎉', '🎊', '✨'].map((t) =>
+          confetti.shapeFromText({ text: t, scalar: 2 })
+        )
+        confetti({
+          particleCount: 60,
+          spread: 75,
+          startVelocity: 35,
+          origin: { y: 0.25 },
+          shapes,
+          scalar: 1.4,
+          ticks: 200,
+        })
+        sessionStorage.setItem('campaign-confetti-shown', '1')
+      } catch {
+        // Bazı tarayıcılarda emoji shape desteklenmeyebilir — sessizce atla
+      }
+    }, 350)
+
+    return () => clearTimeout(timer)
+  }, [loading, campaigns.length])
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
@@ -207,7 +238,7 @@ export default function PortalOverviewPage() {
       {/* Milestone — özel gün kutlamaları */}
       {milestones.length > 0 && <MilestoneBanner milestones={milestones} />}
 
-      {/* Kampanya Bannerları — hero'nun hemen altında, dikkat çekici ama abartısız */}
+      {/* Kampanya Bannerları — turuncu/sarı tema, konfeti dekorasyonu, açılışta emoji patlaması */}
       {campaigns.length > 0 && (
         <section className="space-y-3">
           {campaigns.map((c) => {
@@ -218,39 +249,44 @@ export default function PortalOverviewPage() {
             return (
               <div
                 key={c.id}
-                className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-pulse-900 via-pulse-800 to-indigo-700 p-5 shadow-lg shadow-pulse-900/15"
+                className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-500 via-orange-500 to-orange-600 p-5 shadow-lg shadow-orange-500/25"
               >
-                {/* Arka plan deseni */}
-                <div className="pointer-events-none absolute inset-0 opacity-[0.06]"
-                  style={{ backgroundImage: 'radial-gradient(circle at 80% 20%, white 1px, transparent 1px)', backgroundSize: '28px 28px' }}
+                {/* Arka plan: soluk büyük PartyPopper ikonu */}
+                <PartyPopper
+                  className="pointer-events-none absolute -bottom-6 -right-4 h-44 w-44 text-white/10 rotate-12"
+                  aria-hidden
+                />
+                {/* Arka plan: ince nokta deseni */}
+                <div className="pointer-events-none absolute inset-0 opacity-[0.08]"
+                  style={{ backgroundImage: 'radial-gradient(circle at 20% 80%, white 1px, transparent 1px)', backgroundSize: '24px 24px' }}
                 />
                 <div className="relative flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     {/* Etiket */}
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-white/20 text-white rounded-full px-2.5 py-0.5">
-                        <Megaphone className="h-3 w-3" /> Sana Özel
+                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-white/25 text-white rounded-full px-2.5 py-0.5 backdrop-blur-sm">
+                        <PartyPopper className="h-3 w-3" /> Sana Özel
                       </span>
                       {expiring && daysLeft !== null && (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-amber-400/30 text-amber-200 rounded-full px-2.5 py-0.5">
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-yellow-300/40 text-yellow-50 rounded-full px-2.5 py-0.5">
                           <Clock className="h-3 w-3" /> {daysLeft === 0 ? 'Son gün!' : `${daysLeft} gün kaldı`}
                         </span>
                       )}
                     </div>
-                    <h3 className="text-base font-bold text-white leading-tight">{c.name}</h3>
+                    <h3 className="text-base font-bold text-white leading-tight drop-shadow-sm">{c.name}</h3>
                     {c.description && (
-                      <p className="text-sm text-white/75 mt-1 line-clamp-2">{c.description}</p>
+                      <p className="text-sm text-white/85 mt-1 line-clamp-2">{c.description}</p>
                     )}
                     {/* Meta bilgiler */}
                     <div className="flex flex-wrap items-center gap-3 mt-2.5">
                       {c.expires_at && (
-                        <span className="text-xs text-white/60 flex items-center gap-1">
+                        <span className="text-xs text-white/75 flex items-center gap-1">
                           <Clock className="h-3 w-3" />
                           {new Date(c.expires_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })} tarihine kadar
                         </span>
                       )}
                       {c.max_recipients && (
-                        <span className="text-xs text-white/60 flex items-center gap-1">
+                        <span className="text-xs text-white/75 flex items-center gap-1">
                           <Users className="h-3 w-3" />
                           Sınırlı {c.max_recipients} kişiyle
                         </span>
@@ -260,7 +296,7 @@ export default function PortalOverviewPage() {
                   {/* CTA */}
                   <a
                     href={`/book/${businessId}`}
-                    className="flex-shrink-0 mt-1 inline-flex items-center gap-1.5 bg-white text-pulse-900 text-xs font-semibold px-3.5 py-2 rounded-xl hover:bg-white/90 transition-colors shadow-sm"
+                    className="flex-shrink-0 mt-1 inline-flex items-center gap-1.5 bg-white text-orange-600 text-xs font-semibold px-3.5 py-2 rounded-xl hover:bg-yellow-50 transition-colors shadow-md"
                   >
                     Randevu Al
                     <ChevronRight className="h-3.5 w-3.5" />
