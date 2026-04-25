@@ -13,6 +13,7 @@ import { SuggestionCard, type PortalSuggestion } from './_components/suggestion-
 import { MilestoneBanner } from './_components/milestone-banner'
 import { MetricTile } from './_components/metric-tile'
 import { SectionHeader } from './_components/section-header'
+import BookingModal from './_components/booking-modal'
 import { isBirthdayToday, daysSince } from '@/lib/portal/date-helpers'
 
 interface Customer {
@@ -104,6 +105,8 @@ export default function PortalOverviewPage() {
   const [unpaidInvoices, setUnpaidInvoices] = useState<UnpaidInvoice[]>([])
   const [activeProtocolProgress, setActiveProtocolProgress] = useState<{ name: string; percent: number } | null>(null)
   const [loading, setLoading] = useState(true)
+  const [bookingOpen, setBookingOpen] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
     (async () => {
@@ -165,7 +168,7 @@ export default function PortalOverviewPage() {
         setLoading(false)
       }
     })()
-  }, [])
+  }, [reloadKey])
 
   if (loading) {
     return (
@@ -297,9 +300,10 @@ export default function PortalOverviewPage() {
           </div>
         </section>
       ) : (
-        <Link
-          href={`/book/${businessId}`}
-          className="group flex items-center justify-between bg-gradient-to-br from-pulse-50 to-indigo-50 dark:from-pulse-900/20 dark:to-indigo-900/20 rounded-2xl border border-pulse-100 dark:border-pulse-900/40 p-5 hover:shadow-md transition-all"
+        <button
+          type="button"
+          onClick={() => setBookingOpen(true)}
+          className="group w-full flex items-center justify-between bg-gradient-to-br from-pulse-50 to-indigo-50 dark:from-pulse-900/20 dark:to-indigo-900/20 rounded-2xl border border-pulse-100 dark:border-pulse-900/40 p-5 hover:shadow-md transition-all text-left"
         >
           <div className="flex items-center gap-4">
             <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-pulse-900 to-indigo-600 text-white flex items-center justify-center shadow-md shadow-pulse-900/20">
@@ -311,7 +315,7 @@ export default function PortalOverviewPage() {
             </div>
           </div>
           <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-pulse-900 dark:group-hover:text-pulse-300 group-hover:translate-x-0.5 transition-all" />
-        </Link>
+        </button>
       )}
 
       {/* Akıllı Öneriler — kaydırılabilir şerit */}
@@ -427,6 +431,12 @@ export default function PortalOverviewPage() {
         </div>
       </section>
 
+      <BookingModal
+        businessId={businessId}
+        open={bookingOpen}
+        onClose={() => setBookingOpen(false)}
+        onCreated={() => setReloadKey((k) => k + 1)}
+      />
     </div>
   )
 }
