@@ -343,14 +343,14 @@ export default function ProtocolsPage() {
               <div
                 key={p.id}
                 onClick={() => setSelectedProtocol(p)}
-                className={`card p-4 cursor-pointer transition-all ${
+                className={`card p-4 cursor-pointer transition-all min-h-[140px] flex flex-col ${
                   isSelected ? 'ring-2 ring-pulse-900 shadow-md' : 'hover:shadow-sm'
                 }`}>
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-gray-900 dark:text-white truncate">{p.name}</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1 mt-0.5">
-                      <User className="h-3 w-3" /> {customer?.name || '—'}
+                    <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1 mt-0.5 truncate">
+                      <User className="h-3 w-3 flex-shrink-0" /> <span className="truncate">{customer?.name || '—'}</span>
                     </p>
                   </div>
                   <span className={statusBadge}>
@@ -358,28 +358,29 @@ export default function ProtocolsPage() {
                   </span>
                 </div>
 
-                {service && (
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mb-2 flex items-center gap-1">
-                    <Activity className="h-3 w-3" /> {service.name}
-                  </p>
-                )}
+                {/* Hizmet — her zaman slot, boşsa "—" */}
+                <p className="text-xs text-gray-400 dark:text-gray-500 mb-2 flex items-center gap-1 truncate">
+                  <Activity className="h-3 w-3 flex-shrink-0" /> <span className="truncate">{service?.name || '—'}</span>
+                </p>
 
-                {/* Progress bar */}
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full h-2">
-                    <div
-                      className="bg-pulse-900 h-2 rounded-full transition-all"
-                      style={{ width: `${progress}%` }}
-                    />
+                {/* Progress bar — alta yasla */}
+                <div className="mt-auto">
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full h-2">
+                      <div
+                        className="bg-pulse-900 h-2 rounded-full transition-all"
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                    <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                      {p.completed_sessions}/{p.total_sessions}
+                    </span>
                   </div>
-                  <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                    {p.completed_sessions}/{p.total_sessions}
-                  </span>
-                </div>
 
-                <div className="flex items-center justify-between mt-2">
-                  <span className="text-xs text-gray-400">{p.interval_days} gün aralık</span>
-                  <ChevronRight className="h-4 w-4 text-gray-300" />
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="text-xs text-gray-400">{p.interval_days} gün aralık</span>
+                    <ChevronRight className="h-4 w-4 text-gray-300" />
+                  </div>
                 </div>
               </div>
             )

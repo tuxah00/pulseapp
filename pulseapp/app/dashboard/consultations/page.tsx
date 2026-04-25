@@ -11,6 +11,7 @@ import {
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import EmptyState from '@/components/ui/empty-state'
 import { Portal } from '@/components/ui/portal'
+import { CustomSelect } from '@/components/ui/custom-select'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { requirePermission } from '@/lib/hooks/use-require-permission'
 import { cn } from '@/lib/utils'
@@ -258,45 +259,46 @@ export default function ConsultationsPage() {
         />
       ) : (
         <AnimatedList>
-          {items.map(item => (
-            <AnimatedItem key={item.id}>
-              <div
-                onClick={() => openPanel(item)}
-                className="flex items-start gap-4 p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-pulse-900/30 hover:shadow-sm transition-all cursor-pointer"
-              >
-                {/* Avatar */}
-                <div className="h-10 w-10 rounded-xl bg-pulse-900/10 dark:bg-pulse-900/20 flex items-center justify-center flex-shrink-0">
-                  <span className="text-sm font-bold text-pulse-900 dark:text-pulse-300">
-                    {item.full_name.charAt(0).toUpperCase()}
-                  </span>
-                </div>
+          {items.map(item => {
+            const photoCount = (item.photo_urls as { url: string }[])?.length || 0
+            return (
+              <AnimatedItem key={item.id}>
+                <div
+                  onClick={() => openPanel(item)}
+                  className="flex items-center gap-4 px-4 h-16 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-pulse-900/30 hover:shadow-sm transition-all cursor-pointer"
+                >
+                  {/* Avatar */}
+                  <div className="h-10 w-10 rounded-xl bg-pulse-900/10 dark:bg-pulse-900/20 flex items-center justify-center flex-shrink-0">
+                    <span className="text-sm font-bold text-pulse-900 dark:text-pulse-300">
+                      {item.full_name.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
 
-                {/* Bilgiler */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold text-sm text-gray-900 dark:text-white">{item.full_name}</span>
-                    <StatusBadge status={item.status} />
-                    {(item.photo_urls as { url: string }[])?.length > 0 && (
-                      <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-                        <ImageIcon className="h-3 w-3" />{(item.photo_urls as { url: string }[]).length}
+                  {/* Bilgiler — 2 satır sabit */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-sm text-gray-900 dark:text-white truncate">{item.full_name}</span>
+                      <StatusBadge status={item.status} />
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                      {item.service_label || item.phone}
+                    </p>
+                  </div>
+
+                  {/* Sağ blok — fotoğraf sayısı + tarih */}
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    {photoCount > 0 && (
+                      <span className="hidden sm:flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                        <ImageIcon className="h-3 w-3" />{photoCount}
                       </span>
                     )}
+                    <span className="hidden md:block text-xs text-gray-400">{formatDate(item.created_at)}</span>
+                    <ChevronRight className="h-4 w-4 text-gray-300 dark:text-gray-600" />
                   </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{item.phone}</p>
-                  {item.service_label && (
-                    <p className="text-xs text-pulse-900 dark:text-pulse-300 mt-0.5">{item.service_label}</p>
-                  )}
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1 line-clamp-2">{item.question}</p>
                 </div>
-
-                {/* Tarih */}
-                <div className="text-right flex-shrink-0">
-                  <p className="text-xs text-gray-400">{formatDate(item.created_at)}</p>
-                  <ChevronRight className="h-4 w-4 text-gray-300 dark:text-gray-600 ml-auto mt-2" />
-                </div>
-              </div>
-            </AnimatedItem>
-          ))}
+              </AnimatedItem>
+            )
+          })}
         </AnimatedList>
       )}
 
@@ -489,16 +491,18 @@ export default function ConsultationsPage() {
                         className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-pulse-900/30 focus:border-pulse-900 resize-none"
                       />
                       <div className="flex items-center gap-2">
-                        <select
-                          value={respondDecision}
-                          onChange={e => setRespondDecision(e.target.value)}
-                          className="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-pulse-900/30"
-                        >
-                          <option value="">— Status değişikliği yok —</option>
-                          <option value="suitable">Uygun olarak işaretle</option>
-                          <option value="not_suitable">Uygun değil olarak işaretle</option>
-                          <option value="needs_more_info">Ek bilgi istendi</option>
-                        </select>
+                        <div className="flex-1">
+                          <CustomSelect
+                            value={respondDecision}
+                            onChange={setRespondDecision}
+                            options={[
+                              { value: '', label: '— Status değişikliği yok —' },
+                              { value: 'suitable', label: 'Uygun olarak işaretle' },
+                              { value: 'not_suitable', label: 'Uygun değil olarak işaretle' },
+                              { value: 'needs_more_info', label: 'Ek bilgi istendi' },
+                            ]}
+                          />
+                        </div>
                         <button
                           onClick={handleRespond}
                           disabled={!respondMsg.trim() || actioning}
@@ -615,20 +619,26 @@ function ConvertModal({ request, businessId, onClose, onSuccess }: ConvertModalP
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Hizmet *</label>
-              <select value={serviceId} onChange={e => setServiceId(e.target.value)}
-                className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-pulse-900/30">
-                <option value="">Seçiniz...</option>
-                {services.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
+              <CustomSelect
+                value={serviceId}
+                onChange={setServiceId}
+                options={[
+                  { value: '', label: 'Seçiniz...' },
+                  ...services.map(s => ({ value: s.id, label: s.name })),
+                ]}
+              />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Personel</label>
-              <select value={staffId} onChange={e => setStaffId(e.target.value)}
-                className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-pulse-900/30">
-                <option value="">Atanmamış</option>
-                {staff.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
+              <CustomSelect
+                value={staffId}
+                onChange={setStaffId}
+                options={[
+                  { value: '', label: 'Atanmamış' },
+                  ...staff.map(s => ({ value: s.id, label: s.name })),
+                ]}
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-3">

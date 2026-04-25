@@ -327,41 +327,34 @@ export default function FollowUpsPage() {
             const sc = STATUS_CONFIG[f.status]
             const Icon = sc.icon
             return (
-              <AnimatedItem key={f.id} className="card p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors" onClick={() => openDetail(f)}>
-                <div className="flex items-center gap-4">
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 dark:text-white truncate">
-                      {f.customers?.name || 'Bilinmeyen'}
-                    </p>
-                    {f.customers?.phone && (
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{f.customers.phone}</p>
-                    )}
-                  </div>
-                  <div className="flex-shrink-0">
-                    <span className="badge-info">
-                      {FOLLOW_UP_TYPE_LABELS[f.type] || f.type}
-                    </span>
-                  </div>
-                  <div className="flex-shrink-0 text-right flex flex-col justify-center leading-tight">
-                    <p className="text-sm text-gray-700 dark:text-gray-300 flex items-center gap-1 justify-end">
-                      <Calendar className="h-3.5 w-3.5 text-gray-400" />
-                      {new Date(f.scheduled_for).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: 'numeric' })}
-                    </p>
-                    <p className="text-xs text-gray-400">
-                      {new Date(f.scheduled_for).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                  </div>
-                  <div className="flex-shrink-0">
-                    <span className={`${sc.badge} inline-flex items-center gap-1`}>
-                      <Icon className="h-3 w-3" /> {FOLLOW_UP_STATUS_LABELS[f.status]}
-                    </span>
-                  </div>
-                </div>
-                {f.message && (
-                  <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500 italic line-clamp-1">
-                    {f.message}
+              <AnimatedItem key={f.id} className="card flex items-center gap-4 px-4 h-16 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors" onClick={() => openDetail(f)}>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-gray-900 dark:text-white truncate">
+                    {f.customers?.name || 'Bilinmeyen'}
                   </p>
-                )}
+                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                    {f.customers?.phone || '—'}
+                  </p>
+                </div>
+                <div className="flex-shrink-0 hidden sm:block">
+                  <span className="badge-info">
+                    {FOLLOW_UP_TYPE_LABELS[f.type] || f.type}
+                  </span>
+                </div>
+                <div className="flex-shrink-0 text-right leading-tight hidden md:flex md:flex-col md:justify-center">
+                  <p className="text-sm text-gray-700 dark:text-gray-300 flex items-center gap-1 justify-end">
+                    <Calendar className="h-3.5 w-3.5 text-gray-400" />
+                    {new Date(f.scheduled_for).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    {new Date(f.scheduled_for).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                </div>
+                <div className="flex-shrink-0">
+                  <span className={`${sc.badge} inline-flex items-center gap-1`}>
+                    <Icon className="h-3 w-3" /> {FOLLOW_UP_STATUS_LABELS[f.status]}
+                  </span>
+                </div>
               </AnimatedItem>
             )
           })}
