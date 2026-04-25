@@ -102,10 +102,10 @@ export function PhotoLightbox({ photo, onClose, onOpenRecord }: PhotoLightboxPro
             <div className="mt-3 flex justify-end">
               <button
                 onClick={() => onOpenRecord(photo.record_id!)}
-                className="inline-flex items-center gap-1 text-xs font-medium text-pulse-900 dark:text-pulse-300 hover:underline"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-pulse-900 hover:bg-pulse-800 dark:bg-pulse-700 dark:hover:bg-pulse-600 text-white text-xs font-medium transition-colors"
               >
-                Kayıtta Aç
-                <ArrowRight className="h-3 w-3" />
+                Hasta Dosyasına Git
+                <ArrowRight className="h-3.5 w-3.5" />
               </button>
             </div>
           )}
