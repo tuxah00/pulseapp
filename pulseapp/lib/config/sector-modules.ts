@@ -205,6 +205,21 @@ export function getSidebarSections(
     item.key === 'customers' ? { ...item, name: customerLabel } : item
   ).filter(item => excludeAppointments.includes(sector) ? item.key !== 'appointments' : true)
 
+  // Ön Konsültasyon — medical_aesthetic ve dental_clinic için
+  const consultationsEnabled =
+    settings?.consultations_enabled != null
+      ? settings.consultations_enabled
+      : (sector === 'medical_aesthetic' || sector === 'dental_clinic')
+
+  if (consultationsEnabled) {
+    filteredBase.push({
+      key: 'consultations',
+      name: 'Ön Konsültasyon',
+      href: '/dashboard/consultations',
+      iconName: 'ClipboardCheck',
+    })
+  }
+
   return [
     { label: 'Ana', items: filteredBase },
     ...(sectorItems.length > 0 ? [{ label: 'Sektör', items: sectorItems }] : []),

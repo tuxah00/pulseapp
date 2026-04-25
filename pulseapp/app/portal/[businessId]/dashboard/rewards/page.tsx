@@ -3,10 +3,11 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { Gift, Coins, Trophy, Loader2, TrendingUp } from 'lucide-react'
+import { Gift, Coins, Trophy, TrendingUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { RewardCard, type PortalReward } from '../_components/reward-card'
 import { SectionHeader } from '../_components/section-header'
+import { SkeletonList } from '../_components/skeleton-card'
 
 interface Loyalty {
   points_balance: number
@@ -90,9 +91,7 @@ export default function PortalRewardsPage() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-        </div>
+        <SkeletonList count={3} lines={3} withAvatar />
       ) : (
         <>
           {/* Sadakat Tier Kartı */}

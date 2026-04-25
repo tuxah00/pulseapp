@@ -312,7 +312,7 @@ export async function POST(
           business_id: params.id,
           type: 'appointment',
           title: 'Yeni Online Randevu (Otomatik)',
-          message: `${name} — ${service.name} — ${dateStr} ${slot}`,
+          body: `${name} — ${service.name} — ${dateStr} ${slot}`,
           related_id: appointment.id,
           related_type: 'appointment',
           is_read: false,

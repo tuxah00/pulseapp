@@ -4,6 +4,7 @@ import { requirePortalSession } from '@/lib/portal/guards'
 import { validateBody } from '@/lib/api/validate'
 import { portalReviewCreateSchema } from '@/lib/schemas'
 import { createLogger } from '@/lib/utils/logger'
+import { logPortalAction, getClientIp } from '@/lib/portal/audit'
 
 const log = createLogger({ route: 'api/portal/reviews' })
 
@@ -149,6 +150,16 @@ export async function POST(request: NextRequest) {
       is_read: false,
     })
   } catch { /* bildirim hatası yorum kaydını etkilemez */ }
+
+  await logPortalAction({
+    customerId,
+    businessId,
+    action: 'review_submitted',
+    resource: 'review',
+    resourceId: created.id,
+    details: { rating, hasComment: !!comment, isAnonymous, appointmentId },
+    ipAddress: getClientIp(request),
+  })
 
   return NextResponse.json({ review: created })
 }

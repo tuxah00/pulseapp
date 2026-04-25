@@ -58,7 +58,9 @@ export function setPortalSessionCookies(
   const options = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax' as const,
+    // Portal API tek-origin (kendi domain'i). 'strict' ile CSRF yüzeyi kapatılır;
+    // dış sitelerden kaynaklanan isteklerde cookie gönderilmez.
+    sameSite: 'strict' as const,
     maxAge: PORTAL_SESSION_MAX_AGE,
     path: '/',
   }

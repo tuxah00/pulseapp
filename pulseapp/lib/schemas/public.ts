@@ -186,7 +186,7 @@ export type PortalAppointmentUpdateInput = z.infer<typeof portalAppointmentUpdat
 // /api/portal/profile — müşteri profil güncelleme (PATCH)
 // ---------------------------------------------------------------------------
 
-export const portalChannelValues = ['sms', 'whatsapp', 'auto'] as const
+export const portalChannelValues = ['sms', 'whatsapp', 'email', 'auto'] as const
 
 export const portalProfileUpdateSchema = z
   .object({
@@ -218,3 +218,42 @@ export const portalProfileUpdateSchema = z
   )
 
 export type PortalProfileUpdateInput = z.infer<typeof portalProfileUpdateSchema>
+
+// ---------------------------------------------------------------------------
+// /api/portal/appointments — POST: müşteri portal'dan online randevu oluşturur
+// ---------------------------------------------------------------------------
+
+export const portalAppointmentCreateSchema = z.object({
+  serviceId: UUID,
+  staffId: UUID.optional().nullable(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, MSG.INVALID_DATE_FORMAT),
+  startTime: z.string().regex(/^\d{2}:\d{2}$/, MSG.INVALID_TIME_FORMAT),
+  notes: z
+    .string()
+    .trim()
+    .max(500, MSG.TOO_LONG(500))
+    .optional()
+    .or(z.literal('').transform(() => undefined)),
+})
+
+export type PortalAppointmentCreateInput = z.infer<typeof portalAppointmentCreateSchema>
+
+// ---------------------------------------------------------------------------
+// /api/portal/messages — POST: müşteri inbound mesaj gönderir (web channel)
+// ---------------------------------------------------------------------------
+
+export const portalMessageCreateSchema = z.object({
+  content: z.string().trim().min(1, MSG.REQUIRED).max(2000, MSG.TOO_LONG(2000)),
+})
+
+export type PortalMessageCreateInput = z.infer<typeof portalMessageCreateSchema>
+
+// ---------------------------------------------------------------------------
+// /api/portal/consents/revoke — POST: müşteri rızasını iptal eder
+// ---------------------------------------------------------------------------
+
+export const portalConsentRevokeSchema = z.object({
+  consentId: UUID,
+})
+
+export type PortalConsentRevokeInput = z.infer<typeof portalConsentRevokeSchema>

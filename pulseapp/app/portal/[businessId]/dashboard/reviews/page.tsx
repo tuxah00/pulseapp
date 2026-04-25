@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import { ReviewFormModal, type PendingAppointmentForReview } from '../_components/review-form-modal'
 import { SectionHeader } from '../_components/section-header'
 import { FeedbackForm } from '../_components/feedback-form'
+import { SkeletonList } from '../_components/skeleton-card'
 
 interface PortalReview {
   id: string
@@ -269,9 +270,7 @@ export default function PortalReviewsPage() {
 
       {tab === 'my' && (
         loadingMy ? (
-          <div className="flex items-center justify-center py-16">
-            <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-          </div>
+          <SkeletonList count={3} lines={3} />
         ) : (
           <div className="space-y-8">
             {/* Yorum Bekleyen Randevular */}
@@ -398,9 +397,7 @@ export default function PortalReviewsPage() {
       {tab === 'business' && (
         // İşletme Yorumları tab
         loadingBiz ? (
-          <div className="flex items-center justify-center py-16">
-            <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-          </div>
+          <SkeletonList count={3} lines={3} />
         ) : businessReviews.length === 0 ? (
           <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-8 text-center">
             <Users className="h-10 w-10 text-gray-300 dark:text-gray-700 mx-auto mb-3" />

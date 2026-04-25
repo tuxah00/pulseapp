@@ -41,6 +41,7 @@ export async function getActiveProtocolsWithSessions(businessId: string, custome
       staff:staff_members!treatment_protocols_created_by_fkey(id, name),
       sessions:protocol_sessions(
         id, session_number, status, planned_date, completed_date, notes,
+        post_care_notes, post_care_files,
         appointment:appointments(id, appointment_date, start_time, end_time)
       )
     `)

@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'next/navigation'
-import Link from 'next/link'
 import {
   CalendarCheck, Clock, Loader2, X, Pencil, Ban, Plus, CalendarX2,
 } from 'lucide-react'
 import { cn, formatTime, formatDateISO } from '@/lib/utils'
 import { useConfirm } from '@/lib/hooks/use-confirm'
+import BookingModal from '../_components/booking-modal'
+import { SkeletonList } from '../_components/skeleton-card'
 
 interface ServiceJoin {
   id: string
@@ -65,6 +66,7 @@ export default function PortalAppointmentsPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<Appointment | null>(null)
+  const [bookingOpen, setBookingOpen] = useState(false)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -106,12 +108,13 @@ export default function PortalAppointmentsPage() {
     <div className="max-w-4xl mx-auto space-y-5">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Randevularım</h1>
-        <Link
-          href={`/book/${businessId}`}
+        <button
+          type="button"
+          onClick={() => setBookingOpen(true)}
           className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-pulse-900 text-white text-sm font-medium hover:bg-pulse-800 transition-colors"
         >
           <Plus className="h-4 w-4" /> Yeni
-        </Link>
+        </button>
       </div>
 
       <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl w-fit">
@@ -132,9 +135,7 @@ export default function PortalAppointmentsPage() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-        </div>
+        <SkeletonList count={3} lines={3} />
       ) : appointments.length === 0 ? (
         <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-10 text-center">
           <div className="h-14 w-14 rounded-full bg-pulse-900/5 dark:bg-pulse-900/20 flex items-center justify-center mx-auto mb-3">
@@ -144,12 +145,13 @@ export default function PortalAppointmentsPage() {
             {tab === 'upcoming' ? 'Yaklaşan randevunuz bulunmuyor.' : 'Geçmiş randevunuz bulunmuyor.'}
           </p>
           {tab === 'upcoming' && (
-            <Link
-              href={`/book/${businessId}`}
+            <button
+              type="button"
+              onClick={() => setBookingOpen(true)}
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-pulse-900 text-white text-sm font-medium hover:bg-pulse-800 transition-colors"
             >
               <Plus className="h-4 w-4" /> Randevu Al
-            </Link>
+            </button>
           )}
         </div>
       ) : (
@@ -217,6 +219,13 @@ export default function PortalAppointmentsPage() {
           onSaved={() => { setEditing(null); fetchData() }}
         />
       )}
+
+      <BookingModal
+        businessId={businessId}
+        open={bookingOpen}
+        onClose={() => setBookingOpen(false)}
+        onCreated={fetchData}
+      />
     </div>
   )
 }

@@ -4,6 +4,7 @@ import { requirePortalSession } from '@/lib/portal/guards'
 import { validateBody } from '@/lib/api/validate'
 import { portalFeedbackCreateSchema } from '@/lib/schemas'
 import { createLogger } from '@/lib/utils/logger'
+import { logPortalAction, getClientIp } from '@/lib/portal/audit'
 
 const log = createLogger({ route: 'api/portal/feedback' })
 
@@ -81,6 +82,16 @@ export async function POST(request: NextRequest) {
       is_read: false,
     })
   } catch { /* bildirim hatası feedback kaydını etkilemez */ }
+
+  await logPortalAction({
+    customerId,
+    businessId,
+    action: 'feedback_submitted',
+    resource: 'feedback',
+    resourceId: created.id,
+    details: { type, hasSubject: !!subject },
+    ipAddress: getClientIp(request),
+  })
 
   return NextResponse.json({ feedback: created })
 }

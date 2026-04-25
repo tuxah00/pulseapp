@@ -38,6 +38,13 @@ export const CORE_TUTORIAL_TOPICS: TutorialTopic[] = [
       'Müşteri kartına tıklayınca Bilgiler ve Geçmiş sekmeleri açılır. Yeni randevu oluşturmadan önce müşteri kaydı gereklidir.',
   },
   {
+    pageKey: 'consultations',
+    path: '/dashboard/consultations',
+    title: 'Ön Konsültasyon',
+    skeleton:
+      'Müşterilerin işletmeye gelmeden önce gönderdiği konsültasyon taleplerini buradan incele. Uygun bulduğunu tek tıkla randevuya dönüştür, ek bilgi gerekenlere mesaj at, uygun olmayanları arşivle.',
+  },
+  {
     pageKey: 'waitlist',
     path: '/dashboard/waitlist',
     title: 'Bekleme Listesi',
@@ -820,14 +827,12 @@ export function getTutorialTopicsForSector(sector: SectorType): TutorialTopic[] 
  */
 function buildGenericTopic(path: string): TutorialTopic {
   const clean = path.split('?')[0].split('#')[0]
-  const last = clean.replace(/\/$/, '').split('/').filter(Boolean).pop() || 'dashboard'
-  const title = last
-    .replace(/[-_]/g, ' ')
-    .replace(/\b\w/g, c => c.toUpperCase())
   return {
     pageKey: `generic:${clean}`,
     path: clean,
-    title,
+    // URL slug'ından başlık üretmek İngilizce sonuç verir — boş bırak,
+    // balon bileşeni bu durumda genel Türkçe metin gösterir.
+    title: '',
     skeleton:
       'Bu sayfa hakkında kısa bir açıklama ister misin? Asistan sayfanın ana amacını ve öne çıkan butonları özetler.',
   }

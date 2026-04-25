@@ -53,6 +53,7 @@ export interface StaffPermissions {
   assistant_actions?: boolean
   audit?: boolean
   kvkk?: boolean
+  consultations?: boolean
 }
 
 // Granüler "Düzenle" yetkileri — her modül için yazma iznini ayrı yönetir
@@ -64,7 +65,7 @@ export const WRITABLE_PERMISSION_KEYS: ReadonlyArray<keyof StaffPermissions> = [
   'messages', 'reservations', 'classes', 'memberships', 'packages',
   'records', 'portfolio', 'inventory', 'orders', 'invoices', 'pos',
   'protocols', 'rewards', 'campaigns', 'workflows', 'commissions', 'settings',
-  'waitlist', 'follow_ups', 'assistant_actions', 'kvkk',
+  'waitlist', 'follow_ups', 'assistant_actions', 'kvkk', 'consultations',
 ] as const
 
 // Sadece görüntüleme modülleri (UI'de edit sütunu "—" gösterir)
@@ -79,7 +80,7 @@ export const DEFAULT_PERMISSIONS: Record<StaffRole, StaffPermissions> = {
     settings: true, reservations: true, classes: true, memberships: true,
     packages: true, records: true, portfolio: true, inventory: true, orders: true, invoices: true, pos: true,
     protocols: true, rewards: true, campaigns: true, workflows: true, commissions: true,
-    waitlist: true, follow_ups: true, insights: true, assistant_actions: true, audit: true, kvkk: true,
+    waitlist: true, follow_ups: true, insights: true, assistant_actions: true, audit: true, kvkk: true, consultations: true,
   },
   manager: {
     dashboard: true, appointments: true, customers: true, analytics: true,
@@ -87,7 +88,7 @@ export const DEFAULT_PERMISSIONS: Record<StaffRole, StaffPermissions> = {
     settings: false, reservations: true, classes: true, memberships: true,
     packages: true, records: true, portfolio: true, inventory: true, orders: true, invoices: true, pos: true,
     protocols: true, rewards: true, campaigns: true, workflows: true, commissions: false,
-    waitlist: true, follow_ups: true, insights: true, assistant_actions: true, audit: false, kvkk: false,
+    waitlist: true, follow_ups: true, insights: true, assistant_actions: true, audit: false, kvkk: false, consultations: true,
   },
   // Personel varsayılanı: temel operasyon (randevu + müşteri) açık.
   // Diğer tüm modüller açıkça `false` — sidebar `permissions[key] !== false`
@@ -99,7 +100,7 @@ export const DEFAULT_PERMISSIONS: Record<StaffRole, StaffPermissions> = {
     packages: false, records: false, portfolio: false, inventory: false,
     orders: false, invoices: false, pos: false,
     protocols: false, rewards: false, campaigns: false, workflows: false, commissions: false,
-    waitlist: false, follow_ups: false, insights: false, assistant_actions: false, audit: false, kvkk: false,
+    waitlist: false, follow_ups: false, insights: false, assistant_actions: false, audit: false, kvkk: false, consultations: false,
   },
 }
 
@@ -509,6 +510,9 @@ export interface BusinessSettings {
   // Kurulum sihirbazı (medical_aesthetic + dental_clinic için)
   wizard_completed?: boolean
   wizard_step?: number
+  // Ön Konsültasyon (medical_aesthetic + dental_clinic)
+  consultations_enabled?: boolean      // sektör varsayılanını override eder (null = sektöre göre)
+  consultations_auto_ack?: boolean     // "Talebiniz alındı" otomatik mesajı (varsayılan: false)
   // Randevudan 24 saat sonra "Nasıl hissediyorsunuz?" takip mesajı
   follow_up_24h_enabled?: boolean
   // Doğum günü SMS açık/kapalı bayrağı (birthday_sms_enabled zaten yukarıda mevcut)
@@ -1493,6 +1497,52 @@ export interface AIBlockChart {
   title?: string
   labels: string[]
   series: { name: string; data: number[] }[]
+}
+
+// ── Ön Konsültasyon ──
+
+export type ConsultationStatus =
+  | 'pending'
+  | 'reviewing'
+  | 'suitable'
+  | 'not_suitable'
+  | 'needs_more_info'
+  | 'converted'
+  | 'archived'
+
+export interface ConsultationPhotoUrl {
+  url: string
+  path: string
+}
+
+export interface ConsultationRequest {
+  id: string
+  business_id: string
+  customer_id: string
+  full_name: string
+  phone: string
+  email: string | null
+  age: number | null
+  service_id: string | null
+  service_label: string | null
+  question: string
+  health_notes: string | null
+  photo_urls: ConsultationPhotoUrl[]
+  status: ConsultationStatus
+  reviewed_by_staff_id: string | null
+  reviewed_by_staff_name: string | null
+  reviewed_at: string | null
+  decision_reason: string | null
+  converted_appointment_id: string | null
+  converted_at: string | null
+  consent_kvkk: boolean
+  consent_health_data: boolean
+  consent_marketing: boolean
+  created_at: string
+  updated_at: string
+  // join alanları
+  service?: { name: string } | null
+  customer?: { name: string; phone: string; segment: CustomerSegment } | null
 }
 
 export type AIBlock = AIBlockTable | AIBlockStatCards | AIBlockChart

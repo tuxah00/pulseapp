@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ChevronRight, Home, Bell, Sun, Moon, Command, Inbox, Lightbulb } from 'lucide-react'
+import { ChevronRight, Home, Bell, Sun, Moon, Command, Inbox, Lightbulb, ExternalLink } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
@@ -50,6 +50,7 @@ const ROUTE_LABELS: Record<string, string> = {
   kvkk: 'KVKK',
   'follow-ups': 'Takipler',
   waitlist: 'Bekleme Listesi',
+  consultations: 'Ön Konsültasyon',
   campaigns: 'Kampanyalar',
   'assistant-actions': 'Asistan Aksiyonları',
   insights: 'İş Zekası',
@@ -340,6 +341,21 @@ export default function TopBar({ businessName, userName, onOpenCommand }: TopBar
               )}
             </AnimatePresence>
           </Link>
+        )}
+
+        {/* Müşteri Portalı önizleme */}
+        {businessId && (
+          <a
+            href={`/portal/${businessId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="relative h-9 w-9 flex items-center justify-center rounded-lg
+                       text-gray-500 dark:text-gray-400 hover:bg-pulse-900/10 dark:hover:bg-pulse-900/20
+                       hover:text-pulse-900 dark:hover:text-pulse-300 transition-all duration-150"
+            title="Müşteri Portalı"
+          >
+            <ExternalLink className="h-4 w-4" />
+          </a>
         )}
 
         {/* Notification bell */}

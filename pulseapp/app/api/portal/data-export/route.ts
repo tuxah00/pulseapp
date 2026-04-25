@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requirePortalSession } from '@/lib/portal/guards'
+import { logPortalAction, getClientIp } from '@/lib/portal/audit'
 
 /**
  * KVKK veri taşınabilirliği — müşterinin tüm verilerini JSON olarak döndürür.
@@ -65,6 +66,15 @@ export async function GET(request: NextRequest) {
   }
 
   const filename = `pulseapp-veri-${businessId.slice(0, 8)}-${new Date().toISOString().split('T')[0]}.json`
+
+  await logPortalAction({
+    customerId,
+    businessId,
+    action: 'data_export_download',
+    resource: 'customer',
+    resourceId: customerId,
+    ipAddress: getClientIp(request),
+  })
 
   return new NextResponse(JSON.stringify(exportData, null, 2), {
     status: 200,

@@ -1,10 +1,18 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { User, Mail, Cake, MessageCircle, Download, Trash2, Loader2, CheckCircle2, AlertCircle, LogOut } from 'lucide-react'
+import { User, Mail, Cake, MessageCircle, Download, Trash2, Loader2, CheckCircle2, AlertCircle, LogOut, ShieldAlert, ShieldCheck, UserPlus } from 'lucide-react'
 import { cn, formatDateISO } from '@/lib/utils'
 import { SectionHeader } from '../_components/section-header'
 import { DataDeletionModal } from '../_components/data-deletion-modal'
+import AllergyList from '../_components/allergy-list'
+import ConsentHistory from '../_components/consent-history'
+import ReferralCard from '../_components/referral-card'
+
+/** Alerji takibinin kritik olduğu sektörler — alerji bölümü yalnızca bunlar için görünür. */
+const ALLERGY_AWARE_SECTORS = new Set(['medical_aesthetic', 'dental_clinic'])
+
+type PortalChannel = 'sms' | 'whatsapp' | 'email' | 'auto'
 
 interface Profile {
   id: string
@@ -12,7 +20,7 @@ interface Profile {
   phone: string
   email: string | null
   birthday: string | null
-  preferred_channel: 'sms' | 'whatsapp' | 'auto' | null
+  preferred_channel: PortalChannel | null
   segment: string
 }
 
@@ -24,10 +32,11 @@ interface DeletionRequest {
   requested_at: string
 }
 
-const CHANNEL_OPTIONS: Array<{ value: 'sms' | 'whatsapp' | 'auto'; label: string; subtitle: string }> = [
+const CHANNEL_OPTIONS: Array<{ value: PortalChannel; label: string; subtitle: string }> = [
   { value: 'auto', label: 'Otomatik', subtitle: 'Sistem uygun kanalı seçer' },
   { value: 'sms', label: 'SMS', subtitle: 'Klasik kısa mesaj' },
-  { value: 'whatsapp', label: 'WhatsApp', subtitle: 'WhatsApp mesajı olarak' },
+  { value: 'whatsapp', label: 'WhatsApp', subtitle: 'WhatsApp mesajı' },
+  { value: 'email', label: 'E-posta', subtitle: 'Adresinize e-posta' },
 ]
 
 function formatDate(iso: string | null): string {
@@ -41,9 +50,12 @@ function formatDate(iso: string | null): string {
 
 export default function PortalSettingsPage() {
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [sector, setSector] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saveMsg, setSaveMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
+  // Alan-başı inline hata mesajları (client-side validation)
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<'name' | 'email' | 'birthday', string>>>({})
   const [deletionRequest, setDeletionRequest] = useState<DeletionRequest | null>(null)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [exporting, setExporting] = useState(false)
@@ -53,7 +65,7 @@ export default function PortalSettingsPage() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [birthday, setBirthday] = useState('')
-  const [channel, setChannel] = useState<'sms' | 'whatsapp' | 'auto'>('auto')
+  const [channel, setChannel] = useState<PortalChannel>('auto')
 
   async function loadProfile() {
     const res = await fetch('/api/portal/profile')
@@ -75,14 +87,55 @@ export default function PortalSettingsPage() {
     }
   }
 
+  async function loadSector() {
+    try {
+      const res = await fetch('/api/portal/me')
+      if (res.ok) {
+        const data = await res.json()
+        setSector(data.business?.sector || null)
+      }
+    } catch { /* sessiz */ }
+  }
+
   useEffect(() => {
     (async () => {
-      await Promise.all([loadProfile(), loadDeletion()])
+      await Promise.all([loadProfile(), loadDeletion(), loadSector()])
       setLoading(false)
     })()
   }, [])
 
+  function validate(): boolean {
+    const errors: Partial<Record<'name' | 'email' | 'birthday', string>> = {}
+    const trimmedName = name.trim()
+    if (trimmedName.length < 2) {
+      errors.name = 'Ad en az 2 karakter olmalı'
+    } else if (trimmedName.length > 200) {
+      errors.name = 'Ad çok uzun (en fazla 200 karakter)'
+    }
+    const trimmedEmail = email.trim()
+    if (trimmedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      errors.email = 'Geçerli bir e-posta adresi girin'
+    }
+    if (channel === 'email' && !trimmedEmail) {
+      errors.email = 'E-posta tercih ettiğin için adres zorunlu'
+    }
+    if (birthday) {
+      const d = new Date(birthday)
+      const now = new Date()
+      if (isNaN(d.getTime())) {
+        errors.birthday = 'Geçerli bir tarih girin'
+      } else if (d > now) {
+        errors.birthday = 'Doğum tarihi gelecekte olamaz'
+      } else if (d.getFullYear() < 1900) {
+        errors.birthday = 'Yıl 1900\'den eski olamaz'
+      }
+    }
+    setFieldErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
   async function handleSave() {
+    if (!validate()) return
     setSaving(true)
     setSaveMsg(null)
     try {
@@ -186,9 +239,20 @@ export default function PortalSettingsPage() {
             <input
               type="text"
               value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-pulse-900/30 focus:border-pulse-900"
+              onChange={(e) => {
+                setName(e.target.value)
+                if (fieldErrors.name) setFieldErrors((p) => ({ ...p, name: undefined }))
+              }}
+              className={cn(
+                'w-full px-3 py-2 rounded-lg border bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2',
+                fieldErrors.name
+                  ? 'border-red-300 dark:border-red-800 focus:ring-red-500/30 focus:border-red-500'
+                  : 'border-gray-200 dark:border-gray-700 focus:ring-pulse-900/30 focus:border-pulse-900'
+              )}
             />
+            {fieldErrors.name && (
+              <p className="mt-1 text-xs text-red-600 dark:text-red-400">{fieldErrors.name}</p>
+            )}
           </div>
 
           <div className="grid sm:grid-cols-2 gap-4">
@@ -199,10 +263,21 @@ export default function PortalSettingsPage() {
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value)
+                  if (fieldErrors.email) setFieldErrors((p) => ({ ...p, email: undefined }))
+                }}
                 placeholder="ornek@posta.com"
-                className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-pulse-900/30 focus:border-pulse-900"
+                className={cn(
+                  'w-full px-3 py-2 rounded-lg border bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2',
+                  fieldErrors.email
+                    ? 'border-red-300 dark:border-red-800 focus:ring-red-500/30 focus:border-red-500'
+                    : 'border-gray-200 dark:border-gray-700 focus:ring-pulse-900/30 focus:border-pulse-900'
+                )}
               />
+              {fieldErrors.email && (
+                <p className="mt-1 text-xs text-red-600 dark:text-red-400">{fieldErrors.email}</p>
+              )}
             </div>
 
             <div>
@@ -212,9 +287,22 @@ export default function PortalSettingsPage() {
               <input
                 type="date"
                 value={birthday}
-                onChange={(e) => setBirthday(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-pulse-900/30 focus:border-pulse-900"
+                max={formatDateISO(new Date())}
+                min="1900-01-01"
+                onChange={(e) => {
+                  setBirthday(e.target.value)
+                  if (fieldErrors.birthday) setFieldErrors((p) => ({ ...p, birthday: undefined }))
+                }}
+                className={cn(
+                  'w-full px-3 py-2 rounded-lg border bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2',
+                  fieldErrors.birthday
+                    ? 'border-red-300 dark:border-red-800 focus:ring-red-500/30 focus:border-red-500'
+                    : 'border-gray-200 dark:border-gray-700 focus:ring-pulse-900/30 focus:border-pulse-900'
+                )}
               />
+              {fieldErrors.birthday && (
+                <p className="mt-1 text-xs text-red-600 dark:text-red-400">{fieldErrors.birthday}</p>
+              )}
             </div>
           </div>
 
@@ -256,6 +344,20 @@ export default function PortalSettingsPage() {
         </div>
       </section>
 
+      {/* Alerjiler — yalnızca alerji takibinin kritik olduğu sektörlerde */}
+      {sector && ALLERGY_AWARE_SECTORS.has(sector) && (
+        <section>
+          <SectionHeader
+            title="Alerjilerim"
+            subtitle="Sağlık güvenliğin için salonun seninle ilgili kayıtlı alerjileri."
+            icon={ShieldAlert}
+          />
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-5">
+            <AllergyList />
+          </div>
+        </section>
+      )}
+
       {/* İletişim Tercihleri */}
       <section>
         <SectionHeader
@@ -264,7 +366,7 @@ export default function PortalSettingsPage() {
           icon={MessageCircle}
         />
         <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-5">
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {CHANNEL_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
@@ -285,14 +387,49 @@ export default function PortalSettingsPage() {
               </button>
             ))}
           </div>
+
+          {channel === 'email' && (
+            <div className="mt-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-3 py-2.5 text-xs text-amber-800 dark:text-amber-300">
+              {!email.trim() ? (
+                <span><strong>Uyarı:</strong> E-posta tercih ettin, ama profilinde kayıtlı bir e-posta adresi yok. Lütfen önce yukarıdan e-posta ekle.</span>
+              ) : (
+                <span>Salon e-posta sağlayıcı kurmadıysa SMS/WhatsApp ile iletişim devam eder.</span>
+              )}
+            </div>
+          )}
+
           <button
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || (channel === 'email' && !email.trim())}
             className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-pulse-900 hover:bg-pulse-800 text-white text-sm font-medium transition-colors disabled:opacity-50"
           >
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             Tercihi Kaydet
           </button>
+        </div>
+      </section>
+
+      {/* Verdiğim Onaylar */}
+      <section>
+        <SectionHeader
+          title="Verdiğim Onaylar"
+          subtitle="KVKK ve pazarlama izinlerin — istediğin zaman iptal edebilirsin."
+          icon={ShieldCheck}
+        />
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-5">
+          <ConsentHistory />
+        </div>
+      </section>
+
+      {/* Arkadaşını Davet Et */}
+      <section>
+        <SectionHeader
+          title="Arkadaşını Davet Et"
+          subtitle="Benzersiz linkin ile arkadaşların salona randevu alsın."
+          icon={UserPlus}
+        />
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-5">
+          <ReferralCard />
         </div>
       </section>
 

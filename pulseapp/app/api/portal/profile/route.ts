@@ -4,6 +4,7 @@ import { requirePortalSession } from '@/lib/portal/guards'
 import { validateBody } from '@/lib/api/validate'
 import { portalProfileUpdateSchema } from '@/lib/schemas'
 import { createLogger } from '@/lib/utils/logger'
+import { logPortalAction, getClientIp } from '@/lib/portal/audit'
 
 const log = createLogger({ route: 'api/portal/profile' })
 
@@ -51,6 +52,16 @@ export async function PATCH(request: NextRequest) {
     log.error({ err: error }, '[portal/profile] update error')
     return NextResponse.json({ error: 'Profil güncellenemedi' }, { status: 500 })
   }
+
+  await logPortalAction({
+    customerId,
+    businessId,
+    action: 'profile_update',
+    resource: 'customer',
+    resourceId: customerId,
+    details: { fields: Object.keys(updates) },
+    ipAddress: getClientIp(request),
+  })
 
   return NextResponse.json({ profile: data })
 }

@@ -13,6 +13,7 @@ import { SuggestionCard, type PortalSuggestion } from './_components/suggestion-
 import { MilestoneBanner } from './_components/milestone-banner'
 import { MetricTile } from './_components/metric-tile'
 import { SectionHeader } from './_components/section-header'
+import BookingModal from './_components/booking-modal'
 import { isBirthdayToday, daysSince } from '@/lib/portal/date-helpers'
 
 interface Customer {
@@ -103,35 +104,44 @@ export default function PortalOverviewPage() {
   const [recentFiles, setRecentFiles] = useState<Array<{ id: string; title: string; type: string; created_at: string }>>([])
   const [unpaidInvoices, setUnpaidInvoices] = useState<UnpaidInvoice[]>([])
   const [activeProtocolProgress, setActiveProtocolProgress] = useState<{ name: string; percent: number } | null>(null)
+  const [rewardsEnabled, setRewardsEnabled] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [bookingOpen, setBookingOpen] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
     (async () => {
       try {
-        const [meRes, sugRes, rewRes, campRes, invRes, trtRes, recRes] = await Promise.all([
-          fetch('/api/portal/me'),
+        // 1. Önce me'yi çek — işletmenin feature flag'lerini al
+        const meRes = await fetch('/api/portal/me')
+        let rewardsOn = false
+        if (meRes.ok) {
+          const data = await meRes.json()
+          setCustomer(data.customer)
+          setUpcoming(data.upcomingAppointments || [])
+          setLoyaltyPoints(data.loyaltyPoints || 0)
+          rewardsOn = data.business?.rewardsEnabled === true
+          setRewardsEnabled(rewardsOn)
+        }
+
+        // 2. Geri kalanları paralel çek; ödüller kapalıysa rewards isteği YAPILMAZ
+        const [sugRes, rewRes, campRes, invRes, trtRes, recRes] = await Promise.all([
           fetch('/api/portal/suggestions'),
-          fetch('/api/portal/rewards'),
+          rewardsOn ? fetch('/api/portal/rewards') : Promise.resolve(null),
           fetch('/api/portal/campaigns'),
           fetch('/api/portal/invoices'),
           fetch('/api/portal/treatments'),
           fetch('/api/portal/records'),
         ])
 
-        if (meRes.ok) {
-          const data = await meRes.json()
-          setCustomer(data.customer)
-          setUpcoming(data.upcomingAppointments || [])
-          setLoyaltyPoints(data.loyaltyPoints || 0)
-        }
         if (sugRes.ok) {
           const data = await sugRes.json()
           setSuggestions(data.suggestions || [])
           setMilestones(data.milestones || [])
         }
-        if (rewRes.ok) {
+        if (rewRes && rewRes.ok) {
           const data = await rewRes.json()
-          setLoyaltyTier(data.loyalty?.tier ?? null)
+          if (!data.feature_disabled) setLoyaltyTier(data.loyalty?.tier ?? null)
         }
         if (campRes.ok) {
           const data = await campRes.json()
@@ -165,7 +175,7 @@ export default function PortalOverviewPage() {
         setLoading(false)
       }
     })()
-  }, [])
+  }, [reloadKey])
 
   if (loading) {
     return (
@@ -297,9 +307,10 @@ export default function PortalOverviewPage() {
           </div>
         </section>
       ) : (
-        <Link
-          href={`/book/${businessId}`}
-          className="group flex items-center justify-between bg-gradient-to-br from-pulse-50 to-indigo-50 dark:from-pulse-900/20 dark:to-indigo-900/20 rounded-2xl border border-pulse-100 dark:border-pulse-900/40 p-5 hover:shadow-md transition-all"
+        <button
+          type="button"
+          onClick={() => setBookingOpen(true)}
+          className="group w-full flex items-center justify-between bg-gradient-to-br from-pulse-50 to-indigo-50 dark:from-pulse-900/20 dark:to-indigo-900/20 rounded-2xl border border-pulse-100 dark:border-pulse-900/40 p-5 hover:shadow-md transition-all text-left"
         >
           <div className="flex items-center gap-4">
             <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-pulse-900 to-indigo-600 text-white flex items-center justify-center shadow-md shadow-pulse-900/20">
@@ -311,7 +322,7 @@ export default function PortalOverviewPage() {
             </div>
           </div>
           <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-pulse-900 dark:group-hover:text-pulse-300 group-hover:translate-x-0.5 transition-all" />
-        </Link>
+        </button>
       )}
 
       {/* Akıllı Öneriler — kaydırılabilir şerit */}
@@ -393,7 +404,10 @@ export default function PortalOverviewPage() {
 
       {/* Metrik Tile'lar */}
       <section>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <div className={cn(
+          'grid gap-3',
+          activeProtocolProgress || rewardsEnabled ? 'grid-cols-2 sm:grid-cols-3' : 'grid-cols-2'
+        )}>
           <MetricTile
             icon={Users}
             label="Toplam Ziyaret"
@@ -415,7 +429,7 @@ export default function PortalOverviewPage() {
               subtitle={activeProtocolProgress.name}
               accent="emerald"
             />
-          ) : (
+          ) : rewardsEnabled ? (
             <MetricTile
               icon={Gift}
               label="Ödüllerin"
@@ -423,10 +437,16 @@ export default function PortalOverviewPage() {
               subtitle={loyaltyPoints > 0 ? 'Görmek için tıkla' : 'Randevu al, kazan'}
               accent="pulse"
             />
-          )}
+          ) : null}
         </div>
       </section>
 
+      <BookingModal
+        businessId={businessId}
+        open={bookingOpen}
+        onClose={() => setBookingOpen(false)}
+        onCreated={() => setReloadKey((k) => k + 1)}
+      />
     </div>
   )
 }

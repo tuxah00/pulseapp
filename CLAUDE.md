@@ -205,6 +205,7 @@ Aşağıdaki özellikler **kod tarafında tamamlanmış** ama production'da çal
 | Haftalık stratejik plan cron (`/api/cron/ai-weekly-plan`) — Faz 5.1 | Vercel Pro | Kod hazır; **taslak cron**: `{ "path": "/api/cron/ai-weekly-plan", "schedule": "0 7 * * 1" }` — pazartesi 07:00, her işletme için haftalık plan → `ai_insights` |
 | Benchmark agregasyon cron (`/api/cron/ai-benchmark-aggregate`) — Faz 5.3 | Vercel Pro | Kod hazır; **taslak cron**: `{ "path": "/api/cron/ai-benchmark-aggregate", "schedule": "30 3 * * 1" }` — opt-in işletmelerden son tamamlanmış çeyreği anonim olarak agregeler (p25/p50/p75, sample ≥ 20) |
 | Hatırlatma / winback / doğum günü / yorum SMS cron'ları | Vercel Pro | Kod hazır, cron tetiklenmiyor |
+| KVKK data silme cron (`/api/cron/data-deletion-processor`) | Vercel Pro | Kod hazır; **taslak cron**: `{ "path": "/api/cron/data-deletion-processor", "schedule": "0 4 * * *" }` — her gece 04:00'da `scheduled_deletion_at <= now()` olan talepleri işler |
 | PayTR ödeme akışı | PayTR merchant hesabı | Env eklenince aktif |
 | Paraşüt e-Fatura | Paraşüt API erişimi | Env eklenince aktif |
 | Twilio WhatsApp | Twilio WA Business onayı | Env eklenince aktif |
@@ -284,6 +285,7 @@ Güncel durum (2026-04-18 taraması):
 - `2026-04-23`: **AI Asistan Faz 4 — Proaktif Danışman Katmanı**. 2 yeni migration (`064`, `065`), `lib/ai/watcher/event-handlers.ts` (no_show, overdue, churned, anomaly, slot_gap, pattern tespiti), 2 yeni cron (`ai-watcher`, `ai-pattern-detector`), insights API (`/api/ai/insights` + `[id]` + `count`), TopBar'da amber ampul ikonu + rozet, `ai-insights-drawer.tsx` (Fırsat/Risk/Öneri/Otomasyon kartları, Yap+Reddet butonları). Asistan artık personel sormadan işletmedeki riskleri ve fırsatları tespit eder.
 - `2026-04-23`: **AI Asistan Faz 5 — Stratejik Planner + Forecast + Benchmark** (`ai-asistan` branch). 1 yeni migration (`066_sector_benchmarks_aggregate`), `/api/cron/ai-weekly-plan` (pazartesi 07:00 — sektör playbook + 4 haftalık KPI ile işletme başına haftalık plan → `ai_insights` kartları), `lib/analytics/forecast.ts` (30 gün gelir tahmini: lineer regresyon + R² + sezonsal çarpan + `simulateCampaign()`), 2 yeni asistan aracı (`forecast_revenue`, `simulate_campaign`) analytics skill'ine eklendi, `/api/ai/transcribe` Whisper için `getOpenAIClient()` + `WHISPER_MODEL` sabiti kullanımına geçirildi.
 - `2026-04-23`: **Faz 5.3 tamamlama** (`ai-asistan` branch). Benchmark agregasyon cron'u `/api/cron/ai-benchmark-aggregate` yazıldı (opt-in işletmelerden son tamamlanmış çeyreği anonim agregeler; sample ≥ 20 şartı ile p25/p50/p75 hesaplar; `business_id` saklamaz). `BusinessSettings.benchmark_opt_in` tipi eklendi. `/dashboard/settings/ai` sayfasına "Sektörel Benchmark'a Katıl" opt-in toggle kartı eklendi.
+- `2026-04-25`: **Müşteri Portalı Tam İyileştirme** (`iyilestirme-plani` branch). 4 migration (070b–073), 8 yeni API endpoint, 8 yeni UI bileşeni, 3 yeni sayfa tamamlandı. Öne çıkanlar: portal içi online randevu oluşturma (BookingModal), PayTR fatura ödeme (PaymentIframeModal), iki yönlü mesajlaşma (inbox + compose, 10sn polling), alerji read-only gösterimi, post-care talimatları (protocol_sessions), KVKK rıza geçmişi + iptal, tavsiye linki (/r/<code>), e-posta bildirim tercihi, error boundary'ler (error.tsx + not-found.tsx), SkeletonCard uniform loader, sameSite strict cookie, audit log entegrasyonu (actor_type: customer), owner-preview güvenlik düzeltmesi.
 
 ---
 
@@ -344,11 +346,16 @@ Aşağıdaki migration'lar Supabase SQL Editor'de manuel olarak çalıştırılm
 - `065_ai_insights.sql` → **✅ Uygulandı (2026-04-23)** — `ai_insights` tablosu + RLS + index'ler (Faz 4 — insight kartları)
 - `066_sector_benchmarks_aggregate.sql` → **✅ Uygulandı (2026-04-23)** — `sector_benchmarks_aggregate` tablosu + unique index (sector+metric+period) + RLS public read (Faz 5 — anonim sektörel benchmark, sample_size >= 20 şartı)
 - `070_move_appointment_rpc.sql` → **✅ Uygulandı (2026-04-25)** — drag-drop randevu taşıma için atomic RPC (advisory lock + FOR UPDATE ile TOCTOU kapanır)
+- `070b_audit_actor_type.sql` → **✅ Uygulandı (2026-04-25)** — `audit_logs` tablosuna `actor_type` (`staff`/`customer`/`system`) + `actor_id` kolonları + index (müşteri portal audit log için)
+- `071_post_care_instructions.sql` → **✅ Uygulandı (2026-04-25)** — `protocol_sessions.post_care_notes text`, `post_care_files jsonb`; `services.default_post_care_notes text`, `default_post_care_files jsonb` (tedavi protokolü bakım talimatları)
+- `072_preferred_channel_email.sql` → **✅ Uygulandı (2026-04-25)** — `customers.preferred_channel` CHECK constraint'ına `'email'` değeri eklendi (portal bildirim tercihi)
+- `073_customer_referral_code.sql` → **✅ Uygulandı (2026-04-25)** — `customers.referral_code text` + UNIQUE index (müşteri tavsiye linki)
+- `074_consultation_requests.sql` → **✅ Uygulandı (2026-04-25)** — `customers.lead_source text` CHECK + `consultation_requests` tablosu (status workflow, photo_urls JSONB, KVKK consent fields, RLS 3 policy + trigger)
 
 ### Migration Numaralandırma Kuralı (2026-04-18'den itibaren)
 Aynı numaraya denk gelen migration'lar `a/b/c` harf suffix'i ile ayrılır. Alfabetik sıralama doğru çalışma sırasını korur.
 Örnek: `036a_fix_rewards_type_constraint.sql` → `036b_referral_status_simplify.sql`
 
-Mevcut a/b çiftleri: `036a/036b`, `037a/037b`, `040a/040b`, `049a/049b`, `050a/050b`, `053a/053b`, `054a/054b`, `064/064b`.
+Mevcut a/b çiftleri: `036a/036b`, `037a/037b`, `040a/040b`, `049a/049b`, `050a/050b`, `053a/053b`, `054a/054b`, `064/064b`, `070/070b`.
 
-Son migration numarası: `070_move_appointment_rpc.sql` (2026-04-25, güvenlik review Tier 2).
+Son migration numarası: `074_consultation_requests.sql` (2026-04-25, ön konsültasyon sistemi).

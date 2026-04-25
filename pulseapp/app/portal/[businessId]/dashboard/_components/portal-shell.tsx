@@ -1,12 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, CalendarDays, Stethoscope, Receipt, Folder,
-  Gift, Star, Settings, LogOut, Menu, X,
+  Gift, Star, Settings, LogOut, Menu, X, MessageSquare,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ConfirmProvider } from '@/lib/hooks/use-confirm'
@@ -26,6 +26,8 @@ type NavItem = {
   href: string
   icon: React.ComponentType<{ className?: string }>
   mobileTab?: boolean
+  /** İçinde unread sayacı tutulacak nav anahtarı (sadece messages için) */
+  showUnreadBadge?: boolean
 }
 
 const SEGMENT_GRADIENT: Record<string, string> = {
@@ -57,6 +59,7 @@ function buildNav(businessId: string, showTreatments: boolean, rewardsEnabled: b
       ? [{ key: 'treatments', label: 'Tedavilerim', href: `${base}/treatments`, icon: Stethoscope }]
       : []),
     { key: 'invoices', label: 'Faturalarım', href: `${base}/invoices`, icon: Receipt },
+    { key: 'messages', label: 'Mesajlar', href: `${base}/messages`, icon: MessageSquare, showUnreadBadge: true },
     { key: 'files', label: 'Dosyalarım', href: `${base}/files`, icon: Folder, mobileTab: true },
     ...(rewardsEnabled
       ? [{ key: 'rewards', label: 'Ödüllerim', href: `${base}/rewards`, icon: Gift, mobileTab: true }]
@@ -74,6 +77,21 @@ export function PortalShell({ businessId, business, customer, showTreatments, re
 
   const nav = buildNav(businessId, showTreatments, rewardsEnabled)
   const mobileTabs = nav.filter(n => n.mobileTab)
+  const [unreadMessages, setUnreadMessages] = useState(0)
+
+  // Okunmamış mesaj sayısını periyodik kontrol et (60 sn).
+  useEffect(() => {
+    let cancelled = false
+    const fetchCount = () => {
+      fetch('/api/portal/messages/unread-count')
+        .then((r) => r.ok ? r.json() : null)
+        .then((d) => { if (!cancelled && d && typeof d.count === 'number') setUnreadMessages(d.count) })
+        .catch(() => undefined)
+    }
+    fetchCount()
+    const interval = setInterval(fetchCount, 60_000)
+    return () => { cancelled = true; clearInterval(interval) }
+  }, [pathname])
 
   const isActive = (href: string) => {
     if (href === `/portal/${businessId}/dashboard`) return pathname === href
@@ -163,7 +181,15 @@ export function PortalShell({ businessId, business, customer, showTreatments, re
                 )}
               >
                 <Icon className={cn('h-4 w-4', active ? 'text-white' : 'text-gray-400')} />
-                <span>{item.label}</span>
+                <span className="flex-1">{item.label}</span>
+                {item.showUnreadBadge && unreadMessages > 0 && (
+                  <span className={cn(
+                    'inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-semibold',
+                    active ? 'bg-white text-pulse-900' : 'bg-pulse-900 text-white'
+                  )}>
+                    {unreadMessages > 99 ? '99+' : unreadMessages}
+                  </span>
+                )}
               </Link>
             )
           })}

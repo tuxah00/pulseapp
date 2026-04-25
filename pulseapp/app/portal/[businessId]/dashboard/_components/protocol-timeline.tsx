@@ -2,6 +2,7 @@
 
 import { Check, Clock, X as XIcon, Circle } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import PostCareAccordion from './post-care-accordion'
 
 export interface TimelineSession {
   id: string
@@ -10,6 +11,8 @@ export interface TimelineSession {
   planned_date: string | null
   completed_date: string | null
   notes?: string | null
+  post_care_notes?: string | null
+  post_care_files?: Array<{ url: string; name?: string; type?: string }> | null
   appointment?: {
     id: string
     appointment_date: string
@@ -105,6 +108,14 @@ export function ProtocolTimeline({ sessions }: ProtocolTimelineProps) {
                 <p className="text-xs text-gray-600 dark:text-gray-300 mt-1 bg-gray-50 dark:bg-gray-800/50 rounded-md px-2 py-1.5">
                   {s.notes}
                 </p>
+              )}
+              {s.status === 'completed' && (s.post_care_notes || (s.post_care_files && s.post_care_files.length > 0)) && (
+                <div className="mt-2">
+                  <PostCareAccordion
+                    notes={s.post_care_notes ?? null}
+                    files={s.post_care_files ?? null}
+                  />
+                </div>
               )}
             </div>
           </li>
