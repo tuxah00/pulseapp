@@ -350,6 +350,7 @@ Aşağıdaki migration'lar Supabase SQL Editor'de manuel olarak çalıştırılm
 - `071_post_care_instructions.sql` → **✅ Uygulandı (2026-04-25)** — `protocol_sessions.post_care_notes text`, `post_care_files jsonb`; `services.default_post_care_notes text`, `default_post_care_files jsonb` (tedavi protokolü bakım talimatları)
 - `072_preferred_channel_email.sql` → **✅ Uygulandı (2026-04-25)** — `customers.preferred_channel` CHECK constraint'ına `'email'` değeri eklendi (portal bildirim tercihi)
 - `073_customer_referral_code.sql` → **✅ Uygulandı (2026-04-25)** — `customers.referral_code text` + UNIQUE index (müşteri tavsiye linki)
+- `074_consultation_requests.sql` → **✅ Uygulandı (2026-04-25)** — `customers.lead_source text` CHECK + `consultation_requests` tablosu (status workflow, photo_urls JSONB, KVKK consent fields, RLS 3 policy + trigger)
 
 ### Migration Numaralandırma Kuralı (2026-04-18'den itibaren)
 Aynı numaraya denk gelen migration'lar `a/b/c` harf suffix'i ile ayrılır. Alfabetik sıralama doğru çalışma sırasını korur.
@@ -357,4 +358,4 @@ Aynı numaraya denk gelen migration'lar `a/b/c` harf suffix'i ile ayrılır. Alf
 
 Mevcut a/b çiftleri: `036a/036b`, `037a/037b`, `040a/040b`, `049a/049b`, `050a/050b`, `053a/053b`, `054a/054b`, `064/064b`, `070/070b`.
 
-Son migration numarası: `073_customer_referral_code.sql` (2026-04-25, müşteri portal iyileştirme).
+Son migration numarası: `074_consultation_requests.sql` (2026-04-25, ön konsültasyon sistemi).
