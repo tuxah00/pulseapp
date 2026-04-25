@@ -24,7 +24,6 @@ import type {
 } from '@/types/db'
 import TodayAppointments from './_components/today-appointments'
 import WeeklyInsights from './_components/weekly-insights'
-import PerformanceStats from './_components/performance-stats'
 
 type TodayAppointmentRow = AppointmentRow & {
   customers: { name: string; phone: string | null } | null
@@ -204,7 +203,7 @@ export default async function DashboardPage() {
           <TodayAppointments appointments={todayAppointments} />
         </div>
 
-        {/* Sağ: bildirim + riskli müşteri (flat, gradient'siz) */}
+        {/* Sağ: bildirim + riskli müşteri + haftalık rapor */}
         <div className="space-y-5">
           {/* Bildirimler */}
           <div className="card">
@@ -257,7 +256,7 @@ export default async function DashboardPage() {
             )}
           </div>
 
-          {/* Riskli müşteriler — flat kart (gradient kaldırıldı) */}
+          {/* Riskli müşteriler */}
           {riskCustomers && riskCustomers.length > 0 && (
             <div className="card">
               <div className="mb-3 flex items-center gap-2">
@@ -284,16 +283,10 @@ export default async function DashboardPage() {
               </a>
             </div>
           )}
-        </div>
-      </div>
 
-      {/* Performans + haftalık */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-5">
-          <PerformanceStats />
+          {/* Haftalık Rapor */}
           <WeeklyInsights />
         </div>
-        <div className="space-y-5" />
       </div>
 
       {/* Link kartları — footer (kompakt paylaşım) */}
