@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
         name: businessRow.name,
         sector: businessRow.sector,
         logo_url: (businessRow.settings as { logo_url?: string | null } | null)?.logo_url ?? null,
+        rewardsEnabled: (businessRow.settings as { rewards_enabled?: boolean } | null)?.rewards_enabled === true,
       }
     : null
 
