@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
       .select('id', { count: 'exact', head: true })
       .eq('business_id', businessId)
       .eq('referrer_customer_id', customerId)
-      .eq('status', 'converted'),
+      .eq('status', 'rewarded'),
   ])
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''

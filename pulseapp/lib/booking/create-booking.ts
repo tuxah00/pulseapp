@@ -27,6 +27,12 @@ export interface CreateBookingInput {
    * createBooking içinde campaigns tablosundan campaign_id çözülür.
    */
   campaignRecipientId?: string | null
+  /**
+   * Tavsiye linki üzerinden gelen randevu.
+   * /r/<code> kısa link handler → /book/<id>?ref=<customerId> yönlendirmesi yapar.
+   * Bu müşteri ID'si `referrals` tablosuna `referrer_customer_id` olarak kaydedilir.
+   */
+  referrerCustomerId?: string | null
 }
 
 export interface CreateBookingResult {
@@ -52,6 +58,7 @@ export async function createBooking(
     date, startTime, notes, source = 'web', withManageToken = false,
     durationMinutes: providedDuration,
     campaignRecipientId,
+    referrerCustomerId,
   } = input
 
   // Hizmet — `durationMinutes` dışarıdan sağlanmışsa sorguyu atla
@@ -182,6 +189,40 @@ export async function createBooking(
     .select('id, manage_token')
     .single()
   if (apptErr || !appt) throw Object.assign(new Error('Randevu oluşturulamadı'), { status: 500 })
+
+  // Tavsiye linki attribution: referrerCustomerId geldi ve geçerliyse referrals kaydı oluştur
+  if (referrerCustomerId) {
+    // Referrer'ın bu işletmeye ait ve aktif olduğunu doğrula
+    const { data: referrer } = await supabase
+      .from('customers')
+      .select('id')
+      .eq('id', referrerCustomerId)
+      .eq('business_id', businessId)
+      .eq('is_active', true)
+      .maybeSingle()
+
+    if (referrer && referrer.id !== customerId) {
+      // Aynı referrer → referred çifti için daha önce kayıt açılmamışsa ekle (idempotent)
+      const { data: existing } = await supabase
+        .from('referrals')
+        .select('id')
+        .eq('business_id', businessId)
+        .eq('referrer_customer_id', referrerCustomerId)
+        .eq('referred_customer_id', customerId)
+        .maybeSingle()
+
+      if (!existing) {
+        await supabase.from('referrals').insert({
+          business_id: businessId,
+          referrer_customer_id: referrerCustomerId,
+          referred_customer_id: customerId,
+          referred_name: name.trim(),
+          referred_phone: normalizedPhone,
+          status: 'pending',
+        }).then(() => undefined, () => undefined) // fire-and-forget; hata olursa booking çökmez
+      }
+    }
+  }
 
   // Mesaj attribution (window): son 7 gün içinde bu müşteriye gönderilen
   // ve henüz hiçbir randevuya bağlanmamış outbound mesajları bu randevuya bağla.

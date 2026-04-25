@@ -75,6 +75,11 @@ export async function POST(req: NextRequest) {
       ? campaignRecipientIdRaw
       : null
 
+  // Tavsiye linki attribution: ?ref=<referrer_customer_id>
+  const referrerIdRaw = req.nextUrl.searchParams.get('ref')
+  const referrerCustomerId =
+    referrerIdRaw && isValidUUID(referrerIdRaw) ? referrerIdRaw : null
+
   // Geçmiş tarih kontrolü
   if (date < new Date().toISOString().slice(0, 10)) {
     return NextResponse.json(
@@ -147,6 +152,7 @@ export async function POST(req: NextRequest) {
       // auto-assign bloğunda zaten çekildiyse duplicate services sorgusunu önler
       ...(resolvedDuration !== undefined && { durationMinutes: resolvedDuration }),
       ...(campaignRecipientId && { campaignRecipientId }),
+      ...(referrerCustomerId && { referrerCustomerId }),
     })
     return NextResponse.json({ success: true, appointment_id: booking.appointmentId })
   } catch (e: unknown) {
