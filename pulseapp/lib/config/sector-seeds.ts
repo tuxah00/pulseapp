@@ -75,6 +75,12 @@ export interface SectorSeed {
   workflows: SeedWorkflow[]
   rewards: SeedReward[]
   campaigns: SeedCampaign[]
+  /**
+   * Personel etiket havuzu önerisi — onboarding'de "Personel Etiketleri" adımında
+   * default olarak işaretli gelir. Kullanıcı çıkarıp custom ekleyebilir.
+   * Sonuç `businesses.settings.staff_tag_options` JSONB array'e yazılır.
+   */
+  staff_tags: string[]
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -186,6 +192,7 @@ const DENTAL_CLINIC_SEED: SectorSeed = {
       messageTemplate: 'Merhaba {name}, implant tedavisini merak ediyorsanız ücretsiz konsültasyon için bize ulaşın: {link}',
     },
   ],
+  staff_tags: ['Doktor', 'Hemşire', 'Asistan', 'Resepsiyon'],
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -299,13 +306,231 @@ const MEDICAL_AESTHETIC_SEED: SectorSeed = {
       messageTemplate: 'Değerli hastamız {name}, PRP uygulamanızda size özel %25 indirim hazırladık. Detay: {link}',
     },
   ],
+  staff_tags: ['Doktor', 'Hemşire', 'Asistan', 'Resepsiyon'],
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+// Diğer sektörler için hafif seed'ler — sadece hizmet + etiket önerisi.
+// Onboarding'de bu sektör seçildiğinde preset chip'leri olarak gösterilir.
+// Paket/workflow/reward/campaign önerileri ileride genişletilebilir.
+// ────────────────────────────────────────────────────────────────────────────
+function makeLightSeed(services: SeedService[], staff_tags: string[]): SectorSeed {
+  return {
+    services,
+    packages: [],
+    workflows: [],
+    rewards: [],
+    campaigns: [],
+    staff_tags,
+  }
+}
+
+const HAIR_SALON_SEED = makeLightSeed(
+  [
+    { key: 'kesim',    name: 'Saç Kesimi',  duration_minutes: 45, price: 250,  sort_order: 0 },
+    { key: 'boyama',   name: 'Saç Boyama',  duration_minutes: 90, price: 800,  sort_order: 1 },
+    { key: 'rofle',    name: 'Röfle / Balyaj', duration_minutes: 120, price: 1200, sort_order: 2 },
+    { key: 'fon',      name: 'Fön',         duration_minutes: 30, price: 200,  sort_order: 3 },
+    { key: 'manikur',  name: 'Manikür',     duration_minutes: 30, price: 300,  sort_order: 4 },
+    { key: 'pedikur',  name: 'Pedikür',     duration_minutes: 45, price: 350,  sort_order: 5 },
+    { key: 'kas',      name: 'Kaş Tasarımı', duration_minutes: 15, price: 150, sort_order: 6 },
+  ],
+  ['Stilist', 'Asistan', 'Çırak'],
+)
+
+const BARBER_SEED = makeLightSeed(
+  [
+    { key: 'kesim',     name: 'Saç Kesimi',     duration_minutes: 30, price: 200, sort_order: 0 },
+    { key: 'sakal',     name: 'Sakal Tıraşı',   duration_minutes: 20, price: 100, sort_order: 1 },
+    { key: 'sac_sakal', name: 'Saç + Sakal',    duration_minutes: 45, price: 280, sort_order: 2 },
+    { key: 'yuz_bakim', name: 'Yüz Bakımı',     duration_minutes: 30, price: 200, sort_order: 3 },
+  ],
+  ['Berber', 'Çırak'],
+)
+
+const BEAUTY_SALON_SEED = makeLightSeed(
+  [
+    { key: 'cilt',     name: 'Cilt Bakımı',    duration_minutes: 60, price: 700,  sort_order: 0 },
+    { key: 'manikur',  name: 'Manikür',        duration_minutes: 30, price: 250,  sort_order: 1 },
+    { key: 'pedikur',  name: 'Pedikür',        duration_minutes: 45, price: 300,  sort_order: 2 },
+    { key: 'kas',      name: 'Kaş Tasarımı',   duration_minutes: 15, price: 150,  sort_order: 3 },
+    { key: 'kirpik',   name: 'Kirpik Lifting', duration_minutes: 60, price: 600,  sort_order: 4 },
+    { key: 'epilasyon', name: 'Ağda',          duration_minutes: 45, price: 400,  sort_order: 5 },
+  ],
+  ['Estetisyen', 'Asistan'],
+)
+
+const PHYSIOTHERAPY_SEED = makeLightSeed(
+  [
+    { key: 'manuel',   name: 'Manuel Terapi',     duration_minutes: 60, price: 800, sort_order: 0 },
+    { key: 'egzersiz', name: 'Egzersiz Tedavisi', duration_minutes: 60, price: 600, sort_order: 1 },
+    { key: 'elektro',  name: 'Elektroterapi',     duration_minutes: 30, price: 400, sort_order: 2 },
+    { key: 'masaj',    name: 'Tedavi Masajı',     duration_minutes: 45, price: 500, sort_order: 3 },
+  ],
+  ['Fizyoterapist', 'Asistan'],
+)
+
+const VETERINARY_SEED = makeLightSeed(
+  [
+    { key: 'muayene',     name: 'Muayene',          duration_minutes: 20, price: 350,  sort_order: 0 },
+    { key: 'asi',         name: 'Aşı',              duration_minutes: 15, price: 250,  sort_order: 1 },
+    { key: 'kisirlastir', name: 'Kısırlaştırma',    duration_minutes: 90, price: 2500, sort_order: 2 },
+    { key: 'dis',         name: 'Diş Bakımı',       duration_minutes: 45, price: 800,  sort_order: 3 },
+    { key: 'tiras',       name: 'Tıraş & Bakım',    duration_minutes: 60, price: 400,  sort_order: 4 },
+  ],
+  ['Veteriner', 'Veteriner Asistanı'],
+)
+
+const PSYCHOLOGIST_SEED = makeLightSeed(
+  [
+    { key: 'bireysel', name: 'Bireysel Terapi',  duration_minutes: 50, price: 1200, sort_order: 0 },
+    { key: 'cift',     name: 'Çift Terapisi',    duration_minutes: 75, price: 1800, sort_order: 1 },
+    { key: 'aile',     name: 'Aile Terapisi',    duration_minutes: 75, price: 1800, sort_order: 2 },
+    { key: 'cocuk',    name: 'Çocuk Terapisi',   duration_minutes: 50, price: 1200, sort_order: 3 },
+  ],
+  ['Psikolog', 'Psikiyatrist'],
+)
+
+const SPA_MASSAGE_SEED = makeLightSeed(
+  [
+    { key: 'klasik',    name: 'Klasik Masaj',    duration_minutes: 60, price: 700, sort_order: 0 },
+    { key: 'aromaterapi', name: 'Aromaterapi',   duration_minutes: 60, price: 800, sort_order: 1 },
+    { key: 'hot_stone', name: 'Sıcak Taş Masajı', duration_minutes: 75, price: 900, sort_order: 2 },
+    { key: 'reflex',    name: 'Refleksoloji',     duration_minutes: 45, price: 500, sort_order: 3 },
+  ],
+  ['Masöz', 'Spa Terapisti'],
+)
+
+const FITNESS_SEED = makeLightSeed(
+  [
+    { key: 'pt',     name: 'Kişisel Antrenman',  duration_minutes: 60, price: 400, sort_order: 0 },
+    { key: 'grup',   name: 'Grup Dersi',         duration_minutes: 45, price: 200, sort_order: 1 },
+    { key: 'beslenme', name: 'Beslenme Danışmanlığı', duration_minutes: 30, price: 300, sort_order: 2 },
+  ],
+  ['Antrenör', 'Eğitmen', 'Resepsiyon'],
+)
+
+const YOGA_PILATES_SEED = makeLightSeed(
+  [
+    { key: 'pilates', name: 'Pilates Reformer', duration_minutes: 50, price: 350, sort_order: 0 },
+    { key: 'mat',     name: 'Mat Pilates',      duration_minutes: 50, price: 250, sort_order: 1 },
+    { key: 'yoga',    name: 'Yoga',             duration_minutes: 60, price: 250, sort_order: 2 },
+  ],
+  ['Eğitmen', 'Yoga Hocası'],
+)
+
+const TATTOO_PIERCING_SEED = makeLightSeed(
+  [
+    { key: 'tattoo_kucuk', name: 'Küçük Dövme',  duration_minutes: 60,  price: 1000, sort_order: 0 },
+    { key: 'tattoo_orta',  name: 'Orta Dövme',   duration_minutes: 120, price: 2500, sort_order: 1 },
+    { key: 'piercing',     name: 'Piercing',     duration_minutes: 30,  price: 500,  sort_order: 2 },
+  ],
+  ['Dövme Sanatçısı', 'Piercer'],
+)
+
+const DIETITIAN_SEED = makeLightSeed(
+  [
+    { key: 'ilk',     name: 'İlk Görüşme',         duration_minutes: 60, price: 800, sort_order: 0 },
+    { key: 'kontrol', name: 'Kontrol Görüşmesi',   duration_minutes: 30, price: 400, sort_order: 1 },
+    { key: 'olcum',   name: 'Vücut Analizi',       duration_minutes: 30, price: 350, sort_order: 2 },
+  ],
+  ['Diyetisyen', 'Asistan'],
+)
+
+const TUTORING_SEED = makeLightSeed(
+  [
+    { key: 'matematik', name: 'Matematik',     duration_minutes: 60, price: 400, sort_order: 0 },
+    { key: 'fen',       name: 'Fen Bilimleri', duration_minutes: 60, price: 400, sort_order: 1 },
+    { key: 'ingilizce', name: 'İngilizce',     duration_minutes: 60, price: 400, sort_order: 2 },
+    { key: 'tyt',       name: 'TYT/AYT',       duration_minutes: 90, price: 600, sort_order: 3 },
+  ],
+  ['Öğretmen', 'Asistan'],
+)
+
+const PHOTO_STUDIO_SEED = makeLightSeed(
+  [
+    { key: 'portre',   name: 'Portre Çekimi',      duration_minutes: 60, price: 1500, sort_order: 0 },
+    { key: 'aile',     name: 'Aile Fotoğrafı',     duration_minutes: 90, price: 2500, sort_order: 1 },
+    { key: 'urun',     name: 'Ürün Çekimi',        duration_minutes: 60, price: 1200, sort_order: 2 },
+    { key: 'dis',      name: 'Dış Mekan Çekimi',   duration_minutes: 120, price: 3000, sort_order: 3 },
+  ],
+  ['Fotoğrafçı', 'Asistan'],
+)
+
+const CAR_WASH_SEED = makeLightSeed(
+  [
+    { key: 'dis_yikama', name: 'Dış Yıkama',        duration_minutes: 30,  price: 200,  sort_order: 0 },
+    { key: 'ic_dis',     name: 'İç + Dış Yıkama',  duration_minutes: 60,  price: 400,  sort_order: 1 },
+    { key: 'detay',      name: 'Detaylı Temizlik',  duration_minutes: 180, price: 1500, sort_order: 2 },
+    { key: 'pasta',      name: 'Pasta + Cila',      duration_minutes: 240, price: 2500, sort_order: 3 },
+  ],
+  ['Operatör', 'Çırak'],
+)
+
+const AUTO_SERVICE_SEED = makeLightSeed(
+  [
+    { key: 'periyodik', name: 'Periyodik Bakım',  duration_minutes: 90, price: 1500, sort_order: 0 },
+    { key: 'fren',      name: 'Fren Sistemi',     duration_minutes: 60, price: 1000, sort_order: 1 },
+    { key: 'aku',       name: 'Akü Değişimi',     duration_minutes: 30, price: 300,  sort_order: 2 },
+    { key: 'lastik',    name: 'Lastik Rotasyonu', duration_minutes: 30, price: 200,  sort_order: 3 },
+  ],
+  ['Usta', 'Çırak'],
+)
+
+const RESTAURANT_SEED = makeLightSeed(
+  [
+    { key: 'rezervasyon', name: 'Masa Rezervasyonu', duration_minutes: 90, price: 0, sort_order: 0 },
+    { key: 'ozel',         name: 'Özel Etkinlik',    duration_minutes: 180, price: 0, sort_order: 1 },
+  ],
+  ['Şef', 'Garson', 'Komi'],
+)
+
+const CAFE_SEED = makeLightSeed(
+  [
+    { key: 'rezervasyon', name: 'Masa Rezervasyonu', duration_minutes: 60, price: 0, sort_order: 0 },
+  ],
+  ['Barista', 'Garson'],
+)
+
+const LAWYER_SEED = makeLightSeed(
+  [
+    { key: 'gorus',  name: 'İlk Görüşme',         duration_minutes: 60, price: 1500, sort_order: 0 },
+    { key: 'dosya',  name: 'Dosya İncelemesi',    duration_minutes: 90, price: 2500, sort_order: 1 },
+  ],
+  ['Avukat', 'Stajyer Avukat', 'Sekreter'],
+)
 
 export const SECTOR_SEEDS: Partial<Record<SectorType, SectorSeed>> = {
   dental_clinic: DENTAL_CLINIC_SEED,
   medical_aesthetic: MEDICAL_AESTHETIC_SEED,
+  hair_salon: HAIR_SALON_SEED,
+  barber: BARBER_SEED,
+  beauty_salon: BEAUTY_SALON_SEED,
+  physiotherapy: PHYSIOTHERAPY_SEED,
+  veterinary: VETERINARY_SEED,
+  psychologist: PSYCHOLOGIST_SEED,
+  spa_massage: SPA_MASSAGE_SEED,
+  fitness: FITNESS_SEED,
+  yoga_pilates: YOGA_PILATES_SEED,
+  tattoo_piercing: TATTOO_PIERCING_SEED,
+  dietitian: DIETITIAN_SEED,
+  tutoring: TUTORING_SEED,
+  photo_studio: PHOTO_STUDIO_SEED,
+  car_wash: CAR_WASH_SEED,
+  auto_service: AUTO_SERVICE_SEED,
+  restaurant: RESTAURANT_SEED,
+  cafe: CAFE_SEED,
+  lawyer: LAWYER_SEED,
 }
 
 export function getSeedForSector(sector: SectorType): SectorSeed | null {
   return SECTOR_SEEDS[sector] ?? null
+}
+
+/**
+ * Sektöre göre personel etiket havuzu önerisi.
+ * Sektörde seed yoksa veya etiket tanımlı değilse fallback olarak ['Personel'] döner.
+ */
+export function getStaffTagsForSector(sector: SectorType): string[] {
+  return SECTOR_SEEDS[sector]?.staff_tags ?? ['Personel']
 }
