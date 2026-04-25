@@ -174,7 +174,14 @@ export default function BookingModal({
         },
       }))
       onCreated?.()
-      handleClose()
+      // Önemli: submitting'i kapat ki handleClose() guard'ından geçebilsin
+      setSubmitting(false)
+      // Animasyonlu kapanma (handleClose içindeki submitting guard artık geçer)
+      setClosing(true)
+      setTimeout(() => {
+        setClosing(false)
+        onClose()
+      }, 200)
     } catch {
       setError('Bağlantı hatası')
       setSubmitting(false)
