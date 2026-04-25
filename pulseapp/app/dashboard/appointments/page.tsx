@@ -40,6 +40,7 @@ type AppointmentView = AppointmentRow & {
   services: { name: string; price: number; duration_minutes: number } | null
   staff_members: { name: string } | null
   campaigns: { name: string } | null
+  invoices: { id: string; status: string; paid_amount: number }[] | null
 }
 import { logAudit } from '@/lib/utils/audit'
 import { addMonthsSafe } from '@/lib/utils/date-range'
@@ -144,7 +145,7 @@ export default function AppointmentsPage() {
     async function openFromNotification() {
       const { data } = await supabase
         .from('appointments')
-        .select('*, customers(name, phone), services(name, duration_minutes, price), staff_members(name), campaigns(name)')
+        .select('*, customers(name, phone), services(name, duration_minutes, price), staff_members(name), campaigns(name), invoices(id, status, paid_amount)')
         .eq('id', appointmentId!)
         .eq('business_id', businessId)
         .is('deleted_at', null)
@@ -213,7 +214,7 @@ export default function AppointmentsPage() {
 
     let query = supabase
       .from('appointments')
-      .select('*, customers(name, phone), services(name, duration_minutes, price), staff_members(name), campaigns(name)')
+      .select('*, customers(name, phone), services(name, duration_minutes, price), staff_members(name), campaigns(name), invoices(id, status, paid_amount)')
       .eq('business_id', businessId)
       .is('deleted_at', null)
       .order('start_time', { ascending: true })
@@ -1158,7 +1159,7 @@ export default function AppointmentsPage() {
     return slots
   }
 
-  // Geçmiş + sonuçsuz randevu: tek tarama ile Set oluştur, her yerde O(1) lookup
+  // Dikkat gerektiren randevular: (1) geçmiş + sonuçlanmamış, (2) tamamlandı ama tahsilat yok
   const { unresolvedIds, unresolvedCount, pastIds } = useMemo(() => {
     const n = new Date()
     const today = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`
@@ -1168,7 +1169,16 @@ export default function AppointmentsPage() {
     for (const a of appointments) {
       const isInPast = a.appointment_date < today || (a.appointment_date === today && a.end_time <= nowMin)
       if (isInPast) pids.add(a.id)
-      if (a.status === 'completed' || a.status === 'cancelled' || a.status === 'no_show') continue
+      if (a.status === 'cancelled' || a.status === 'no_show') continue
+      if (a.status === 'completed') {
+        // Tamamlandı ama ödeme alınmamışsa dikkat gerekiyor (ücretsiz hizmetler hariç)
+        const invs = Array.isArray(a.invoices) ? a.invoices : []
+        const hasPaid = invs.some(i => i.status === 'paid' || (i.paid_amount ?? 0) > 0)
+        const svcPrice = a.services?.price ?? 0
+        if (!hasPaid && svcPrice > 0) ids.add(a.id)
+        continue
+      }
+      // Geçmişteki ama sonuçlandırılmamış randevular
       if (isInPast) ids.add(a.id)
     }
     return { unresolvedIds: ids, unresolvedCount: ids.size, pastIds: pids }
@@ -2494,7 +2504,7 @@ export default function AppointmentsPage() {
                       <span className="font-semibold text-sm text-gray-900 dark:text-gray-100">{apt.customers?.name || 'İsimsiz'}</span>
                       <span className={`badge text-xs ${getStatusColor(apt.status)}`}>{STATUS_LABELS[apt.status as keyof typeof STATUS_LABELS]}</span>
                       {apt.recurrence_group_id && <span title="Tekrarlayan randevu"><Repeat className="h-3.5 w-3.5 text-purple-400" /></span>}
-                      {isPastUnresolved(apt) && <span className="h-2.5 w-2.5 rounded-full bg-red-500 flex-shrink-0" title="Sonuç girilmemiş" />}
+                      {isPastUnresolved(apt) && <span className="h-2.5 w-2.5 rounded-full bg-red-500 flex-shrink-0" title={apt.status === 'completed' ? 'Tahsilat yapılmamış' : 'Sonuç girilmemiş'} />}
                     </div>
                     <div className="mt-0.5 flex items-center gap-2 text-xs text-gray-400">
                       {apt.services?.name && <span>{apt.services.name}</span>}
