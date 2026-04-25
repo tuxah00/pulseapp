@@ -306,10 +306,10 @@ export default function BookingPage() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-24">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white shadow-sm mb-5">
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white dark:bg-gray-800 shadow-sm mb-5">
           <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
         </div>
-        <p className="text-sm font-medium text-gray-500">Yükleniyor...</p>
+        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Yükleniyor...</p>
       </div>
     )
   }
@@ -317,11 +317,11 @@ export default function BookingPage() {
   if (error || !business) {
     return (
       <div className="flex flex-col items-center justify-center py-24">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-red-50 mb-5">
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-red-50 dark:bg-red-900/20 mb-5">
           <AlertCircle className="h-8 w-8 text-red-400" />
         </div>
-        <p className="text-base font-medium text-gray-700">{error || 'İşletme bulunamadı'}</p>
-        <p className="text-sm text-gray-400 mt-1">Lütfen linki kontrol edin.</p>
+        <p className="text-base font-medium text-gray-700 dark:text-gray-300">{error || 'İşletme bulunamadı'}</p>
+        <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Lütfen linki kontrol edin.</p>
       </div>
     )
   }
@@ -336,16 +336,16 @@ export default function BookingPage() {
           <CampaignBanner name={campaignInfo.name} description={campaignInfo.description} />
         )}
 
-        <div className="mt-4 bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center">
-          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-green-100 mb-6">
+        <div className="mt-4 bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-8 text-center">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30 mb-6">
             <CheckCircle2 className="h-10 w-10 text-green-500" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900">Randevunuz Alındı!</h2>
-          <p className="mt-2 text-gray-500">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Randevunuz Alındı!</h2>
+          <p className="mt-2 text-gray-500 dark:text-gray-400">
             {business.name} sizi bekliyor.
           </p>
 
-          <div className="mt-6 bg-gray-50 rounded-xl p-4 text-left space-y-3 text-sm">
+          <div className="mt-6 bg-gray-50 dark:bg-gray-800 rounded-xl p-4 text-left space-y-3 text-sm">
             <SummaryRow label="Hizmet" value={selectedService?.name ?? ''} />
             {selectedDate && selectedTime ? (
               <>
@@ -353,9 +353,9 @@ export default function BookingPage() {
                 <SummaryRow label="Saat" value={selectedTime} />
               </>
             ) : waitlistEnabled ? (
-              <div className="flex items-center gap-2 py-1.5 px-2 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center gap-2 py-1.5 px-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                 <Bell className="h-4 w-4 text-blue-500 flex-shrink-0" />
-                <span className="text-xs text-blue-700 font-medium">Bekleme listesine eklendiniz — boşluk oluşunca haber vereceğiz.</span>
+                <span className="text-xs text-blue-700 dark:text-blue-300 font-medium">Bekleme listesine eklendiniz — boşluk oluşunca haber vereceğiz.</span>
               </div>
             ) : null}
             {selectedService?.price != null && (
@@ -401,7 +401,7 @@ export default function BookingPage() {
       )}
 
       {/* Step Indicator */}
-      <div className="mt-4 bg-white rounded-2xl shadow-sm border border-gray-200 px-6 py-4">
+      <div className="mt-4 bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 px-6 py-4">
         <div className="flex items-start">
           {STEPS.map((label, i) => {
             const stepNum = i + 1
@@ -412,7 +412,7 @@ export default function BookingPage() {
                 {/* Bağlantı çizgisi — adımlar arasında */}
                 {i > 0 && (
                   <div className={`flex-1 h-0.5 mt-[18px] mx-1 transition-colors ${
-                    step > i ? 'bg-blue-500' : 'bg-gray-200'
+                    step > i ? 'bg-blue-500' : 'bg-gray-200 dark:bg-gray-700'
                   }`} />
                 )}
                 {/* Adım: daire + etiket */}
@@ -422,14 +422,14 @@ export default function BookingPage() {
                       isCompleted
                         ? 'bg-blue-500 text-white shadow-sm shadow-blue-200'
                         : isCurrent
-                          ? 'bg-blue-500 text-white shadow-sm shadow-blue-200 ring-4 ring-blue-100'
-                          : 'bg-gray-100 text-gray-400'
+                          ? 'bg-blue-500 text-white shadow-sm shadow-blue-200 ring-4 ring-blue-100 dark:ring-blue-900'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500'
                     }`}
                   >
                     {isCompleted ? <CheckCircle2 className="h-5 w-5" /> : stepNum}
                   </div>
                   <span className={`mt-1.5 text-[11px] font-medium whitespace-nowrap text-center ${
-                    isCurrent ? 'text-blue-600' : isCompleted ? 'text-gray-600' : 'text-gray-400'
+                    isCurrent ? 'text-blue-600' : isCompleted ? 'text-gray-600 dark:text-gray-400' : 'text-gray-400 dark:text-gray-500'
                   }`}>
                     {label}
                   </span>
@@ -441,12 +441,12 @@ export default function BookingPage() {
       </div>
 
       {/* Step Content */}
-      <div className="mt-4 bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+      <div className="mt-4 bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
 
         {/* Step 1: Hizmet */}
         {step === 1 && (
           <div>
-            <h2 className="text-base font-semibold text-gray-900 mb-4">Hizmet Seçin</h2>
+            <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">Hizmet Seçin</h2>
             {services.length === 0 ? (
               <div className="text-center py-12">
                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 mx-auto mb-3">
@@ -464,29 +464,29 @@ export default function BookingPage() {
                       onClick={() => setSelectedServiceId(service.id)}
                       className={`w-full text-left rounded-xl border-2 p-4 transition-all ${
                         isSelected
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-100 bg-gray-50 hover:border-gray-200 hover:bg-white'
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                          : 'border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:border-gray-200 dark:hover:border-gray-600 hover:bg-white dark:hover:bg-gray-750'
                       }`}
                     >
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-3 min-w-0">
                           <div className={`flex-shrink-0 flex h-5 w-5 items-center justify-center rounded-full border-2 transition-colors ${
-                            isSelected ? 'border-blue-500 bg-blue-500' : 'border-gray-300'
+                            isSelected ? 'border-blue-500 bg-blue-500' : 'border-gray-300 dark:border-gray-600'
                           }`}>
                             {isSelected && <div className="h-2 w-2 rounded-full bg-white" />}
                           </div>
                           <div className="min-w-0">
-                            <p className="font-semibold text-gray-900 text-sm">{service.name}</p>
+                            <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm">{service.name}</p>
                             {service.description && (
-                              <p className="mt-0.5 text-xs text-gray-500 truncate">{service.description}</p>
+                              <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400 truncate">{service.description}</p>
                             )}
                           </div>
                         </div>
                         <div className="flex-shrink-0 text-right">
                           {service.price != null && (
-                            <p className="text-sm font-bold text-gray-900">{formatPrice(service.price)}</p>
+                            <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{formatPrice(service.price)}</p>
                           )}
-                          <p className="text-xs text-gray-400 flex items-center gap-1 justify-end mt-0.5">
+                          <p className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1 justify-end mt-0.5">
                             <Clock className="h-3 w-3" />
                             {service.duration_minutes} dk
                           </p>
@@ -497,7 +497,7 @@ export default function BookingPage() {
                 })}
               </div>
             )}
-            <div className="mt-5 pt-4 border-t border-gray-100">
+            <div className="mt-5 pt-4 border-t border-gray-100 dark:border-gray-800">
               <button
                 onClick={() => setStep(2)}
                 disabled={!selectedServiceId}
@@ -512,7 +512,7 @@ export default function BookingPage() {
         {/* Step 2: Tarih & Saat */}
         {step === 2 && (
           <div>
-            <h2 className="text-base font-semibold text-gray-900 mb-4">Tarih & Saat Seçin</h2>
+            <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">Tarih & Saat Seçin</h2>
 
             {staff.length > 0 && (
               <div className="mb-4">
@@ -548,19 +548,19 @@ export default function BookingPage() {
                   <Clock className="h-3.5 w-3.5" /> Saat
                 </label>
                 {isDayClosed ? (
-                  <div className="text-center py-8 bg-gray-50 rounded-xl border border-gray-100">
-                    <p className="text-sm text-gray-500 font-medium">Bu gün kapalı</p>
-                    <p className="text-xs text-gray-400 mt-1">Lütfen farklı bir gün seçin</p>
+                  <div className="text-center py-8 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
+                    <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Bu gün kapalı</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Lütfen farklı bir gün seçin</p>
                   </div>
                 ) : slotsLoading ? (
-                  <div className="text-center py-8 bg-gray-50 rounded-xl border border-gray-100">
+                  <div className="text-center py-8 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
                     <Loader2 className="h-5 w-5 animate-spin text-blue-500 mx-auto mb-2" />
-                    <p className="text-sm text-gray-500">Müsait saatler yükleniyor...</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Müsait saatler yükleniyor...</p>
                   </div>
                 ) : availableSlots.length === 0 ? (
-                  <div className="text-center py-8 bg-gray-50 rounded-xl border border-gray-100">
-                    <p className="text-sm text-gray-500 font-medium">Bu gün için uygun saat bulunamadı</p>
-                    <p className="text-xs text-gray-400 mt-1">Tüm saatler dolu. Farklı bir gün veya personel deneyin.</p>
+                  <div className="text-center py-8 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
+                    <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Bu gün için uygun saat bulunamadı</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Tüm saatler dolu. Farklı bir gün veya personel deneyin.</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
@@ -571,7 +571,7 @@ export default function BookingPage() {
                         className={`rounded-lg py-2.5 text-sm font-medium transition-all ${
                           selectedTime === time
                             ? 'bg-blue-500 text-white shadow-sm shadow-blue-200'
-                            : 'bg-gray-50 border border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50'
+                            : 'bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20'
                         }`}
                       >
                         {time}
@@ -584,11 +584,11 @@ export default function BookingPage() {
 
             {/* ── Bekleme Listesi ───────────────────────── */}
             <div className="flex items-center gap-3 my-4">
-              <div className="flex-1 h-px bg-gray-200" />
-              <span className="text-xs text-gray-400 font-medium px-1">veya</span>
-              <div className="flex-1 h-px bg-gray-200" />
+              <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+              <span className="text-xs text-gray-400 dark:text-gray-500 font-medium px-1">veya</span>
+              <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
             </div>
-            <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
+            <div className="rounded-xl border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-4">
               <label className="flex items-start gap-3 cursor-pointer">
                 <input
                   type="checkbox"
@@ -600,14 +600,14 @@ export default function BookingPage() {
                       setWaitlistDate(selectedDate || '')
                     }
                   }}
-                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+                  className="mt-0.5 h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-blue-500 focus:ring-blue-500"
                 />
                 <div className="flex-1 min-w-0">
-                  <span className="text-sm font-medium text-gray-900 flex items-center gap-1.5">
+                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center gap-1.5">
                     <Bell className="h-4 w-4 text-blue-500" />
                     Randevu boşluğu oluştuğunda beni bilgilendir
                   </span>
-                  <span className="text-xs text-gray-400 mt-0.5 block">
+                  <span className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 block">
                     Tercih ettiğiniz zamanda yer açılırsa SMS ile haberdar ederiz.
                   </span>
                 </div>
@@ -682,8 +682,8 @@ export default function BookingPage() {
               )}
             </div>
 
-            <div className="mt-4 pt-4 border-t border-gray-100 flex gap-2.5">
-              <button onClick={() => setStep(1)} className="btn-secondary flex items-center gap-1 px-3">
+            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800 flex gap-2.5">
+              <button onClick={() => setStep(1)} className="btn-secondary flex items-center gap-1 px-3" aria-label="Geri">
                 <ChevronLeft className="h-4 w-4" />
               </button>
               <button
@@ -700,7 +700,7 @@ export default function BookingPage() {
         {/* Step 3: Bilgiler */}
         {step === 3 && (
           <div>
-            <h2 className="text-base font-semibold text-gray-900 mb-4">Bilgileriniz</h2>
+            <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">Bilgileriniz</h2>
             <div className="space-y-4">
               <div>
                 <label className="label flex items-center gap-1.5">
@@ -727,9 +727,9 @@ export default function BookingPage() {
                 />
               </div>
               {intervalWarning && (
-                <div className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm">
-                  <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600" />
-                  <div className="flex-1 text-amber-900">
+                <div className="flex items-start gap-2 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-3 text-sm">
+                  <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600 dark:text-amber-400" />
+                  <div className="flex-1 text-amber-900 dark:text-amber-200">
                     <p className="font-medium">Önerilen tekrar aralığı dolmadı</p>
                     <p className="mt-0.5 text-xs opacity-90">{intervalWarning}</p>
                     <p className="mt-1.5 text-xs opacity-75">
@@ -744,17 +744,17 @@ export default function BookingPage() {
                 type="checkbox"
                 checked={kvkkConsent}
                 onChange={(e) => setKvkkConsent(e.target.checked)}
-                className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+                className="mt-0.5 h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-blue-500 focus:ring-blue-500"
                 required
               />
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-gray-500 dark:text-gray-400">
                 Kişisel verilerimin işlenmesine ilişkin{' '}
                 <span className="text-blue-500 font-medium">KVKK Aydınlatma Metni</span>&apos;ni
                 okudum ve kabul ediyorum.
               </span>
             </label>
-            <div className="mt-5 pt-4 border-t border-gray-100 flex gap-2.5">
-              <button onClick={() => setStep(2)} className="btn-secondary flex items-center gap-1 px-3">
+            <div className="mt-5 pt-4 border-t border-gray-100 dark:border-gray-800 flex gap-2.5">
+              <button onClick={() => setStep(2)} className="btn-secondary flex items-center gap-1 px-3" aria-label="Geri">
                 <ChevronLeft className="h-4 w-4" />
               </button>
               <button
@@ -771,9 +771,9 @@ export default function BookingPage() {
         {/* Step 4: Onay */}
         {step === 4 && selectedService && (
           <div>
-            <h2 className="text-base font-semibold text-gray-900 mb-4">Randevu Özeti</h2>
+            <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">Randevu Özeti</h2>
 
-            <div className="bg-gray-50 rounded-xl border border-gray-100 p-4 space-y-3 text-sm">
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-4 space-y-3 text-sm">
               <SummaryRow label="İşletme" value={business.name} />
               <SummaryRow label="Hizmet" value={selectedService.name} />
               {selectedDate && selectedTime ? (
@@ -786,24 +786,24 @@ export default function BookingPage() {
               {selectedService.price != null && (
                 <SummaryRow label="Ücret" value={formatPrice(selectedService.price)} highlight />
               )}
-              <div className="border-t border-gray-200 pt-3 space-y-3">
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-3 space-y-3">
                 <SummaryRow label="Ad Soyad" value={customerName} />
                 <SummaryRow label="Telefon" value={customerPhone} />
               </div>
               {waitlistEnabled && (
-                <div className="border-t border-gray-200 pt-3 space-y-2">
-                  <div className="flex items-center gap-2 py-1.5 px-2 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-3 space-y-2">
+                  <div className="flex items-center gap-2 py-1.5 px-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                     <Bell className="h-4 w-4 text-blue-500 flex-shrink-0" />
-                    <span className="text-xs text-blue-700 font-medium">
+                    <span className="text-xs text-blue-700 dark:text-blue-300 font-medium">
                       {selectedDate && selectedTime
                         ? 'Bekleme listesine de kaydedilecek'
                         : 'Bekleme listesine eklenecek — boşluk oluşunca haber vereceğiz'}
                     </span>
                   </div>
                   {waitlistAutoBook && (
-                    <div className="flex items-center gap-2 py-1.5 px-2 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center gap-2 py-1.5 px-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
                       <CalendarPlus className="h-4 w-4 text-green-500 flex-shrink-0" />
-                      <span className="text-xs text-green-700 font-medium">
+                      <span className="text-xs text-green-700 dark:text-green-300 font-medium">
                         Tercihinize uygun boşluk oluştuğunda otomatik randevu alınacak (onay bekler)
                       </span>
                     </div>
@@ -812,8 +812,8 @@ export default function BookingPage() {
               )}
             </div>
 
-            <div className="mt-5 pt-4 border-t border-gray-100 flex gap-2.5">
-              <button onClick={() => setStep(3)} className="btn-secondary flex items-center gap-1 px-3">
+            <div className="mt-5 pt-4 border-t border-gray-100 dark:border-gray-800 flex gap-2.5">
+              <button onClick={() => setStep(3)} className="btn-secondary flex items-center gap-1 px-3" aria-label="Geri">
                 <ChevronLeft className="h-4 w-4" />
               </button>
               <button
@@ -827,13 +827,13 @@ export default function BookingPage() {
             </div>
 
             {submitError && (
-              <div className="mt-3 rounded-xl bg-red-50 border border-red-100 p-3 text-sm text-red-600 flex gap-2">
+              <div className="mt-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 p-3 text-sm text-red-600 dark:text-red-400 flex gap-2">
                 <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
                 {submitError}
               </div>
             )}
 
-            <p className="mt-4 text-center text-xs text-gray-400">
+            <p className="mt-4 text-center text-xs text-gray-400 dark:text-gray-500">
               Onaylayarak {business.name} ile iletişim kurulmasına izin vermiş olursunuz.
             </p>
           </div>
@@ -850,7 +850,7 @@ function BusinessHeader({ business }: { business: BusinessData }) {
   const location = [business.district, business.city].filter(Boolean).join(', ')
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden relative">
+    <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden relative">
       {/* Hesabım butonu — sağ üst köşe */}
       <a
         href={`/portal/${business.id}`}
@@ -879,18 +879,18 @@ function BusinessHeader({ business }: { business: BusinessData }) {
           </div>
         )}
 
-        <h1 className="mt-3 text-lg font-bold text-gray-900 text-center">{business.name}</h1>
+        <h1 className="mt-3 text-lg font-bold text-gray-900 dark:text-gray-100 text-center">{business.name}</h1>
 
         {(business.phone || location) && (
           <div className="mt-1.5 flex flex-wrap justify-center items-center gap-x-3 gap-y-1">
             {business.phone && (
-              <span className="flex items-center gap-1 text-xs text-gray-500">
+              <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
                 <Phone className="h-3 w-3" />
                 {business.phone}
               </span>
             )}
             {location && (
-              <span className="flex items-center gap-1 text-xs text-gray-500">
+              <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
                 <MapPin className="h-3 w-3" />
                 {location}
               </span>
@@ -905,23 +905,23 @@ function BusinessHeader({ business }: { business: BusinessData }) {
 function SummaryRow({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
   return (
     <div className="flex justify-between items-center">
-      <span className="text-gray-500">{label}</span>
-      <span className={`font-medium ${highlight ? 'text-blue-600' : 'text-gray-900'}`}>{value}</span>
+      <span className="text-gray-500 dark:text-gray-400">{label}</span>
+      <span className={`font-medium ${highlight ? 'text-blue-600 dark:text-blue-400' : 'text-gray-900 dark:text-gray-100'}`}>{value}</span>
     </div>
   )
 }
 
 function CampaignBanner({ name, description }: { name: string; description: string | null }) {
   return (
-    <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 flex items-start gap-3">
+    <div className="mt-4 rounded-2xl border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-4 flex items-start gap-3">
       <div className="flex-shrink-0 flex h-10 w-10 items-center justify-center rounded-full bg-amber-100">
         <Sparkles className="h-5 w-5 text-amber-600" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-700">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">
           Size özel kampanya
         </p>
-        <p className="mt-0.5 text-sm font-semibold text-amber-900">{name}</p>
+        <p className="mt-0.5 text-sm font-semibold text-amber-900 dark:text-amber-200">{name}</p>
         {description && (
           <p className="mt-1 text-xs text-amber-800 leading-relaxed whitespace-pre-wrap">
             {description}

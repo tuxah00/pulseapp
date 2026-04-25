@@ -548,9 +548,14 @@ export default function AppointmentsPage() {
       const { error } = await supabase.from('appointments').insert({ business_id: businessId, ...payload, status: 'confirmed', source: 'manual' })
       if (error) { setError(humanizeSupabaseError(error)); setSaving(false); return }
     }
+    const isFirstAppointment = !editingAppointment && appointments.length === 0
     setSaving(false); closeModal()
     await fetchAppointments()
-    window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: editingAppointment ? 'Randevu güncellendi' : 'Randevu oluşturuldu' } }))
+    window.dispatchEvent(new CustomEvent('pulse-toast', {
+      detail: isFirstAppointment
+        ? { type: 'appointment', title: '🎉 İlk randevunuz oluşturuldu!', body: 'Artık takviminiz canlı.' }
+        : { type: 'success', title: editingAppointment ? 'Randevu güncellendi' : 'Randevu oluşturuldu' }
+    }))
     const auditCustRes = customerId ? await supabase.from('customers').select('name').eq('id', customerId).single() : null
     const auditCustomer = auditCustRes?.data || null
     const auditService = services.find(s => s.id === serviceId)
