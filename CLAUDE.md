@@ -351,6 +351,7 @@ Aşağıdaki migration'lar Supabase SQL Editor'de manuel olarak çalıştırılm
 - `072_preferred_channel_email.sql` → **✅ Uygulandı (2026-04-25)** — `customers.preferred_channel` CHECK constraint'ına `'email'` değeri eklendi (portal bildirim tercihi)
 - `073_customer_referral_code.sql` → **✅ Uygulandı (2026-04-25)** — `customers.referral_code text` + UNIQUE index (müşteri tavsiye linki)
 - `074_consultation_requests.sql` → **✅ Uygulandı (2026-04-25)** — `customers.lead_source text` CHECK + `consultation_requests` tablosu (status workflow, photo_urls JSONB, KVKK consent fields, RLS 3 policy + trigger)
+- `075_photos_appointment_id.sql` → **⏳ Beklemede (2026-04-25)** — `customer_photos.appointment_id UUID` FK → appointments(id) ON DELETE SET NULL + partial index. Randevu öncesi/sonrası foto desteği için. Supabase Studio veya Management API ile uygulanmalı.
 
 ### Migration Numaralandırma Kuralı (2026-04-18'den itibaren)
 Aynı numaraya denk gelen migration'lar `a/b/c` harf suffix'i ile ayrılır. Alfabetik sıralama doğru çalışma sırasını korur.
@@ -358,4 +359,4 @@ Aynı numaraya denk gelen migration'lar `a/b/c` harf suffix'i ile ayrılır. Alf
 
 Mevcut a/b çiftleri: `036a/036b`, `037a/037b`, `040a/040b`, `049a/049b`, `050a/050b`, `053a/053b`, `054a/054b`, `064/064b`, `070/070b`.
 
-Son migration numarası: `074_consultation_requests.sql` (2026-04-25, ön konsültasyon sistemi).
+Son migration numarası: `075_photos_appointment_id.sql` (2026-04-25, randevu öncesi/sonrası foto FK).

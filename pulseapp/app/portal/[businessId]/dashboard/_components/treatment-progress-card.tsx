@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Sparkles, Calendar, Image as ImageIcon, User, ChevronDown } from 'lucide-react'
+import { Calendar, Image as ImageIcon, User, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ProtocolTimeline, type TimelineSession } from './protocol-timeline'
 import { BeforeAfterGallery } from './before-after-gallery'
@@ -66,7 +66,7 @@ export function TreatmentProgressCard({ protocol }: TreatmentProgressCardProps) 
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-gray-500 dark:text-gray-400">
               {service?.name && (
                 <span className="inline-flex items-center gap-1">
-                  <Sparkles className="h-3 w-3" /> {service.name}
+                  {service.name}
                 </span>
               )}
               {staff?.name && (

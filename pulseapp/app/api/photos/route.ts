@@ -11,6 +11,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const customerId = searchParams.get('customerId')
   const protocolId = searchParams.get('protocolId')
+  const appointmentId = searchParams.get('appointmentId')
   const photoType = searchParams.get('photoType')
 
   const supabase = createServerSupabaseClient()
@@ -22,6 +23,7 @@ export async function GET(request: NextRequest) {
 
   if (customerId) query = query.eq('customer_id', customerId)
   if (protocolId) query = query.eq('protocol_id', protocolId)
+  if (appointmentId) query = query.eq('appointment_id', appointmentId)
   if (photoType) query = query.eq('photo_type', photoType)
 
   const { data, error } = await query
@@ -36,7 +38,7 @@ export async function POST(request: NextRequest) {
   const { businessId, staffId } = auth.ctx
 
   const body = await request.json()
-  const { customerId, protocolId, sessionId, pairId, photoUrl, photoType, tags, notes, takenAt, isPublic, aiAnalysis } = body
+  const { customerId, protocolId, sessionId, appointmentId, pairId, photoUrl, photoType, tags, notes, takenAt, isPublic, aiAnalysis } = body
 
   if (!customerId || !photoUrl || !photoType) {
     return NextResponse.json({ error: 'customerId, photoUrl, photoType zorunlu' }, { status: 400 })
@@ -50,6 +52,7 @@ export async function POST(request: NextRequest) {
       customer_id: customerId,
       protocol_id: protocolId || null,
       session_id: sessionId || null,
+      appointment_id: appointmentId || null,
       pair_id: pairId || null,
       photo_url: photoUrl,
       photo_type: photoType,

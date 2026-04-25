@@ -7,6 +7,8 @@ import { cn } from '@/lib/utils'
 
 interface BeforeAfterUploadProps {
   customerId: string
+  /** Opsiyonel — randevu detayından açılırsa fotoğraflar bu randevuya bağlanır. */
+  appointmentId?: string
   open: boolean
   onClose: () => void
   onUploaded: () => void
@@ -19,7 +21,7 @@ type Slot = 'before' | 'after' | 'single'
  * Aynı `pair_id` altında before + after birlikte yüklenir (galeride yan yana eşleştirilir).
  * `pair_id` non-FK UUID; protocol_sessions FK'sından bağımsız çalışır.
  */
-export function BeforeAfterUpload({ customerId, open, onClose, onUploaded }: BeforeAfterUploadProps) {
+export function BeforeAfterUpload({ customerId, appointmentId, open, onClose, onUploaded }: BeforeAfterUploadProps) {
   const [mode, setMode] = useState<'pair' | 'single'>('pair')
   const [beforeFile, setBeforeFile] = useState<File | null>(null)
   const [afterFile, setAfterFile] = useState<File | null>(null)
@@ -75,6 +77,7 @@ export function BeforeAfterUpload({ customerId, open, onClose, onUploaded }: Bef
       notes: notes.trim() || null,
     }
     if (pairId) body.pairId = pairId
+    if (appointmentId) body.appointmentId = appointmentId
     const res = await fetch('/api/photos', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
