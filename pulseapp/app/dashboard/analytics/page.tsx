@@ -55,7 +55,6 @@ type AnalyticsTab = 'summary' | 'breakdown' | 'finance' | 'people'
 
 type AnalyticsAppointment = AppointmentRow & {
   services: { name: string; price: number } | null
-  customers: { name: string } | null
 }
 
 type PrevAppointment = Pick<AppointmentRow, 'status'> & {
@@ -172,7 +171,7 @@ export default function AnalyticsPage() {
     const { start: prevStart, end: prevEnd } = getPeriodDates(period, 1)
 
     const [aptRes, prevAptRes, custRes, revRes, svcRes, staffRes, invRes] = await Promise.all([
-      supabase.from('appointments').select('*, services(name, price), customers(name)')
+      supabase.from('appointments').select('*, services(name, price)')
         .eq('business_id', businessId).is('deleted_at', null).gte('appointment_date', start).lte('appointment_date', end).order('appointment_date'),
       supabase.from('appointments').select('status, services(price)')
         .eq('business_id', businessId).is('deleted_at', null).gte('appointment_date', prevStart).lte('appointment_date', prevEnd),
@@ -1243,52 +1242,12 @@ export default function AnalyticsPage() {
             </div>
           )}
 
-          {/* Randevu Gelirleri Tablosu */}
-          {completed.length > 0 && (
-            <div>
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">{periodLabel} Randevu Gelirleri</h3>
-              <div className="table-wrapper">
-                <table className="table-base">
-                  <thead className="table-head-row">
-                    <tr>
-                      <th className="table-head-cell">Tarih</th>
-                      <th className="table-head-cell">Kategori</th>
-                      <th className="table-head-cell">Açıklama</th>
-                      <th className="table-head-cell text-right">Tutar</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {completed.map(apt => (
-                      <tr key={apt.id} className="table-row">
-                        <td className="table-cell text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                          {new Date(apt.appointment_date).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' })}
-                        </td>
-                        <td className="table-cell font-medium text-gray-900 dark:text-gray-100">Randevu Geliri</td>
-                        <td className="table-cell text-gray-500 dark:text-gray-400">
-                          {apt.services?.name ?? '—'}
-                          {apt.customers?.name ? ` · ${apt.customers.name}` : ''}
-                        </td>
-                        <td className="table-cell text-right font-medium text-green-600">{formatCurrency(apt.services?.price || 0)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot className="table-head-row">
-                    <tr>
-                      <td colSpan={3} className="table-cell font-semibold text-gray-700 dark:text-gray-300 text-right">Toplam Randevu Geliri</td>
-                      <td className="table-cell text-right font-bold text-green-600">{formatCurrency(appointmentRevenue)}</td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* Manuel Gelir Listesi */}
+          {/* Gelir Listesi */}
           {incomesLoading ? (
             <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-pulse-900" /></div>
-          ) : incomes.length > 0 && (
+          ) : (completed.length > 0 || incomes.length > 0) && (
             <div>
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">{periodLabel} Manuel Gelirleri</h3>
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">{periodLabel} Gelirleri</h3>
               <div className="table-wrapper">
                 <table className="table-base">
                   <thead className="table-head-row">
@@ -1301,6 +1260,17 @@ export default function AnalyticsPage() {
                     </tr>
                   </thead>
                   <tbody>
+                    {/* Randevu geliri özet satırı */}
+                    {completed.length > 0 && (
+                      <tr className="table-row">
+                        <td className="table-cell text-gray-500 dark:text-gray-400 whitespace-nowrap">—</td>
+                        <td className="table-cell font-medium text-gray-900 dark:text-gray-100">Randevular</td>
+                        <td className="table-cell text-gray-500 dark:text-gray-400">{completed.length} tamamlanan randevu</td>
+                        <td className="table-cell text-right font-medium text-green-600">{formatCurrency(appointmentRevenue)}</td>
+                        <td className="table-cell"></td>
+                      </tr>
+                    )}
+                    {/* Manuel gelir satırları */}
                     {incomes.map(income => (
                       <tr key={income.id} className="table-row">
                         <td className="table-cell text-gray-500 dark:text-gray-400 whitespace-nowrap">
@@ -1322,8 +1292,8 @@ export default function AnalyticsPage() {
                   </tbody>
                   <tfoot className="table-head-row">
                     <tr>
-                      <td colSpan={3} className="table-cell font-semibold text-gray-700 dark:text-gray-300 text-right">Toplam Gelir (Manuel)</td>
-                      <td className="table-cell text-right font-bold text-green-600">{formatCurrency(manualIncome)}</td>
+                      <td colSpan={3} className="table-cell font-semibold text-gray-700 dark:text-gray-300 text-right">Toplam Gelir</td>
+                      <td className="table-cell text-right font-bold text-green-600">{formatCurrency(totalRevenue)}</td>
                       <td></td>
                     </tr>
                   </tfoot>
