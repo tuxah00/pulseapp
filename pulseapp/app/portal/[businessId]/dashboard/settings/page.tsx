@@ -50,6 +50,8 @@ export default function PortalSettingsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saveMsg, setSaveMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
+  // Alan-başı inline hata mesajları (client-side validation)
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<'name' | 'email' | 'birthday', string>>>({})
   const [deletionRequest, setDeletionRequest] = useState<DeletionRequest | null>(null)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [exporting, setExporting] = useState(false)
@@ -98,7 +100,39 @@ export default function PortalSettingsPage() {
     })()
   }, [])
 
+  function validate(): boolean {
+    const errors: Partial<Record<'name' | 'email' | 'birthday', string>> = {}
+    const trimmedName = name.trim()
+    if (trimmedName.length < 2) {
+      errors.name = 'Ad en az 2 karakter olmalı'
+    } else if (trimmedName.length > 200) {
+      errors.name = 'Ad çok uzun (en fazla 200 karakter)'
+    }
+    const trimmedEmail = email.trim()
+    if (trimmedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      errors.email = 'Geçerli bir e-posta adresi girin'
+    }
+    // Faz 4: e-posta tercih edildiyse adres zorunlu (channel='email' eklendiğinde aktif olur)
+    if ((channel as string) === 'email' && !trimmedEmail) {
+      errors.email = 'E-posta tercih ettiğin için adres zorunlu'
+    }
+    if (birthday) {
+      const d = new Date(birthday)
+      const now = new Date()
+      if (isNaN(d.getTime())) {
+        errors.birthday = 'Geçerli bir tarih girin'
+      } else if (d > now) {
+        errors.birthday = 'Doğum tarihi gelecekte olamaz'
+      } else if (d.getFullYear() < 1900) {
+        errors.birthday = 'Yıl 1900\'den eski olamaz'
+      }
+    }
+    setFieldErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
   async function handleSave() {
+    if (!validate()) return
     setSaving(true)
     setSaveMsg(null)
     try {
@@ -202,9 +236,20 @@ export default function PortalSettingsPage() {
             <input
               type="text"
               value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-pulse-900/30 focus:border-pulse-900"
+              onChange={(e) => {
+                setName(e.target.value)
+                if (fieldErrors.name) setFieldErrors((p) => ({ ...p, name: undefined }))
+              }}
+              className={cn(
+                'w-full px-3 py-2 rounded-lg border bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2',
+                fieldErrors.name
+                  ? 'border-red-300 dark:border-red-800 focus:ring-red-500/30 focus:border-red-500'
+                  : 'border-gray-200 dark:border-gray-700 focus:ring-pulse-900/30 focus:border-pulse-900'
+              )}
             />
+            {fieldErrors.name && (
+              <p className="mt-1 text-xs text-red-600 dark:text-red-400">{fieldErrors.name}</p>
+            )}
           </div>
 
           <div className="grid sm:grid-cols-2 gap-4">
@@ -215,10 +260,21 @@ export default function PortalSettingsPage() {
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value)
+                  if (fieldErrors.email) setFieldErrors((p) => ({ ...p, email: undefined }))
+                }}
                 placeholder="ornek@posta.com"
-                className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-pulse-900/30 focus:border-pulse-900"
+                className={cn(
+                  'w-full px-3 py-2 rounded-lg border bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2',
+                  fieldErrors.email
+                    ? 'border-red-300 dark:border-red-800 focus:ring-red-500/30 focus:border-red-500'
+                    : 'border-gray-200 dark:border-gray-700 focus:ring-pulse-900/30 focus:border-pulse-900'
+                )}
               />
+              {fieldErrors.email && (
+                <p className="mt-1 text-xs text-red-600 dark:text-red-400">{fieldErrors.email}</p>
+              )}
             </div>
 
             <div>
@@ -228,9 +284,22 @@ export default function PortalSettingsPage() {
               <input
                 type="date"
                 value={birthday}
-                onChange={(e) => setBirthday(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-pulse-900/30 focus:border-pulse-900"
+                max={formatDateISO(new Date())}
+                min="1900-01-01"
+                onChange={(e) => {
+                  setBirthday(e.target.value)
+                  if (fieldErrors.birthday) setFieldErrors((p) => ({ ...p, birthday: undefined }))
+                }}
+                className={cn(
+                  'w-full px-3 py-2 rounded-lg border bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2',
+                  fieldErrors.birthday
+                    ? 'border-red-300 dark:border-red-800 focus:ring-red-500/30 focus:border-red-500'
+                    : 'border-gray-200 dark:border-gray-700 focus:ring-pulse-900/30 focus:border-pulse-900'
+                )}
               />
+              {fieldErrors.birthday && (
+                <p className="mt-1 text-xs text-red-600 dark:text-red-400">{fieldErrors.birthday}</p>
+              )}
             </div>
           </div>
 

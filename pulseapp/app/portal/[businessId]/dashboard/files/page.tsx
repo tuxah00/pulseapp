@@ -3,12 +3,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import NextImage from 'next/image'
 import { useParams, useSearchParams } from 'next/navigation'
-import { Folder, Image as ImageIcon, Loader2, X } from 'lucide-react'
+import { Folder, Image as ImageIcon, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { FileCard, FileDetailModal, type PortalRecord } from '../_components/file-card'
 import { PhotoLightbox, type LightboxPhoto } from '../_components/photo-lightbox'
 import { SectionHeader } from '../_components/section-header'
 import { getFilesPageTitle, getFilesPageSubtitle } from '@/lib/portal/sector-labels'
+import { SkeletonList } from '../_components/skeleton-card'
 
 interface PhotoRow extends LightboxPhoto {
   session_id?: string | null
@@ -137,9 +138,7 @@ export default function PortalFilesPage() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-        </div>
+        <SkeletonList count={4} lines={2} withAvatar />
       ) : tab === 'records' ? (
         records.length === 0 ? (
           <EmptyCard icon={Folder} title="Henüz kayıt yok" description="İşletme senin için dosya eklediğinde burada görünecek." />

@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { Receipt, Loader2, ChevronRight, FileX } from 'lucide-react'
+import { Receipt, ChevronRight, FileX } from 'lucide-react'
 import { cn, formatCurrency, formatDate } from '@/lib/utils'
+import { SkeletonList } from '../_components/skeleton-card'
 
 interface Invoice {
   id: string
@@ -75,9 +76,7 @@ export default function PortalInvoicesPage() {
       )}
 
       {loading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-        </div>
+        <SkeletonList count={4} lines={2} />
       ) : invoices.length === 0 ? (
         <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-10 text-center">
           <div className="h-14 w-14 rounded-full bg-pulse-900/5 dark:bg-pulse-900/20 flex items-center justify-center mx-auto mb-3">

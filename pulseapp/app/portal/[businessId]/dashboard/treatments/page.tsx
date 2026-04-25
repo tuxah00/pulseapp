@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { Sparkles, Package, Loader2, CalendarClock, CheckCircle2 } from 'lucide-react'
+import { Sparkles, Package, CalendarClock, CheckCircle2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   TreatmentProgressCard,
@@ -12,6 +12,7 @@ import {
 import { SectionHeader } from '../_components/section-header'
 import { getTreatmentsPageTitle } from '@/lib/portal/sector-labels'
 import { formatUntil, daysSince } from '@/lib/portal/date-helpers'
+import { SkeletonList } from '../_components/skeleton-card'
 
 interface CustomerPackage {
   id: string
@@ -102,9 +103,7 @@ export default function PortalTreatmentsPage() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-        </div>
+        <SkeletonList count={2} lines={4} />
       ) : isEmpty ? (
         <div className="bg-gradient-to-br from-pulse-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800 rounded-2xl border border-pulse-100 dark:border-gray-800 p-10 text-center">
           <div className="h-14 w-14 rounded-full bg-white dark:bg-gray-900 shadow flex items-center justify-center mx-auto mb-3">
