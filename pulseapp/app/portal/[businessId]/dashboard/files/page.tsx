@@ -3,30 +3,80 @@
 import { useEffect, useMemo, useState } from 'react'
 import NextImage from 'next/image'
 import { useParams, useSearchParams } from 'next/navigation'
-import { Folder, Image as ImageIcon, X } from 'lucide-react'
+import { Folder, Image as ImageIcon, Stethoscope } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { FileCard, FileDetailModal, type PortalRecord } from '../_components/file-card'
 import { PhotoLightbox, type LightboxPhoto } from '../_components/photo-lightbox'
-import { SectionHeader } from '../_components/section-header'
 import { getFilesPageTitle, getFilesPageSubtitle } from '@/lib/portal/sector-labels'
 import { SkeletonList } from '../_components/skeleton-card'
 
-interface PhotoRow extends LightboxPhoto {
-  session_id?: string | null
+// API'den gelen ham fotoğraf satırı (protocol join dahil)
+interface RawPhoto {
+  id: string
+  photo_url: string
+  photo_type: string
+  tags?: string[] | null
+  notes?: string | null
+  taken_at?: string | null
+  created_at?: string | null
   protocol_id?: string | null
+  session_id?: string | null
+  protocol?: {
+    id: string
+    name: string
+    service?: { id: string; name: string } | null
+  } | null
 }
 
-const PHOTO_FILTERS: Array<{ key: string; label: string; match: (t: string) => boolean }> = [
-  { key: 'all', label: 'Hepsi', match: () => true },
-  { key: 'before', label: 'Öncesi', match: (t) => t === 'before' },
-  { key: 'after', label: 'Sonrası', match: (t) => t === 'after' },
-  { key: 'xray', label: 'Röntgen', match: (t) => t === 'xray' },
-  { key: 'panoramic', label: 'Panoramik', match: (t) => t === 'panoramic' },
-  { key: 'progress', label: 'Süreç', match: (t) => t === 'progress' },
+interface PhotoRow extends LightboxPhoto {
+  protocol_id?: string | null
+  session_id?: string | null
+}
+
+// Protokol/hizmet grubunu temsil eder
+interface PhotoGroup {
+  key: string           // protocol_id veya 'general'
+  serviceLabel: string  // Hizmet / protokol adı
+  firstDate: string     // En erken çekilme tarihi (grup başlığında gösterilir)
+  photos: PhotoRow[]
+}
+
+const TYPE_LABELS: Record<string, string> = {
+  before: 'Öncesi',
+  after: 'Sonrası',
+  progress: 'Süreç',
+  xray: 'Röntgen',
+  panoramic: 'Panoramik',
+}
+
+// Filtre butonları — aktif filtre 0 fotoğrafa sahipse gizlenir
+const PHOTO_FILTERS: Array<{ key: string; label: string; types: string[] }> = [
+  { key: 'all',      label: 'Hepsi',    types: [] },
+  { key: 'before',   label: 'Öncesi',   types: ['before'] },
+  { key: 'after',    label: 'Sonrası',  types: ['after'] },
+  { key: 'xray',     label: 'Röntgen',  types: ['xray'] },
+  { key: 'panoramic',label: 'Panoramik',types: ['panoramic'] },
+  { key: 'progress', label: 'Süreç',    types: ['progress'] },
 ]
 
-// Hasta Dosyaları (records) içindeki resim/röntgen dosyalarını saptamak için
-// MIME ve uzantı kontrolü; sadece görsel olanlar Fotoğraflar sekmesine alınır.
+// Ham API yanıtını PhotoRow'a dönüştür
+function normalizePhoto(raw: RawPhoto): PhotoRow {
+  return {
+    id: raw.id,
+    photo_url: raw.photo_url,
+    photo_type: raw.photo_type,
+    tags: raw.tags,
+    notes: raw.notes,
+    taken_at: raw.taken_at,
+    created_at: raw.created_at,
+    service_name: raw.protocol?.service?.name ?? null,
+    protocol_name: raw.protocol?.name ?? null,
+    protocol_id: raw.protocol_id,
+    session_id: raw.session_id,
+  }
+}
+
+// Records içindeki resimleri synthetic PhotoRow'a dönüştür
 const IMAGE_EXT_RE = /\.(jpe?g|png|webp|gif|heic|heif|bmp|tiff?|dcm)(\?|$)/i
 
 function isImageFile(name: string | undefined, url: string, mime: string | undefined): boolean {
@@ -34,22 +84,17 @@ function isImageFile(name: string | undefined, url: string, mime: string | undef
     if (mime.startsWith('image/')) return true
     if (mime === 'application/dicom') return true
   }
-  const target = (name || '') + ' ' + url
-  return IMAGE_EXT_RE.test(target)
+  return IMAGE_EXT_RE.test((name || '') + ' ' + url)
 }
 
-// Records'tan gelen bir resmin mevcut filtrelerden hangisine düştüğünü belirler.
-// .dcm/dicom → röntgen, isminde panoramic/panoramik → panoramik, isminde rontgen/röntgen/xray → röntgen,
-// kalan tüm resimler → süreç.
 function classifyRecordPhoto(name: string | undefined, url: string, mime: string | undefined): string {
   const lower = ((name || '') + ' ' + url).toLowerCase()
-  if (mime === 'application/dicom' || /\.dcm(\?|$)/i.test(url) || (name && /\.dcm$/i.test(name))) return 'xray'
+  if (mime === 'application/dicom' || /\.dcm(\?|$)/i.test(url)) return 'xray'
   if (/panoramic|panoramik/.test(lower)) return 'panoramic'
   if (/r[öo]ntgen|x-?ray/.test(lower)) return 'xray'
   return 'progress'
 }
 
-// Records arrayini gez ve içindeki resim/röntgen dosyalarını synthetic PhotoRow'a dönüştür.
 function extractRecordPhotos(records: PortalRecord[]): PhotoRow[] {
   const out: PhotoRow[] = []
   for (const rec of records) {
@@ -68,13 +113,45 @@ function extractRecordPhotos(records: PortalRecord[]): PhotoRow[] {
         photo_type: classifyRecordPhoto(meta.name, url, meta.type),
         taken_at: rec.created_at,
         notes: meta.name || null,
-        is_from_record: true,
-        record_id: rec.id,
-        record_title: rec.title,
+        protocol_id: null,
       })
     })
   }
   return out
+}
+
+// Fotoğrafları protokol/hizmet bazında grupla.
+// protocol_id olanlar hizmet grubuna, olmayanlar 'general'a girer.
+function groupPhotos(photos: PhotoRow[]): { groups: PhotoGroup[]; general: PhotoRow[] } {
+  const groupMap = new Map<string, PhotoGroup>()
+  const general: PhotoRow[] = []
+
+  for (const p of photos) {
+    if (!p.protocol_id) {
+      general.push(p)
+      continue
+    }
+    const key = p.protocol_id
+    if (!groupMap.has(key)) {
+      groupMap.set(key, {
+        key,
+        serviceLabel: p.service_name || p.protocol_name || 'Tedavi',
+        firstDate: p.taken_at || p.created_at || '',
+        photos: [],
+      })
+    }
+    groupMap.get(key)!.photos.push(p)
+  }
+
+  const groups = Array.from(groupMap.values())
+  return { groups, general }
+}
+
+function formatGroupDate(iso: string): string {
+  if (!iso) return ''
+  try {
+    return new Date(iso).toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' })
+  } catch { return '' }
 }
 
 export default function PortalFilesPage() {
@@ -85,7 +162,7 @@ export default function PortalFilesPage() {
 
   const [tab, setTab] = useState<'records' | 'photos'>('records')
   const [records, setRecords] = useState<PortalRecord[]>([])
-  const [photos, setPhotos] = useState<PhotoRow[]>([])
+  const [rawPhotos, setRawPhotos] = useState<RawPhoto[]>([])
   const [sector, setSector] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -102,22 +179,21 @@ export default function PortalFilesPage() {
           fetch('/api/portal/photos'),
         ])
         if (meRes.ok) {
-          const data = await meRes.json()
-          setSector(data.business?.sector ?? null)
+          const d = await meRes.json()
+          setSector(d.business?.sector ?? null)
         }
         if (recRes.ok) {
-          const data = await recRes.json()
-          const recs: PortalRecord[] = data.records || []
+          const d = await recRes.json()
+          const recs: PortalRecord[] = d.records || []
           setRecords(recs)
-          // Derin bağlantı: ?open=<id> ile belirtilen kaydı otomatik aç
           if (openRecordId) {
             const target = recs.find((r) => r.id === openRecordId)
             if (target) setActiveRecord(target)
           }
         }
         if (phRes.ok) {
-          const data = await phRes.json()
-          setPhotos(data.photos || [])
+          const d = await phRes.json()
+          setRawPhotos(d.photos || [])
         }
       } finally {
         setLoading(false)
@@ -129,18 +205,22 @@ export default function PortalFilesPage() {
   const title = getFilesPageTitle(sector)
   const subtitle = getFilesPageSubtitle(sector)
 
-  // customer_photos + records'taki resim dosyaları birleşik liste
+  // customer_photos (normalize edilmiş) + records'tan çıkarılan resimler
   const allPhotos = useMemo<PhotoRow[]>(() => {
-    return [...photos, ...extractRecordPhotos(records)]
-  }, [photos, records])
+    return [...rawPhotos.map(normalizePhoto), ...extractRecordPhotos(records)]
+  }, [rawPhotos, records])
 
-  const filteredPhotos = useMemo(() => {
+  // Aktif filtreye göre fotoğrafları kırp
+  const filteredPhotos = useMemo<PhotoRow[]>(() => {
     const f = PHOTO_FILTERS.find((x) => x.key === photoFilter)
-    if (!f) return allPhotos
-    return allPhotos.filter((p) => f.match(p.photo_type))
+    if (!f || f.types.length === 0) return allPhotos
+    return allPhotos.filter((p) => f.types.includes(p.photo_type))
   }, [allPhotos, photoFilter])
 
-  // Aktif filtrenin hangi tipleri içerdiğini say
+  // Filtreli fotoğrafları grupla
+  const { groups, general } = useMemo(() => groupPhotos(filteredPhotos), [filteredPhotos])
+
+  // Filtre buton sayaçları (tüm allPhotos üzerinden, filtreden bağımsız)
   const photoCounts = useMemo(() => {
     const counts: Record<string, number> = { all: allPhotos.length }
     for (const p of allPhotos) {
@@ -149,6 +229,9 @@ export default function PortalFilesPage() {
     return counts
   }, [allPhotos])
 
+  const hasProtocolPhotos = groups.length > 0
+  const hasGeneralPhotos = general.length > 0
+
   return (
     <div className="max-w-4xl mx-auto space-y-5">
       <div>
@@ -156,42 +239,10 @@ export default function PortalFilesPage() {
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{subtitle}</p>
       </div>
 
-      {/* Tabs */}
+      {/* Sekmeler */}
       <div className="inline-flex rounded-xl bg-gray-100 dark:bg-gray-800 p-1">
-        <button
-          onClick={() => setTab('records')}
-          className={cn(
-            'px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2',
-            tab === 'records'
-              ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 shadow-sm'
-              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-          )}
-        >
-          <Folder className="h-4 w-4" />
-          Kayıtlar
-          {records.length > 0 && (
-            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-pulse-900/10 dark:bg-pulse-900/30 text-pulse-900 dark:text-pulse-300">
-              {records.length}
-            </span>
-          )}
-        </button>
-        <button
-          onClick={() => setTab('photos')}
-          className={cn(
-            'px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2',
-            tab === 'photos'
-              ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 shadow-sm'
-              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-          )}
-        >
-          <ImageIcon className="h-4 w-4" />
-          Fotoğraflar
-          {allPhotos.length > 0 && (
-            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-pulse-900/10 dark:bg-pulse-900/30 text-pulse-900 dark:text-pulse-300">
-              {allPhotos.length}
-            </span>
-          )}
-        </button>
+        <TabButton active={tab === 'records'} onClick={() => setTab('records')} icon={<Folder className="h-4 w-4" />} label="Kayıtlar" count={records.length} />
+        <TabButton active={tab === 'photos'} onClick={() => setTab('photos')} icon={<ImageIcon className="h-4 w-4" />} label="Fotoğraflar" count={allPhotos.length} />
       </div>
 
       {loading ? (
@@ -207,10 +258,12 @@ export default function PortalFilesPage() {
           </div>
         )
       ) : (
-        <div>
-          {/* Filtreler */}
+        /* ── Fotoğraflar sekmesi ── */
+        <div className="space-y-6">
+
+          {/* Filtre butonları */}
           {allPhotos.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-4">
+            <div className="flex flex-wrap gap-2">
               {PHOTO_FILTERS.map((f) => {
                 const count = f.key === 'all' ? allPhotos.length : (photoCounts[f.key] || 0)
                 if (f.key !== 'all' && count === 0) return null
@@ -234,31 +287,71 @@ export default function PortalFilesPage() {
           )}
 
           {filteredPhotos.length === 0 ? (
-            <EmptyCard icon={ImageIcon} title="Fotoğraf yok" description="Bu kategoride fotoğraf bulunmuyor." />
+            <EmptyCard icon={ImageIcon} title="Fotoğraf yok" description="Bu kategoride henüz fotoğraf bulunmuyor." />
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-              {filteredPhotos.map((p) => {
-                const label = PHOTO_FILTERS.find((f) => f.key === p.photo_type)?.label
-                return (
-                  <button
-                    key={p.id}
-                    onClick={() => setActivePhoto(p)}
-                    className="relative aspect-square rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 hover:ring-2 hover:ring-pulse-900 transition-all group"
-                  >
-                    <NextImage src={p.photo_url} alt={label || 'Fotoğraf'} fill className="object-cover group-hover:scale-105 transition-transform" />
-                    <span className="absolute bottom-2 left-2 text-[10px] font-medium px-2 py-0.5 rounded-full bg-black/60 text-white capitalize">
-                      {label || p.photo_type}
-                    </span>
-                    {p.is_from_record && (
-                      <span className="absolute top-2 left-2 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-500/90 text-white flex items-center gap-1 shadow">
-                        <Folder className="h-2.5 w-2.5" />
-                        Dosya
-                      </span>
-                    )}
-                  </button>
-                )
-              })}
-            </div>
+            <>
+              {/* ── Protokol/hizmet grupları ── */}
+              {hasProtocolPhotos && (
+                <div className="space-y-4">
+                  {/* Başlık sadece hem gruplu hem genel foto varsa gösterilir */}
+                  {hasGeneralPhotos && (
+                    <SectionLabel icon={<Stethoscope className="h-4 w-4" />} text="Tedavi Fotoğrafları" />
+                  )}
+
+                  {groups.map((group) => (
+                    <div
+                      key={group.key}
+                      className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden"
+                    >
+                      {/* Grup başlığı */}
+                      <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center gap-2">
+                        <div className="h-7 w-7 rounded-lg bg-pulse-900/5 dark:bg-pulse-900/20 flex items-center justify-center flex-shrink-0">
+                          <Stethoscope className="h-3.5 w-3.5 text-pulse-900 dark:text-pulse-300" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+                            {group.serviceLabel}
+                          </p>
+                          {group.firstDate && (
+                            <p className="text-[11px] text-gray-400 dark:text-gray-500">
+                              {formatGroupDate(group.firstDate)}
+                            </p>
+                          )}
+                        </div>
+                        <span className="text-[11px] font-medium text-gray-400 dark:text-gray-500 flex-shrink-0">
+                          {group.photos.length} fotoğraf
+                        </span>
+                      </div>
+
+                      {/* Grup fotoğraf grid'i */}
+                      <div className="p-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                        {group.photos.map((p) => (
+                          <PhotoTile
+                            key={p.id}
+                            photo={p}
+                            onClick={() => setActivePhoto(p)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* ── Genel / protokolsüz fotoğraflar ── */}
+              {hasGeneralPhotos && (
+                <div className="space-y-3">
+                  {hasProtocolPhotos && (
+                    <SectionLabel icon={<ImageIcon className="h-4 w-4" />} text="Diğer Fotoğraflar" />
+                  )}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {general.map((p) => (
+                      <PhotoTile key={p.id} photo={p} onClick={() => setActivePhoto(p)} />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
@@ -267,23 +360,83 @@ export default function PortalFilesPage() {
         record={activeRecord}
         onClose={() => setActiveRecord(null)}
         onImageClick={(url) => {
-          // Record detayındaki resimlere tıklanınca lightbox'ta aç
-          setActivePhoto({ id: `rec-${url}`, photo_url: url, photo_type: 'progress' })
+          setActivePhoto({ id: `img-${url}`, photo_url: url, photo_type: 'progress' })
         }}
       />
+
       <PhotoLightbox
         photo={activePhoto}
         onClose={() => setActivePhoto(null)}
-        onOpenRecord={(recordId) => {
-          const target = records.find((r) => r.id === recordId)
-          if (target) {
-            setActivePhoto(null)
-            setTab('records')
-            setActiveRecord(target)
-          }
-        }}
       />
     </div>
+  )
+}
+
+// ── Küçük yardımcı bileşenler ──
+
+interface TabButtonProps {
+  active: boolean
+  onClick: () => void
+  icon: React.ReactNode
+  label: string
+  count: number
+}
+function TabButton({ active, onClick, icon, label, count }: TabButtonProps) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        'px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2',
+        active
+          ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 shadow-sm'
+          : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+      )}
+    >
+      {icon}
+      {label}
+      {count > 0 && (
+        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-pulse-900/10 dark:bg-pulse-900/30 text-pulse-900 dark:text-pulse-300">
+          {count}
+        </span>
+      )}
+    </button>
+  )
+}
+
+interface SectionLabelProps {
+  icon: React.ReactNode
+  text: string
+}
+function SectionLabel({ icon, text }: SectionLabelProps) {
+  return (
+    <div className="flex items-center gap-2 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest">
+      {icon}
+      {text}
+    </div>
+  )
+}
+
+interface PhotoTileProps {
+  photo: PhotoRow
+  onClick: () => void
+}
+function PhotoTile({ photo, onClick }: PhotoTileProps) {
+  const label = TYPE_LABELS[photo.photo_type] || photo.photo_type
+  return (
+    <button
+      onClick={onClick}
+      className="relative aspect-square rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 hover:ring-2 hover:ring-pulse-900 transition-all group"
+    >
+      <NextImage
+        src={photo.photo_url}
+        alt={label}
+        fill
+        className="object-cover group-hover:scale-105 transition-transform"
+      />
+      <span className="absolute bottom-2 left-2 text-[10px] font-medium px-2 py-0.5 rounded-full bg-black/60 text-white">
+        {label}
+      </span>
+    </button>
   )
 }
 
