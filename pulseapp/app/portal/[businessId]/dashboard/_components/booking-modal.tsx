@@ -122,17 +122,19 @@ export default function BookingModal({
       setStartTime('')
       return
     }
+    const svc = services.find((s) => s.id === serviceId)
+    if (!svc) return
     setLoadingSlots(true)
     setSlots([])
     setStartTime('')
-    const params = new URLSearchParams({ date, serviceId })
+    const params = new URLSearchParams({ date, duration: String(svc.duration_minutes) })
     if (staffId) params.set('staffId', staffId)
     fetch(`/api/public/business/${businessId}/slots?${params.toString()}`)
       .then((r) => r.json())
       .then((d) => setSlots(Array.isArray(d.slots) ? d.slots : []))
       .catch(() => setSlots([]))
       .finally(() => setLoadingSlots(false))
-  }, [serviceId, staffId, date, businessId])
+  }, [serviceId, staffId, date, businessId, services])
 
   const selectedService = services.find((s) => s.id === serviceId) || null
 
