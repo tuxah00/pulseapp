@@ -163,7 +163,7 @@ export default function PortalAppointmentsPage() {
             const canEdit = tab === 'upcoming' && !TERMINAL_STATUSES.has(apt.status)
 
             return (
-              <div key={apt.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-5 hover:shadow-md transition-shadow">
+              <div key={apt.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1.5">

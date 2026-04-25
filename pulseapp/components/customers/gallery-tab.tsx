@@ -212,11 +212,6 @@ export function GalleryTab({ customerId, canWrite, appointmentId, filterByAppoin
           <Camera className="h-4 w-4 text-pulse-900" />
           Galeri
           {!loading && <span className="text-xs text-gray-500 dark:text-gray-400">({photos.length})</span>}
-          {appointmentStatus === 'confirmed' && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-medium">
-              Sadece Öncesi
-            </span>
-          )}
         </div>
         {canUpload && (
           <button onClick={() => setUploadOpen(true)} className="btn-primary text-xs py-1.5">

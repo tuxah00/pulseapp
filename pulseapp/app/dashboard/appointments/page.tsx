@@ -1,6 +1,7 @@
 ﻿'use client'
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
@@ -27,7 +28,7 @@ import {
   CalendarDays,
   CalendarRange,
   Search, Filter, ArrowUpDown,
-  Users, Building2, Ban, Lock, BellRing, Sparkles,
+  Users, User, Building2, Ban, Lock, BellRing, Sparkles, ExternalLink,
 } from 'lucide-react'
 import { formatTime, formatDate, getStatusColor, formatCurrency, cn, formatDateISO } from '@/lib/utils'
 import { STATUS_LABELS, type AppointmentStatus, type Service, type StaffMember, type WorkingHours, type BlockedSlot } from '@/types'
@@ -2642,9 +2643,22 @@ export default function AppointmentsPage() {
                 <DetailRow label={customerLabel} value={selectedAppointment.customers?.name || 'İsimsiz'} />
                 {selectedAppointment.customers?.phone && (
                   <DetailRow label="Telefon" value={
-                    <a href={`tel:${selectedAppointment.customers.phone}`} className="text-pulse-900 hover:underline flex items-center gap-1">
-                      <Phone className="h-3 w-3" />{selectedAppointment.customers.phone}
-                    </a>
+                    <div className="flex items-center gap-2">
+                      <a href={`tel:${selectedAppointment.customers.phone}`} className="text-pulse-900 hover:underline flex items-center gap-1">
+                        <Phone className="h-3 w-3" />{selectedAppointment.customers.phone}
+                      </a>
+                      {selectedAppointment.customer_id && (
+                        <Link
+                          href={`/dashboard/customers?customerId=${selectedAppointment.customer_id}`}
+                          className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                          title={`${customerLabel} profiline git`}
+                        >
+                          <User className="h-3 w-3" />
+                          Profil
+                          <ExternalLink className="h-2.5 w-2.5 opacity-60" />
+                        </Link>
+                      )}
+                    </div>
                   } />
                 )}
                 <DetailRow label="Tarih" value={formatDate(selectedAppointment.appointment_date)} />
