@@ -41,11 +41,13 @@ export default function TutorialBubble({ topic, onOpen, onDismiss }: Props) {
           </div>
           <div className="min-w-0">
             <p className="text-xs font-semibold text-gray-900 dark:text-gray-100 leading-snug">
-              {topic.title} sayfası
+              {topic.title ? `${topic.title} sayfası` : 'Kısa bir ipucu ister misin?'}
             </p>
-            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-snug group-hover:text-pulse-900 dark:group-hover:text-pulse-300 transition-colors">
-              Kısa bir ipucu ister misin?
-            </p>
+            {topic.title && (
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-snug group-hover:text-pulse-900 dark:group-hover:text-pulse-300 transition-colors">
+                Kısa bir ipucu ister misin?
+              </p>
+            )}
           </div>
         </button>
         {/* Oluşan kuyruk (arrow) */}
