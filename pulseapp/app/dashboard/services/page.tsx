@@ -45,6 +45,7 @@ export default function ServicesPage() {
   const [durationMinutes, setDurationMinutes] = useState(30)
   const [price, setPrice] = useState('')
   const [recommendedInterval, setRecommendedInterval] = useState('')
+  const [postCareNotes, setPostCareNotes] = useState('')
 
   const supabase = createClient()
 
@@ -84,6 +85,7 @@ export default function ServicesPage() {
     setDurationMinutes(30)
     setPrice('')
     setRecommendedInterval('')
+    setPostCareNotes('')
     setError(null)
     setContraindications([])
     setPendingContraindications([])
@@ -97,6 +99,7 @@ export default function ServicesPage() {
     setDurationMinutes(service.duration_minutes)
     setPrice(service.price ? String(service.price) : '')
     setRecommendedInterval(service.recommended_interval_days ? String(service.recommended_interval_days) : '')
+    setPostCareNotes((service as Service & { default_post_care_notes?: string | null }).default_post_care_notes || '')
     setError(null)
     setShowModal(true)
     fetchContraindications(service.id)
@@ -113,6 +116,7 @@ export default function ServicesPage() {
       duration_minutes: durationMinutes,
       price: price ? parseFloat(price) : null,
       recommended_interval_days: recommendedInterval ? parseInt(recommendedInterval) : null,
+      default_post_care_notes: postCareNotes.trim() || null,
       business_id: businessId,
     }
 
@@ -120,7 +124,14 @@ export default function ServicesPage() {
       // Güncelle
       const { error } = await supabase
         .from('services')
-        .update({ name, description: description || null, duration_minutes: durationMinutes, price: price ? parseFloat(price) : null, recommended_interval_days: recommendedInterval ? parseInt(recommendedInterval) : null })
+        .update({
+          name,
+          description: description || null,
+          duration_minutes: durationMinutes,
+          price: price ? parseFloat(price) : null,
+          recommended_interval_days: recommendedInterval ? parseInt(recommendedInterval) : null,
+          default_post_care_notes: postCareNotes.trim() || null,
+        })
         .eq('id', editingService.id)
 
       if (error) {
@@ -402,6 +413,22 @@ export default function ServicesPage() {
                   min="0"
                 />
                 <p className="text-xs text-gray-400 mt-1">Periyodik hatırlatma için. Boş bırakılırsa hatırlatma gönderilmez.</p>
+              </div>
+
+              <div>
+                <label htmlFor="postCareNotes" className="label">Bakım Talimatları <span className="text-gray-400 font-normal">(opsiyonel)</span></label>
+                <textarea
+                  id="postCareNotes"
+                  value={postCareNotes}
+                  onChange={(e) => setPostCareNotes(e.target.value)}
+                  className="input min-h-[80px] resize-y"
+                  placeholder="Seans sonrası bakım talimatları (ör. 24 saat güneşten kaçının, ılık duş alın...)"
+                  rows={3}
+                  maxLength={2000}
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  Tedavi protokolü seansı tamamlanınca müşteri portal'ında "Bakım Talimatları" olarak görünür.
+                </p>
               </div>
 
               {error && (

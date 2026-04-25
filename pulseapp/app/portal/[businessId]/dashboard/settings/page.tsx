@@ -1,10 +1,15 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { User, Mail, Cake, MessageCircle, Download, Trash2, Loader2, CheckCircle2, AlertCircle, LogOut } from 'lucide-react'
+import { User, Mail, Cake, MessageCircle, Download, Trash2, Loader2, CheckCircle2, AlertCircle, LogOut, ShieldAlert, ShieldCheck } from 'lucide-react'
 import { cn, formatDateISO } from '@/lib/utils'
 import { SectionHeader } from '../_components/section-header'
 import { DataDeletionModal } from '../_components/data-deletion-modal'
+import AllergyList from '../_components/allergy-list'
+import ConsentHistory from '../_components/consent-history'
+
+/** Alerji takibinin kritik olduğu sektörler — alerji bölümü yalnızca bunlar için görünür. */
+const ALLERGY_AWARE_SECTORS = new Set(['medical_aesthetic', 'dental_clinic'])
 
 interface Profile {
   id: string
@@ -41,6 +46,7 @@ function formatDate(iso: string | null): string {
 
 export default function PortalSettingsPage() {
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [sector, setSector] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saveMsg, setSaveMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
@@ -75,9 +81,19 @@ export default function PortalSettingsPage() {
     }
   }
 
+  async function loadSector() {
+    try {
+      const res = await fetch('/api/portal/me')
+      if (res.ok) {
+        const data = await res.json()
+        setSector(data.business?.sector || null)
+      }
+    } catch { /* sessiz */ }
+  }
+
   useEffect(() => {
     (async () => {
-      await Promise.all([loadProfile(), loadDeletion()])
+      await Promise.all([loadProfile(), loadDeletion(), loadSector()])
       setLoading(false)
     })()
   }, [])
@@ -256,6 +272,20 @@ export default function PortalSettingsPage() {
         </div>
       </section>
 
+      {/* Alerjiler — yalnızca alerji takibinin kritik olduğu sektörlerde */}
+      {sector && ALLERGY_AWARE_SECTORS.has(sector) && (
+        <section>
+          <SectionHeader
+            title="Alerjilerim"
+            subtitle="Sağlık güvenliğin için salonun seninle ilgili kayıtlı alerjileri."
+            icon={ShieldAlert}
+          />
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-5">
+            <AllergyList />
+          </div>
+        </section>
+      )}
+
       {/* İletişim Tercihleri */}
       <section>
         <SectionHeader
@@ -293,6 +323,18 @@ export default function PortalSettingsPage() {
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             Tercihi Kaydet
           </button>
+        </div>
+      </section>
+
+      {/* Verdiğim Onaylar */}
+      <section>
+        <SectionHeader
+          title="Verdiğim Onaylar"
+          subtitle="KVKK ve pazarlama izinlerin — istediğin zaman iptal edebilirsin."
+          icon={ShieldCheck}
+        />
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-5">
+          <ConsentHistory />
         </div>
       </section>
 

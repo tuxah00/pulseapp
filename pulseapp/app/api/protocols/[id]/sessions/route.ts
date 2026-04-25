@@ -39,6 +39,41 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     updateData.completed_date = new Date().toISOString().split('T')[0]
   }
 
+  // Seans completed olunca: post_care_notes zaten manuel girilmemişse,
+  // hizmetin default_post_care_notes değerini seansa kopyala (override edilebilir).
+  if (status === 'completed') {
+    const { data: existingSession } = await supabase
+      .from('protocol_sessions')
+      .select('post_care_notes, post_care_files, protocol_id')
+      .eq('id', sessionId)
+      .single()
+
+    const noPostCareYet =
+      !existingSession?.post_care_notes &&
+      (!existingSession?.post_care_files || (Array.isArray(existingSession.post_care_files) && existingSession.post_care_files.length === 0))
+
+    if (noPostCareYet && existingSession?.protocol_id) {
+      const { data: protocolWithService } = await supabase
+        .from('treatment_protocols')
+        .select('service_id')
+        .eq('id', existingSession.protocol_id)
+        .single()
+      if (protocolWithService?.service_id) {
+        const { data: service } = await supabase
+          .from('services')
+          .select('default_post_care_notes, default_post_care_files')
+          .eq('id', protocolWithService.service_id)
+          .single()
+        if (service?.default_post_care_notes) {
+          updateData.post_care_notes = service.default_post_care_notes
+        }
+        if (Array.isArray(service?.default_post_care_files) && service.default_post_care_files.length > 0) {
+          updateData.post_care_files = service.default_post_care_files
+        }
+      }
+    }
+  }
+
   const { data: session, error } = await supabase
     .from('protocol_sessions')
     .update(updateData)
