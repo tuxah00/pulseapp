@@ -280,6 +280,24 @@ export default function AppointmentsPage() {
   useEffect(() => { if (!ctxLoading) fetchFormData() }, [fetchFormData, ctxLoading])
   useEffect(() => { if (!ctxLoading) fetchBlockedSlots() }, [fetchBlockedSlots, ctxLoading])
 
+  // Realtime: yeni randevu / güncellenme gelince listeyi otomatik tazele
+  useEffect(() => {
+    if (!businessId) return
+    const supabase = createClient()
+    const channel = supabase
+      .channel(`appointments-list-${businessId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'appointments',
+        filter: `business_id=eq.${businessId}`,
+      }, () => {
+        fetchAppointments()
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [businessId, fetchAppointments])
+
   // Müşteri + hizmet seçildiğinde önerilen tekrar aralığı kontrolü
   useEffect(() => {
     if (!showModal || !businessId || !customerId || !serviceId) {
