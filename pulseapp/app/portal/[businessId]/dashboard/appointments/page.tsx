@@ -265,13 +265,15 @@ function EditModal({ appointment, onClose, onSaved }: {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           date,
-          startTime: `${startTime}:00`,
-          endTime: `${calcEndTime(startTime)}:00`,
+          startTime,
+          endTime: calcEndTime(startTime),
         }),
       })
       const data = await res.json()
       if (!res.ok) {
-        setError(data.error || 'Güncelleme başarısız')
+        // Field-level Zod hatalarını da göster
+        const fieldErrors = data.fields ? Object.values(data.fields).filter(Boolean).join(', ') : ''
+        setError(fieldErrors || data.error || 'Güncelleme başarısız')
         return
       }
       onSaved()
