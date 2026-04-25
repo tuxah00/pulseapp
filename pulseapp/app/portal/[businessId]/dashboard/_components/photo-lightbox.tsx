@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import Image from 'next/image'
 import { X, Calendar, Tag, Folder, ArrowRight } from 'lucide-react'
+import { Portal } from '@/components/ui/portal'
 
 export interface LightboxPhoto {
   id: string
@@ -45,6 +46,7 @@ export function PhotoLightbox({ photo, onClose, onOpenRecord }: PhotoLightboxPro
   const takenDate = taken ? new Date(taken).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }) : ''
 
   return (
+    <Portal>
     <div
       className="fixed inset-0 z-[110] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4"
       onClick={onClose}
@@ -112,5 +114,6 @@ export function PhotoLightbox({ photo, onClose, onOpenRecord }: PhotoLightboxPro
         </div>
       </div>
     </div>
+    </Portal>
   )
 }

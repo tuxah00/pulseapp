@@ -9,6 +9,7 @@ import { cn, formatTime, formatDateISO } from '@/lib/utils'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import BookingModal from '../_components/booking-modal'
 import { SkeletonList } from '../_components/skeleton-card'
+import { Portal } from '@/components/ui/portal'
 
 interface ServiceJoin {
   id: string
@@ -284,6 +285,7 @@ function EditModal({ appointment, onClose, onSaved }: {
   const minDate = formatDateISO(new Date())
 
   return (
+    <Portal>
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-overlay">
       <div className="absolute inset-0 bg-black/60 dark:bg-black/70" onClick={onClose} />
       <div className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md modal-content">
@@ -338,5 +340,6 @@ function EditModal({ appointment, onClose, onSaved }: {
         </div>
       </div>
     </div>
+    </Portal>
   )
 }
