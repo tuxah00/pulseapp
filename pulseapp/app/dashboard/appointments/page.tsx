@@ -102,6 +102,7 @@ export default function AppointmentsPage() {
 
   const [services, setServices] = useState<Service[]>([])
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>([])
+  const [staffServicesMap, setStaffServicesMap] = useState<Record<string, string[]>>({}) // staffId → serviceId[]
   const [rooms, setRooms] = useState<{ id: string; name: string; color: string }[]>([])
   const [workingHours, setWorkingHours] = useState<Record<string, { open: string; close: string } | null> | null>(null)
 
@@ -242,14 +243,23 @@ export default function AppointmentsPage() {
 
   const fetchFormData = useCallback(async () => {
     if (!businessId) return
-    const [svcRes, staffRes, bizRes, roomsRes] = await Promise.all([
+    const [svcRes, staffRes, stsRes, bizRes, roomsRes] = await Promise.all([
       supabase.from('services').select('*').eq('business_id', businessId).eq('is_active', true).order('sort_order'),
       supabase.from('staff_members').select('*').eq('business_id', businessId).eq('is_active', true).order('name'),
+      supabase.from('staff_services').select('staff_id, service_id').eq('business_id', businessId),
       supabase.from('businesses').select('working_hours').eq('id', businessId).single(),
       fetch(`/api/rooms`).then(r => r.ok ? r.json() : { rooms: [] }).catch(() => ({ rooms: [] })),
     ])
     if (svcRes.data) setServices(svcRes.data)
     if (staffRes.data) setStaffMembers(staffRes.data)
+    if (stsRes.data) {
+      const map: Record<string, string[]> = {}
+      for (const row of stsRes.data) {
+        if (!map[row.staff_id]) map[row.staff_id] = []
+        map[row.staff_id].push(row.service_id)
+      }
+      setStaffServicesMap(map)
+    }
     if (bizRes.data?.working_hours) setWorkingHours(bizRes.data.working_hours)
     if (roomsRes.rooms) setRooms(roomsRes.rooms)
   }, [businessId, supabase])
@@ -2710,6 +2720,10 @@ export default function AppointmentsPage() {
                     setServiceId(v)
                     const svc = services.find(s => s.id === v)
                     if (svc) setEndTime(calculateEndTime(startTime, svc.duration_minutes))
+                    // Seçili personel bu hizmeti yapamıyorsa sıfırla
+                    if (staffId && v && !(staffServicesMap[staffId] ?? []).includes(v)) {
+                      setStaffId('')
+                    }
                   }}
                   placeholder="Hizmet seçin (opsiyonel)..."
                   className="input"
@@ -2727,12 +2741,25 @@ export default function AppointmentsPage() {
               <div>
                 <label className="label">Personel</label>
                 <CustomSelect
-                  options={staffMembers.map(s => ({ value: s.id, label: s.name }))}
+                  options={(() => {
+                    // Hizmet seçiliyse: yalnızca o hizmeti yapabilen personeli göster
+                    const filtered = serviceId
+                      ? staffMembers.filter(s => (staffServicesMap[s.id] ?? []).includes(serviceId))
+                      : staffMembers
+                    return filtered.map(s => ({ value: s.id, label: s.name }))
+                  })()}
                   value={staffId}
                   onChange={v => setStaffId(v)}
-                  placeholder="Personel seçin (opsiyonel)..."
+                  placeholder={serviceId && staffMembers.filter(s => (staffServicesMap[s.id] ?? []).includes(serviceId)).length === 0
+                    ? 'Bu hizmeti yapan personel yok'
+                    : 'Personel seçin (opsiyonel)...'}
                   className="input"
                 />
+                {serviceId && staffMembers.filter(s => (staffServicesMap[s.id] ?? []).includes(serviceId)).length === 0 && (
+                  <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                    Bu hizmeti yapan personel atanmamış. Personel sayfasından hizmet ataması yapın.
+                  </p>
+                )}
               </div>
               {rooms.length > 0 && (
                 <div>

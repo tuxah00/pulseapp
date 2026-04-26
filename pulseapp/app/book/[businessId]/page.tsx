@@ -117,6 +117,31 @@ export default function BookingPage() {
   const selectedService = services.find(s => s.id === selectedServiceId) || null
   const [availableSlots, setAvailableSlots] = useState<string[]>([])
   const [slotsLoading, setSlotsLoading] = useState(false)
+
+  // Hizmet değişince → o hizmeti yapabilen personeli yeniden çek
+  useEffect(() => {
+    if (!businessId || !selectedServiceId) {
+      // Hizmet seçili değil veya ilk yükleme: /api/book'tan gelen tam listeyi koru
+      return
+    }
+    let cancelled = false
+    async function fetchFilteredStaff() {
+      try {
+        const res = await fetch(`/api/public/business/${businessId}/staff?serviceId=${selectedServiceId}`)
+        if (!cancelled && res.ok) {
+          const data = await res.json()
+          setStaff(data.staff || [])
+          // Seçili personel bu hizmeti yapamıyorsa sıfırla
+          if (selectedStaffId && !(data.staff || []).find((s: { id: string }) => s.id === selectedStaffId)) {
+            setSelectedStaffId('')
+          }
+        }
+      } catch { /* sessiz geç */ }
+    }
+    fetchFilteredStaff()
+    return () => { cancelled = true }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [businessId, selectedServiceId])
   const isDayClosed = !!(business && selectedDate && !business.working_hours[getDayKey(selectedDate)])
 
   // Tarih/personel/hizmet değiştiğinde müsait saatleri API'den çek
@@ -557,28 +582,56 @@ export default function BookingPage() {
                     <Loader2 className="h-5 w-5 animate-spin text-blue-500 mx-auto mb-2" />
                     <p className="text-sm text-gray-500 dark:text-gray-400">Müsait saatler yükleniyor...</p>
                   </div>
-                ) : availableSlots.length === 0 ? (
-                  <div className="text-center py-8 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
-                    <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Bu gün için uygun saat bulunamadı</p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Tüm saatler dolu. Farklı bir gün veya personel deneyin.</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
-                    {availableSlots.map((time) => (
-                      <button
-                        key={time}
-                        onClick={() => setSelectedTime(time)}
-                        className={`rounded-lg py-2.5 text-sm font-medium transition-all ${
-                          selectedTime === time
-                            ? 'bg-blue-500 text-white shadow-sm shadow-blue-200'
-                            : 'bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20'
-                        }`}
-                      >
-                        {time}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                ) : (() => {
+                  // Çalışma saatlerine göre TÜM olası slotları hesapla
+                  const allSlots = business && selectedService
+                    ? generateTimeSlots(business.working_hours, selectedDate, selectedService.duration_minutes)
+                    : []
+                  const availableSet = new Set(availableSlots)
+                  const allUnavailable = allSlots.length > 0 && allSlots.every(s => !availableSet.has(s))
+
+                  if (allSlots.length === 0) {
+                    return (
+                      <div className="text-center py-8 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
+                        <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Bu gün için saat bulunamadı</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Farklı bir gün deneyin.</p>
+                      </div>
+                    )
+                  }
+
+                  return (
+                    <div>
+                      {allUnavailable && (
+                        <p className="text-xs text-amber-600 dark:text-amber-400 mb-2 text-center">
+                          Tüm saatler dolu. Farklı bir gün veya personel deneyin.
+                        </p>
+                      )}
+                      <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
+                        {allSlots.map((time) => {
+                          const isAvailable = availableSet.has(time)
+                          const isSelected = selectedTime === time
+                          return (
+                            <button
+                              key={time}
+                              onClick={() => isAvailable && setSelectedTime(time)}
+                              disabled={!isAvailable}
+                              title={isAvailable ? undefined : 'Bu saat dolu'}
+                              className={`rounded-lg py-2.5 text-sm font-medium transition-all ${
+                                isSelected
+                                  ? 'bg-blue-500 text-white shadow-sm shadow-blue-200'
+                                  : isAvailable
+                                    ? 'bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                                    : 'bg-gray-100 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 text-gray-300 dark:text-gray-600 line-through cursor-not-allowed'
+                              }`}
+                            >
+                              {time}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )
+                })()}
               </div>
             )}
 
