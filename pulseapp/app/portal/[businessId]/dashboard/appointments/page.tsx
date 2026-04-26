@@ -163,47 +163,45 @@ export default function PortalAppointmentsPage() {
             const canEdit = tab === 'upcoming' && !TERMINAL_STATUSES.has(apt.status)
 
             return (
-              <div key={apt.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 px-5 py-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">{svc?.name || 'Randevu'}</h3>
-                      <span className={cn('text-[11px] font-medium px-2 py-0.5 rounded-full border flex-shrink-0', STATUS_COLORS[apt.status] || 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400')}>
-                        {STATUS_LABELS[apt.status] || apt.status}
-                      </span>
-                    </div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400 space-y-0.5">
-                      <div className="flex items-center gap-1.5">
-                        <CalendarCheck className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
-                        {formatAppointmentDate(apt.appointment_date)}
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <Clock className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
-                        {formatTime(apt.start_time)}{apt.end_time && ` - ${formatTime(apt.end_time)}`}
-                      </div>
-                      <p className="text-xs text-gray-400 dark:text-gray-500">
-                        {staff?.name ? `Uzman: ${staff.name}` : ' '}
-                      </p>
-                    </div>
+              <div key={apt.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 px-5 flex items-center justify-between gap-3 min-h-[112px]">
+                <div className="flex-1 min-w-0 py-3">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">{svc?.name || 'Randevu'}</h3>
+                    <span className={cn('text-[11px] font-medium px-2 py-0.5 rounded-full border flex-shrink-0', STATUS_COLORS[apt.status] || 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400')}>
+                      {STATUS_LABELS[apt.status] || apt.status}
+                    </span>
                   </div>
-
-                  {canEdit && (
-                    <div className="flex flex-col gap-1.5 flex-shrink-0">
-                      <button
-                        onClick={() => setEditing(apt)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 text-xs font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                      >
-                        <Pencil className="h-3 w-3" /> Düzenle
-                      </button>
-                      <button
-                        onClick={() => handleCancel(apt)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 text-xs font-medium hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                      >
-                        <Ban className="h-3 w-3" /> İptal
-                      </button>
+                  <div className="text-sm text-gray-500 dark:text-gray-400 space-y-0.5">
+                    <div className="flex items-center gap-1.5">
+                      <CalendarCheck className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
+                      {formatAppointmentDate(apt.appointment_date)}
                     </div>
-                  )}
+                    <div className="flex items-center gap-1.5">
+                      <Clock className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
+                      {formatTime(apt.start_time)}{apt.end_time && ` - ${formatTime(apt.end_time)}`}
+                    </div>
+                    <p className={cn('text-xs text-gray-400 dark:text-gray-500', !staff?.name && 'invisible')}>
+                      Uzman: {staff?.name || 'placeholder'}
+                    </p>
+                  </div>
                 </div>
+
+                {canEdit && (
+                  <div className="flex flex-col gap-1.5 flex-shrink-0">
+                    <button
+                      onClick={() => setEditing(apt)}
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 text-xs font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                    >
+                      <Pencil className="h-3 w-3" /> Düzenle
+                    </button>
+                    <button
+                      onClick={() => handleCancel(apt)}
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 text-xs font-medium hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                    >
+                      <Ban className="h-3 w-3" /> İptal
+                    </button>
+                  </div>
+                )}
               </div>
             )
           })}
@@ -268,7 +266,6 @@ function EditModal({ appointment, onClose, onSaved }: {
       })
       const data = await res.json()
       if (!res.ok) {
-        // Field-level Zod hatalarını da göster
         const fieldErrors = data.fields ? Object.values(data.fields).filter(Boolean).join(', ') : ''
         setError(fieldErrors || data.error || 'Güncelleme başarısız')
         return
