@@ -12,6 +12,7 @@ import { CheckCircle2, Sparkles } from 'lucide-react'
 
 interface CompletionSummary {
   services: number
+  staff_tags: number
   packages: number
   workflows: number
   rewards: number
@@ -42,6 +43,7 @@ export default function CompletionStep({ summary, onFinish, finishLoading }: Com
 
   const items: Array<{ label: string; count: number }> = [
     { label: 'hizmet', count: summary.services },
+    { label: 'personel etiketi', count: summary.staff_tags },
     { label: 'paket', count: summary.packages },
     { label: 'otomatik mesaj', count: summary.workflows },
     { label: 'ödül şablonu', count: summary.rewards },

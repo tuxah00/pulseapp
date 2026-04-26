@@ -84,6 +84,34 @@ async function seedSectorContent(
     const { error: wfErr } = await supabase.from('workflows').insert(wfRows)
     if (wfErr) log.error({ err: wfErr }, '[Seed] workflows ekleme hatası')
   }
+
+  // 4) Personel etiket havuzu — sektör default'u settings'e merge edilir.
+  //    Wizard kullanan sektörler (medical_aesthetic + dental_clinic) bu değeri
+  //    onboarding/wizard/staff-tags adımında üzerine yazar; diğer sektörler için
+  //    default kalır ve settings/staff sayfasından düzenlenir.
+  if (seed.staff_tags.length > 0) {
+    const { data: bizRow } = await supabase
+      .from('businesses')
+      .select('settings')
+      .eq('id', businessId)
+      .maybeSingle()
+    const currentSettings = (bizRow?.settings as Record<string, unknown> | null) ?? {}
+    const { error: settingsErr } = await supabase
+      .from('businesses')
+      .update({
+        settings: { ...currentSettings, staff_tag_options: seed.staff_tags },
+      })
+      .eq('id', businessId)
+    if (settingsErr) log.error({ err: settingsErr }, '[Seed] staff_tag_options yazma hatası')
+
+    // 5) Owner personeline default ilk etiketi de uygula (örn. estetik klinik → "Doktor")
+    const { error: ownerTagErr } = await supabase
+      .from('staff_members')
+      .update({ tags: [seed.staff_tags[0]] })
+      .eq('business_id', businessId)
+      .eq('role', 'owner')
+    if (ownerTagErr) log.error({ err: ownerTagErr }, '[Seed] owner tags güncelleme hatası')
+  }
 }
 
 export async function POST(request: NextRequest) {

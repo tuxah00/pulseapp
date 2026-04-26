@@ -7,6 +7,7 @@ import type { SectorType } from '@/types'
 import WelcomeStep from './welcome-step'
 import WizardShell, { WIZARD_STEPS } from './wizard-shell'
 import ServicesStep, { type ServiceDraft } from './services-step'
+import StaffTagsStep from './staff-tags-step'
 import PackagesStep, { type PackageDraft } from './packages-step'
 import WorkflowsStep, { type WorkflowSelection } from './workflows-step'
 import RewardsStep, { type RewardDraft } from './rewards-step'
@@ -31,6 +32,17 @@ interface WizardContainerProps {
   initialStep: number
 }
 
+const STEP_INDEX = {
+  WELCOME: 0,
+  SERVICES: 1,
+  STAFF_TAGS: 2,
+  PACKAGES: 3,
+  WORKFLOWS: 4,
+  REWARDS: 5,
+  CAMPAIGNS: 6,
+  COMPLETION: 7,
+} as const
+
 function emitToast(type: 'system' | 'error', title: string, body?: string) {
   if (typeof window === 'undefined') return
   window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type, title, body } }))
@@ -47,18 +59,21 @@ export default function WizardContainer({ seed, initialStep }: WizardContainerPr
 
   // Adım 1 state
   const [selectedServices, setSelectedServices] = useState<ServiceDraft[]>([])
-  // Adım 2 state
-  const [selectedPackages, setSelectedPackages] = useState<PackageDraft[]>([])
+  // Adım 2 state — personel etiket havuzu (sektör default'u ile başlar)
+  const [selectedStaffTags, setSelectedStaffTags] = useState<string[]>(seed.staff_tags)
   // Adım 3 state
-  const [workflowSelection, setWorkflowSelection] = useState<WorkflowSelection | null>(null)
+  const [selectedPackages, setSelectedPackages] = useState<PackageDraft[]>([])
   // Adım 4 state
+  const [workflowSelection, setWorkflowSelection] = useState<WorkflowSelection | null>(null)
+  // Adım 5 state
   const [rewardsEnabled, setRewardsEnabled] = useState(false)
   const [selectedRewards, setSelectedRewards] = useState<RewardDraft[]>([])
-  // Adım 5 state
+  // Adım 6 state
   const [selectedCampaigns, setSelectedCampaigns] = useState<CampaignDraft[]>([])
   // Tamamlama özeti — her commit başarısı bu nesneye yazar
   const [summary, setSummary] = useState({
     services: 0,
+    staff_tags: 0,
     packages: 0,
     workflows: 0,
     rewards: 0,
@@ -130,6 +145,15 @@ export default function WizardContainer({ seed, initialStep }: WizardContainerPr
       'services',
     )
 
+  const commitStaffTagsAndNext = () =>
+    commitStep(
+      '/api/onboarding/wizard/staff-tags',
+      { tags: selectedStaffTags },
+      n => (n > 0 ? `${n} etiket kaydedildi` : null),
+      'Etiketler kaydedilemedi',
+      'staff_tags',
+    )
+
   const commitPackagesAndNext = () =>
     commitStep(
       '/api/onboarding/wizard/packages',
@@ -177,7 +201,7 @@ export default function WizardContainer({ seed, initialStep }: WizardContainerPr
     )
 
   // Adım 0 — Karşılama
-  if (currentStep === 0) {
+  if (currentStep === STEP_INDEX.WELCOME) {
     return (
       <WelcomeStep
         onStart={goNext}
@@ -188,10 +212,10 @@ export default function WizardContainer({ seed, initialStep }: WizardContainerPr
   }
 
   // Adım 1 — Hizmetler
-  if (currentStep === 1) {
+  if (currentStep === STEP_INDEX.SERVICES) {
     return (
       <WizardShell
-        currentStep={1}
+        currentStep={STEP_INDEX.SERVICES}
         onBack={goBack}
         onSkip={goNext}
         onNext={commitServicesAndNext}
@@ -205,11 +229,29 @@ export default function WizardContainer({ seed, initialStep }: WizardContainerPr
     )
   }
 
-  // Adım 2 — Paketler
-  if (currentStep === 2) {
+  // Adım 2 — Personel Etiketleri
+  if (currentStep === STEP_INDEX.STAFF_TAGS) {
     return (
       <WizardShell
-        currentStep={2}
+        currentStep={STEP_INDEX.STAFF_TAGS}
+        onBack={goBack}
+        onSkip={goNext}
+        onNext={commitStaffTagsAndNext}
+        nextLoading={commitLoading}
+      >
+        <StaffTagsStep
+          seedTags={seed.staff_tags}
+          onTagsChange={setSelectedStaffTags}
+        />
+      </WizardShell>
+    )
+  }
+
+  // Adım 3 — Paketler
+  if (currentStep === STEP_INDEX.PACKAGES) {
+    return (
+      <WizardShell
+        currentStep={STEP_INDEX.PACKAGES}
         onBack={goBack}
         onSkip={goNext}
         onNext={commitPackagesAndNext}
@@ -223,11 +265,11 @@ export default function WizardContainer({ seed, initialStep }: WizardContainerPr
     )
   }
 
-  // Adım 3 — Otomatik mesajlar
-  if (currentStep === 3) {
+  // Adım 4 — Otomatik mesajlar
+  if (currentStep === STEP_INDEX.WORKFLOWS) {
     return (
       <WizardShell
-        currentStep={3}
+        currentStep={STEP_INDEX.WORKFLOWS}
         onBack={goBack}
         onSkip={goNext}
         onNext={commitWorkflowsAndNext}
@@ -238,11 +280,11 @@ export default function WizardContainer({ seed, initialStep }: WizardContainerPr
     )
   }
 
-  // Adım 4 — Ödüller
-  if (currentStep === 4) {
+  // Adım 5 — Ödüller
+  if (currentStep === STEP_INDEX.REWARDS) {
     return (
       <WizardShell
-        currentStep={4}
+        currentStep={STEP_INDEX.REWARDS}
         onBack={goBack}
         onSkip={goNext}
         onNext={commitRewardsAndNext}
@@ -256,11 +298,11 @@ export default function WizardContainer({ seed, initialStep }: WizardContainerPr
     )
   }
 
-  // Adım 5 — Kampanyalar
-  if (currentStep === 5) {
+  // Adım 6 — Kampanyalar
+  if (currentStep === STEP_INDEX.CAMPAIGNS) {
     return (
       <WizardShell
-        currentStep={5}
+        currentStep={STEP_INDEX.CAMPAIGNS}
         onBack={goBack}
         onSkip={goNext}
         onNext={commitCampaignsAndNext}

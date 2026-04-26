@@ -12,6 +12,7 @@ import { Check } from 'lucide-react'
 
 export const WIZARD_STEPS = [
   { key: 'services', label: 'Hizmetler' },
+  { key: 'staff_tags', label: 'Etiketler' },
   { key: 'packages', label: 'Paketler' },
   { key: 'workflows', label: 'Mesajlar' },
   { key: 'rewards', label: 'Ödüller' },
