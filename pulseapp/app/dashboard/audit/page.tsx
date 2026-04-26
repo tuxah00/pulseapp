@@ -130,13 +130,26 @@ function formatAuditDetail(log: AuditLog): string {
     return `${name ? name + ' — ' : ''}${from} → ${to}`
   }
 
-  // Randevu oluşturma/silme
+  // Randevu (oluşturma / iptal / erteleme)
   if (log.resource === 'appointment') {
+    // Erteleme: {from: {date, time/startTime}, to: {date, time/startTime}}
+    if (log.action === 'appointment_reschedule' && d.from && d.to) {
+      const from = d.from as Record<string, string>
+      const to   = d.to   as Record<string, string>
+      const fromStr = [from.date, from.time ?? from.startTime].filter(Boolean).join(' ')
+      const toStr   = [to.date,   to.time   ?? to.startTime  ].filter(Boolean).join(' ')
+      const header = [d.customer_name, d.service_name].filter(Boolean).map(String).join(' · ')
+      const change = `${fromStr} → ${toStr}`
+      return [header, change].filter(Boolean).join(' — ')
+    }
+    // Oluşturma / iptal
     const parts: string[] = []
     if (d.customer_name) parts.push(String(d.customer_name))
-    if (d.service_name) parts.push(String(d.service_name))
-    if (d.date) parts.push(String(d.date))
-    if (d.time) parts.push(String(d.time))
+    if (d.service_name)  parts.push(String(d.service_name))
+    if (d.date)          parts.push(String(d.date))
+    // Eski loglar startTime, yeni loglar time kullanır
+    const timeVal = d.time ?? d.startTime
+    if (timeVal) parts.push(String(timeVal))
     return parts.join(' · ')
   }
 

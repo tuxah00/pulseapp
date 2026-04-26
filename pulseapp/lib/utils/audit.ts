@@ -6,7 +6,7 @@ export async function logAudit(params: {
   action: 'create' | 'update' | 'delete' | 'restore' | 'status_change' | 'send' | 'pay' | 'cancel' | 'assign' | 'revoke' | 'request'
   resource: string
   resourceId?: string
-  details?: Record<string, string | number | boolean | null>
+  details?: Record<string, unknown>
 }) {
   try {
     await fetch('/api/audit', {
@@ -25,7 +25,7 @@ export async function logAuditServer(params: {
   action: string
   resource: string
   resourceId?: string
-  details?: Record<string, string | number | boolean | null>
+  details?: Record<string, unknown>
   ipAddress?: string | null
 }) {
   try {
