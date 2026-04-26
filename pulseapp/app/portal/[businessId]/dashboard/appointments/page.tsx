@@ -163,7 +163,7 @@ export default function PortalAppointmentsPage() {
             const canEdit = tab === 'upcoming' && !TERMINAL_STATUSES.has(apt.status)
 
             return (
-              <div key={apt.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 px-5 py-4 hover:shadow-md transition-shadow">
+              <div key={apt.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 px-5 py-4">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1.5">
@@ -181,7 +181,9 @@ export default function PortalAppointmentsPage() {
                         <Clock className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
                         {formatTime(apt.start_time)}{apt.end_time && ` - ${formatTime(apt.end_time)}`}
                       </div>
-                      {staff?.name && <p className="text-xs text-gray-400 dark:text-gray-500">Uzman: {staff.name}</p>}
+                      <p className="text-xs text-gray-400 dark:text-gray-500">
+                        {staff?.name ? `Uzman: ${staff.name}` : ' '}
+                      </p>
                     </div>
                   </div>
 

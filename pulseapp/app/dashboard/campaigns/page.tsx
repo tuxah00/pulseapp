@@ -329,7 +329,11 @@ export default function CampaignsPage() {
                           ))}
                         </div>
                       ) : (
-                        <p className="text-xs text-gray-400 mt-0.5">Tüm müşteriler</p>
+                        <div className="flex flex-wrap gap-1 mt-1.5">
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-300">
+                            Tüm Müşteriler
+                          </span>
+                        </div>
                       )}
 
                       {c.scheduled_at && c.status === 'scheduled' && (
