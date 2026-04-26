@@ -82,7 +82,9 @@ export default function AppointmentsPage() {
   const [cancelConfirmAppointment, setCancelConfirmAppointment] = useState<AppointmentView | null>(null)
   const [isClosingCancelConfirm, setIsClosingCancelConfirm] = useState(false)
   const closeCancelConfirm = () => setIsClosingCancelConfirm(true)
-  const [fillGapOnCancel, setFillGapOnCancel] = useState(false)
+  // Not: Bu state artık kullanılmıyor — iptal sonrası fill-gap her zaman otomatik tetiklenir.
+  // Bekleme listesindeki müşteri auto_book_on_match=true ile kayıt olduğu zaman ayrı bir
+  // sahip onayına gerek kalmıyor. Hiç eşleşme yoksa fill-gap silent dönüyor.
   const [fillGapLoading, setFillGapLoading] = useState<string | null>(null)
   const [cancelNotifyCustomer, setCancelNotifyCustomer] = useState(true)
   const [slotPopup, setSlotPopup] = useState<{ day: string; hour: number; apts: AppointmentView[]; x: number; y: number } | null>(null)
@@ -885,13 +887,13 @@ export default function AppointmentsPage() {
     if (selectedAppointment?.id === apt.id) setSelectedAppointment(null)
     fetchAppointments()
     window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Randevu iptal edildi' } }))
-    if (fillGapOnCancel) {
-      setTimeout(() => handleFillGap(apt.id), 300)
-    }
+    // Otomatik bekleme listesi kontrolü — eşleşme yoksa sessiz geç (toast atma)
+    setTimeout(() => handleFillGap(apt.id, undefined, { silent: true }), 300)
   }
 
-  async function handleFillGap(appointmentId: string, e?: React.MouseEvent) {
+  async function handleFillGap(appointmentId: string, e?: React.MouseEvent, opts?: { silent?: boolean }) {
     e?.stopPropagation()
+    const silent = !!opts?.silent
     setFillGapLoading(appointmentId)
     try {
       const res = await fetch(`/api/appointments/${appointmentId}/fill-gap`, {
@@ -900,14 +902,19 @@ export default function AppointmentsPage() {
       })
       const j = await res.json()
       if (!res.ok) {
-        window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: j.error || 'Bildirim gönderilemedi' } }))
+        if (!silent) window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: j.error || 'Bildirim gönderilemedi' } }))
       } else if (j.notified === 0) {
-        window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'appointment', title: 'Uygun müşteri bulunamadı', body: 'Bekleme listesinde veya geçmişte uygun müşteri yok.' } }))
+        // Hiç eşleşme yok — silent modda toast atlanır (otomatik tetikleme için)
+        if (!silent) window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'appointment', title: 'Uygun müşteri bulunamadı', body: 'Bekleme listesinde veya geçmişte uygun müşteri yok.' } }))
+      } else if (j.autoBooked) {
+        // Otomatik randevu oluşturuldu — silent olsa bile bilgi ver
+        window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'appointment', title: 'Otomatik Randevu', body: 'Bekleme listesinden bu boşluk otomatik dolduruldu.' } }))
+        fetchAppointments()
       } else {
         window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'appointment', title: 'Bildirimler Gönderildi', body: `${j.notified} kişiye boşluk bildirimi gönderildi.` } }))
       }
     } catch {
-      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: 'Bağlantı hatası' } }))
+      if (!silent) window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: 'Bağlantı hatası' } }))
     }
     finally { setFillGapLoading(null) }
   }
@@ -2955,10 +2962,10 @@ export default function AppointmentsPage() {
               <input type="checkbox" checked={cancelNotifyCustomer} onChange={(e) => setCancelNotifyCustomer(e.target.checked)} className="rounded border-gray-300" />
               <span className="text-sm text-gray-700 dark:text-gray-300">Müşteriye iptal bildirimi gönder</span>
             </label>
-            <label className="flex items-center gap-2 cursor-pointer mb-4">
-              <input type="checkbox" checked={fillGapOnCancel} onChange={(e) => setFillGapOnCancel(e.target.checked)} className="rounded border-gray-300" />
-              <span className="text-sm text-gray-700 dark:text-gray-300">Boşluğu otomatik doldurmaya çalış</span>
-            </label>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-4 flex items-start gap-1.5">
+              <BellRing className="h-3.5 w-3.5 mt-0.5 flex-shrink-0 text-amber-500" />
+              <span>İptal sonrası bekleme listesi otomatik kontrol edilir. Otomatik randevu isteyen müşteri varsa boşluk anında doldurulur, diğerlerine SMS bildirim gider.</span>
+            </p>
             <div className="flex gap-3">
               <button type="button" onClick={() => closeCancelConfirm()} className="btn-secondary flex-1">Vazgeç</button>
               <button type="button" onClick={handleCancelConfirm} disabled={saving} className="flex-1 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50">
