@@ -17,7 +17,7 @@ import { cn } from '@/lib/utils'
 import type { Campaign, CustomerSegment } from '@/types'
 
 const SEGMENT_LABELS: Record<CustomerSegment, string> = {
-  new: 'Yeni', regular: 'Düzenli', vip: 'VIP', risk: 'Risk', lost: 'Kayıp'
+  new: 'Yeni Müşteriler', regular: 'Düzenli Müşteriler', vip: 'VIP Müşteriler', risk: 'Riskli Müşteriler', lost: 'Kayıp Müşteriler'
 }
 
 const SEGMENT_COLORS: Record<CustomerSegment, string> = {
