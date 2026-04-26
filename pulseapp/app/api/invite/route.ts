@@ -17,7 +17,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Sadece işletme sahibi davet oluşturabilir' }, { status: 403 })
   }
 
-  const { email, role = 'staff' } = await req.json()
+  const { email, role = 'staff', staff_id } = await req.json()
+
+  // staff_id verilmişse: mevcut personel için davet üretiyoruz.
+  // Bu personelin aynı işletmeye ait, henüz user_id'siz (login etmemiş) olması zorunlu.
+  if (staff_id) {
+    const { data: targetStaff, error: targetErr } = await supabase
+      .from('staff_members')
+      .select('id, business_id, user_id, role')
+      .eq('id', staff_id)
+      .maybeSingle()
+    if (targetErr || !targetStaff) {
+      return NextResponse.json({ error: 'Personel bulunamadı' }, { status: 404 })
+    }
+    if (targetStaff.business_id !== staff.business_id) {
+      return NextResponse.json({ error: 'Yetkisiz: farklı işletme' }, { status: 403 })
+    }
+    if (targetStaff.user_id) {
+      return NextResponse.json({ error: 'Bu personel zaten sisteme dahil' }, { status: 409 })
+    }
+  }
 
   const { data: invitation, error } = await supabase
     .from('staff_invitations')
@@ -26,6 +45,7 @@ export async function POST(req: NextRequest) {
       invited_by: staff.id,
       email: email || null,
       role,
+      staff_id: staff_id || null,
     })
     .select('token')
     .single()
@@ -38,7 +58,7 @@ export async function POST(req: NextRequest) {
     staffName: staff.name ?? null,
     action: 'create',
     resource: 'staff_invitation',
-    details: { email: email || null, role },
+    details: { email: email || null, role, staff_id: staff_id || null },
   })
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://pulseapp.vercel.app'

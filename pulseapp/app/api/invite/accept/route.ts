@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
   // Validate invitation
   const { data: invitation, error: invErr } = await admin
     .from('staff_invitations')
-    .select('id, business_id, role, email, expires_at, used_at')
+    .select('id, business_id, role, email, expires_at, used_at, staff_id')
     .eq('token', token)
     .single()
 
@@ -53,17 +53,44 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Bu işletmede zaten personelsiniz' }, { status: 409 })
   }
 
-  // Create staff_member record
-  const { error: staffErr } = await admin.from('staff_members').insert({
-    business_id: invitation.business_id,
-    user_id,
-    name,
-    role: invitation.role,
-    is_active: true,
-    permissions: null, // Use role defaults
-  })
+  // Davet, mevcut bir staff_member kaydına bağlıysa: yeni satır INSERT etme,
+  // sadece o satıra user_id + name ata. Yetki/etiket/hizmet atamaları korunur.
+  if (invitation.staff_id) {
+    const { data: targetStaff, error: targetErr } = await admin
+      .from('staff_members')
+      .select('id, user_id')
+      .eq('id', invitation.staff_id)
+      .eq('business_id', invitation.business_id)
+      .maybeSingle()
 
-  if (staffErr) return NextResponse.json({ error: 'Personel kaydı oluşturulamadı: ' + staffErr.message }, { status: 500 })
+    if (targetErr || !targetStaff) {
+      return NextResponse.json({ error: 'Davet bağlı personel kaydı bulunamadı' }, { status: 404 })
+    }
+    if (targetStaff.user_id) {
+      return NextResponse.json({ error: 'Bu personel zaten sisteme dahil olmuş' }, { status: 409 })
+    }
+
+    const { error: updateErr } = await admin
+      .from('staff_members')
+      .update({ user_id, name })
+      .eq('id', invitation.staff_id)
+
+    if (updateErr) {
+      return NextResponse.json({ error: 'Personel güncellemesi başarısız: ' + updateErr.message }, { status: 500 })
+    }
+  } else {
+    // Klasik akış: yeni staff_member satırı oluştur
+    const { error: staffErr } = await admin.from('staff_members').insert({
+      business_id: invitation.business_id,
+      user_id,
+      name,
+      role: invitation.role,
+      is_active: true,
+      permissions: null, // Use role defaults
+    })
+
+    if (staffErr) return NextResponse.json({ error: 'Personel kaydı oluşturulamadı: ' + staffErr.message }, { status: 500 })
+  }
 
   // Mark invitation as used
   await admin.from('staff_invitations').update({ used_at: new Date().toISOString() }).eq('id', invitation.id)

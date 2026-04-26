@@ -162,13 +162,12 @@ export default function StaffPage() {
   const [localPerms, setLocalPerms] = useState<StaffPermissions | null>(null)
   const [localWritePerms, setLocalWritePerms] = useState<StaffWritePermissions | null>(null)
 
-  const [showInviteModal, setShowInviteModal] = useState(false)
-  const [isClosingInviteModal, setIsClosingInviteModal] = useState(false)
-  const closeInviteModal = () => setIsClosingInviteModal(true)
-  const [inviteRole, setInviteRole] = useState<'manager' | 'staff'>('staff')
-  const [inviteEmail, setInviteEmail] = useState('')
-  const [inviteLink, setInviteLink] = useState<string | null>(null)
-  const [inviteLoading, setInviteLoading] = useState(false)
+  // Davet linki üretimi (yeni personel formunda + per-row)
+  const [sendInvite, setSendInvite] = useState(true) // Email doluysa default ON
+  const [linkModal, setLinkModal] = useState<{ link: string; staffName: string; role: StaffRole; email: string | null } | null>(null)
+  const [linkModalClosing, setLinkModalClosing] = useState(false)
+  const closeLinkModal = () => setLinkModalClosing(true)
+  const [inviteLoadingFor, setInviteLoadingFor] = useState<string | null>(null) // staff_id loading flag
 
   // Commission earnings widget
   const [staffCommission, setStaffCommission] = useState<{
@@ -267,6 +266,7 @@ export default function StaffPage() {
     // Yeni personel: tüm aktif hizmetleri default ata (booking'de görünür kalsın)
     setSelectedTags([])
     setSelectedServiceIds(services.map(s => s.id))
+    setSendInvite(true) // Default: email girildiğinde davet linki üretilsin
     setError(null); setShowModal(true)
   }
 
@@ -348,9 +348,42 @@ export default function StaffPage() {
       }
     }
 
+    // Yeni personel + davet linki üretimi (sadece YENİ ekleme + email var + toggle ON + owner değil)
+    let generatedLink: string | null = null
+    const isNewStaff = !editingStaff
+    const canInvite = isNewStaff && sendInvite && email && role !== 'owner' && currentUserRole === 'owner'
+    if (canInvite && staffMemberId) {
+      try {
+        const res = await fetch('/api/invite', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, role, staff_id: staffMemberId }),
+        })
+        const data = await res.json()
+        if (res.ok && data.link) {
+          generatedLink = data.link
+        } else {
+          // Davet üretilemese bile personel kayıt başarılı; sadece toast ile uyar
+          window.dispatchEvent(new CustomEvent('pulse-toast', {
+            detail: { type: 'error', title: 'Davet linki üretilemedi', body: data.error || 'Bilinmeyen hata' },
+          }))
+        }
+      } catch {
+        window.dispatchEvent(new CustomEvent('pulse-toast', {
+          detail: { type: 'error', title: 'Davet linki üretilemedi' },
+        }))
+      }
+    }
+
     setSaving(false); closeModal()
     await fetchStaff()
     window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Kaydedildi' } }))
+
+    // Davet linki üretildiyse modal'da göster
+    if (generatedLink) {
+      setLinkModal({ link: generatedLink, staffName: name, role, email: email || null })
+    }
+
     await logAudit({
       businessId: businessId!,
       staffId: currentStaffId,
@@ -358,8 +391,39 @@ export default function StaffPage() {
       action: editingStaff ? 'update' : 'create',
       resource: 'staff',
       resourceId: editingStaff?.id ?? staffMemberId ?? undefined,
-      details: { name, role, tags: selectedTags, service_count: selectedServiceIds.length },
+      details: { name, role, tags: selectedTags, service_count: selectedServiceIds.length, invited: !!generatedLink },
     })
+  }
+
+  /** Mevcut personel için davet linki üret (per-row aksiyon). */
+  async function generateInviteForExisting(member: StaffMember) {
+    if (!member.email) {
+      window.dispatchEvent(new CustomEvent('pulse-toast', {
+        detail: { type: 'error', title: 'E-posta yok', body: 'Önce personele bir e-posta adresi tanımlayın.' },
+      }))
+      return
+    }
+    if (member.role === 'owner') return // owner davet edilemez
+    setInviteLoadingFor(member.id)
+    try {
+      const res = await fetch('/api/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: member.email, role: member.role, staff_id: member.id }),
+      })
+      const data = await res.json()
+      if (res.ok && data.link) {
+        setLinkModal({ link: data.link, staffName: member.name, role: member.role, email: member.email })
+      } else {
+        window.dispatchEvent(new CustomEvent('pulse-toast', {
+          detail: { type: 'error', title: 'Davet üretilemedi', body: data.error || 'Bilinmeyen hata' },
+        }))
+      }
+    } catch {
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Davet üretilemedi' } }))
+    } finally {
+      setInviteLoadingFor(null)
+    }
   }
 
   /** Etiket havuzu modal'ını aç + mevcut havuzu draft'a kopyala. */
@@ -520,23 +584,6 @@ export default function StaffPage() {
     }
   }
 
-  async function handleCreateInvite() {
-    setInviteLoading(true)
-    setInviteLink(null)
-    const res = await fetch('/api/invite', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: inviteEmail || undefined, role: inviteRole }),
-    })
-    const data = await res.json()
-    if (res.ok) {
-      setInviteLink(data.link)
-    } else {
-      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: data.error } }))
-    }
-    setInviteLoading(false)
-  }
-
   function getPermissionCount(member: StaffMember): number {
     const perms = getEffectivePermissions(member.role, member.permissions)
     return (Object.values(perms) as boolean[]).filter(Boolean).length
@@ -560,6 +607,10 @@ export default function StaffPage() {
     const permCount = getPermissionCount(member)
     const totalPerms = Object.keys(permissionLabels).length
     const memberServiceCount = staffServicesMap[member.id]?.length ?? 0
+    // Davet edilebilir mi: henüz sisteme dahil değil (user_id null), email var, owner değil, current user owner
+    const memberUserId = (member as { user_id?: string | null }).user_id ?? null
+    const canInviteMember = currentUserRole === 'owner' && memberUserId === null && !!member.email && member.role !== 'owner'
+    const isInvitingThis = inviteLoadingFor === member.id
 
     if (viewMode === 'box') {
       return (
@@ -602,6 +653,11 @@ export default function StaffPage() {
                 <span className="font-medium text-gray-900 dark:text-gray-100">{member.name}</span>
                 <span className={ROLE_COLORS[member.role]}>{ROLE_LABELS[member.role]}</span>
                 {isMe && <span className="badge-info">Siz</span>}
+                {memberUserId === null && member.role !== 'owner' && (
+                  <span className="inline-flex items-center rounded-full bg-amber-50 dark:bg-amber-900/30 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-300" title="Bu personel henüz sisteme dahil olmadı (giriş yapamaz)">
+                    Beklemede
+                  </span>
+                )}
                 {member.role !== 'owner' && (
                   <span className="text-xs text-gray-400">{permCount}/{totalPerms} yetki</span>
                 )}
@@ -631,6 +687,17 @@ export default function StaffPage() {
             </div>
             {canManageMember && (
               <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                {canInviteMember && (
+                  <button
+                    onClick={() => generateInviteForExisting(member)}
+                    disabled={isInvitingThis}
+                    className="flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors disabled:opacity-50"
+                    title="Davet linki üret"
+                  >
+                    {isInvitingThis ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <UserPlus className="h-3.5 w-3.5" />}
+                    Davet
+                  </button>
+                )}
                 <button onClick={() => openEditModal(member)} className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 transition-colors" title="Düzenle">
                   <Pencil className="h-4 w-4" />
                 </button>
@@ -676,11 +743,6 @@ export default function StaffPage() {
           {(currentUserRole === 'owner' || currentUserRole === 'manager') && (
             <button onClick={openTagPoolModal} className="btn-secondary" title="Personel etiket havuzunu düzenle">
               <Tag className="mr-2 h-4 w-4" />Etiket Havuzu
-            </button>
-          )}
-          {(currentUserRole === 'owner' || currentUserRole === 'manager') && (
-            <button onClick={() => { setShowInviteModal(true); setInviteLink(null); setInviteEmail('') }} className="btn-secondary">
-              <UserPlus className="mr-2 h-4 w-4" />Davet Et
             </button>
           )}
           <button onClick={openNewModal} className="btn-primary">
@@ -1030,9 +1092,33 @@ export default function StaffPage() {
                 <input id="staffPhone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="input" placeholder="0532 123 45 67" />
               </div>
               <div>
-                <label htmlFor="staffEmail" className="label">E-posta (opsiyonel)</label>
+                <label htmlFor="staffEmail" className="label">E-posta {!editingStaff && '(giriş için)'}</label>
                 <input id="staffEmail" type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="input" placeholder="ahmet@ornek.com" />
               </div>
+
+              {/* Davet linki üretimi — sadece YENİ personel + owner ekleyici */}
+              {!editingStaff && currentUserRole === 'owner' && role !== 'owner' && (
+                <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/40 p-3">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={sendInvite}
+                      onChange={(e) => setSendInvite(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 rounded border-gray-300 text-pulse-900 focus:ring-pulse-900"
+                    />
+                    <div className="flex-1">
+                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                        Sisteme giriş yetkisi ver
+                      </span>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        {email
+                          ? 'Kayıttan sonra paylaşabileceğiniz bir davet linki üretilecek. Personel link üzerinden şifresini belirleyip kendi paneline giriş yapar.'
+                          : 'Davet linki üretilmesi için e-posta gerekiyor. E-posta boşsa sadece isim olarak eklenir, kişi sisteme giriş yapamaz.'}
+                      </p>
+                    </div>
+                  </label>
+                </div>
+              )}
 
               {/* Etiketler — havuzdan multi-select chip */}
               <div>
@@ -1245,58 +1331,68 @@ export default function StaffPage() {
         </Portal>
       )}
 
-      {/* Davet Modal */}
-      {showInviteModal && (
+      {/* Davet Linki Sonuç Modalı */}
+      {linkModal && (
         <Portal>
-        <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 ${isClosingInviteModal ? 'closing' : ''}`} onClick={closeInviteModal} onAnimationEnd={() => { if (isClosingInviteModal) { setShowInviteModal(false); setIsClosingInviteModal(false) } }}>
-          <div className={`modal-content card w-full max-w-sm ${isClosingInviteModal ? 'closing' : ''}`} onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
+        <div
+          className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 ${linkModalClosing ? 'closing' : ''}`}
+          onClick={closeLinkModal}
+          onAnimationEnd={() => { if (linkModalClosing) { setLinkModal(null); setLinkModalClosing(false) } }}
+        >
+          <div className={`modal-content card w-full max-w-md ${linkModalClosing ? 'closing' : ''}`} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
               <div>
-                <h2 className="h-section">Personel Davet Et</h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Link paylaşarak sisteme katmak için</p>
+                <h2 className="h-section">Davet Linki Hazır</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                  <span className="font-medium text-gray-700 dark:text-gray-200">{linkModal.staffName}</span>
+                  {' · '}
+                  <span>{ROLE_LABELS[linkModal.role]}</span>
+                  {linkModal.email && <> · <span className="font-mono text-xs">{linkModal.email}</span></>}
+                </p>
               </div>
-              <button onClick={closeInviteModal} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
+              <button onClick={closeLinkModal} className="text-gray-400 hover:text-gray-600" aria-label="Kapat">
+                <X className="h-5 w-5" />
+              </button>
             </div>
 
-            {!inviteLink ? (
-              <div className="space-y-4">
-                <div>
-                  <label className="label">Rol</label>
-                  <CustomSelect
-                    value={inviteRole}
-                    onChange={v => setInviteRole(v as 'manager' | 'staff')}
-                    options={[
-                      { value: 'staff', label: 'Personel' },
-                      ...(currentUserRole === 'owner' ? [{ value: 'manager', label: 'Yönetici' }] : []),
-                    ]}
-                  />
-                </div>
-                <div>
-                  <label className="label">E-posta (opsiyonel)</label>
-                  <input type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} className="input" placeholder="personel@ornek.com" />
-                </div>
-                <button onClick={handleCreateInvite} disabled={inviteLoading} className="btn-primary w-full">
-                  {inviteLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <UserPlus className="mr-2 h-4 w-4" />}
-                  Davet Linki Oluştur
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                  <p className="text-xs text-green-600 dark:text-green-400 font-medium mb-1">Davet linki oluşturuldu (7 gün geçerli):</p>
-                  <p className="text-xs text-gray-700 dark:text-gray-300 break-all font-mono">{inviteLink}</p>
-                </div>
-                <button
-                  onClick={() => { navigator.clipboard.writeText(inviteLink); window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Kopyalandı', body: 'Davet linki panoya kopyalandı' } })) }}
-                  className="btn-secondary w-full text-sm"
+            <div className="rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-900/40 p-3 mb-3">
+              <p className="text-[11px] uppercase tracking-wide text-green-700 dark:text-green-400 font-semibold mb-1">
+                7 gün geçerli · Tek kullanımlık
+              </p>
+              <p className="text-xs text-gray-700 dark:text-gray-300 break-all font-mono leading-relaxed">
+                {linkModal.link}
+              </p>
+            </div>
+
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3 leading-relaxed">
+              Bu linki personele iletmeniz yeterli. Link üzerinden adı ve şifresini belirleyip sisteme dahil olur.
+              Link iletilince personel listesinde &ldquo;Beklemede&rdquo; rozeti, kabul edildiğinde kaybolur.
+            </p>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(linkModal.link)
+                  window.dispatchEvent(new CustomEvent('pulse-toast', {
+                    detail: { type: 'success', title: 'Kopyalandı', body: 'Davet linki panoya kopyalandı' },
+                  }))
+                }}
+                className="btn-primary flex-1 text-sm"
+              >
+                Linki Kopyala
+              </button>
+              {linkModal.email && (
+                <a
+                  href={`mailto:${linkModal.email}?subject=${encodeURIComponent('Sisteme davet — ' + (currentStaffName || 'PulseApp'))}&body=${encodeURIComponent('Merhaba ' + linkModal.staffName + ',\n\nSisteme dahil olmak için aşağıdaki linki kullanabilirsin:\n' + linkModal.link + '\n\nLink 7 gün geçerli.')}`}
+                  className="btn-secondary text-sm flex items-center justify-center"
+                  title="E-posta uygulamasında aç"
                 >
-                  Linki Kopyala
-                </button>
-                <button onClick={() => { setInviteLink(null) }} className="text-sm text-gray-500 w-full text-center hover:text-gray-700">
-                  Yeni link oluştur
-                </button>
-              </div>
-            )}
+                  <Mail className="h-4 w-4 mr-1.5" />
+                  E-posta
+                </a>
+              )}
+              <button onClick={closeLinkModal} className="btn-secondary text-sm">Kapat</button>
+            </div>
           </div>
         </div>
         </Portal>
