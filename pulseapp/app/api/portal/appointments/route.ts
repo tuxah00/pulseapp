@@ -177,7 +177,14 @@ export async function POST(request: NextRequest) {
     action: 'appointment_create',
     resource: 'appointment',
     resourceId: appt.id,
-    details: { serviceId, staffId, date, startTime },
+    details: {
+      customer_name: customerForNotif?.name || null,
+      service_name: service.name,
+      date,
+      time: startTime,
+      serviceId,
+      staffId,
+    },
     ipAddress: getClientIp(request),
   })
 
