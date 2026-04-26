@@ -52,13 +52,19 @@ export async function POST(req: NextRequest) {
   }
 
   // Supabase Auth — recovery link üret
-  // redirectTo: personel bu linke tıklayınca şifre güncelleme sayfasına gidecek
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://pulseapp.vercel.app'
+  // redirectTo: personel bu linke tıklayınca şifre güncelleme sayfasına gidecek.
+  // Önce isteğin geldiği origin'i kullan (Vercel preview/prod dahil dinamik), yoksa
+  // env değerini, yoksa request URL origin'ini al — sabit fallback hardcode ETME
+  // (eski preview deployment'a (pulseapp.vercel.app) düşmesin).
+  const origin =
+    req.headers.get('origin') ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    new URL(req.url).origin
   const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
     type: 'recovery',
     email: targetStaff.email,
     options: {
-      redirectTo: `${appUrl}/auth/reset-password`,
+      redirectTo: `${origin}/auth/reset-password`,
     },
   })
 
