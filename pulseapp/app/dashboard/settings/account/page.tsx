@@ -200,17 +200,19 @@ export default function AccountSettingsPage() {
         </form>
       </div>
 
-      {/* Yardım kutusu */}
-      <div className="rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/40 p-4 flex items-start gap-3">
-        <Mail className="h-4 w-4 text-blue-600 dark:text-blue-300 mt-0.5 flex-shrink-0" />
-        <div>
-          <p className="text-sm font-medium text-blue-900 dark:text-blue-200">Şifreni unuttuysan</p>
-          <p className="text-xs text-blue-700 dark:text-blue-300 mt-1 leading-relaxed">
-            İşletme sahibinden yeni bir şifre üretmesini iste. Sahibe Personel listesinden senin için yeni bir
-            şifre oluşturma yetkisi var.
-          </p>
+      {/* Yardım kutusu — sadece non-owner personellere göster (owner'ın isteyeceği bir sahip yok) */}
+      {staffRole !== 'owner' && (
+        <div className="rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/40 p-4 flex items-start gap-3">
+          <Mail className="h-4 w-4 text-blue-600 dark:text-blue-300 mt-0.5 flex-shrink-0" />
+          <div>
+            <p className="text-sm font-medium text-blue-900 dark:text-blue-200">Şifreni unuttuysan</p>
+            <p className="text-xs text-blue-700 dark:text-blue-300 mt-1 leading-relaxed">
+              İşletme sahibinden yeni bir şifre üretmesini iste. Sahibe Personel listesinden senin için yeni bir
+              şifre oluşturma yetkisi var.
+            </p>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }
