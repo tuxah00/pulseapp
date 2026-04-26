@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { AlertTriangle, Loader2, X, ChevronLeft } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Portal } from '@/components/ui/portal'
 
 type ReasonCategory = 'not_using' | 'privacy_concern' | 'switched_provider' | 'dissatisfied' | 'other'
 
@@ -74,6 +75,7 @@ export function DataDeletionModal({ open, onClose, onSubmitted }: DataDeletionMo
   const canSubmit = confirmation === 'VERİLERİMİ SİL' && !submitting
 
   return (
+    <Portal>
     <div
       className="fixed inset-0 z-[100] bg-black/60 dark:bg-black/70 flex items-center justify-center p-4 modal-overlay"
       onClick={onClose}
@@ -223,5 +225,6 @@ export function DataDeletionModal({ open, onClose, onSubmitted }: DataDeletionMo
         </div>
       </div>
     </div>
+    </Portal>
   )
 }

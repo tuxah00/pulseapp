@@ -3,7 +3,6 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { requirePortalSession } from '@/lib/portal/guards'
 import { validateBody } from '@/lib/api/validate'
 import { portalAppointmentCreateSchema } from '@/lib/schemas'
-import { createBooking } from '@/lib/booking/create-booking'
 import { checkWorkingHours } from '@/lib/booking/working-hours'
 import { logPortalAction, getClientIp } from '@/lib/portal/audit'
 import { createLogger } from '@/lib/utils/logger'
@@ -64,9 +63,8 @@ export async function GET(request: NextRequest) {
  *
  * Müşteri portal'dan online randevu oluşturur.
  * - Cookie üzerinden customerId + businessId çekilir
- * - Hizmet süresi services tablosundan alınır
- * - Çalışma saati kontrolü + çakışma kontrolü createBooking içinde yapılır
- * - source='portal' olarak kaydedilir
+ * - Doğrudan INSERT yapılır (createBooking yerine) — müşteri datasını sıfırlamaz,
+ *   appointment_source enum sorunu yaratmaz
  */
 export async function POST(request: NextRequest) {
   const guard = requirePortalSession(request)
@@ -79,24 +77,20 @@ export async function POST(request: NextRequest) {
 
   const admin = createAdminClient()
 
-  // Müşteri bilgisini çek (createBooking name+phone bekliyor)
-  const { data: customer } = await admin
-    .from('customers')
-    .select('name, phone')
-    .eq('id', customerId)
-    .eq('business_id', businessId)
-    .single()
+  // Bağımsız sorgular paralel çalışır — 3 serial RTT → 1 paralel RTT
+  const [
+    { data: service, error: svcErr },
+    { data: business },
+    { data: customerForNotif },
+  ] = await Promise.all([
+    admin.from('services').select('id, name, duration_minutes, price').eq('id', serviceId).eq('business_id', businessId).single(),
+    admin.from('businesses').select('working_hours').eq('id', businessId).single(),
+    admin.from('customers').select('name').eq('id', customerId).single(),
+  ])
 
-  if (!customer) {
-    return NextResponse.json({ error: 'Müşteri bulunamadı' }, { status: 404 })
+  if (svcErr || !service) {
+    return NextResponse.json({ error: 'Hizmet bulunamadı' }, { status: 404 })
   }
-
-  // Çalışma saati kontrolü
-  const { data: business } = await admin
-    .from('businesses')
-    .select('working_hours')
-    .eq('id', businessId)
-    .single()
 
   const whError = checkWorkingHours(
     business?.working_hours as Parameters<typeof checkWorkingHours>[0],
@@ -113,44 +107,94 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Geçmiş bir tarihe randevu oluşturulamaz' }, { status: 400 })
   }
 
-  try {
-    const result = await createBooking(admin, {
-      businessId,
-      name: customer.name,
-      phone: customer.phone || '',
+  // Bitiş saati hesapla
+  const [sh, sm] = startTime.split(':').map(Number)
+  const endTotal = sh * 60 + sm + service.duration_minutes
+  if (endTotal >= 24 * 60) {
+    return NextResponse.json({ error: 'Randevu gece yarısını aşamaz' }, { status: 400 })
+  }
+  const endTime = `${String(Math.floor(endTotal / 60)).padStart(2, '0')}:${String(endTotal % 60).padStart(2, '0')}`
+
+  // Çakışma kontrolü
+  let cq = admin
+    .from('appointments')
+    .select('id')
+    .eq('business_id', businessId)
+    .eq('appointment_date', date)
+    .in('status', ['pending', 'confirmed'])
+    .is('deleted_at', null)
+    .lt('start_time', endTime)
+    .gt('end_time', startTime)
+  if (staffId) cq = cq.eq('staff_id', staffId)
+
+  const { data: conflicts } = await cq
+  if (conflicts?.length) {
+    return NextResponse.json({ error: 'Bu saat dolu. Lütfen başka bir saat seçin.' }, { status: 409 })
+  }
+
+  // Randevu INSERT — mevcut müşteri ID kullanılır, enum alanı dahil edilmez
+  const apptData: Record<string, unknown> = {
+    business_id: businessId,
+    customer_id: customerId,
+    service_id: serviceId,
+    appointment_date: date,
+    start_time: startTime,
+    end_time: endTime,
+    status: 'pending',
+    notes: notes ?? null,
+    reminder_24h_sent: false,
+    reminder_2h_sent: false,
+    review_requested: false,
+  }
+  if (staffId) apptData.staff_id = staffId
+
+  const { data: appt, error: apptErr } = await admin
+    .from('appointments')
+    .insert(apptData)
+    .select('id')
+    .single()
+
+  if (apptErr || !appt) {
+    log.error({ apptErr, businessId, customerId }, 'portal appointment insert failed')
+    return NextResponse.json({ error: 'Randevu oluşturulamadı' }, { status: 500 })
+  }
+
+  // İşletmeye bildirim (fire-and-forget)
+  admin.from('notifications').insert({
+    business_id: businessId,
+    type: 'appointment',
+    title: 'Yeni Online Randevu',
+    body: `${customerForNotif?.name || 'Müşteri'} — ${service.name} — ${date} ${startTime}`,
+    related_id: appt.id,
+    related_type: 'appointment',
+    is_read: false,
+  }).then(() => undefined, () => undefined)
+
+  // Audit log (fire-and-forget — log hatası müşteriye HTTP 500 döndürmemeli)
+  logPortalAction({
+    customerId,
+    businessId,
+    action: 'appointment_create',
+    resource: 'appointment',
+    resourceId: appt.id,
+    details: {
+      customer_name: customerForNotif?.name || null,
+      service_name: service.name,
+      date,
+      time: startTime,
       serviceId,
       staffId,
-      date,
-      startTime,
-      notes,
-      source: 'portal',
-    })
+    },
+    ipAddress: getClientIp(request),
+  })
 
-    await logPortalAction({
-      customerId,
-      businessId,
-      action: 'appointment_create',
-      resource: 'appointment',
-      resourceId: result.appointmentId,
-      details: { serviceId, staffId, date, startTime },
-      ipAddress: getClientIp(request),
-    })
-
-    return NextResponse.json({
-      appointment: {
-        id: result.appointmentId,
-        appointment_date: date,
-        start_time: startTime,
-        end_time: result.endTime,
-        service: result.service,
-      },
-    })
-  } catch (err) {
-    const status = (err as { status?: number })?.status ?? 500
-    const message = err instanceof Error ? err.message : 'Randevu oluşturulamadı'
-    if (status >= 500) {
-      log.error({ err, businessId, customerId }, 'createBooking failed')
-    }
-    return NextResponse.json({ error: message }, { status })
-  }
+  return NextResponse.json({
+    appointment: {
+      id: appt.id,
+      appointment_date: date,
+      start_time: startTime,
+      end_time: endTime,
+      service: { name: service.name, price: service.price },
+    },
+  })
 }

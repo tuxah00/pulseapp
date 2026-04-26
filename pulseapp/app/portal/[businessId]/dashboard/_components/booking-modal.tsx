@@ -115,9 +115,11 @@ export default function BookingModal({
       .catch(() => setStaff([]))
   }, [serviceId, businessId])
 
+  const selectedService = services.find((s) => s.id === serviceId) ?? null
+
   // Tarih+hizmet+personel hazırsa slot çek
   useEffect(() => {
-    if (!serviceId || !date) {
+    if (!selectedService || !date) {
       setSlots([])
       setStartTime('')
       return
@@ -125,16 +127,14 @@ export default function BookingModal({
     setLoadingSlots(true)
     setSlots([])
     setStartTime('')
-    const params = new URLSearchParams({ date, serviceId })
+    const params = new URLSearchParams({ date, duration: String(selectedService.duration_minutes) })
     if (staffId) params.set('staffId', staffId)
     fetch(`/api/public/business/${businessId}/slots?${params.toString()}`)
       .then((r) => r.json())
       .then((d) => setSlots(Array.isArray(d.slots) ? d.slots : []))
       .catch(() => setSlots([]))
       .finally(() => setLoadingSlots(false))
-  }, [serviceId, staffId, date, businessId])
-
-  const selectedService = services.find((s) => s.id === serviceId) || null
+  }, [selectedService, staffId, date, businessId])
 
   // Bugünden 60 güne kadar
   const todayStr = new Date().toISOString().split('T')[0]
@@ -174,7 +174,14 @@ export default function BookingModal({
         },
       }))
       onCreated?.()
-      handleClose()
+      // Önemli: submitting'i kapat ki handleClose() guard'ından geçebilsin
+      setSubmitting(false)
+      // Animasyonlu kapanma (handleClose içindeki submitting guard artık geçer)
+      setClosing(true)
+      setTimeout(() => {
+        setClosing(false)
+        onClose()
+      }, 200)
     } catch {
       setError('Bağlantı hatası')
       setSubmitting(false)

@@ -11,6 +11,9 @@ const DAY_KEYS: Record<number, keyof WorkingHours> = {
   0: 'sun', 1: 'mon', 2: 'tue', 3: 'wed', 4: 'thu', 5: 'fri', 6: 'sat',
 }
 
+/** Randevu slotları her zaman 30 dakikada bir başlayabilir; randevu süresi bitişi kapsamalı. */
+const SLOT_STEP_MINUTES = 30
+
 function generateSlots(open: string, close: string, durationMinutes: number): string[] {
   const slots: string[] = []
   const [openH, openM] = open.split(':').map(Number)
@@ -22,7 +25,7 @@ function generateSlots(open: string, close: string, durationMinutes: number): st
     const h = Math.floor(current / 60).toString().padStart(2, '0')
     const m = (current % 60).toString().padStart(2, '0')
     slots.push(`${h}:${m}`)
-    current += durationMinutes
+    current += SLOT_STEP_MINUTES
   }
   return slots
 }

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { Toaster, toast } from 'sonner'
 import { motion } from 'framer-motion'
@@ -51,6 +52,7 @@ function DashboardShellInner({
   settings,
 }: DashboardShellProps) {
   const { collapsed } = useSidebar()
+  const router = useRouter()
   const [commandOpen, setCommandOpen] = useState(false)
   const [isDesktop, setIsDesktop] = useState(false)
   const [successNotif, setSuccessNotif] = useState<{ title: string; body?: string } | null>(null)
@@ -87,7 +89,24 @@ function DashboardShellInner({
       customer:    toast.info,
       system:      toast,
       stock_alert: toast.error,
+      consultation_request: toast.info,
+      ai_alert:    toast.info,
     }
+
+    // related_type → hedef route
+    function getRouteFor(type: string | null, relatedId: string | null): string | null {
+      if (!relatedId) return null
+      switch (type) {
+        case 'appointment': return `/dashboard/appointments?appointmentId=${relatedId}`
+        case 'consultation_request': return `/dashboard/consultations?id=${relatedId}`
+        case 'review': return '/dashboard/reviews'
+        case 'customer': return `/dashboard/customers?id=${relatedId}`
+        case 'message': return '/dashboard/messages'
+        case 'feedback': return '/dashboard/feedback'
+        default: return null
+      }
+    }
+
     function handlePulseToast(e: Event) {
       const detail = (e as CustomEvent).detail
       if (!detail) return
@@ -97,11 +116,33 @@ function DashboardShellInner({
         return
       }
       const fn = TYPE_MAP[detail.type] ?? toast
-      fn(detail.title, { description: detail.body ?? undefined, duration: 5000 })
+      const route = getRouteFor(detail.related_type ?? detail.type, detail.related_id ?? null)
+
+      fn(detail.title, {
+        description: detail.body ?? undefined,
+        duration: 8000, // tıklamaya zaman ver
+        // Görsel ipucu — tıklanabilir toast'larda imleç pointer olur
+        className: route ? 'cursor-pointer' : undefined,
+        // Aksiyon butonu — Sonner'da resmi CTA mekanizması
+        ...(route && {
+          action: {
+            label: 'Git →',
+            onClick: () => router.push(route),
+          },
+          actionButtonStyle: {
+            backgroundColor: '#193d8f',
+            color: '#ffffff',
+            fontWeight: '600',
+            fontSize: '12px',
+            padding: '4px 10px',
+            borderRadius: '6px',
+          },
+        }),
+      })
     }
     window.addEventListener('pulse-toast', handlePulseToast)
     return () => window.removeEventListener('pulse-toast', handlePulseToast)
-  }, [])
+  }, [router])
 
   const paddingLeft = isDesktop ? (collapsed ? 72 : 256) : 0
 

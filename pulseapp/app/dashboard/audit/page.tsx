@@ -13,6 +13,7 @@ import EmptyState from '@/components/ui/empty-state'
 interface AuditLog {
   id: string
   staff_name: string | null
+  actor_type?: string | null
   action: string
   resource: string
   details: Record<string, string | number | boolean | null> | null
@@ -21,6 +22,7 @@ interface AuditLog {
 }
 
 const ACTION_LABELS: Record<string, string> = {
+  // Standart eylemler
   create: 'Oluşturdu',
   update: 'Güncelledi',
   delete: 'Sildi',
@@ -33,6 +35,23 @@ const ACTION_LABELS: Record<string, string> = {
   assign: 'Atadı',
   revoke: 'İptal Etti',
   request: 'Talep Etti',
+  // Portal (hasta) eylemleri
+  appointment_create: 'Online Randevu Oluşturdu',
+  appointment_cancel: 'Randevu İptal Etti',
+  appointment_reschedule: 'Randevu Düzenledi',
+  payment_initiated: 'Ödeme Başlattı',
+  feedback_submitted: 'Geri Bildirim Gönderdi',
+  review_submitted: 'Yorum Gönderdi',
+  consent_change: 'KVKK Rızası Değiştirdi',
+  profile_update: 'Profil Güncelledi',
+  data_deletion_request: 'Veri Silme Talep Etti',
+  data_deletion_cancel: 'Veri Silme İptal Etti',
+  data_export_download: 'Veri Dışa Aktardı',
+  // Sistem eylemleri
+  invoice_payment_received: 'Ödeme Alındı',
+  consultation_request: 'Konsültasyon Talebi Geldi',
+  consultation_status_change: 'Konsültasyon Durumu Değişti',
+  consultation_convert: 'Konsültasyondan Randevu Oluşturuldu',
 }
 
 const RESOURCE_LABELS: Record<string, string> = {
@@ -477,10 +496,21 @@ export default function AuditPage() {
                     </td>
                     <td className="table-cell font-medium text-gray-900 dark:text-gray-100">
                       <div className="flex items-center gap-2">
-                        <span>{log.staff_name ?? 'Sistem'}</span>
+                        <span>
+                          {log.staff_name
+                            ? log.staff_name
+                            : log.actor_type === 'customer'
+                              ? 'Hasta (Portal)'
+                              : 'Sistem'}
+                        </span>
                         {log.details?.via === 'ai_assistant' && (
                           <span className="rounded-full bg-pulse-900/10 text-pulse-900 dark:bg-pulse-300/20 dark:text-pulse-300 px-2 py-0.5 text-[10px] font-medium whitespace-nowrap">
                             PulseApp Asistan
+                          </span>
+                        )}
+                        {log.actor_type === 'customer' && (
+                          <span className="rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 text-[10px] font-medium whitespace-nowrap">
+                            Portal
                           </span>
                         )}
                       </div>

@@ -493,7 +493,6 @@ export default function WaitlistPage() {
                       <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">Personel: fark etmez</span>
                     )}
                   </div>
-                  {e.notes && <p className="text-xs text-gray-400 mt-1 truncate">{e.notes}</p>}
                 </div>
                 <div className="flex-shrink-0 flex items-center gap-2 self-center" onClick={ev => ev.stopPropagation()}>
                   {e.is_notified && e.is_active && <CountdownBadge expiresAt={e.notification_expires_at} />}

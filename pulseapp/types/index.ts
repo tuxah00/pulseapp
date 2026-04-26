@@ -1139,6 +1139,7 @@ export interface CustomerPhoto {
   customer_id: string
   protocol_id: string | null
   session_id: string | null
+  appointment_id: string | null
   photo_url: string
   photo_type: PhotoType
   tags: string[]

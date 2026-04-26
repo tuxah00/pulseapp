@@ -993,61 +993,54 @@ function RecordsPageInner() {
       {!dbError && records.length > 0 && (
         <>
           {viewMode === 'list' && (
-            <AnimatedList className="space-y-3">
-              {displayedRecords.map((record) => (
-                <AnimatedItem
-                  key={record.id}
-                  onClick={() => setSelectedRecord(record)}
-                  className={cn(
-                    'card flex items-center gap-4 p-4 cursor-pointer transition-all hover:shadow-md',
-                    selectedRecord?.id === record.id && 'ring-2 ring-pulse-900'
-                  )}
-                >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-pulse-50 dark:bg-pulse-900/20 flex-shrink-0">
-                    <Icon className="h-5 w-5 text-pulse-900 dark:text-pulse-400" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <span className="font-medium text-gray-900 dark:text-gray-100 truncate block">
-                      {record.title}
-                    </span>
-                    {getSubtitle(record) && (
-                      <span className="text-sm text-gray-500 dark:text-gray-400 truncate block">
-                        {getSubtitle(record)}
+            <AnimatedList className="space-y-2">
+              {displayedRecords.map((record) => {
+                const subtitle = getSubtitle(record)
+                return (
+                  <AnimatedItem
+                    key={record.id}
+                    onClick={() => setSelectedRecord(record)}
+                    className={cn(
+                      'card flex items-center gap-4 px-4 h-16 cursor-pointer transition-all hover:shadow-md',
+                      selectedRecord?.id === record.id && 'ring-2 ring-pulse-900'
+                    )}
+                  >
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-pulse-50 dark:bg-pulse-900/20 flex-shrink-0">
+                      <Icon className="h-5 w-5 text-pulse-900 dark:text-pulse-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="font-medium text-gray-900 dark:text-gray-100 truncate block">
+                        {record.title}
+                      </span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 truncate block">
+                        {subtitle ? subtitle : formatDate(record.created_at)}
+                      </span>
+                    </div>
+                    {subtitle && (
+                      <span className="hidden sm:block text-xs text-gray-400 dark:text-gray-500 flex-shrink-0">
+                        {formatDate(record.created_at)}
                       </span>
                     )}
-                    {(() => {
-                      const recordTags = record.data.tags ? String(record.data.tags).split(',').map((t: string) => t.trim()).filter(Boolean) : []
-                      return recordTags.length > 0 ? (
-                        <div className="flex items-center gap-1 mt-1 flex-wrap">
-                          {recordTags.map((tag: string, i: number) => (
-                            <span key={i} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      ) : null
-                    })()}
-                    <span className="text-xs text-gray-400 dark:text-gray-500">
-                      {formatDate(record.created_at)}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      onClick={() => { openEditModal(record); setSelectedRecord(null) }}
-                      className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 transition-colors"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(record)}
-                      className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 transition-colors"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-gray-300 dark:text-gray-600 flex-shrink-0" />
-                </AnimatedItem>
-              ))}
+                    <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => { openEditModal(record); setSelectedRecord(null) }}
+                        className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 transition-colors"
+                        aria-label="Düzenle"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(record)}
+                        className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 transition-colors"
+                        aria-label="Sil"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-gray-300 dark:text-gray-600 flex-shrink-0" />
+                  </AnimatedItem>
+                )
+              })}
             </AnimatedList>
           )}
           {viewMode === 'box' && (

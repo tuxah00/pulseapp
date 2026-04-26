@@ -1,6 +1,7 @@
 ﻿'use client'
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
@@ -27,18 +28,20 @@ import {
   CalendarDays,
   CalendarRange,
   Search, Filter, ArrowUpDown,
-  Users, Building2, Ban, Lock, BellRing, Sparkles,
+  Users, User, Building2, Ban, Lock, BellRing, Sparkles, ExternalLink,
 } from 'lucide-react'
 import { formatTime, formatDate, getStatusColor, formatCurrency, cn, formatDateISO } from '@/lib/utils'
 import { STATUS_LABELS, type AppointmentStatus, type Service, type StaffMember, type WorkingHours, type BlockedSlot } from '@/types'
 import type { AppointmentRow } from '@/types/db'
 import { FollowUpQuickModal } from '@/components/dashboard/follow-up-quick-modal'
+import { GalleryTab } from '@/components/customers/gallery-tab'
 
 type AppointmentView = AppointmentRow & {
   customers: { name: string; phone: string | null } | null
   services: { name: string; price: number; duration_minutes: number } | null
   staff_members: { name: string } | null
   campaigns: { name: string } | null
+  invoices: { id: string; status: string; paid_amount: number }[] | null
 }
 import { logAudit } from '@/lib/utils/audit'
 import { addMonthsSafe } from '@/lib/utils/date-range'
@@ -57,7 +60,7 @@ const UNRESOLVED_BORDER = 'opacity-50'
 const UNRESOLVED_BORDER_ONLY = 'bg-red-50/40 dark:bg-red-950/10 border-red-100 dark:border-red-900/30'
 
 export default function AppointmentsPage() {
-  const { businessId, staffId: currentStaffId, staffName: currentStaffName, sector, loading: ctxLoading } = useBusinessContext()
+  const { businessId, staffId: currentStaffId, staffName: currentStaffName, sector, permissions, writePermissions, loading: ctxLoading } = useBusinessContext()
   const customerLabel = getCustomerLabelSingular(sector ?? undefined)
   const { confirm } = useConfirm()
   const [appointments, setAppointments] = useState<AppointmentView[]>([])
@@ -143,7 +146,7 @@ export default function AppointmentsPage() {
     async function openFromNotification() {
       const { data } = await supabase
         .from('appointments')
-        .select('*, customers(name, phone), services(name, duration_minutes, price), staff_members(name), campaigns(name)')
+        .select('*, customers(name, phone), services(name, duration_minutes, price), staff_members(name), campaigns(name), invoices(id, status, paid_amount)')
         .eq('id', appointmentId!)
         .eq('business_id', businessId)
         .is('deleted_at', null)
@@ -212,7 +215,7 @@ export default function AppointmentsPage() {
 
     let query = supabase
       .from('appointments')
-      .select('*, customers(name, phone), services(name, duration_minutes, price), staff_members(name), campaigns(name)')
+      .select('*, customers(name, phone), services(name, duration_minutes, price), staff_members(name), campaigns(name), invoices(id, status, paid_amount)')
       .eq('business_id', businessId)
       .is('deleted_at', null)
       .order('start_time', { ascending: true })
@@ -1157,7 +1160,7 @@ export default function AppointmentsPage() {
     return slots
   }
 
-  // Geçmiş + sonuçsuz randevu: tek tarama ile Set oluştur, her yerde O(1) lookup
+  // Dikkat gerektiren randevular: (1) geçmiş + sonuçlanmamış, (2) tamamlandı ama tahsilat yok
   const { unresolvedIds, unresolvedCount, pastIds } = useMemo(() => {
     const n = new Date()
     const today = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`
@@ -1167,7 +1170,16 @@ export default function AppointmentsPage() {
     for (const a of appointments) {
       const isInPast = a.appointment_date < today || (a.appointment_date === today && a.end_time <= nowMin)
       if (isInPast) pids.add(a.id)
-      if (a.status === 'completed' || a.status === 'cancelled' || a.status === 'no_show') continue
+      if (a.status === 'cancelled' || a.status === 'no_show') continue
+      if (a.status === 'completed') {
+        // Tamamlandı ama ödeme alınmamışsa dikkat gerekiyor (ücretsiz hizmetler hariç)
+        const invs = Array.isArray(a.invoices) ? a.invoices : []
+        const hasPaid = invs.some(i => i.status === 'paid' || (i.paid_amount ?? 0) > 0)
+        const svcPrice = a.services?.price ?? 0
+        if (!hasPaid && svcPrice > 0) ids.add(a.id)
+        continue
+      }
+      // Geçmişteki ama sonuçlandırılmamış randevular
       if (isInPast) ids.add(a.id)
     }
     return { unresolvedIds: ids, unresolvedCount: ids.size, pastIds: pids }
@@ -2493,7 +2505,7 @@ export default function AppointmentsPage() {
                       <span className="font-semibold text-sm text-gray-900 dark:text-gray-100">{apt.customers?.name || 'İsimsiz'}</span>
                       <span className={`badge text-xs ${getStatusColor(apt.status)}`}>{STATUS_LABELS[apt.status as keyof typeof STATUS_LABELS]}</span>
                       {apt.recurrence_group_id && <span title="Tekrarlayan randevu"><Repeat className="h-3.5 w-3.5 text-purple-400" /></span>}
-                      {isPastUnresolved(apt) && <span className="h-2.5 w-2.5 rounded-full bg-red-500 flex-shrink-0" title="Sonuç girilmemiş" />}
+                      {isPastUnresolved(apt) && <span className="h-2.5 w-2.5 rounded-full bg-red-500 flex-shrink-0" title={apt.status === 'completed' ? 'Tahsilat yapılmamış' : 'Sonuç girilmemiş'} />}
                     </div>
                     <div className="mt-0.5 flex items-center gap-2 text-xs text-gray-400">
                       {apt.services?.name && <span>{apt.services.name}</span>}
@@ -2605,9 +2617,45 @@ export default function AppointmentsPage() {
                 </div>
               </div>
 
+              {/* Pending randevu için hızlı onay banner'ı */}
+              {selectedAppointment.status === 'pending' && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800 p-4 flex items-start gap-3">
+                  <div className="flex-shrink-0 mt-0.5">
+                    <BellRing className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">Onay Bekliyor</p>
+                    <p className="text-xs text-amber-800 dark:text-amber-300 mt-0.5">
+                      Müşteri online randevu aldı. Onaylamak için aşağıdaki butona basın.
+                    </p>
+                    <button
+                      onClick={async () => { await updateStatus(selectedAppointment.id, 'confirmed'); setSelectedAppointment(null) }}
+                      className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 text-sm font-medium transition-colors"
+                    >
+                      <CheckCircle className="h-4 w-4" /> Şimdi Onayla
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Bilgiler */}
               <div className="space-y-3">
-                <DetailRow label={customerLabel} value={selectedAppointment.customers?.name || 'İsimsiz'} />
+                <DetailRow label={customerLabel} value={
+                  <div className="flex items-center gap-2">
+                    <span>{selectedAppointment.customers?.name || 'İsimsiz'}</span>
+                    {selectedAppointment.customer_id && (
+                      <Link
+                        href={`/dashboard/customers?customerId=${selectedAppointment.customer_id}`}
+                        className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                        title={`${customerLabel} profiline git`}
+                      >
+                        <User className="h-3 w-3" />
+                        Profil
+                        <ExternalLink className="h-2.5 w-2.5 opacity-60" />
+                      </Link>
+                    )}
+                  </div>
+                } />
                 {selectedAppointment.customers?.phone && (
                   <DetailRow label="Telefon" value={
                     <a href={`tel:${selectedAppointment.customers.phone}`} className="text-pulse-900 hover:underline flex items-center gap-1">
@@ -2632,6 +2680,19 @@ export default function AppointmentsPage() {
                   </div>
                 )}
               </div>
+
+              {/* Öncesi/Sonrası Fotoğraflar — yalnızca müşteriye bağlı randevularda */}
+              {selectedAppointment.customer_id && (
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                  <GalleryTab
+                    customerId={selectedAppointment.customer_id}
+                    appointmentId={selectedAppointment.id}
+                    appointmentStatus={selectedAppointment.status as 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show'}
+                    filterByAppointment
+                    canWrite={writePermissions?.appointments ?? permissions?.appointments ?? false}
+                  />
+                </div>
+              )}
 
               {/* Aksiyonlar */}
               <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-2">
