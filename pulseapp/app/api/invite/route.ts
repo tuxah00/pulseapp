@@ -61,10 +61,15 @@ export async function POST(req: NextRequest) {
     details: { email: email || null, role, staff_id: staff_id || null },
   })
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://pulseapp.vercel.app'
+  // Origin'i önce request header'dan al (Vercel preview/prod dahil dinamik) —
+  // env eksikse eski sabit preview URL'e (pulseapp.vercel.app) düşmesin.
+  const origin =
+    req.headers.get('origin') ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    new URL(req.url).origin
   return NextResponse.json({
     token: invitation.token,
-    link: `${appUrl}/invite/${invitation.token}`,
+    link: `${origin}/invite/${invitation.token}`,
   })
 }
 
