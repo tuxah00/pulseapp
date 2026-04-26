@@ -1007,6 +1007,16 @@ export default function AppointmentsPage() {
       setSelectedAppointment((prev) => prev ? { ...prev, status: newStatus } : null)
     }
     const statusApt = appointments.find(a => a.id === appointmentId)
+
+    // Tamamlandı → takip teklif modal'ını HEMEN aç (paket/sadakat/audit beklemeden)
+    if (newStatus === 'completed' && statusApt?.customer_id && statusApt?.customers?.name) {
+      setFollowUpTarget({
+        appointmentId,
+        customerId: statusApt.customer_id,
+        customerName: statusApt.customers.name,
+      })
+    }
+
     await logAudit({
       businessId: businessId!,
       staffId: currentStaffId,
@@ -1099,15 +1109,6 @@ export default function AppointmentsPage() {
     fetchAppointments()
     const statusLabels: Record<string, string> = { completed: 'Tamamlandı', cancelled: 'İptal edildi', no_show: 'Gelmedi olarak işaretlendi', confirmed: 'Onaylandı', pending: 'Beklemede' }
     window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: statusLabels[newStatus] || 'Durum güncellendi' } }))
-
-    // Tamamlandı → takip teklif modal'ını aç
-    if (newStatus === 'completed' && statusApt?.customer_id && statusApt?.customers?.name) {
-      setFollowUpTarget({
-        appointmentId,
-        customerId: statusApt.customer_id,
-        customerName: statusApt.customers.name,
-      })
-    }
   }
 
   function getDayKeyFromDate(dateStr: string): keyof WorkingHours {
@@ -2737,10 +2738,7 @@ export default function AppointmentsPage() {
                 {selectedAppointment.status === 'completed' && (
                   <>
                     <button
-                      onClick={() => {
-                        setQuickPaymentTarget(selectedAppointment)
-                        closePanelAnimated()
-                      }}
+                      onClick={() => setQuickPaymentTarget(selectedAppointment)}
                       className="w-full flex items-center gap-2 rounded-lg border border-pulse-200 dark:border-pulse-800 bg-pulse-50 dark:bg-pulse-900/20 px-4 py-2.5 text-sm font-medium text-pulse-900 dark:text-pulse-300 hover:bg-pulse-100 dark:hover:bg-pulse-800/30 transition-colors"
                     >
                       <CheckCircle className="h-4 w-4" /> Tahsilat Al

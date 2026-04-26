@@ -132,7 +132,9 @@ export function QuickPaymentModal({ open, onClose, onCreated, appointment, staff
     <Portal>
       <div
         className={cn(
-          'fixed inset-0 z-[115] flex items-end sm:items-center justify-center p-0 sm:p-4 modal-overlay',
+          // !bg-transparent: slide-over backdrop'unun üzerine açıldığında ekstra
+          // karartma katmanı eklemiyoruz — modal-overlay'in fadeIn animasyonu kalır
+          'fixed inset-0 z-[115] flex items-end sm:items-center justify-center p-0 sm:p-4 modal-overlay !bg-transparent dark:!bg-transparent',
           closing && 'closing'
         )}
         onClick={handleClose}
