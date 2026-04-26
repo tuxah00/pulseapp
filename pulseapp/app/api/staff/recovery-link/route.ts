@@ -52,9 +52,14 @@ export async function POST(req: NextRequest) {
   }
 
   // Supabase Auth — recovery link üret
+  // redirectTo: personel bu linke tıklayınca şifre güncelleme sayfasına gidecek
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://pulseapp.vercel.app'
   const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
     type: 'recovery',
     email: targetStaff.email,
+    options: {
+      redirectTo: `${appUrl}/auth/reset-password`,
+    },
   })
 
   if (linkErr || !linkData?.properties?.action_link) {
