@@ -163,7 +163,7 @@ export default function PortalAppointmentsPage() {
             const canEdit = tab === 'upcoming' && !TERMINAL_STATUSES.has(apt.status)
 
             return (
-              <div key={apt.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 px-5 flex items-center justify-between gap-3 min-h-[112px]">
+              <div key={apt.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 px-5 flex items-center justify-between gap-3 h-[124px]">
                 <div className="flex-1 min-w-0 py-3">
                   <div className="flex items-center gap-2 mb-1.5">
                     <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">{svc?.name || 'Randevu'}</h3>
@@ -180,9 +180,11 @@ export default function PortalAppointmentsPage() {
                       <Clock className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
                       {formatTime(apt.start_time)}{apt.end_time && ` - ${formatTime(apt.end_time)}`}
                     </div>
-                    <p className={cn('text-xs text-gray-400 dark:text-gray-500', !staff?.name && 'invisible')}>
-                      Uzman: {staff?.name || 'placeholder'}
-                    </p>
+                    {staff?.name && (
+                      <p className="text-xs text-gray-400 dark:text-gray-500">
+                        Uzman: {staff.name}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -282,9 +284,8 @@ function EditModal({ appointment, onClose, onSaved }: {
 
   return (
     <Portal>
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-overlay">
-      <div className="absolute inset-0 bg-black/60 dark:bg-black/70" onClick={onClose} />
-      <div className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md modal-content">
+    <div className="modal-overlay fixed inset-0 z-[60] bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="modal-content card w-full max-w-md" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800">
           <h3 className="font-semibold text-gray-900 dark:text-gray-100">Randevuyu Düzenle</h3>
           <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
