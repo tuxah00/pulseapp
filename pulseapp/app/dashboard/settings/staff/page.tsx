@@ -6,7 +6,7 @@ import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
 import { requirePermission } from '@/lib/hooks/use-require-permission'
-import { Plus, Pencil, Trash2, Loader2, UserPlus, X, Mail, Phone, Settings, LayoutList, LayoutGrid, Check, Tag, Wrench } from 'lucide-react'
+import { Plus, Pencil, Trash2, Loader2, UserPlus, X, Mail, Phone, Settings, LayoutList, LayoutGrid, Check } from 'lucide-react'
 import ViewModeToggle from '@/components/ui/view-mode-toggle'
 import { cn } from '@/lib/utils'
 import { Portal } from '@/components/ui/portal'
@@ -18,7 +18,6 @@ import { DEFAULT_PERMISSIONS, getEffectivePermissions } from '@/types'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { getCustomerLabel, getSectorPermissionKeys } from '@/lib/config/sector-modules'
-import { getStaffTagsForSector } from '@/lib/config/sector-seeds'
 
 const ROLE_LABELS: Record<StaffRole, string> = {
   owner: 'İşletme Sahibi',
@@ -181,14 +180,6 @@ export default function StaffPage() {
   const closeInviteModal = () => setIsClosingInviteModal(true)
   const [permPopupClosing, setPermPopupClosing] = useState(false)
   const closePermPopup = () => setPermPopupClosing(true)
-
-  // Badge state — etiket + hizmet ataması
-  const [allServices, setAllServices] = useState<{ id: string; name: string }[]>([])
-  const [staffServiceMap, setStaffServiceMap] = useState<Record<string, string[]>>({})
-  const [localTags, setLocalTags] = useState<string[]>([])
-  const [localServiceIds, setLocalServiceIds] = useState<string[]>([])
-  const [badgeSaving, setBadgeSaving] = useState(false)
-
   const [inviteRole, setInviteRole] = useState<'manager' | 'staff'>('staff')
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteLink, setInviteLink] = useState<string | null>(null)
@@ -198,63 +189,18 @@ export default function StaffPage() {
 
   const fetchStaff = useCallback(async () => {
     if (!businessId) return
-    const [staffRes, svcRes, staffSvcRes] = await Promise.all([
-      supabase.from('staff_members').select('*').eq('business_id', businessId).eq('is_active', true).order('name'),
-      supabase.from('services').select('id, name').eq('business_id', businessId).eq('is_active', true).order('name'),
-      supabase.from('staff_services').select('staff_id, service_id').eq('business_id', businessId),
-    ])
-    if (staffRes.data) setStaff(staffRes.data)
-    if (svcRes.data) setAllServices(svcRes.data)
-    if (staffSvcRes.data) {
-      const map: Record<string, string[]> = {}
-      for (const row of staffSvcRes.data) {
-        if (!map[row.staff_id]) map[row.staff_id] = []
-        map[row.staff_id].push(row.service_id)
-      }
-      setStaffServiceMap(map)
-    }
-    if (staffRes.error) console.error('Personel çekme hatası:', staffRes.error)
+    const { data, error: err } = await supabase
+      .from('staff_members')
+      .select('*')
+      .eq('business_id', businessId)
+      .eq('is_active', true)
+      .order('name')
+    if (data) setStaff(data)
+    if (err) console.error('Personel çekme hatası:', err)
     setLoading(false)
   }, [businessId, supabase])
 
   useEffect(() => { if (!ctxLoading) fetchStaff() }, [fetchStaff, ctxLoading])
-
-  // Detay popup açıldığında lokal badge state'ini sync et
-  useEffect(() => {
-    if (selectedStaff) {
-      setLocalTags(selectedStaff.tags || [])
-      setLocalServiceIds(staffServiceMap[selectedStaff.id] || [])
-    }
-  }, [selectedStaff, staffServiceMap])
-
-  async function handleSaveBadges() {
-    if (!selectedStaff || !businessId) return
-    setBadgeSaving(true)
-    try {
-      // Tags kaydet
-      await supabase.from('staff_members').update({ tags: localTags }).eq('id', selectedStaff.id)
-      // Hizmet atamaları: önce sil, sonra yeniden ekle
-      await supabase.from('staff_services').delete().eq('staff_id', selectedStaff.id)
-      if (localServiceIds.length > 0) {
-        await supabase.from('staff_services').insert(
-          localServiceIds.map(serviceId => ({
-            staff_id: selectedStaff.id,
-            service_id: serviceId,
-            business_id: businessId,
-          }))
-        )
-      }
-      // Local state güncelle
-      setStaffServiceMap(prev => ({ ...prev, [selectedStaff.id]: localServiceIds }))
-      setStaff(prev => prev.map(s => s.id === selectedStaff.id ? { ...s, tags: localTags } : s))
-      setSelectedStaff(prev => prev ? { ...prev, tags: localTags } : null)
-      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Etiket ve hizmetler kaydedildi' } }))
-    } catch {
-      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Kayıt hatası' } }))
-    } finally {
-      setBadgeSaving(false)
-    }
-  }
 
   // Sort by role hierarchy, then name
   const sortedStaff = [...staff].sort((a, b) => {
@@ -534,21 +480,6 @@ export default function StaffPage() {
                   {[member.phone, member.email].filter(Boolean).join(' · ')}
                 </p>
               )}
-              {/* Etiket + hizmet badge'leri */}
-              {((member.tags && member.tags.length > 0) || staffServiceMap[member.id] !== undefined) && (
-                <div className="flex flex-wrap gap-1 mt-1.5">
-                  {(member.tags || []).map(tag => (
-                    <span key={tag} className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full bg-pulse-50 dark:bg-pulse-900/20 text-pulse-900 dark:text-pulse-300 border border-pulse-100 dark:border-pulse-900/40 font-medium">
-                      <Tag className="h-2.5 w-2.5" />{tag}
-                    </span>
-                  ))}
-                  {staffServiceMap[member.id] !== undefined && (
-                    <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 font-medium">
-                      <Wrench className="h-2.5 w-2.5" />{staffServiceMap[member.id].length} hizmet
-                    </span>
-                  )}
-                </div>
-              )}
             </div>
             {canEdit && (
               <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
@@ -676,82 +607,6 @@ export default function StaffPage() {
                   <p className="text-sm text-gray-400 text-center py-2">İletişim bilgisi bulunmuyor</p>
                 )}
               </div>
-
-              {/* Etiketler & Hizmetler */}
-              {canEditMember(currentUserRole as StaffRole, selectedStaff.role) && (
-                <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-4">
-                  {/* Etiketler */}
-                  {sector && getStaffTagsForSector(sector as Parameters<typeof getStaffTagsForSector>[0]).length > 0 && (
-                    <div>
-                      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 flex items-center gap-1.5">
-                        <Tag className="h-3.5 w-3.5" />Mesleki Etiketler
-                      </p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {getStaffTagsForSector(sector as Parameters<typeof getStaffTagsForSector>[0]).map(tag => {
-                          const active = localTags.includes(tag)
-                          return (
-                            <button
-                              key={tag}
-                              type="button"
-                              onClick={() => setLocalTags(prev => active ? prev.filter(t => t !== tag) : [...prev, tag])}
-                              className={cn(
-                                'text-xs px-2.5 py-1 rounded-full border transition-colors',
-                                active
-                                  ? 'bg-pulse-900 text-white border-pulse-900 dark:bg-pulse-800'
-                                  : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-pulse-900 dark:hover:border-pulse-300'
-                              )}
-                            >
-                              {tag}
-                            </button>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Hizmet Ataması */}
-                  {allServices.length > 0 && (
-                    <div>
-                      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 flex items-center gap-1.5">
-                        <Wrench className="h-3.5 w-3.5" />Verebileceği Hizmetler
-                      </p>
-                      <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
-                        {allServices.map(svc => {
-                          const checked = localServiceIds.includes(svc.id)
-                          return (
-                            <label key={svc.id} className="flex items-center gap-2.5 py-1 cursor-pointer group">
-                              <div className="relative flex-shrink-0">
-                                <input
-                                  type="checkbox"
-                                  checked={checked}
-                                  onChange={e => setLocalServiceIds(prev =>
-                                    e.target.checked ? [...prev, svc.id] : prev.filter(id => id !== svc.id)
-                                  )}
-                                  className="peer sr-only"
-                                />
-                                <div className="h-4 w-4 rounded border-2 border-gray-300 dark:border-gray-600 peer-checked:bg-pulse-900 peer-checked:border-pulse-900 flex items-center justify-center transition-colors">
-                                  {checked && <Check className="h-2.5 w-2.5 text-white" />}
-                                </div>
-                              </div>
-                              <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-gray-100 transition-colors">{svc.name}</span>
-                            </label>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Kaydet */}
-                  <button
-                    onClick={handleSaveBadges}
-                    disabled={badgeSaving}
-                    className="btn-primary w-full text-sm"
-                  >
-                    {badgeSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5 inline" /> : <Check className="h-3.5 w-3.5 mr-1.5 inline" />}
-                    Etiket & Hizmetleri Kaydet
-                  </button>
-                </div>
-              )}
 
               {/* Düzenle / Kaldır */}
               {canEditMember(currentUserRole as StaffRole, selectedStaff.role) && (
