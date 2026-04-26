@@ -25,7 +25,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 
   const { data: appointment } = await admin
     .from('appointments')
-    .select('id, status, staff_id, appointment_date, start_time')
+    .select('id, status, staff_id, appointment_date, start_time, services(name), customers(name)')
     .eq('id', params.id)
     .eq('business_id', businessId)
     .eq('customer_id', customerId)
@@ -73,6 +73,9 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     return NextResponse.json({ error: 'Güncelleme başarısız' }, { status: 500 })
   }
 
+  const reschSvc = Array.isArray(appointment.services) ? appointment.services[0] : appointment.services
+  const reschCst = Array.isArray(appointment.customers) ? appointment.customers[0] : appointment.customers
+
   await logPortalAction({
     customerId,
     businessId,
@@ -80,8 +83,10 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     resource: 'appointment',
     resourceId: params.id,
     details: {
-      from: { date: appointment.appointment_date, startTime: appointment.start_time },
-      to: { date, startTime, endTime },
+      customer_name: (reschCst as { name?: string } | null)?.name || null,
+      service_name:  (reschSvc as { name?: string } | null)?.name || null,
+      from: { date: appointment.appointment_date, time: appointment.start_time },
+      to:   { date, time: startTime },
     },
     ipAddress: getClientIp(request),
   })
@@ -102,7 +107,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
 
   const { data: appointment } = await admin
     .from('appointments')
-    .select('id, status')
+    .select('id, status, appointment_date, start_time, services(name), customers(name)')
     .eq('id', params.id)
     .eq('business_id', businessId)
     .eq('customer_id', customerId)
@@ -126,12 +131,21 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     return NextResponse.json({ error: 'İptal işlemi başarısız' }, { status: 500 })
   }
 
+  const cancelSvc = Array.isArray(appointment.services) ? appointment.services[0] : appointment.services
+  const cancelCst = Array.isArray(appointment.customers) ? appointment.customers[0] : appointment.customers
+
   await logPortalAction({
     customerId,
     businessId,
     action: 'appointment_cancel',
     resource: 'appointment',
     resourceId: params.id,
+    details: {
+      customer_name: (cancelCst as { name?: string } | null)?.name || null,
+      service_name: (cancelSvc as { name?: string } | null)?.name || null,
+      date: appointment.appointment_date,
+      time: appointment.start_time,
+    },
     ipAddress: getClientIp(request),
   })
 
