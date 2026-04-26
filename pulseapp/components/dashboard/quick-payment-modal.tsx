@@ -132,9 +132,10 @@ export function QuickPaymentModal({ open, onClose, onCreated, appointment, staff
     <Portal>
       <div
         className={cn(
-          // !bg-transparent: slide-over backdrop'unun üzerine açıldığında ekstra
-          // karartma katmanı eklemiyoruz — modal-overlay'in fadeIn animasyonu kalır
-          'fixed inset-0 z-[115] flex items-end sm:items-center justify-center p-0 sm:p-4 modal-overlay !bg-transparent dark:!bg-transparent',
+          // Hafif karartma: slide-over'ın bg-black/50'si zaten var; üstüne hafif
+          // bir katman ekleyerek modal'ı odakta tutuyoruz (toplam ~65%, eski
+          // çift modal-overlay'den (~75%) belirgin daha açık).
+          'fixed inset-0 z-[115] flex items-end sm:items-center justify-center p-0 sm:p-4 modal-overlay !bg-black/30 dark:!bg-black/40',
           closing && 'closing'
         )}
         onClick={handleClose}
