@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { requirePermission } from '@/lib/hooks/use-require-permission'
 import {
-  Building2, Sparkles, BadgePercent, UserCog,
+  Building2, Sparkles, BadgePercent,
   CreditCard, ShieldCheck, ChevronRight, Loader2,
   type LucideIcon,
 } from 'lucide-react'
@@ -31,13 +31,6 @@ const SETTINGS_CARDS: SettingsCard[] = [
     description: 'Asistanın tonu, varsayılan hatırlatma süresi ve işletmene özel talimatlar.',
     icon: Sparkles,
     iconBg: 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
-  },
-  {
-    href: '/dashboard/settings/staff',
-    title: 'Personel Yetkileri',
-    description: 'Personel ekleme, rol ataması ve modül bazlı yetki yönetimi.',
-    icon: UserCog,
-    iconBg: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
   },
   {
     href: '/dashboard/settings/commissions',

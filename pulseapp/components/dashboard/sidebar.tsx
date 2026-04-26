@@ -104,8 +104,6 @@ const PERMISSION_MAP: Record<string, keyof StaffPermissions> = {
   '/dashboard/consultations': 'consultations',
   '/dashboard/commissions': 'commissions',
   '/dashboard/settings/services': 'services',
-  '/dashboard/settings/staff': 'staff',
-  '/dashboard/settings/shifts': 'shifts',
   '/dashboard/settings/audit': 'audit',
   '/dashboard/settings/commissions': 'commissions',
   '/dashboard/workflows': 'workflows',
