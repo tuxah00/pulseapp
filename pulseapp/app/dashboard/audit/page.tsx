@@ -134,8 +134,8 @@ function formatAuditDetail(log: AuditLog): string {
   if (log.resource === 'appointment') {
     // Erteleme: {from: {date, time/startTime}, to: {date, time/startTime}}
     if (log.action === 'appointment_reschedule' && d.from && d.to) {
-      const from = d.from as Record<string, string>
-      const to   = d.to   as Record<string, string>
+      const from = d.from as unknown as Record<string, string>
+      const to   = d.to   as unknown as Record<string, string>
       const fromStr = [from.date, from.time ?? from.startTime].filter(Boolean).join(' ')
       const toStr   = [to.date,   to.time   ?? to.startTime  ].filter(Boolean).join(' ')
       const header = [d.customer_name, d.service_name].filter(Boolean).map(String).join(' · ')
