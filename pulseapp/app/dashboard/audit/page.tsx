@@ -133,7 +133,7 @@ function formatAuditDetail(log: AuditLog): string {
   // Randevu (oluşturma / iptal / erteleme)
   if (log.resource === 'appointment') {
     // Erteleme: {from: {date, time/startTime}, to: {date, time/startTime}}
-    if (log.action === 'appointment_reschedule' && d.from && d.to) {
+    if (log.action === 'appointment_reschedule' && d.from && typeof d.from === 'object' && d.to && typeof d.to === 'object') {
       const from = d.from as Record<string, string>
       const to   = d.to   as Record<string, string>
       const fromStr = [from.date, from.time ?? from.startTime].filter(Boolean).join(' ')
