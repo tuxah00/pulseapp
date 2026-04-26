@@ -34,6 +34,7 @@ import { formatTime, formatDate, getStatusColor, formatCurrency, cn, formatDateI
 import { STATUS_LABELS, type AppointmentStatus, type Service, type StaffMember, type WorkingHours, type BlockedSlot } from '@/types'
 import type { AppointmentRow } from '@/types/db'
 import { FollowUpQuickModal } from '@/components/dashboard/follow-up-quick-modal'
+import { QuickPaymentModal } from '@/components/dashboard/quick-payment-modal'
 import { GalleryTab } from '@/components/customers/gallery-tab'
 
 type AppointmentView = AppointmentRow & {
@@ -97,6 +98,7 @@ export default function AppointmentsPage() {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   // Follow-up modal state
   const [followUpTarget, setFollowUpTarget] = useState<{ appointmentId: string; customerId: string; customerName: string } | null>(null)
+  const [quickPaymentTarget, setQuickPaymentTarget] = useState<AppointmentView | null>(null)
 
   const [services, setServices] = useState<Service[]>([])
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>([])
@@ -1732,8 +1734,7 @@ export default function AppointmentsPage() {
                                   const colorIdx = getStaffColorIndex(apt.staff_id)
                                   const colWidth = 100 / totalColumns
                                   const colLeft = column * colWidth
-                                  const isAptPast = isDayPast || (isDayToday && apt.end_time <= nowTimeStr)
-                                  const isAptUnresolved = isAptPast && apt.status !== 'completed' && apt.status !== 'cancelled' && apt.status !== 'no_show'
+                                  const isAptUnresolved = isPastUnresolved(apt)
                                   const visual = getAptVisual(apt)
                                   return (
                                     <div
@@ -1742,7 +1743,10 @@ export default function AppointmentsPage() {
                                       style={{ top: topPos, height: h, left: `${colLeft}%`, width: `${colWidth - 1}%` }}
                                     >
                                       {isAptUnresolved && (
-                                        <span className="absolute -top-1 -right-1 z-10 h-2.5 w-2.5 rounded-full bg-red-500 border-2 border-gray-900 pointer-events-none" />
+                                        <span
+                                          className="absolute -top-1 -right-1 z-10 h-2.5 w-2.5 rounded-full bg-red-500 border-2 border-gray-900 pointer-events-none"
+                                          title={apt.status === 'completed' ? 'Tahsilat yapılmamış' : 'Sonuç girilmemiş'}
+                                        />
                                       )}
                                       <div
                                         draggable
@@ -2084,39 +2088,51 @@ export default function AppointmentsPage() {
                           const top = (startMin / 60) * hourHeight
                           const height = Math.max(((endMin - startMin) / 60) * hourHeight, 20)
                           const visual = getAptVisual(apt)
+                          const isAptUnresolved = isPastUnresolved(apt)
                           return (
                             <div
                               key={apt.id}
-                              draggable
-                              onDragStart={(e) => {
-                                e.dataTransfer.setData('text/plain', apt.id)
-                                e.dataTransfer.effectAllowed = 'move'
-                                setDraggingId(apt.id)
-                              }}
-                              onDragEnd={() => setDraggingId(null)}
-                              className={cn(
-                                'absolute left-0.5 right-0.5 rounded-md px-1.5 py-0.5 overflow-hidden cursor-grab active:cursor-grabbing hover:opacity-90 transition-opacity',
-                                staffColors[col.colorIdx],
-                                visual.isActive ? 'ring-2 ring-inset ring-green-500' :
-                                visual.isUnconfirmed ? 'ring-2 ring-inset ring-orange-400' :
-                                'border border-white/20'
-                              )}
-                              style={{ top, height, opacity: draggingId === apt.id ? 0.5 : visual.isDim ? 0.5 : 1 }}
-                              onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
+                              className="absolute left-0.5 right-0.5"
+                              style={{ top, height }}
                             >
-                              <p className={cn('text-[10px] font-semibold truncate', staffTextColors[col.colorIdx])}>
-                                {apt.customers?.name || 'İsimsiz'}
-                              </p>
-                              {height > 30 && (
-                                <p className={cn('text-[9px] truncate opacity-75', staffTextColors[col.colorIdx])}>
-                                  {apt.services?.name} · {formatTime(apt.start_time)}
-                                </p>
+                              {isAptUnresolved && (
+                                <span
+                                  className="absolute -top-1 -right-1 z-10 h-2.5 w-2.5 rounded-full bg-red-500 border-2 border-gray-900 pointer-events-none"
+                                  title={apt.status === 'completed' ? 'Tahsilat yapılmamış' : 'Sonuç girilmemiş'}
+                                />
                               )}
-                              {apt.staff_members?.name && height > 24 && (
-                                <p className={cn('text-[8px] truncate opacity-60 absolute bottom-0.5 right-1 max-w-[90%] text-right', staffTextColors[col.colorIdx])}>
-                                  {apt.staff_members.name}
+                              <div
+                                draggable
+                                onDragStart={(e) => {
+                                  e.dataTransfer.setData('text/plain', apt.id)
+                                  e.dataTransfer.effectAllowed = 'move'
+                                  setDraggingId(apt.id)
+                                }}
+                                onDragEnd={() => setDraggingId(null)}
+                                className={cn(
+                                  'absolute inset-0 rounded-md px-1.5 py-0.5 overflow-hidden cursor-grab active:cursor-grabbing hover:opacity-90 transition-opacity',
+                                  staffColors[col.colorIdx],
+                                  visual.isActive ? 'ring-2 ring-inset ring-green-500' :
+                                  visual.isUnconfirmed ? 'ring-2 ring-inset ring-orange-400' :
+                                  'border border-white/20'
+                                )}
+                                style={{ opacity: draggingId === apt.id ? 0.5 : visual.isDim ? 0.5 : 1 }}
+                                onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
+                              >
+                                <p className={cn('text-[10px] font-semibold truncate', staffTextColors[col.colorIdx])}>
+                                  {apt.customers?.name || 'İsimsiz'}
                                 </p>
-                              )}
+                                {height > 30 && (
+                                  <p className={cn('text-[9px] truncate opacity-75', staffTextColors[col.colorIdx])}>
+                                    {apt.services?.name} · {formatTime(apt.start_time)}
+                                  </p>
+                                )}
+                                {apt.staff_members?.name && height > 24 && (
+                                  <p className={cn('text-[8px] truncate opacity-60 absolute bottom-0.5 right-1 max-w-[90%] text-right', staffTextColors[col.colorIdx])}>
+                                    {apt.staff_members.name}
+                                  </p>
+                                )}
+                              </div>
                             </div>
                           )
                         })}
@@ -2301,34 +2317,46 @@ export default function AppointmentsPage() {
                           const top = (startMin / 60) * hourHeight
                           const height = Math.max(((endMin - startMin) / 60) * hourHeight, 20)
                           const visual = getAptVisual(apt)
+                          const isAptUnresolved = isPastUnresolved(apt)
                           return (
                             <div
                               key={apt.id}
-                              draggable
-                              onDragStart={(e) => {
-                                e.dataTransfer.setData('text/plain', apt.id)
-                                e.dataTransfer.effectAllowed = 'move'
-                                setDraggingId(apt.id)
-                              }}
-                              onDragEnd={() => setDraggingId(null)}
-                              className={cn(
-                                'absolute left-0.5 right-0.5 rounded-md px-1.5 py-0.5 overflow-hidden cursor-grab active:cursor-grabbing hover:opacity-80 transition-opacity text-white',
-                                visual.isActive ? 'ring-2 ring-inset ring-green-500' :
-                                visual.isUnconfirmed ? 'ring-2 ring-inset ring-orange-400' :
-                                'border border-white/20'
-                              )}
-                              style={{ top, height, backgroundColor: col.color, opacity: draggingId === apt.id ? 0.5 : visual.isDim ? 0.5 : 1 }}
-                              onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
+                              className="absolute left-0.5 right-0.5"
+                              style={{ top, height }}
                             >
-                              <p className="text-[10px] font-semibold truncate">{apt.customers?.name || 'İsimsiz'}</p>
-                              {height > 30 && (
-                                <p className="text-[9px] truncate opacity-80">{apt.services?.name} · {formatTime(apt.start_time)}</p>
+                              {isAptUnresolved && (
+                                <span
+                                  className="absolute -top-1 -right-1 z-10 h-2.5 w-2.5 rounded-full bg-red-500 border-2 border-gray-900 pointer-events-none"
+                                  title={apt.status === 'completed' ? 'Tahsilat yapılmamış' : 'Sonuç girilmemiş'}
+                                />
                               )}
-                              {apt.staff_members?.name && height > 24 && (
-                                <p className="text-[8px] truncate opacity-60 absolute bottom-0.5 right-1 max-w-[90%] text-right">
-                                  {apt.staff_members.name}
-                                </p>
-                              )}
+                              <div
+                                draggable
+                                onDragStart={(e) => {
+                                  e.dataTransfer.setData('text/plain', apt.id)
+                                  e.dataTransfer.effectAllowed = 'move'
+                                  setDraggingId(apt.id)
+                                }}
+                                onDragEnd={() => setDraggingId(null)}
+                                className={cn(
+                                  'absolute inset-0 rounded-md px-1.5 py-0.5 overflow-hidden cursor-grab active:cursor-grabbing hover:opacity-80 transition-opacity text-white',
+                                  visual.isActive ? 'ring-2 ring-inset ring-green-500' :
+                                  visual.isUnconfirmed ? 'ring-2 ring-inset ring-orange-400' :
+                                  'border border-white/20'
+                                )}
+                                style={{ backgroundColor: col.color, opacity: draggingId === apt.id ? 0.5 : visual.isDim ? 0.5 : 1 }}
+                                onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
+                              >
+                                <p className="text-[10px] font-semibold truncate">{apt.customers?.name || 'İsimsiz'}</p>
+                                {height > 30 && (
+                                  <p className="text-[9px] truncate opacity-80">{apt.services?.name} · {formatTime(apt.start_time)}</p>
+                                )}
+                                {apt.staff_members?.name && height > 24 && (
+                                  <p className="text-[8px] truncate opacity-60 absolute bottom-0.5 right-1 max-w-[90%] text-right">
+                                    {apt.staff_members.name}
+                                  </p>
+                                )}
+                              </div>
                             </div>
                           )
                         })}
@@ -2709,7 +2737,10 @@ export default function AppointmentsPage() {
                 {selectedAppointment.status === 'completed' && (
                   <>
                     <button
-                      onClick={() => { window.location.href = `/dashboard/pos?appointmentId=${selectedAppointment.id}` }}
+                      onClick={() => {
+                        setQuickPaymentTarget(selectedAppointment)
+                        closePanelAnimated()
+                      }}
                       className="w-full flex items-center gap-2 rounded-lg border border-pulse-200 dark:border-pulse-800 bg-pulse-50 dark:bg-pulse-900/20 px-4 py-2.5 text-sm font-medium text-pulse-900 dark:text-pulse-300 hover:bg-pulse-100 dark:hover:bg-pulse-800/30 transition-colors"
                     >
                       <CheckCircle className="h-4 w-4" /> Tahsilat Al
@@ -3061,6 +3092,17 @@ export default function AppointmentsPage() {
           appointmentId={followUpTarget.appointmentId}
           defaultType="post_session"
           defaultDaysOffset={3}
+        />
+      )}
+
+      {/* Hızlı tahsilat — kasaya gitmeden randevu üzerinden tahsilat al */}
+      {quickPaymentTarget && (
+        <QuickPaymentModal
+          open={!!quickPaymentTarget}
+          onClose={() => setQuickPaymentTarget(null)}
+          appointment={quickPaymentTarget}
+          staffId={currentStaffId}
+          onCreated={() => fetchAppointments()}
         />
       )}
     </div>
