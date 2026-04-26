@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -6,13 +6,13 @@ import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
 import { requirePermission } from '@/lib/hooks/use-require-permission'
-import { Plus, Pencil, Trash2, Loader2, UserPlus, X, Mail, Phone, LayoutList, LayoutGrid, Check, ArrowUpDown, BadgePercent } from 'lucide-react'
+import { Plus, Pencil, Trash2, Loader2, UserPlus, X, Mail, Phone, LayoutList, LayoutGrid, Check, ArrowUpDown, BadgePercent, Tag } from 'lucide-react'
 import ViewModeToggle from '@/components/ui/view-mode-toggle'
 import { cn } from '@/lib/utils'
 import { Portal } from '@/components/ui/portal'
 import CompactBoxCard from '@/components/ui/compact-box-card'
 import { ToolbarPopover, SortPopoverContent } from '@/components/ui/toolbar-popover'
-import type { StaffMember, StaffRole, StaffPermissions, StaffWritePermissions } from '@/types'
+import type { StaffMember, StaffRole, StaffPermissions, StaffWritePermissions, SectorType } from '@/types'
 import { logAudit } from '@/lib/utils/audit'
 import { formatCurrency } from '@/lib/utils'
 import {
@@ -24,8 +24,15 @@ import {
 } from '@/types'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { getCustomerLabel, getSectorPermissionKeys } from '@/lib/config/sector-modules'
+import { getStaffTagsForSector } from '@/lib/config/sector-seeds'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import EmptyState from '@/components/ui/empty-state'
+
+interface ServiceLite {
+  id: string
+  name: string
+  is_active: boolean
+}
 
 const ROLE_LABELS: Record<StaffRole, string> = {
   owner: 'İşletme Sahibi',
@@ -134,6 +141,22 @@ export default function StaffPage() {
   const [role, setRole] = useState<StaffRole>('staff')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
+  // Etiket + hizmet seçimi (form state)
+  const [selectedTags, setSelectedTags] = useState<string[]>([])
+  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([])
+  // Etiket havuzu (işletme bazlı, settings.staff_tag_options)
+  const [tagPool, setTagPool] = useState<string[]>([])
+  // İşletmenin aktif hizmetleri
+  const [services, setServices] = useState<ServiceLite[]>([])
+  // Personel başına atanmış hizmet ID'leri (staff_services'tan)
+  const [staffServicesMap, setStaffServicesMap] = useState<Record<string, string[]>>({})
+  // Etiket havuzu modal'ı
+  const [tagPoolModal, setTagPoolModal] = useState(false)
+  const [tagPoolModalClosing, setTagPoolModalClosing] = useState(false)
+  const closeTagPoolModal = () => setTagPoolModalClosing(true)
+  const [tagPoolDraft, setTagPoolDraft] = useState<string[]>([])
+  const [newTagInput, setNewTagInput] = useState('')
+  const [tagPoolSaving, setTagPoolSaving] = useState(false)
   const [permsSaving, setPermsSaving] = useState(false)
   const [permsSaved, setPermsSaved] = useState(false)
   const [localPerms, setLocalPerms] = useState<StaffPermissions | null>(null)
@@ -161,14 +184,63 @@ export default function StaffPage() {
 
   const fetchStaff = useCallback(async () => {
     if (!businessId) return
-    const { data, error: err } = await supabase
-      .from('staff_members')
-      .select('*')
-      .eq('business_id', businessId)
-      .eq('is_active', true)
-      .order('name')
-    if (data) setStaff(data)
-    if (err) console.error('Personel çekme hatası:', err)
+    // Paralel: personel + hizmet + staff_services + business settings
+    const [staffRes, servicesRes, stsRes, bizRes] = await Promise.all([
+      supabase
+        .from('staff_members')
+        .select('*')
+        .eq('business_id', businessId)
+        .eq('is_active', true)
+        .order('name'),
+      supabase
+        .from('services')
+        .select('id, name, is_active')
+        .eq('business_id', businessId)
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true }),
+      supabase
+        .from('staff_services')
+        .select('staff_id, service_id')
+        .eq('business_id', businessId),
+      supabase
+        .from('businesses')
+        .select('settings, sector')
+        .eq('id', businessId)
+        .maybeSingle(),
+    ])
+
+    if (staffRes.data) setStaff(staffRes.data)
+    if (staffRes.error) console.error('Personel çekme hatası:', staffRes.error)
+
+    if (servicesRes.data) setServices(servicesRes.data)
+
+    // staff_services → personel başına service_id listesi
+    if (stsRes.data) {
+      const map: Record<string, string[]> = {}
+      for (const row of stsRes.data) {
+        if (!map[row.staff_id]) map[row.staff_id] = []
+        map[row.staff_id].push(row.service_id)
+      }
+      setStaffServicesMap(map)
+    }
+
+    // Etiket havuzu — boşsa sektör default'unu sessizce kaydet
+    if (bizRes.data) {
+      const settings = (bizRes.data.settings as Record<string, unknown> | null) ?? {}
+      const existingPool = (settings.staff_tag_options as string[] | undefined) ?? []
+      if (existingPool.length === 0) {
+        const sectorDefault = getStaffTagsForSector((bizRes.data.sector as SectorType) ?? 'other')
+        // Sessiz hidrasyon — kullanıcıya bildirim yok
+        await supabase
+          .from('businesses')
+          .update({ settings: { ...settings, staff_tag_options: sectorDefault } })
+          .eq('id', businessId)
+        setTagPool(sectorDefault)
+      } else {
+        setTagPool(existingPool)
+      }
+    }
+
     setLoading(false)
   }, [businessId, supabase])
 
@@ -192,6 +264,9 @@ export default function StaffPage() {
   function openNewModal() {
     setEditingStaff(null)
     setName(''); setRole('staff'); setPhone(''); setEmail('')
+    // Yeni personel: tüm aktif hizmetleri default ata (booking'de görünür kalsın)
+    setSelectedTags([])
+    setSelectedServiceIds(services.map(s => s.id))
     setError(null); setShowModal(true)
   }
 
@@ -199,7 +274,31 @@ export default function StaffPage() {
     setEditingStaff(member)
     setName(member.name); setRole(member.role)
     setPhone(member.phone || ''); setEmail(member.email || '')
+    setSelectedTags(Array.isArray(member.tags) ? member.tags : [])
+    setSelectedServiceIds(staffServicesMap[member.id] ?? [])
     setError(null); setShowModal(true)
+  }
+
+  /** Personel ↔ hizmet eşleşmesini sync et: eski satırları sil, yeni listeyi ekle. */
+  async function syncStaffServices(staffMemberId: string, serviceIds: string[]) {
+    if (!businessId) return
+    // Önce mevcut atamaları sil (RLS owner/manager check'i geçer)
+    await supabase
+      .from('staff_services')
+      .delete()
+      .eq('staff_id', staffMemberId)
+      .eq('business_id', businessId)
+    if (serviceIds.length === 0) return
+    const rows = serviceIds.map(sid => ({
+      staff_id: staffMemberId,
+      service_id: sid,
+      business_id: businessId,
+    }))
+    const { error: stsErr } = await supabase.from('staff_services').insert(rows)
+    if (stsErr) {
+      console.error('staff_services sync hatası:', stsErr)
+      throw stsErr
+    }
   }
 
   async function handleSave(e: React.FormEvent) {
@@ -212,22 +311,43 @@ export default function StaffPage() {
       return
     }
 
+    let staffMemberId: string | null = editingStaff?.id ?? null
+
     if (editingStaff) {
       const { error: err } = await supabase
         .from('staff_members')
-        .update({ name, role, phone: phone || null, email: email || null })
+        .update({
+          name, role,
+          phone: phone || null, email: email || null,
+          tags: selectedTags,
+        })
         .eq('id', editingStaff.id)
       if (err) { setError('Güncelleme hatası: ' + err.message); setSaving(false); return }
       setSelectedStaff(prev => prev?.id === editingStaff.id
-        ? { ...prev, name, role, phone: phone || null, email: email || null } as StaffMember
+        ? { ...prev, name, role, phone: phone || null, email: email || null, tags: selectedTags } as StaffMember
         : prev)
     } else {
-      const { error: err } = await supabase.from('staff_members').insert({
+      const { data: inserted, error: err } = await supabase.from('staff_members').insert({
         business_id: businessId, name, role,
         phone: phone || null, email: email || null, user_id: null, is_active: true,
-      })
+        tags: selectedTags,
+      }).select('id').single()
       if (err) { setError('Ekleme hatası: ' + err.message); setSaving(false); return }
+      staffMemberId = inserted?.id ?? null
     }
+
+    // Hizmet eşleşmelerini sync et
+    if (staffMemberId) {
+      try {
+        await syncStaffServices(staffMemberId, selectedServiceIds)
+      } catch (stsErr) {
+        const msg = stsErr instanceof Error ? stsErr.message : 'Hizmet ataması başarısız'
+        setError('Hizmet ataması kaydedilemedi: ' + msg)
+        setSaving(false)
+        return
+      }
+    }
+
     setSaving(false); closeModal()
     await fetchStaff()
     window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Kaydedildi' } }))
@@ -237,9 +357,90 @@ export default function StaffPage() {
       staffName: currentStaffName,
       action: editingStaff ? 'update' : 'create',
       resource: 'staff',
-      resourceId: editingStaff?.id,
-      details: { name, role },
+      resourceId: editingStaff?.id ?? staffMemberId ?? undefined,
+      details: { name, role, tags: selectedTags, service_count: selectedServiceIds.length },
     })
+  }
+
+  /** Etiket havuzu modal'ını aç + mevcut havuzu draft'a kopyala. */
+  function openTagPoolModal() {
+    setTagPoolDraft([...tagPool])
+    setNewTagInput('')
+    setTagPoolModal(true)
+  }
+
+  function addTagToDraft() {
+    const trimmed = newTagInput.trim()
+    if (!trimmed) return
+    const lower = trimmed.toLowerCase()
+    if (tagPoolDraft.some(t => t.toLowerCase() === lower)) {
+      setNewTagInput('')
+      return
+    }
+    setTagPoolDraft([...tagPoolDraft, trimmed])
+    setNewTagInput('')
+  }
+
+  function removeTagFromDraft(tag: string) {
+    setTagPoolDraft(tagPoolDraft.filter(t => t !== tag))
+  }
+
+  /** Etiket havuzunu kaydet — settings.staff_tag_options PATCH. */
+  async function saveTagPool() {
+    if (!businessId) return
+    setTagPoolSaving(true)
+
+    // Mevcut settings'i çek, merge et
+    const { data: bizRow } = await supabase
+      .from('businesses')
+      .select('settings')
+      .eq('id', businessId)
+      .maybeSingle()
+    const settings = (bizRow?.settings as Record<string, unknown> | null) ?? {}
+
+    const { error: err } = await supabase
+      .from('businesses')
+      .update({ settings: { ...settings, staff_tag_options: tagPoolDraft } })
+      .eq('id', businessId)
+
+    if (err) {
+      window.dispatchEvent(new CustomEvent('pulse-toast', {
+        detail: { type: 'error', title: 'Etiket havuzu kaydedilemedi', body: err.message },
+      }))
+      setTagPoolSaving(false)
+      return
+    }
+
+    setTagPool(tagPoolDraft)
+    setTagPoolSaving(false)
+    closeTagPoolModal()
+    window.dispatchEvent(new CustomEvent('pulse-toast', {
+      detail: { type: 'success', title: 'Etiket havuzu güncellendi' },
+    }))
+    await logAudit({
+      businessId,
+      staffId: currentStaffId,
+      staffName: currentStaffName,
+      action: 'update',
+      resource: 'settings',
+      details: { staff_tag_options: tagPoolDraft },
+    })
+  }
+
+  function toggleSelectedTag(tag: string) {
+    if (selectedTags.includes(tag)) {
+      setSelectedTags(selectedTags.filter(t => t !== tag))
+    } else {
+      setSelectedTags([...selectedTags, tag])
+    }
+  }
+
+  function toggleSelectedService(id: string) {
+    if (selectedServiceIds.includes(id)) {
+      setSelectedServiceIds(selectedServiceIds.filter(s => s !== id))
+    } else {
+      setSelectedServiceIds([...selectedServiceIds, id])
+    }
   }
 
   async function handleDeactivate(member: StaffMember) {
@@ -358,6 +559,7 @@ export default function StaffPage() {
     const canManageMember = canEditMember(currentUserRole as StaffRole, member.role)
     const permCount = getPermissionCount(member)
     const totalPerms = Object.keys(permissionLabels).length
+    const memberServiceCount = staffServicesMap[member.id]?.length ?? 0
 
     if (viewMode === 'box') {
       return (
@@ -403,7 +605,24 @@ export default function StaffPage() {
                 {member.role !== 'owner' && (
                   <span className="text-xs text-gray-400">{permCount}/{totalPerms} yetki</span>
                 )}
+                {memberServiceCount > 0 && (
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {memberServiceCount} hizmet
+                  </span>
+                )}
               </div>
+              {Array.isArray(member.tags) && member.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {member.tags.map(tag => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center rounded-full bg-pulse-50 dark:bg-pulse-900/20 px-2 py-0.5 text-[10px] font-medium text-pulse-900 dark:text-pulse-300"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
               {(member.phone || member.email) && (
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
                   {[member.phone, member.email].filter(Boolean).join(' · ')}
@@ -454,6 +673,11 @@ export default function StaffPage() {
               ]}
             />
           </div>
+          {(currentUserRole === 'owner' || currentUserRole === 'manager') && (
+            <button onClick={openTagPoolModal} className="btn-secondary" title="Personel etiket havuzunu düzenle">
+              <Tag className="mr-2 h-4 w-4" />Etiket Havuzu
+            </button>
+          )}
           {(currentUserRole === 'owner' || currentUserRole === 'manager') && (
             <button onClick={() => { setShowInviteModal(true); setInviteLink(null); setInviteEmail('') }} className="btn-secondary">
               <UserPlus className="mr-2 h-4 w-4" />Davet Et
@@ -519,6 +743,18 @@ export default function StaffPage() {
                 </div>
                 <h4 className="h-section">{selectedStaff.name}</h4>
                 <span className={cn('mt-1', ROLE_COLORS[selectedStaff.role])}>{ROLE_LABELS[selectedStaff.role]}</span>
+                {Array.isArray(selectedStaff.tags) && selectedStaff.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 justify-center mt-2">
+                    {selectedStaff.tags.map(tag => (
+                      <span
+                        key={tag}
+                        className="inline-flex items-center rounded-full bg-pulse-50 dark:bg-pulse-900/20 px-2 py-0.5 text-[11px] font-medium text-pulse-900 dark:text-pulse-300"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* İletişim */}
@@ -539,6 +775,29 @@ export default function StaffPage() {
                   <p className="text-sm text-gray-400 text-center py-2">İletişim bilgisi bulunmuyor</p>
                 )}
               </div>
+
+              {/* Yapabildiği Hizmetler */}
+              {(staffServicesMap[selectedStaff.id]?.length ?? 0) > 0 && (
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                    Yapabildiği Hizmetler ({staffServicesMap[selectedStaff.id]!.length})
+                  </h4>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(staffServicesMap[selectedStaff.id] ?? []).map(sid => {
+                      const svc = services.find(s => s.id === sid)
+                      if (!svc) return null
+                      return (
+                        <span
+                          key={sid}
+                          className="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-800 px-2.5 py-1 text-xs text-gray-700 dark:text-gray-300"
+                        >
+                          {svc.name}
+                        </span>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Bu Ay Primleri */}
               <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
@@ -749,7 +1008,7 @@ export default function StaffPage() {
       {showModal && (
         <Portal>
         <div className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 ${isClosingModal ? 'closing' : ''}`} onAnimationEnd={() => { if (isClosingModal) { setShowModal(false); setIsClosingModal(false) } }}>
-          <div className={`modal-content card w-full max-w-md ${isClosingModal ? 'closing' : ''}`}>
+          <div className={`modal-content card w-full max-w-lg max-h-[90vh] overflow-y-auto ${isClosingModal ? 'closing' : ''}`}>
             <h2 className="h-section mb-4">
               {editingStaff ? 'Personeli Düzenle' : 'Yeni Personel Ekle'}
             </h2>
@@ -774,6 +1033,106 @@ export default function StaffPage() {
                 <label htmlFor="staffEmail" className="label">E-posta (opsiyonel)</label>
                 <input id="staffEmail" type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="input" placeholder="ahmet@ornek.com" />
               </div>
+
+              {/* Etiketler — havuzdan multi-select chip */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="label mb-0">Etiketler (opsiyonel)</label>
+                  <button
+                    type="button"
+                    onClick={openTagPoolModal}
+                    className="text-xs text-pulse-700 hover:text-pulse-900 dark:text-pulse-400 dark:hover:text-pulse-300"
+                  >
+                    Havuzu düzenle
+                  </button>
+                </div>
+                {tagPool.length === 0 ? (
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Henüz etiket havuzu yok. Yukarıdaki linkle etiket ekleyin.
+                  </p>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5">
+                    {tagPool.map(tag => {
+                      const isSelected = selectedTags.includes(tag)
+                      return (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => toggleSelectedTag(tag)}
+                          className={cn(
+                            'inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors',
+                            isSelected
+                              ? 'border-pulse-900 bg-pulse-900 text-white'
+                              : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-gray-500',
+                          )}
+                        >
+                          {isSelected && <Check className="h-3 w-3" />}
+                          {tag}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Yapabildiği hizmetler — multi-select chip */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="label mb-0">Yapabildiği Hizmetler</label>
+                  {services.length > 0 && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedServiceIds(services.map(s => s.id))}
+                        className="text-pulse-700 hover:text-pulse-900 dark:text-pulse-400 dark:hover:text-pulse-300"
+                      >
+                        Tümü
+                      </button>
+                      <span className="text-gray-300 dark:text-gray-600">·</span>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedServiceIds([])}
+                        className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                      >
+                        Hiçbiri
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {services.length === 0 ? (
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Önce Ayarlar &raquo; Hizmetler&apos;den hizmet ekleyin.
+                  </p>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 p-2">
+                    {services.map(svc => {
+                      const isSelected = selectedServiceIds.includes(svc.id)
+                      return (
+                        <button
+                          key={svc.id}
+                          type="button"
+                          onClick={() => toggleSelectedService(svc.id)}
+                          className={cn(
+                            'inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors',
+                            isSelected
+                              ? 'border-pulse-900 bg-pulse-900 text-white'
+                              : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-gray-500',
+                          )}
+                        >
+                          {isSelected && <Check className="h-3 w-3" />}
+                          {svc.name}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+                {selectedServiceIds.length === 0 && services.length > 0 && (
+                  <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                    ⚠️ Hizmet seçilmedi — bu personel müşteri randevu alma sayfasında hiçbir hizmette görünmez.
+                  </p>
+                )}
+              </div>
+
               {error && <div className="rounded-lg bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-400">{error}</div>}
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={closeModal} className="btn-secondary flex-1">İptal</button>
@@ -783,6 +1142,104 @@ export default function StaffPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+        </Portal>
+      )}
+
+      {/* Etiket Havuzu Modal — chip listesi, ekle/sil */}
+      {tagPoolModal && (
+        <Portal>
+        <div
+          className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 ${tagPoolModalClosing ? 'closing' : ''}`}
+          onClick={closeTagPoolModal}
+          onAnimationEnd={() => { if (tagPoolModalClosing) { setTagPoolModal(false); setTagPoolModalClosing(false) } }}
+        >
+          <div
+            className={`modal-content card w-full max-w-md ${tagPoolModalClosing ? 'closing' : ''}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="h-section">Etiket Havuzu</h2>
+              <button onClick={closeTagPoolModal} className="text-gray-400 hover:text-gray-600" aria-label="Kapat">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+              Personellere atayabileceğiniz etiketleri burada yönetin (örn. Doktor, Asistan, Resepsiyon).
+            </p>
+
+            {/* Mevcut etiket chip'leri */}
+            <div className="flex flex-wrap gap-2 mb-4 min-h-[48px] rounded-lg border border-gray-200 dark:border-gray-700 p-2">
+              {tagPoolDraft.length === 0 ? (
+                <p className="text-xs text-gray-400 dark:text-gray-500 px-2 py-1">
+                  Henüz etiket eklenmedi.
+                </p>
+              ) : (
+                tagPoolDraft.map(tag => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-pulse-100 dark:bg-pulse-900/30 px-3 py-1 text-xs font-medium text-pulse-900 dark:text-pulse-300"
+                  >
+                    {tag}
+                    <button
+                      type="button"
+                      onClick={() => removeTagFromDraft(tag)}
+                      className="rounded-full p-0.5 text-pulse-700 hover:bg-pulse-200 dark:text-pulse-400 dark:hover:bg-pulse-800/40"
+                      aria-label={`${tag} etiketini kaldır`}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))
+              )}
+            </div>
+
+            {/* Yeni etiket ekleme */}
+            <div className="flex gap-2 mb-4">
+              <input
+                type="text"
+                value={newTagInput}
+                onChange={(e) => setNewTagInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    addTagToDraft()
+                  }
+                }}
+                placeholder="Yeni etiket (örn. Operatör)"
+                className="input flex-1"
+                maxLength={40}
+              />
+              <button
+                type="button"
+                onClick={addTagToDraft}
+                disabled={!newTagInput.trim()}
+                className="btn-secondary px-4"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={closeTagPoolModal}
+                className="btn-secondary flex-1"
+                disabled={tagPoolSaving}
+              >
+                İptal
+              </button>
+              <button
+                type="button"
+                onClick={saveTagPool}
+                disabled={tagPoolSaving}
+                className="btn-primary flex-1"
+              >
+                {tagPoolSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin inline" />}
+                Kaydet
+              </button>
+            </div>
           </div>
         </div>
         </Portal>
