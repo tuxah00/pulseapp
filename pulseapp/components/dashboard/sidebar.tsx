@@ -48,6 +48,7 @@ import {
   TrendingUp,
   Inbox,
   ClipboardCheck,
+  KeyRound,
   type LucideIcon,
 } from 'lucide-react'
 import type { SectorType, PlanType, StaffPermissions, StaffRole, BusinessSettings } from '@/types'
@@ -70,6 +71,8 @@ const ICON_MAP: Record<string, LucideIcon> = {
 }
 
 const bottomNav = [
+  // Hesabım: tüm personeller şifre değiştirme için erişebilmeli (settings izni şart değil)
+  { name: 'Hesabım', href: '/dashboard/settings/account', icon: KeyRound },
   { name: 'Ayarlar', href: '/dashboard/settings', icon: Settings },
 ]
 

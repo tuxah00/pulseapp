@@ -164,11 +164,15 @@ export default function StaffPage() {
 
   // Davet linki üretimi (yeni personel formunda + per-row)
   const [sendInvite, setSendInvite] = useState(true) // Email doluysa default ON
-  const [linkModal, setLinkModal] = useState<{ link: string; staffName: string; role: StaffRole; email: string | null; type: 'invite' | 'recovery' } | null>(null)
+  const [linkModal, setLinkModal] = useState<{ link: string; staffName: string; role: StaffRole; email: string | null; type: 'invite' } | null>(null)
   const [linkModalClosing, setLinkModalClosing] = useState(false)
   const closeLinkModal = () => setLinkModalClosing(true)
   const [inviteLoadingFor, setInviteLoadingFor] = useState<string | null>(null) // staff_id loading flag
   const [recoveryLoadingFor, setRecoveryLoadingFor] = useState<string | null>(null) // şifre sıfırlama loading flag
+  // Şifre sıfırlama: Supabase Admin ile doğrudan set; tek seferlik gösterilen yeni şifre
+  const [passwordModal, setPasswordModal] = useState<{ password: string; staffName: string } | null>(null)
+  const [passwordModalClosing, setPasswordModalClosing] = useState(false)
+  const closePasswordModal = () => setPasswordModalClosing(true)
 
   // Commission earnings widget
   const [staffCommission, setStaffCommission] = useState<{
@@ -427,19 +431,16 @@ export default function StaffPage() {
     }
   }
 
-  /** Sisteme dahil olmuş personel için şifre sıfırlama linki üret. */
+  /**
+   * Sisteme dahil olmuş personel için şifre sıfırla.
+   * Supabase Admin API doğrudan yeni rastgele şifre set eder; sonuç tek seferlik
+   * modal'da gösterilir, owner manuel olarak personeline iletir.
+   */
   async function generateRecoveryLink(member: StaffMember) {
-    if (!member.email) {
-      window.dispatchEvent(new CustomEvent('pulse-toast', {
-        detail: { type: 'error', title: 'E-posta yok', body: 'Önce personele bir e-posta adresi tanımlayın.' },
-      }))
-      return
-    }
-
     const confirmed = await confirm({
-      title: 'Şifre sıfırlama linki oluştur',
-      message: `"${member.name}" adlı personelin zaten bir hesabı var.\n\nBu linki personele ilettiğinizde yeni bir şifre belirleyecek ve eski şifresi değişecektir. Devam etmek istiyor musunuz?`,
-      confirmText: 'Linki Oluştur',
+      title: 'Şifreyi sıfırla',
+      message: `"${member.name}" adlı personel için yeni bir şifre üretilecek. Mevcut şifresi geçersiz olacak ve panele girişi engellenecek.\n\nYeni şifreyi ekrandan kopyalayıp personele iletmeniz gerekecek (bir kez gösterilir).`,
+      confirmText: 'Şifreyi Sıfırla',
       cancelText: 'İptal',
       variant: 'warning',
     })
@@ -447,21 +448,21 @@ export default function StaffPage() {
 
     setRecoveryLoadingFor(member.id)
     try {
-      const res = await fetch('/api/staff/recovery-link', {
+      const res = await fetch('/api/staff/set-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ staffId: member.id }),
       })
       const data = await res.json()
-      if (res.ok && data.link) {
-        setLinkModal({ link: data.link, staffName: member.name, role: member.role, email: member.email, type: 'recovery' })
+      if (res.ok && data.password) {
+        setPasswordModal({ password: data.password, staffName: data.staffName || member.name })
       } else {
         window.dispatchEvent(new CustomEvent('pulse-toast', {
-          detail: { type: 'error', title: 'Link üretilemedi', body: data.error || 'Bilinmeyen hata' },
+          detail: { type: 'error', title: 'Şifre sıfırlanamadı', body: data.error || 'Bilinmeyen hata' },
         }))
       }
     } catch {
-      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Link üretilemedi' } }))
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Şifre sıfırlanamadı' } }))
     } finally {
       setRecoveryLoadingFor(null)
     }
@@ -1396,9 +1397,7 @@ export default function StaffPage() {
           <div className={`modal-content card w-full max-w-md ${linkModalClosing ? 'closing' : ''}`} onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-3">
               <div>
-                <h2 className="h-section">
-                  {linkModal.type === 'recovery' ? 'Şifre Sıfırlama Linki Hazır' : 'Davet Linki Hazır'}
-                </h2>
+                <h2 className="h-section">Davet Linki Hazır</h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
                   <span className="font-medium text-gray-700 dark:text-gray-200">{linkModal.staffName}</span>
                   {' · '}
@@ -1411,30 +1410,17 @@ export default function StaffPage() {
               </button>
             </div>
 
-            {linkModal.type === 'recovery' ? (
-              <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900/40 p-3 mb-3">
-                <p className="text-[11px] uppercase tracking-wide text-amber-700 dark:text-amber-400 font-semibold mb-1">
-                  ⚠️ Mevcut hesap · Şifre değişecek
-                </p>
-                <p className="text-xs text-gray-700 dark:text-gray-300 break-all font-mono leading-relaxed">
-                  {linkModal.link}
-                </p>
-              </div>
-            ) : (
-              <div className="rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-900/40 p-3 mb-3">
-                <p className="text-[11px] uppercase tracking-wide text-green-700 dark:text-green-400 font-semibold mb-1">
-                  7 gün geçerli · Tek kullanımlık
-                </p>
-                <p className="text-xs text-gray-700 dark:text-gray-300 break-all font-mono leading-relaxed">
-                  {linkModal.link}
-                </p>
-              </div>
-            )}
+            <div className="rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-900/40 p-3 mb-3">
+              <p className="text-[11px] uppercase tracking-wide text-green-700 dark:text-green-400 font-semibold mb-1">
+                7 gün geçerli · Tek kullanımlık
+              </p>
+              <p className="text-xs text-gray-700 dark:text-gray-300 break-all font-mono leading-relaxed">
+                {linkModal.link}
+              </p>
+            </div>
 
             <p className="text-xs text-gray-500 dark:text-gray-400 mb-3 leading-relaxed">
-              {linkModal.type === 'recovery'
-                ? 'Bu linki personele iletin. Link üzerinden yeni şifresini belirleyebilir. Personelin eski şifresi artık geçersiz olacak.'
-                : 'Bu linki personele iletmeniz yeterli. Link üzerinden adı ve şifresini belirleyip sisteme dahil olur. Link iletilince personel listesinde “Beklemede” rozeti, kabul edildiğinde kaybolur.'}
+              Bu linki personele iletmeniz yeterli. Link üzerinden adı ve şifresini belirleyip sisteme dahil olur. Link iletilince personel listesinde &ldquo;Beklemede&rdquo; rozeti, kabul edildiğinde kaybolur.
             </p>
 
             <div className="flex gap-2">
@@ -1442,11 +1428,7 @@ export default function StaffPage() {
                 onClick={() => {
                   navigator.clipboard.writeText(linkModal.link)
                   window.dispatchEvent(new CustomEvent('pulse-toast', {
-                    detail: {
-                      type: 'success',
-                      title: 'Kopyalandı',
-                      body: linkModal.type === 'recovery' ? 'Şifre sıfırlama linki panoya kopyalandı' : 'Davet linki panoya kopyalandı',
-                    },
+                    detail: { type: 'success', title: 'Kopyalandı', body: 'Davet linki panoya kopyalandı' },
                   }))
                 }}
                 className="btn-primary flex-1 text-sm"
@@ -1455,14 +1437,8 @@ export default function StaffPage() {
               </button>
               {linkModal.email && (
                 <a
-                  href={`mailto:${linkModal.email}?subject=${encodeURIComponent(
-                    linkModal.type === 'recovery'
-                      ? 'Şifre sıfırlama — PulseApp'
-                      : 'Sisteme davet — ' + (currentStaffName || 'PulseApp')
-                  )}&body=${encodeURIComponent(
-                    linkModal.type === 'recovery'
-                      ? `Merhaba ${linkModal.staffName},\n\nPulseApp şifrenizi sıfırlamak için aşağıdaki linki kullanabilirsiniz:\n${linkModal.link}\n\nLinke tıkladığınızda yeni şifrenizi belirleyebilirsiniz.`
-                      : `Merhaba ${linkModal.staffName},\n\nSisteme dahil olmak için aşağıdaki linki kullanabilirsin:\n${linkModal.link}\n\nLink 7 gün geçerli.`
+                  href={`mailto:${linkModal.email}?subject=${encodeURIComponent('Sisteme davet — ' + (currentStaffName || 'PulseApp'))}&body=${encodeURIComponent(
+                    `Merhaba ${linkModal.staffName},\n\nSisteme dahil olmak için aşağıdaki linki kullanabilirsin:\n${linkModal.link}\n\nLink 7 gün geçerli.`
                   )}`}
                   className="btn-secondary text-sm flex items-center justify-center"
                   title="E-posta uygulamasında aç"
@@ -1472,6 +1448,59 @@ export default function StaffPage() {
                 </a>
               )}
               <button onClick={closeLinkModal} className="btn-secondary text-sm">Kapat</button>
+            </div>
+          </div>
+        </div>
+        </Portal>
+      )}
+
+      {/* Şifre sıfırlama sonucu — yeni şifre tek seferlik gösterilir */}
+      {passwordModal && (
+        <Portal>
+        <div
+          className={`modal-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 ${passwordModalClosing ? 'closing' : ''}`}
+          onClick={closePasswordModal}
+          onAnimationEnd={() => { if (passwordModalClosing) { setPasswordModal(null); setPasswordModalClosing(false) } }}
+        >
+          <div className={`modal-content card w-full max-w-md ${passwordModalClosing ? 'closing' : ''}`} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h2 className="h-section">Yeni Şifre Hazır</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                  <span className="font-medium text-gray-700 dark:text-gray-200">{passwordModal.staffName}</span>
+                </p>
+              </div>
+              <button onClick={closePasswordModal} className="text-gray-400 hover:text-gray-600" aria-label="Kapat">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900/40 p-3 mb-3">
+              <p className="text-[11px] uppercase tracking-wide text-amber-700 dark:text-amber-400 font-semibold mb-2">
+                ⚠️ Bu şifre yalnızca bir kez gösterilir
+              </p>
+              <p className="font-mono text-2xl tracking-widest text-center py-3 text-gray-900 dark:text-gray-100 select-all bg-white dark:bg-gray-900 rounded-md border border-amber-200 dark:border-amber-900/40">
+                {passwordModal.password}
+              </p>
+            </div>
+
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3 leading-relaxed">
+              Bu şifreyi personele iletmeniz gerekiyor (WhatsApp, SMS veya yüz yüze). Personel bu şifre ile giriş yaptıktan sonra <span className="font-medium text-gray-700 dark:text-gray-200">Ayarlar → Hesabım</span> bölümünden kendi şifresini değiştirebilir. Eski şifresi artık geçersiz.
+            </p>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(passwordModal.password)
+                  window.dispatchEvent(new CustomEvent('pulse-toast', {
+                    detail: { type: 'success', title: 'Kopyalandı', body: 'Yeni şifre panoya kopyalandı' },
+                  }))
+                }}
+                className="btn-primary flex-1 text-sm"
+              >
+                Şifreyi Kopyala
+              </button>
+              <button onClick={closePasswordModal} className="btn-secondary text-sm">Kapat</button>
             </div>
           </div>
         </div>

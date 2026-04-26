@@ -5,7 +5,7 @@ import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { requirePermission } from '@/lib/hooks/use-require-permission'
 import {
   Building2, Sparkles, BadgePercent,
-  CreditCard, ShieldCheck, ChevronRight, Loader2,
+  CreditCard, ShieldCheck, KeyRound, ChevronRight, Loader2,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -52,6 +52,13 @@ const SETTINGS_CARDS: SettingsCard[] = [
     description: 'Yapılan tüm işlemlerin detaylı kayıt geçmişi (sadece sahip).',
     icon: ShieldCheck,
     iconBg: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
+  },
+  {
+    href: '/dashboard/settings/account',
+    title: 'Hesabım',
+    description: 'Şifrenizi değiştirin ve hesap güvenliğinizi yönetin.',
+    icon: KeyRound,
+    iconBg: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
   },
 ]
 
