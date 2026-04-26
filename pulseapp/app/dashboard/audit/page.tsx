@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { getCustomerLabelSingular } from '@/lib/config/sector-modules'
 import EmptyState from '@/components/ui/empty-state'
+import { FOLLOW_UP_TYPE_LABELS } from '@/types'
 
 interface AuditLog {
   id: string
@@ -133,9 +134,9 @@ function formatAuditDetail(log: AuditLog): string {
   // Randevu (oluşturma / iptal / erteleme)
   if (log.resource === 'appointment') {
     // Erteleme: {from: {date, time/startTime}, to: {date, time/startTime}}
-    if (log.action === 'appointment_reschedule' && d.from && typeof d.from === 'object' && d.to && typeof d.to === 'object') {
-      const from = d.from as Record<string, string>
-      const to   = d.to   as Record<string, string>
+    if (log.action === 'appointment_reschedule' && d.from && d.to) {
+      const from = d.from as unknown as Record<string, string>
+      const to   = d.to   as unknown as Record<string, string>
       const fromStr = [from.date, from.time ?? from.startTime].filter(Boolean).join(' ')
       const toStr   = [to.date,   to.time   ?? to.startTime  ].filter(Boolean).join(' ')
       const header = [d.customer_name, d.service_name].filter(Boolean).map(String).join(' · ')
@@ -322,8 +323,19 @@ function formatAuditDetail(log: AuditLog): string {
   if (log.resource === 'follow_up') {
     const parts: string[] = []
     if (d.customer_name) parts.push(String(d.customer_name))
-    if (d.type) parts.push(String(d.type))
-    if (d.scheduled_for) parts.push(String(d.scheduled_for))
+    if (d.type) {
+      const typeKey = String(d.type) as keyof typeof FOLLOW_UP_TYPE_LABELS
+      parts.push(FOLLOW_UP_TYPE_LABELS[typeKey] ?? String(d.type))
+    }
+    if (d.scheduled_for) {
+      try {
+        parts.push(new Date(String(d.scheduled_for)).toLocaleString('tr-TR', {
+          day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+        }))
+      } catch {
+        parts.push(String(d.scheduled_for))
+      }
+    }
     return parts.join(' · ')
   }
 
