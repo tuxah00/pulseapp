@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { sendMessage } from '@/lib/messaging/send'
 import { logAuditServer } from '@/lib/utils/audit'
 import { addMonthsSafe } from '@/lib/utils/date-range'
+import { expireStaleWaitlistHolds } from '@/lib/waitlist/cleanup'
 
 export async function POST(
   request: NextRequest,
@@ -22,6 +23,10 @@ export async function POST(
 
   const appointmentId = params.id
   const admin = createAdminClient()
+
+  // Lazy cleanup — süresi dolmuş hold'ları pasifleştir, böylece bu fill-gap
+  // çağrısı sıradaki müşteriye atlayabilir (15dk içinde cevap vermeyenler skip)
+  await expireStaleWaitlistHolds(admin, staff.business_id)
 
   // İptal edilmiş randevuyu getir
   const { data: apt } = await admin

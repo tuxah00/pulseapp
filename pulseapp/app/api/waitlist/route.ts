@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { logAuditServer } from '@/lib/utils/audit'
+import { expireStaleWaitlistHolds } from '@/lib/waitlist/cleanup'
 
 async function getStaffInfo(supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>) {
   const { data: { user } } = await supabase.auth.getUser()
@@ -21,6 +22,10 @@ export async function GET(request: NextRequest) {
 
   const url = request.nextUrl
   const activeOnly = url.searchParams.get('active') !== 'false'
+
+  // Lazy cleanup — süresi dolan hold'ları pasifleştir (15dk hold'da cevap
+  // vermeyen müşteriler slotu kaybetmiş sayılır, listeden düşer)
+  await expireStaleWaitlistHolds(supabase, staff.business_id)
 
   let query = supabase
     .from('waitlist_entries')
