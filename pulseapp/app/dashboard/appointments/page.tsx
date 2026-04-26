@@ -601,66 +601,6 @@ export default function AppointmentsPage() {
     })
   }
 
-  // Drag-drop ile randevuyu yeni tarihe taşı (aylık/haftalık takvim)
-  const [draggingId, setDraggingId] = useState<string | null>(null)
-  async function handleDragMove(appointmentId: string, newDate: string, newStartTime?: string) {
-    if (!businessId) return
-    const apt = appointments.find(a => a.id === appointmentId)
-    if (!apt) return
-    // Aynı tarih + saat ise işlem yapma
-    if (apt.appointment_date === newDate && (!newStartTime || apt.start_time === newStartTime)) return
-
-    try {
-      const res = await fetch(`/api/appointments/${appointmentId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          businessId,
-          appointment_date: newDate,
-          ...(newStartTime ? { start_time: newStartTime } : {}),
-        }),
-      })
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({}))
-        window.dispatchEvent(new CustomEvent('pulse-toast', {
-          detail: {
-            type: 'error',
-            title: 'Randevu Taşınamadı',
-            body: j.error || 'Bir hata oluştu, lütfen tekrar deneyin.',
-          },
-        }))
-        return
-      }
-      await fetchAppointments()
-      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Randevu taşındı' } }))
-      await logAudit({
-        businessId: businessId!,
-        staffId: currentStaffId,
-        staffName: currentStaffName,
-        action: 'update',
-        resource: 'appointment',
-        resourceId: appointmentId,
-        details: {
-          customer_name: apt.customers?.name || null,
-          service_name: apt.services?.name || null,
-          from_date: apt.appointment_date,
-          to_date: newDate,
-          ...(newStartTime ? { from_time: apt.start_time, to_time: newStartTime } : {}),
-          via: 'drag-drop',
-        },
-      })
-    } catch (err) {
-      console.error('drag-drop hatası:', err)
-      window.dispatchEvent(new CustomEvent('pulse-toast', {
-        detail: {
-          type: 'error',
-          title: 'Randevu Taşınamadı',
-          body: 'Bir hata oluştu, lütfen tekrar deneyin.',
-        },
-      }))
-    }
-  }
-
   // ── Rubber-band seçim yardımcıları ──
   function getSelectedCells(
     start: { col: number; hour: number },
@@ -1591,21 +1531,8 @@ export default function AppointmentsPage() {
                             top: topPad,
                             height: `calc(100% - ${topPad}px)`,
                           }}
-                          onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }}
-                          onDrop={(e) => {
-                            e.preventDefault()
-                            const id = e.dataTransfer.getData('text/plain')
-                            if (!id) return
-                            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-                            const dropY = e.clientY - rect.top
-                            const dropHour = Math.max(startHour, Math.min(endHour - 1, Math.round(dropY / hourHeight) + startHour))
-                            const timeStr = `${String(dropHour).padStart(2, '0')}:00`
-                            handleDragMove(id, day, timeStr)
-                          }}
                           onMouseDown={(e) => {
                             if (e.button !== 0) return
-                            const target = e.target as HTMLElement
-                            if (target.closest('[draggable]')) return
                             const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
                             const hour = Math.max(startHour, Math.min(endHour, Math.floor((e.clientY - rect.top) / hourHeight) + startHour))
                             setSelectionStart({ col: dayIdx, hour })
@@ -1750,21 +1677,14 @@ export default function AppointmentsPage() {
                                         />
                                       )}
                                       <div
-                                        draggable
-                                        onDragStart={(e) => {
-                                          e.dataTransfer.setData('text/plain', apt.id)
-                                          e.dataTransfer.effectAllowed = 'move'
-                                          setDraggingId(apt.id)
-                                        }}
-                                        onDragEnd={() => setDraggingId(null)}
                                         className={cn(
-                                          'absolute inset-0 rounded-md px-1.5 py-0.5 overflow-hidden cursor-grab active:cursor-grabbing hover:opacity-90 transition-opacity',
+                                          'absolute inset-0 rounded-md px-1.5 py-0.5 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity',
                                           staffColors[colorIdx],
                                           visual.isActive ? 'ring-2 ring-inset ring-green-500' :
                                           visual.isUnconfirmed ? 'ring-2 ring-inset ring-orange-400' :
                                           'border border-white/20'
                                         )}
-                                        style={{ opacity: draggingId === apt.id ? 0.5 : visual.isDim ? 0.5 : 1 }}
+                                        style={{ opacity: visual.isDim ? 0.5 : 1 }}
                                         onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
                                       >
                                         <p className={cn('text-[10px] font-semibold truncate', staffTextColors[colorIdx])}>
@@ -1863,14 +1783,6 @@ export default function AppointmentsPage() {
                         setSelectedDate(day)
                         setViewMode('list')
                       }}
-                      onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }}
-                      onDrop={(e) => {
-                        e.preventDefault()
-                        e.stopPropagation()
-                        const id = e.dataTransfer.getData('text/plain')
-                        if (!id) return
-                        handleDragMove(id, day)
-                      }}
                     >
                       <div className="flex items-center justify-between">
                         <span className={cn(
@@ -1893,18 +1805,10 @@ export default function AppointmentsPage() {
                                 <span className="absolute -top-1 -right-1 z-10 h-2.5 w-2.5 rounded-full bg-red-500 border-2 border-gray-900 pointer-events-none" />
                               )}
                               <div
-                                draggable
-                                onDragStart={(e) => {
-                                  e.stopPropagation()
-                                  e.dataTransfer.setData('text/plain', apt.id)
-                                  e.dataTransfer.effectAllowed = 'move'
-                                  setDraggingId(apt.id)
-                                }}
-                                onDragEnd={() => setDraggingId(null)}
                                 onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
-                                style={{ opacity: draggingId === apt.id ? 0.5 : isPast(apt) ? 0.5 : 1 }}
+                                style={{ opacity: isPast(apt) ? 0.5 : 1 }}
                                 className={cn(
-                                  'rounded px-1.5 py-0.5 text-[10px] font-medium truncate cursor-grab active:cursor-grabbing border border-white/20 hover:opacity-90',
+                                  'rounded px-1.5 py-0.5 text-[10px] font-medium truncate cursor-pointer border border-white/20 hover:opacity-90',
                                   staffColors[colorIdx],
                                   staffTextColors[colorIdx]
                                 )}
@@ -2007,21 +1911,8 @@ export default function AppointmentsPage() {
                           width: `calc((100% - 60px) / ${columns.length})`,
                           top: 0, height: '100%',
                         }}
-                        onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }}
-                        onDrop={(e) => {
-                          e.preventDefault()
-                          const id = e.dataTransfer.getData('text/plain')
-                          if (!id) return
-                          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-                          const dropY = e.clientY - rect.top
-                          const dropHour = Math.max(startHour, Math.min(endHour - 1, Math.round(dropY / hourHeight) + startHour))
-                          const timeStr = `${String(dropHour).padStart(2, '0')}:00`
-                          handleDragMove(id, selectedDate, timeStr)
-                        }}
                         onMouseDown={(e) => {
                           if (e.button !== 0) return
-                          const target = e.target as HTMLElement
-                          if (target.closest('[draggable]')) return
                           const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
                           const hour = Math.max(startHour, Math.min(endHour, Math.floor((e.clientY - rect.top) / hourHeight) + startHour))
                           setSelectionStart({ col: colIdx, hour })
@@ -2103,21 +1994,14 @@ export default function AppointmentsPage() {
                                 />
                               )}
                               <div
-                                draggable
-                                onDragStart={(e) => {
-                                  e.dataTransfer.setData('text/plain', apt.id)
-                                  e.dataTransfer.effectAllowed = 'move'
-                                  setDraggingId(apt.id)
-                                }}
-                                onDragEnd={() => setDraggingId(null)}
                                 className={cn(
-                                  'absolute inset-0 rounded-md px-1.5 py-0.5 overflow-hidden cursor-grab active:cursor-grabbing hover:opacity-90 transition-opacity',
+                                  'absolute inset-0 rounded-md px-1.5 py-0.5 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity',
                                   staffColors[col.colorIdx],
                                   visual.isActive ? 'ring-2 ring-inset ring-green-500' :
                                   visual.isUnconfirmed ? 'ring-2 ring-inset ring-orange-400' :
                                   'border border-white/20'
                                 )}
-                                style={{ opacity: draggingId === apt.id ? 0.5 : visual.isDim ? 0.5 : 1 }}
+                                style={{ opacity: visual.isDim ? 0.5 : 1 }}
                                 onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
                               >
                                 <p className={cn('text-[10px] font-semibold truncate', staffTextColors[col.colorIdx])}>
@@ -2237,21 +2121,8 @@ export default function AppointmentsPage() {
                           width: `calc((100% - 60px) / ${columns.length})`,
                           top: 0, height: '100%',
                         }}
-                        onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }}
-                        onDrop={(e) => {
-                          e.preventDefault()
-                          const id = e.dataTransfer.getData('text/plain')
-                          if (!id) return
-                          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-                          const dropY = e.clientY - rect.top
-                          const dropHour = Math.max(startHour, Math.min(endHour - 1, Math.round(dropY / hourHeight) + startHour))
-                          const timeStr = `${String(dropHour).padStart(2, '0')}:00`
-                          handleDragMove(id, selectedDate, timeStr)
-                        }}
                         onMouseDown={(e) => {
                           if (e.button !== 0) return
-                          const target = e.target as HTMLElement
-                          if (target.closest('[draggable]')) return
                           const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
                           const hour = Math.max(startHour, Math.min(endHour, Math.floor((e.clientY - rect.top) / hourHeight) + startHour))
                           setSelectionStart({ col: colIdx, hour })
@@ -2332,20 +2203,13 @@ export default function AppointmentsPage() {
                                 />
                               )}
                               <div
-                                draggable
-                                onDragStart={(e) => {
-                                  e.dataTransfer.setData('text/plain', apt.id)
-                                  e.dataTransfer.effectAllowed = 'move'
-                                  setDraggingId(apt.id)
-                                }}
-                                onDragEnd={() => setDraggingId(null)}
                                 className={cn(
-                                  'absolute inset-0 rounded-md px-1.5 py-0.5 overflow-hidden cursor-grab active:cursor-grabbing hover:opacity-80 transition-opacity text-white',
+                                  'absolute inset-0 rounded-md px-1.5 py-0.5 overflow-hidden cursor-pointer hover:opacity-80 transition-opacity text-white',
                                   visual.isActive ? 'ring-2 ring-inset ring-green-500' :
                                   visual.isUnconfirmed ? 'ring-2 ring-inset ring-orange-400' :
                                   'border border-white/20'
                                 )}
-                                style={{ backgroundColor: col.color, opacity: draggingId === apt.id ? 0.5 : visual.isDim ? 0.5 : 1 }}
+                                style={{ backgroundColor: col.color, opacity: visual.isDim ? 0.5 : 1 }}
                                 onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
                               >
                                 <p className="text-[10px] font-semibold truncate">{apt.customers?.name || 'İsimsiz'}</p>
