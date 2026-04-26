@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { getCustomerLabelSingular } from '@/lib/config/sector-modules'
 import EmptyState from '@/components/ui/empty-state'
+import { FOLLOW_UP_TYPE_LABELS } from '@/types'
 
 interface AuditLog {
   id: string
@@ -322,8 +323,19 @@ function formatAuditDetail(log: AuditLog): string {
   if (log.resource === 'follow_up') {
     const parts: string[] = []
     if (d.customer_name) parts.push(String(d.customer_name))
-    if (d.type) parts.push(String(d.type))
-    if (d.scheduled_for) parts.push(String(d.scheduled_for))
+    if (d.type) {
+      const typeKey = String(d.type) as keyof typeof FOLLOW_UP_TYPE_LABELS
+      parts.push(FOLLOW_UP_TYPE_LABELS[typeKey] ?? String(d.type))
+    }
+    if (d.scheduled_for) {
+      try {
+        parts.push(new Date(String(d.scheduled_for)).toLocaleString('tr-TR', {
+          day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+        }))
+      } catch {
+        parts.push(String(d.scheduled_for))
+      }
+    }
     return parts.join(' · ')
   }
 
