@@ -6,7 +6,7 @@ import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { useViewMode } from '@/lib/hooks/use-view-mode'
 import { requirePermission } from '@/lib/hooks/use-require-permission'
-import { Plus, Pencil, Trash2, Loader2, UserPlus, X, Mail, Phone, LayoutList, LayoutGrid, Check, ArrowUpDown, BadgePercent, Tag } from 'lucide-react'
+import { Plus, Pencil, Trash2, Loader2, UserPlus, X, Mail, Phone, LayoutList, LayoutGrid, Check, ArrowUpDown, BadgePercent, Tag, KeyRound } from 'lucide-react'
 import ViewModeToggle from '@/components/ui/view-mode-toggle'
 import { cn } from '@/lib/utils'
 import { Portal } from '@/components/ui/portal'
@@ -164,10 +164,11 @@ export default function StaffPage() {
 
   // Davet linki üretimi (yeni personel formunda + per-row)
   const [sendInvite, setSendInvite] = useState(true) // Email doluysa default ON
-  const [linkModal, setLinkModal] = useState<{ link: string; staffName: string; role: StaffRole; email: string | null } | null>(null)
+  const [linkModal, setLinkModal] = useState<{ link: string; staffName: string; role: StaffRole; email: string | null; type: 'invite' | 'recovery' } | null>(null)
   const [linkModalClosing, setLinkModalClosing] = useState(false)
   const closeLinkModal = () => setLinkModalClosing(true)
   const [inviteLoadingFor, setInviteLoadingFor] = useState<string | null>(null) // staff_id loading flag
+  const [recoveryLoadingFor, setRecoveryLoadingFor] = useState<string | null>(null) // şifre sıfırlama loading flag
 
   // Commission earnings widget
   const [staffCommission, setStaffCommission] = useState<{
@@ -381,7 +382,7 @@ export default function StaffPage() {
 
     // Davet linki üretildiyse modal'da göster
     if (generatedLink) {
-      setLinkModal({ link: generatedLink, staffName: name, role, email: email || null })
+      setLinkModal({ link: generatedLink, staffName: name, role, email: email || null, type: 'invite' })
     }
 
     await logAudit({
@@ -413,7 +414,7 @@ export default function StaffPage() {
       })
       const data = await res.json()
       if (res.ok && data.link) {
-        setLinkModal({ link: data.link, staffName: member.name, role: member.role, email: member.email })
+        setLinkModal({ link: data.link, staffName: member.name, role: member.role, email: member.email, type: 'invite' })
       } else {
         window.dispatchEvent(new CustomEvent('pulse-toast', {
           detail: { type: 'error', title: 'Davet üretilemedi', body: data.error || 'Bilinmeyen hata' },
@@ -423,6 +424,46 @@ export default function StaffPage() {
       window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Davet üretilemedi' } }))
     } finally {
       setInviteLoadingFor(null)
+    }
+  }
+
+  /** Sisteme dahil olmuş personel için şifre sıfırlama linki üret. */
+  async function generateRecoveryLink(member: StaffMember) {
+    if (!member.email) {
+      window.dispatchEvent(new CustomEvent('pulse-toast', {
+        detail: { type: 'error', title: 'E-posta yok', body: 'Önce personele bir e-posta adresi tanımlayın.' },
+      }))
+      return
+    }
+
+    const confirmed = await confirm({
+      title: 'Şifre sıfırlama linki oluştur',
+      message: `"${member.name}" adlı personelin zaten bir hesabı var.\n\nBu linki personele ilettiğinizde yeni bir şifre belirleyecek ve eski şifresi değişecektir. Devam etmek istiyor musunuz?`,
+      confirmText: 'Linki Oluştur',
+      cancelText: 'İptal',
+      variant: 'warning',
+    })
+    if (!confirmed) return
+
+    setRecoveryLoadingFor(member.id)
+    try {
+      const res = await fetch('/api/staff/recovery-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ staffId: member.id }),
+      })
+      const data = await res.json()
+      if (res.ok && data.link) {
+        setLinkModal({ link: data.link, staffName: member.name, role: member.role, email: member.email, type: 'recovery' })
+      } else {
+        window.dispatchEvent(new CustomEvent('pulse-toast', {
+          detail: { type: 'error', title: 'Link üretilemedi', body: data.error || 'Bilinmeyen hata' },
+        }))
+      }
+    } catch {
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Link üretilemedi' } }))
+    } finally {
+      setRecoveryLoadingFor(null)
     }
   }
 
@@ -610,7 +651,10 @@ export default function StaffPage() {
     // Davet edilebilir mi: henüz sisteme dahil değil (user_id null), email var, owner değil, current user owner
     const memberUserId = (member as { user_id?: string | null }).user_id ?? null
     const canInviteMember = currentUserRole === 'owner' && memberUserId === null && !!member.email && member.role !== 'owner'
+    // Şifre sıfırlama: sisteme dahil olmuş (user_id dolu), email var, owner değil
+    const canResetPassword = currentUserRole === 'owner' && memberUserId !== null && !!member.email && member.role !== 'owner'
     const isInvitingThis = inviteLoadingFor === member.id
+    const isResettingThis = recoveryLoadingFor === member.id
 
     if (viewMode === 'box') {
       return (
@@ -696,6 +740,16 @@ export default function StaffPage() {
                   >
                     {isInvitingThis ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <UserPlus className="h-3.5 w-3.5" />}
                     Davet
+                  </button>
+                )}
+                {canResetPassword && (
+                  <button
+                    onClick={() => generateRecoveryLink(member)}
+                    disabled={isResettingThis}
+                    className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 transition-colors disabled:opacity-50"
+                    title="Şifre sıfırlama linki oluştur"
+                  >
+                    {isResettingThis ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <KeyRound className="h-3.5 w-3.5" />}
                   </button>
                 )}
                 <button onClick={() => openEditModal(member)} className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 transition-colors" title="Düzenle">
@@ -1342,7 +1396,9 @@ export default function StaffPage() {
           <div className={`modal-content card w-full max-w-md ${linkModalClosing ? 'closing' : ''}`} onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-3">
               <div>
-                <h2 className="h-section">Davet Linki Hazır</h2>
+                <h2 className="h-section">
+                  {linkModal.type === 'recovery' ? 'Şifre Sıfırlama Linki Hazır' : 'Davet Linki Hazır'}
+                </h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
                   <span className="font-medium text-gray-700 dark:text-gray-200">{linkModal.staffName}</span>
                   {' · '}
@@ -1355,18 +1411,30 @@ export default function StaffPage() {
               </button>
             </div>
 
-            <div className="rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-900/40 p-3 mb-3">
-              <p className="text-[11px] uppercase tracking-wide text-green-700 dark:text-green-400 font-semibold mb-1">
-                7 gün geçerli · Tek kullanımlık
-              </p>
-              <p className="text-xs text-gray-700 dark:text-gray-300 break-all font-mono leading-relaxed">
-                {linkModal.link}
-              </p>
-            </div>
+            {linkModal.type === 'recovery' ? (
+              <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900/40 p-3 mb-3">
+                <p className="text-[11px] uppercase tracking-wide text-amber-700 dark:text-amber-400 font-semibold mb-1">
+                  ⚠️ Mevcut hesap · Şifre değişecek
+                </p>
+                <p className="text-xs text-gray-700 dark:text-gray-300 break-all font-mono leading-relaxed">
+                  {linkModal.link}
+                </p>
+              </div>
+            ) : (
+              <div className="rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-900/40 p-3 mb-3">
+                <p className="text-[11px] uppercase tracking-wide text-green-700 dark:text-green-400 font-semibold mb-1">
+                  7 gün geçerli · Tek kullanımlık
+                </p>
+                <p className="text-xs text-gray-700 dark:text-gray-300 break-all font-mono leading-relaxed">
+                  {linkModal.link}
+                </p>
+              </div>
+            )}
 
             <p className="text-xs text-gray-500 dark:text-gray-400 mb-3 leading-relaxed">
-              Bu linki personele iletmeniz yeterli. Link üzerinden adı ve şifresini belirleyip sisteme dahil olur.
-              Link iletilince personel listesinde &ldquo;Beklemede&rdquo; rozeti, kabul edildiğinde kaybolur.
+              {linkModal.type === 'recovery'
+                ? 'Bu linki personele iletin. Link üzerinden yeni şifresini belirleyebilir. Personelin eski şifresi artık geçersiz olacak.'
+                : 'Bu linki personele iletmeniz yeterli. Link üzerinden adı ve şifresini belirleyip sisteme dahil olur. Link iletilince personel listesinde “Beklemede” rozeti, kabul edildiğinde kaybolur.'}
             </p>
 
             <div className="flex gap-2">
@@ -1374,7 +1442,11 @@ export default function StaffPage() {
                 onClick={() => {
                   navigator.clipboard.writeText(linkModal.link)
                   window.dispatchEvent(new CustomEvent('pulse-toast', {
-                    detail: { type: 'success', title: 'Kopyalandı', body: 'Davet linki panoya kopyalandı' },
+                    detail: {
+                      type: 'success',
+                      title: 'Kopyalandı',
+                      body: linkModal.type === 'recovery' ? 'Şifre sıfırlama linki panoya kopyalandı' : 'Davet linki panoya kopyalandı',
+                    },
                   }))
                 }}
                 className="btn-primary flex-1 text-sm"
@@ -1383,7 +1455,15 @@ export default function StaffPage() {
               </button>
               {linkModal.email && (
                 <a
-                  href={`mailto:${linkModal.email}?subject=${encodeURIComponent('Sisteme davet — ' + (currentStaffName || 'PulseApp'))}&body=${encodeURIComponent('Merhaba ' + linkModal.staffName + ',\n\nSisteme dahil olmak için aşağıdaki linki kullanabilirsin:\n' + linkModal.link + '\n\nLink 7 gün geçerli.')}`}
+                  href={`mailto:${linkModal.email}?subject=${encodeURIComponent(
+                    linkModal.type === 'recovery'
+                      ? 'Şifre sıfırlama — PulseApp'
+                      : 'Sisteme davet — ' + (currentStaffName || 'PulseApp')
+                  )}&body=${encodeURIComponent(
+                    linkModal.type === 'recovery'
+                      ? `Merhaba ${linkModal.staffName},\n\nPulseApp şifrenizi sıfırlamak için aşağıdaki linki kullanabilirsiniz:\n${linkModal.link}\n\nLinke tıkladığınızda yeni şifrenizi belirleyebilirsiniz.`
+                      : `Merhaba ${linkModal.staffName},\n\nSisteme dahil olmak için aşağıdaki linki kullanabilirsin:\n${linkModal.link}\n\nLink 7 gün geçerli.`
+                  )}`}
                   className="btn-secondary text-sm flex items-center justify-center"
                   title="E-posta uygulamasında aç"
                 >
