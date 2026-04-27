@@ -24,21 +24,75 @@ export async function POST(
   const appointmentId = params.id
   const admin = createAdminClient()
 
+  // Body'de freedSlot varsa erteleme/silme akışı: cancelled kontrolünü atla,
+  // slot bilgisini doğrudan body'den al. Yoksa eski akış (cancelled randevu).
+  let freedSlot: {
+    date: string
+    time: string
+    endTime: string
+    staffId: string | null
+    serviceId: string | null
+  } | null = null
+  let trigger: 'cancel' | 'reschedule' | 'delete' = 'cancel'
+  try {
+    const body = await request.json().catch(() => null)
+    if (body?.freedSlot) {
+      freedSlot = body.freedSlot
+      trigger = body.trigger ?? 'reschedule'
+    }
+  } catch { /* body opsiyonel */ }
+
   // Lazy cleanup — süresi dolmuş hold'ları pasifleştir, böylece bu fill-gap
   // çağrısı sıradaki müşteriye atlayabilir (15dk içinde cevap vermeyenler skip)
   await expireStaleWaitlistHolds(admin, staff.business_id)
 
-  // İptal edilmiş randevuyu getir
-  const { data: apt } = await admin
-    .from('appointments')
-    .select('id, business_id, service_id, staff_id, appointment_date, start_time, end_time, services(name, duration_minutes), staff_members(id, name)')
-    .eq('id', appointmentId)
-    .eq('business_id', staff.business_id)
-    .eq('status', 'cancelled')
-    .is('deleted_at', null)
-    .single()
+  // Slot bilgisini ya body'den (erteleme/silme) ya da DB'den (iptal) al
+  let slotDate: string
+  let slotTime: string
+  let slotEndTime: string
+  let serviceId: string | null
+  let slotStaffId: string | null
+  let slotStaffName: string | null = null
+  let serviceDuration = 30
 
-  if (!apt) return NextResponse.json({ error: 'İptal edilmiş randevu bulunamadı' }, { status: 404 })
+  if (freedSlot) {
+    // Erteleme/silme: slot bilgisi body'de
+    slotDate = freedSlot.date
+    slotTime = freedSlot.time
+    slotEndTime = freedSlot.endTime
+    serviceId = freedSlot.serviceId
+    slotStaffId = freedSlot.staffId
+
+    // Personel adı + hizmet süresi DB'den çekilir (mesaj kişiselleştirmesi için)
+    if (slotStaffId) {
+      const { data: s } = await admin.from('staff_members').select('name').eq('id', slotStaffId).single()
+      slotStaffName = s?.name ?? null
+    }
+    if (serviceId) {
+      const { data: svc } = await admin.from('services').select('duration_minutes').eq('id', serviceId).single()
+      serviceDuration = svc?.duration_minutes ?? 30
+    }
+  } else {
+    // İptal akışı: cancelled randevuyu getir
+    const { data: apt } = await admin
+      .from('appointments')
+      .select('id, business_id, service_id, staff_id, appointment_date, start_time, end_time, services(name, duration_minutes), staff_members(id, name)')
+      .eq('id', appointmentId)
+      .eq('business_id', staff.business_id)
+      .eq('status', 'cancelled')
+      .is('deleted_at', null)
+      .single()
+
+    if (!apt) return NextResponse.json({ error: 'İptal edilmiş randevu bulunamadı' }, { status: 404 })
+
+    slotDate = apt.appointment_date
+    slotTime = apt.start_time
+    slotEndTime = apt.end_time
+    serviceId = apt.service_id
+    slotStaffId = apt.staff_id
+    slotStaffName = (apt.staff_members as any)?.name || null
+    serviceDuration = (apt.services as any)?.duration_minutes || 30
+  }
 
   // İşletme ayarları
   const { data: biz } = await admin
@@ -53,13 +107,6 @@ export async function POST(
   }
 
   const lookbackMonths = (settings.gap_fill_lookback_months as number) ?? 6
-  const slotDate = apt.appointment_date
-  const slotTime = apt.start_time
-  const slotEndTime = apt.end_time
-  const serviceId = apt.service_id
-  const slotStaffId = apt.staff_id
-  const slotStaffName = (apt.staff_members as any)?.name || null
-  const serviceDuration = (apt.services as any)?.duration_minutes || 30
   const bizName = biz?.name || ''
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
 

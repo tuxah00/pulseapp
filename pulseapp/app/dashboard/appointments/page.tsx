@@ -856,10 +856,21 @@ export default function AppointmentsPage() {
     const endTime = calculateEndTime(rescheduleTime, duration)
     const conflict = await checkStaffConflict(rescheduleAppointment.staff_id ?? null, rescheduleDate, rescheduleTime, endTime, rescheduleAppointment.id)
     if (conflict) { setError('Bu personelin bu saatte başka bir randevusu var.'); setSaving(false); return }
-    const { error } = await supabase.from('appointments').update({ appointment_date: rescheduleDate, start_time: rescheduleTime, end_time: endTime }).eq('id', rescheduleAppointment.id)
+    // Eski slot bilgisi (boşalan yer) — fill-gap için yakala
+    const freedSlot = {
+      date: rescheduleAppointment.appointment_date,
+      time: rescheduleAppointment.start_time,
+      endTime: rescheduleAppointment.end_time,
+      staffId: rescheduleAppointment.staff_id,
+      serviceId: rescheduleAppointment.service_id,
+    }
+    const aptId = rescheduleAppointment.id
+    const { error } = await supabase.from('appointments').update({ appointment_date: rescheduleDate, start_time: rescheduleTime, end_time: endTime }).eq('id', aptId)
     if (error) { setError(humanizeSupabaseError(error)); setSaving(false); return }
     setSaving(false); closeReschedule(); fetchAppointments()
     window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Randevu ertelendi' } }))
+    // Eski slot için bekleme listesi otomatik kontrol — silent (eşleşme yoksa toast yok)
+    setTimeout(() => handleFillGap(aptId, undefined, { silent: true, freedSlot, trigger: 'reschedule' }), 300)
   }
 
   async function handleCancelConfirm() {
@@ -891,14 +902,34 @@ export default function AppointmentsPage() {
     setTimeout(() => handleFillGap(apt.id, undefined, { silent: true }), 300)
   }
 
-  async function handleFillGap(appointmentId: string, e?: React.MouseEvent, opts?: { silent?: boolean }) {
+  async function handleFillGap(
+    appointmentId: string,
+    e?: React.MouseEvent,
+    opts?: {
+      silent?: boolean
+      // Erteleme/silme akışında: eski slot bilgisi body'ye geçilir,
+      // çünkü appointment artık ya farklı slot'ta ya da deleted.
+      freedSlot?: {
+        date: string
+        time: string
+        endTime: string
+        staffId: string | null
+        serviceId: string | null
+      }
+      trigger?: 'cancel' | 'reschedule' | 'delete'
+    },
+  ) {
     e?.stopPropagation()
     const silent = !!opts?.silent
     setFillGapLoading(appointmentId)
     try {
+      const body = opts?.freedSlot
+        ? JSON.stringify({ freedSlot: opts.freedSlot, trigger: opts.trigger ?? 'reschedule' })
+        : undefined
       const res = await fetch(`/api/appointments/${appointmentId}/fill-gap`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        body,
       })
       const j = await res.json()
       if (!res.ok) {
@@ -923,11 +954,24 @@ export default function AppointmentsPage() {
     e?.stopPropagation()
     const ok = await confirm({ title: 'Onay', message: 'Bu randevuyu kalıcı olarak silmek istediğinizden emin misiniz?' })
     if (!ok) return
+    // Slot bilgisini silmeden önce yakala (fill-gap için)
+    const aptToDelete = appointments.find(a => a.id === appointmentId)
+    const freedSlot = aptToDelete ? {
+      date: aptToDelete.appointment_date,
+      time: aptToDelete.start_time,
+      endTime: aptToDelete.end_time,
+      staffId: aptToDelete.staff_id,
+      serviceId: aptToDelete.service_id,
+    } : null
     const { error } = await supabase
       .from('appointments')
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', appointmentId)
     if (error) { window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: 'Silme hatası: ' + error.message } })); return }
+    // Silinen slot için bekleme listesi otomatik kontrol — silent (eşleşme yoksa toast yok)
+    if (freedSlot) {
+      setTimeout(() => handleFillGap(appointmentId, undefined, { silent: true, freedSlot, trigger: 'delete' }), 300)
+    }
     const deletedApt = appointments.find(a => a.id === appointmentId)
     await logAudit({
       businessId: businessId!,
