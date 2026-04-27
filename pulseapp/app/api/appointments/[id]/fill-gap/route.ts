@@ -102,11 +102,13 @@ export async function POST(
     .single()
 
   const settings = biz?.settings as Record<string, any> | null
-  if (!settings?.gap_fill_enabled) {
+  // Default açık — sadece explicit false ise kapat (null/undefined = aktif).
+  // Yeni işletmeler otomatik aktif gelir, kullanıcı isterse Ayarlar → Genel'den kapatabilir.
+  if (settings?.gap_fill_enabled === false) {
     return NextResponse.json({ error: 'Boşluk doldurma özelliği kapalı. Ayarlar → Genel bölümünden açabilirsiniz.' }, { status: 400 })
   }
 
-  const lookbackMonths = (settings.gap_fill_lookback_months as number) ?? 6
+  const lookbackMonths = (settings?.gap_fill_lookback_months as number) ?? 6
   const bizName = biz?.name || ''
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
 

@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
   if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
 
   const body = await request.json()
-  const { customerName, customerPhone, customerId, serviceId, staffId, preferredDate, preferredTimeStart, preferredTimeEnd, notes } = body
+  const { customerName, customerPhone, customerId, serviceId, staffId, preferredDate, preferredTimeStart, preferredTimeEnd, notes, autoBookOnMatch } = body
 
   if (!customerName || !customerPhone) {
     return NextResponse.json({ error: 'İsim ve telefon zorunludur' }, { status: 400 })
@@ -69,6 +69,7 @@ export async function POST(request: NextRequest) {
       preferred_time_start: preferredTimeStart || null,
       preferred_time_end: preferredTimeEnd || null,
       notes: notes || null,
+      auto_book_on_match: !!autoBookOnMatch,
     })
     .select()
     .single()

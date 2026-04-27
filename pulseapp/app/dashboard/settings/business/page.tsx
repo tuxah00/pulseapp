@@ -64,7 +64,7 @@ const DEFAULT_SETTINGS: BusinessSettings = {
   max_no_shows: 3,
   periodic_reminder_enabled: false,
   periodic_reminder_advance_days: 3,
-  gap_fill_enabled: false,
+  gap_fill_enabled: true,
   gap_fill_lookback_months: 6,
   loyalty_enabled: false,
   points_per_currency: 1,
@@ -785,10 +785,10 @@ export default function BusinessSettingsPage() {
                 <ToggleSetting
                   label="Boşluk doldurma bildirimi"
                   description="İptal edilen randevu için önce bekleme listesi, sonra geçmiş müşteriler arasından uygun adaylar bulunur ve SMS/WhatsApp gönderilir."
-                  checked={settings.gap_fill_enabled ?? false}
+                  checked={settings.gap_fill_enabled ?? true}
                   onChange={(v) => setSettings(prev => ({ ...prev, gap_fill_enabled: v }))}
                 />
-                {(settings.gap_fill_enabled ?? false) && (
+                {(settings.gap_fill_enabled ?? true) && (
                   <div className="ml-14">
                     <label className="label">Geriye bakış süresi (ay)</label>
                     <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">Bu hizmeti son kaç ay içinde alan müşteriler bilgilendirilsin?</p>
