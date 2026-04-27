@@ -2677,7 +2677,7 @@ export default function AppointmentsPage() {
                         onClick={() => setQuickPaymentTarget(selectedAppointment)}
                         className="w-full flex items-center gap-2 rounded-lg border border-pulse-200 dark:border-pulse-800 bg-pulse-50 dark:bg-pulse-900/20 px-4 py-2.5 text-sm font-medium text-pulse-900 dark:text-pulse-300 hover:bg-pulse-100 dark:hover:bg-pulse-800/30 transition-colors"
                       >
-                        <CheckCircle className="h-4 w-4" /> Tahsilat Al
+                        <Wallet className="h-4 w-4" /> Tahsilat Al
                       </button>
                     )}
                     {selectedAppointment.customer_id && selectedAppointment.customers?.name && (
