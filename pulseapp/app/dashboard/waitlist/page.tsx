@@ -245,12 +245,41 @@ export default function WaitlistPage() {
       toast.error('Tarih ve başlangıç saati zorunludur')
       return
     }
-    if (!bookEntry.customer_id) {
-      toast.error('Müşteri bilgisi eksik. Lütfen müşteriyi yeniden seçin.')
-      return
-    }
     setBookSaving(true)
     try {
+      // customer_id yoksa telefona göre müşteriyi bul, yoksa oluştur
+      let resolvedCustomerId: string | null = bookEntry.customer_id || null
+      if (!resolvedCustomerId) {
+        const phone = bookEntry.customer_phone
+        if (!phone) {
+          toast.error('Müşteri telefon numarası eksik.')
+          return
+        }
+        const { data: existing } = await supabase
+          .from('customers')
+          .select('id')
+          .eq('business_id', businessId)
+          .eq('phone', phone)
+          .limit(1)
+          .maybeSingle()
+        if (existing) {
+          resolvedCustomerId = existing.id
+        } else {
+          const { data: created, error: createErr } = await supabase
+            .from('customers')
+            .insert({ business_id: businessId, name: bookEntry.customer_name, phone, segment: 'new' })
+            .select('id')
+            .single()
+          if (createErr || !created) {
+            toast.error('Müşteri kaydı oluşturulamadı: ' + (createErr?.message || 'bilinmiyor'))
+            return
+          }
+          resolvedCustomerId = created.id
+        }
+        // Waitlist entry'yi customer_id ile güncelle
+        await supabase.from('waitlist_entries').update({ customer_id: resolvedCustomerId }).eq('id', bookEntry.id)
+      }
+
       // Bitiş saati yoksa hizmet süresinden hesapla (yoksa 30 dk varsayılan)
       let effectiveEnd = bookTimeEnd
       if (!effectiveEnd) {
@@ -300,7 +329,7 @@ export default function WaitlistPage() {
 
       const { error } = await supabase.from('appointments').insert({
         business_id: businessId,
-        customer_id: bookEntry.customer_id || null,
+        customer_id: resolvedCustomerId,
         service_id: bookServiceId || null,
         staff_id: bookStaffId || null,
         appointment_date: bookDate,
