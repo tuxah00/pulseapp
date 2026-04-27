@@ -429,6 +429,15 @@ export default function AppointmentsPage() {
   const isToday = selectedDate === todayStr
   const nowMinutes = now ? now.getHours() * 60 + now.getMinutes() : -1
 
+  // Seçili günün kapalı olup olmadığını hesapla
+  const isSelectedDayClosed = useMemo(() => {
+    if (!workingHours) return false
+    const dayMap: Record<number, string> = { 0: 'sun', 1: 'mon', 2: 'tue', 3: 'wed', 4: 'thu', 5: 'fri', 6: 'sat' }
+    const d = new Date(selectedDate + 'T00:00:00')
+    const key = dayMap[d.getDay()]
+    return workingHours[key] === null || workingHours[key] === undefined
+  }, [workingHours, selectedDate])
+
   function getTimeState(apt: AppointmentView): 'past' | 'current' | 'future' {
     if (selectedDate < todayStr) return 'past'
     if (selectedDate > todayStr) return 'future'
@@ -2575,9 +2584,18 @@ export default function AppointmentsPage() {
 
       {!loading && viewMode !== 'week' && viewMode !== 'month' && viewMode !== 'staff' && viewMode !== 'room' ? (filteredAppointments.length === 0 ? (
         <EmptyState
-          icon={<Calendar className="h-7 w-7" />}
-          title={search || statusFilter ? 'Filtreye uygun randevu bulunamadı' : 'Bu tarihte randevu yok'}
-          action={!search && !statusFilter ? {
+          icon={isSelectedDayClosed && !search && !statusFilter
+            ? <Ban className="h-7 w-7" />
+            : <Calendar className="h-7 w-7" />}
+          title={search || statusFilter
+            ? 'Filtreye uygun randevu bulunamadı'
+            : isSelectedDayClosed
+              ? 'İşletme bu gün kapalı'
+              : 'Bu tarihte randevu yok'}
+          description={isSelectedDayClosed && !search && !statusFilter
+            ? 'Çalışma saatleri ayarlarından kapalı günler düzenlenebilir.'
+            : undefined}
+          action={!search && !statusFilter && !isSelectedDayClosed ? {
             label: 'Randevu Ekle',
             onClick: () => openNewModal(),
             icon: <Plus className="mr-2 h-4 w-4" />,
