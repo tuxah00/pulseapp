@@ -234,6 +234,8 @@ export const portalAppointmentCreateSchema = z.object({
     .max(500, MSG.TOO_LONG(500))
     .optional()
     .or(z.literal('').transform(() => undefined)),
+  /** Paket seansından randevu alındığında bu paketin ID'si (seans düşümü için) */
+  packageId: UUID.optional().nullable(),
 })
 
 export type PortalAppointmentCreateInput = z.infer<typeof portalAppointmentCreateSchema>

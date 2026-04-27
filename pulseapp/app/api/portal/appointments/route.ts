@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
 
   const parsed = await validateBody(request, portalAppointmentCreateSchema)
   if (!parsed.ok) return parsed.response
-  const { serviceId, staffId = null, date, startTime, notes = null } = parsed.data
+  const { serviceId, staffId = null, date, startTime, notes = null, packageId = null } = parsed.data
 
   const admin = createAdminClient()
 
@@ -157,6 +157,37 @@ export async function POST(request: NextRequest) {
   if (apptErr || !appt) {
     log.error({ apptErr, businessId, customerId }, 'portal appointment insert failed')
     return NextResponse.json({ error: 'Randevu oluşturulamadı' }, { status: 500 })
+  }
+
+  // Paket seansı düşümü — packageId verilmişse seans say ve usage kaydı oluştur
+  if (packageId) {
+    const { data: pkg } = await admin
+      .from('customer_packages')
+      .select('id, sessions_used, sessions_total')
+      .eq('id', packageId)
+      .eq('customer_id', customerId)
+      .eq('business_id', businessId)
+      .eq('status', 'active')
+      .single()
+
+    if (pkg) {
+      const newUsed = pkg.sessions_used + 1
+      const newStatus = newUsed >= pkg.sessions_total ? 'completed' : 'active'
+      await Promise.all([
+        admin.from('package_usages').insert({
+          business_id: businessId,
+          customer_package_id: pkg.id,
+          appointment_id: appt.id,
+          used_at: new Date().toISOString(),
+        }),
+        admin.from('customer_packages').update({
+          sessions_used: newUsed,
+          status: newStatus,
+        }).eq('id', pkg.id),
+      ])
+    } else {
+      log.warn({ packageId, customerId, businessId }, 'packageId verildi ama aktif paket bulunamadı — seans düşümü atlandı')
+    }
   }
 
   // İşletmeye bildirim (fire-and-forget)

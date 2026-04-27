@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
-import { CalendarPlus, X, Loader2, Check } from 'lucide-react'
+import { CalendarPlus, X, Loader2, Check, Package } from 'lucide-react'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { cn, formatCurrency } from '@/lib/utils'
 
@@ -24,12 +24,25 @@ interface BookingModalProps {
   onClose: () => void
   /** Randevu başarıyla oluşturulunca tetiklenir (refetch). */
   onCreated?: () => void
+  /** Paket üzerinden randevu alınıyorsa — hizmet önceden seçili gelir */
+  preselectedServiceId?: string
+  /** Kullanılacak paket ID (seans düşümü için API'ye gönderilir) */
+  customerPackageId?: string
+  /** Paket adı (banner metni için) */
+  packageName?: string
+  /** Pakette kalan seans sayısı (banner için) */
+  sessionsRemaining?: number
 }
 
 /**
  * Müşterinin portal içinden online randevu oluşturmasını sağlayan modal.
  *
  * Akış: hizmet → personel (opsiyonel) → tarih → slot → onay → POST
+ *
+ * Paket modu (preselectedServiceId + customerPackageId verilince):
+ * - Hizmet seçimi kilitli/read-only gelir
+ * - Paket banner'ı gösterilir
+ * - API'ye packageId gönderilir → seans düşülür
  *
  * Endpoint'ler:
  * - GET  /api/public/business/[id]/services
@@ -42,14 +55,20 @@ export default function BookingModal({
   open,
   onClose,
   onCreated,
+  preselectedServiceId,
+  customerPackageId,
+  packageName,
+  sessionsRemaining,
 }: BookingModalProps) {
+  const isPackageMode = !!(preselectedServiceId && customerPackageId)
+
   // Veri
   const [services, setServices] = useState<ServiceOption[]>([])
   const [staff, setStaff] = useState<StaffOption[]>([])
   const [slots, setSlots] = useState<string[]>([])
 
   // Seçimler
-  const [serviceId, setServiceId] = useState('')
+  const [serviceId, setServiceId] = useState(preselectedServiceId ?? '')
   const [staffId, setStaffId] = useState('')
   const [date, setDate] = useState('')
   const [startTime, setStartTime] = useState('')
@@ -85,7 +104,8 @@ export default function BookingModal({
   // Modal açıldığında state'i sıfırla + hizmetleri yükle
   useEffect(() => {
     if (!open) return
-    setServiceId('')
+    // Paket modunda hizmet ID'si korunur, diğerleri sıfırlanır
+    setServiceId(preselectedServiceId ?? '')
     setStaffId('')
     setStaff([])
     setDate('')
@@ -100,7 +120,7 @@ export default function BookingModal({
       .then((d) => setServices(d.services || []))
       .catch(() => setError('Hizmetler yüklenemedi'))
       .finally(() => setLoadingServices(false))
-  }, [open, businessId])
+  }, [open, businessId, preselectedServiceId])
 
   // Hizmet seçilince personel listesini çek
   useEffect(() => {
@@ -149,16 +169,19 @@ export default function BookingModal({
     setSubmitting(true)
     setError(null)
     try {
+      const body: Record<string, unknown> = {
+        serviceId,
+        staffId: staffId || null,
+        date,
+        startTime,
+        notes: notes.trim() || undefined,
+      }
+      if (customerPackageId) body.packageId = customerPackageId
+
       const res = await fetch('/api/portal/appointments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          serviceId,
-          staffId: staffId || null,
-          date,
-          startTime,
-          notes: notes.trim() || undefined,
-        }),
+        body: JSON.stringify(body),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
@@ -170,13 +193,13 @@ export default function BookingModal({
         detail: {
           type: 'appointment',
           title: 'Randevu oluşturuldu',
-          body: 'Randevunuz başarıyla alındı, salon onayı bekleniyor.',
+          body: isPackageMode
+            ? 'Paket seansınız planlandı, salon onayı bekleniyor.'
+            : 'Randevunuz başarıyla alındı, salon onayı bekleniyor.',
         },
       }))
       onCreated?.()
-      // Önemli: submitting'i kapat ki handleClose() guard'ından geçebilsin
       setSubmitting(false)
-      // Animasyonlu kapanma (handleClose içindeki submitting guard artık geçer)
       setClosing(true)
       setTimeout(() => {
         setClosing(false)
@@ -203,10 +226,13 @@ export default function BookingModal({
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-full bg-pulse-50 dark:bg-pulse-900/30 flex items-center justify-center">
-              <CalendarPlus className="w-4 h-4 text-pulse-900 dark:text-pulse-300" />
+              {isPackageMode
+                ? <Package className="w-4 h-4 text-pulse-900 dark:text-pulse-300" />
+                : <CalendarPlus className="w-4 h-4 text-pulse-900 dark:text-pulse-300" />
+              }
             </div>
             <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">
-              Yeni Randevu Al
+              {isPackageMode ? 'Paket Seansı Planla' : 'Yeni Randevu Al'}
             </h2>
           </div>
           <button
@@ -219,6 +245,22 @@ export default function BookingModal({
           </button>
         </div>
 
+        {/* Paket banner */}
+        {isPackageMode && packageName && (
+          <div className="mx-6 mt-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-4 py-3 flex items-start gap-3">
+            <Package className="w-4 h-4 text-amber-700 dark:text-amber-400 mt-0.5 shrink-0" />
+            <div className="text-sm">
+              <p className="font-medium text-amber-800 dark:text-amber-300">{packageName}</p>
+              <p className="text-amber-700 dark:text-amber-400 mt-0.5">
+                Bu randevu paketinizden 1 seans kullanacak.
+                {sessionsRemaining !== undefined && (
+                  <> Randevu sonrası {sessionsRemaining - 1} seans kalacak.</>
+                )}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Body */}
         <div className="px-6 py-5 space-y-4">
           {/* Hizmet */}
@@ -228,6 +270,17 @@ export default function BookingModal({
             </label>
             {loadingServices ? (
               <div className="h-10 rounded-lg bg-gray-100 dark:bg-gray-800 animate-pulse" />
+            ) : isPackageMode && selectedService ? (
+              /* Paket modunda hizmet kilitli */
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                <Package className="w-4 h-4 text-gray-400 dark:text-gray-500 shrink-0" />
+                <span className="text-sm text-gray-700 dark:text-gray-300">
+                  {selectedService.name}
+                  {selectedService.duration_minutes && (
+                    <span className="text-gray-500 dark:text-gray-400"> ({selectedService.duration_minutes} dk)</span>
+                  )}
+                </span>
+              </div>
             ) : (
               <CustomSelect
                 options={[
@@ -342,6 +395,11 @@ export default function BookingModal({
                     weekday: 'long', day: 'numeric', month: 'long',
                   })} · {startTime}
                 </div>
+                {isPackageMode && (
+                  <div className="text-xs text-amber-600 dark:text-amber-400 font-medium mt-1">
+                    📦 Paket seansı olarak kullanılacak
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -376,7 +434,7 @@ export default function BookingModal({
             ) : (
               <>
                 <Check className="w-4 h-4" />
-                Randevu Al
+                {isPackageMode ? 'Seans Planla' : 'Randevu Al'}
               </>
             )}
           </button>
