@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
         if (!hours) {
           const dayNames: Record<string, string> = { mon: 'Pazartesi', tue: 'Salı', wed: 'Çarşamba', thu: 'Perşembe', fri: 'Cuma', sat: 'Cumartesi', sun: 'Pazar' }
           return NextResponse.json({
-            error: `Seçilen tarih ${dayNames[dayKey] || dayKey} gününe denk geliyor ve işletme o gün kapalı.`
+            error: `Seçilen tarih ${dayNames[dayKey] || dayKey} gününe denk geliyor. İşletme ${dayNames[dayKey] || dayKey} günleri hizmet vermiyor — lütfen farklı bir gün seçin.`
           }, { status: 400 })
         }
         // Tarih seçilmişse saat de varsa mesai kontrolü yap
