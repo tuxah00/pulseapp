@@ -26,7 +26,8 @@ export async function GET(request: NextRequest) {
       id, appointment_date, start_time, end_time, status, notes,
       customer_package_id, package_name, package_unit_price,
       services(id, name, price, duration_minutes),
-      staff_members(id, name)
+      staff_members(id, name),
+      invoices(id, paid_amount, status, deleted_at)
     `)
     .eq('business_id', businessId)
     .eq('customer_id', customerId)
@@ -56,7 +57,21 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Randevular yüklenemedi' }, { status: 500 })
   }
 
-  return NextResponse.json({ appointments: data || [] })
+  // is_paid hesapla — randevuya bağlı silinmemiş faturalardan herhangi biri
+  // ödenmiş ya da kısmi ödenmişse müşteri portal'ında "Ödendi" badge'i gösterilir
+  // ve düzenle/iptal butonları kilitlenir (paid randevu üstünden değişiklik yapılmaz).
+  const enriched = (data || []).map((apt) => {
+    const invs = Array.isArray(apt.invoices) ? apt.invoices : []
+    const isPaid = invs.some((i: { status: string; paid_amount: number | string | null; deleted_at: string | null }) =>
+      !i.deleted_at && (i.status === 'paid' || (Number(i.paid_amount) || 0) > 0),
+    )
+    // invoices alanı response'tan çıkarılır — UI'a gerek yok, sadece is_paid türetiyoruz
+    const { invoices: _invoices, ...rest } = apt as typeof apt & { invoices?: unknown }
+    void _invoices
+    return { ...rest, is_paid: isPaid }
+  })
+
+  return NextResponse.json({ appointments: enriched })
 }
 
 /**
