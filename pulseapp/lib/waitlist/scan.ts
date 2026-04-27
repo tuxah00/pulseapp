@@ -99,6 +99,13 @@ export async function scanAndNotifyWaitlistEntry(
     0: 'sun', 1: 'mon', 2: 'tue', 3: 'wed', 4: 'thu', 5: 'fri', 6: 'sat',
   }
 
+  // Şu anki zaman — bugünkü slotlar için "geçmişe gönderme" koruması.
+  // Buffer: rezervasyon ile randevu arasında en az 30 dk olmalı (müşteri SMS'i
+  // okuyup gelmesi için makul süre).
+  const SLOT_BUFFER_MINUTES = 30
+  const today = new Date().toISOString().split('T')[0]
+  const nowMin = new Date().getHours() * 60 + new Date().getMinutes()
+
   for (const date of datesToScan) {
     const dayKey = DAY_KEYS[new Date(date + 'T00:00:00').getDay()]
     const hours = workingHours?.[dayKey]
@@ -161,6 +168,9 @@ export async function scanAndNotifyWaitlistEntry(
 
       // Çalışma saati içinde mi (preferred_time için ekstra kontrol)?
       if (slotMin < toMin(hours.open) || slotEnd > toMin(hours.close)) continue
+
+      // Bugünse: şu anki zamandan + buffer kadar sonra olmalı (geçmiş/yakın slotları atla)
+      if (date === today && slotMin < nowMin + SLOT_BUFFER_MINUTES) continue
 
       // En az 1 personel müsait mi?
       const matchedStaff = availableStaff.find(sid => {

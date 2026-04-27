@@ -64,6 +64,48 @@ import ViewModeToggle from '@/components/ui/view-mode-toggle'
 const UNRESOLVED_BORDER = 'opacity-50'
 const UNRESOLVED_BORDER_ONLY = 'bg-red-50/40 dark:bg-red-950/10 border-red-100 dark:border-red-900/30'
 
+/**
+ * Çakışan randevuları yan yana kolonlara dağıtır.
+ * Greedy column assignment — aynı saatte birden fazla randevu varsa ekran genişliği
+ * eşit paylaşılır, her biri kendi sub-kolonunda görünür ve tıklanabilir kalır.
+ *
+ * Hem haftalık view (tüm günün randevuları) hem staff/room view'da (kolondaki
+ * randevular) kullanılır.
+ */
+function computeOverlapLayout<T extends { start_time: string; end_time: string }>(
+  apts: T[],
+): { apt: T; column: number; totalColumns: number }[] {
+  if (apts.length === 0) return []
+  const sorted = [...apts].sort((a, b) => a.start_time.localeCompare(b.start_time))
+  const columns: { endTime: string }[] = []
+  const assignments: { apt: T; column: number }[] = []
+  for (const apt of sorted) {
+    let placed = false
+    for (let col = 0; col < columns.length; col++) {
+      if (apt.start_time >= columns[col].endTime) {
+        columns[col].endTime = apt.end_time
+        assignments.push({ apt, column: col })
+        placed = true; break
+      }
+    }
+    if (!placed) {
+      assignments.push({ apt, column: columns.length })
+      columns.push({ endTime: apt.end_time })
+    }
+  }
+  return assignments.map(assignment => {
+    const overlapping = assignments.filter(other =>
+      other.apt.start_time < assignment.apt.end_time &&
+      other.apt.end_time > assignment.apt.start_time
+    )
+    return {
+      apt: assignment.apt,
+      column: assignment.column,
+      totalColumns: Math.max(...overlapping.map(o => o.column)) + 1,
+    }
+  })
+}
+
 export default function AppointmentsPage() {
   const { businessId, staffId: currentStaffId, staffName: currentStaffName, sector, permissions, writePermissions, loading: ctxLoading } = useBusinessContext()
   const customerLabel = getCustomerLabelSingular(sector ?? undefined)
@@ -1481,34 +1523,7 @@ export default function AppointmentsPage() {
             return idx >= 0 ? idx % staffColors.length : 0
           }
 
-          // Çakışan randevuları yan yana kolon olarak düzenle
-          function computeOverlapLayout(dayApts: typeof appointments) {
-            if (dayApts.length === 0) return []
-            const sorted = [...dayApts].sort((a, b) => a.start_time.localeCompare(b.start_time))
-            const columns: { endTime: string }[] = []
-            const assignments: { apt: typeof dayApts[0]; column: number }[] = []
-            for (const apt of sorted) {
-              let placed = false
-              for (let col = 0; col < columns.length; col++) {
-                if (apt.start_time >= columns[col].endTime) {
-                  columns[col].endTime = apt.end_time
-                  assignments.push({ apt, column: col })
-                  placed = true; break
-                }
-              }
-              if (!placed) {
-                assignments.push({ apt, column: columns.length })
-                columns.push({ endTime: apt.end_time })
-              }
-            }
-            return assignments.map(assignment => {
-              const overlapping = assignments.filter(other =>
-                other.apt.start_time < assignment.apt.end_time &&
-                other.apt.end_time > assignment.apt.start_time
-              )
-              return { apt: assignment.apt, column: assignment.column, totalColumns: Math.max(...overlapping.map(o => o.column)) + 1 }
-            })
-          }
+          // computeOverlapLayout artık dosya üst seviyesinde — tüm view'lar paylaşır
 
           // Hesapla: her saat 60px yükseklik
           const hourHeight = 60
@@ -2053,18 +2068,27 @@ export default function AppointmentsPage() {
                             />
                           )
                         })}
-                        {col.apts.map(apt => {
+                        {/* Çakışan randevuları yan yana sub-kolonlara dağıt — tek
+                             tıklamayla diğer randevu da seçilebilsin (z-index altında kalmasın) */}
+                        {computeOverlapLayout(col.apts).map(({ apt, column, totalColumns }) => {
                           const startMin = toMinutes(apt.start_time) - startHour * 60
                           const endMin = toMinutes(apt.end_time) - startHour * 60
                           const top = (startMin / 60) * hourHeight
                           const height = Math.max(((endMin - startMin) / 60) * hourHeight, 20)
                           const visual = getAptVisual(apt)
                           const isAptUnresolved = isPastUnresolved(apt)
+                          // Sub-kolon hesabı: aynı saatte birden fazla randevu varsa yan yana
+                          const widthPercent = 100 / totalColumns
+                          const leftPercent = column * widthPercent
                           return (
                             <div
                               key={apt.id}
-                              className="absolute left-0.5 right-0.5"
-                              style={{ top, height }}
+                              className="absolute"
+                              style={{
+                                top, height,
+                                left: `calc(${leftPercent}% + 2px)`,
+                                width: `calc(${widthPercent}% - 4px)`,
+                              }}
                             >
                               {isAptUnresolved && (
                                 <span
@@ -2264,18 +2288,25 @@ export default function AppointmentsPage() {
                             />
                           )
                         })}
-                        {col.apts.map(apt => {
+                        {/* Çakışan randevular yan yana — tek tıklamada doğru randevu açılsın */}
+                        {computeOverlapLayout(col.apts).map(({ apt, column, totalColumns }) => {
                           const startMin = toMinutes(apt.start_time) - startHour * 60
                           const endMin = toMinutes(apt.end_time) - startHour * 60
                           const top = (startMin / 60) * hourHeight
                           const height = Math.max(((endMin - startMin) / 60) * hourHeight, 20)
                           const visual = getAptVisual(apt)
                           const isAptUnresolved = isPastUnresolved(apt)
+                          const widthPercent = 100 / totalColumns
+                          const leftPercent = column * widthPercent
                           return (
                             <div
                               key={apt.id}
-                              className="absolute left-0.5 right-0.5"
-                              style={{ top, height }}
+                              className="absolute"
+                              style={{
+                                top, height,
+                                left: `calc(${leftPercent}% + 2px)`,
+                                width: `calc(${widthPercent}% - 4px)`,
+                              }}
                             >
                               {isAptUnresolved && (
                                 <span
