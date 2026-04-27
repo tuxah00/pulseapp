@@ -2647,26 +2647,85 @@ export default function AppointmentsPage() {
                 </div>
               </div>
 
-              {/* Pending randevu için hızlı onay banner'ı */}
-              {selectedAppointment.status === 'pending' && (
-                <div className="rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800 p-4 flex items-start gap-3">
-                  <div className="flex-shrink-0 mt-0.5">
-                    <BellRing className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              {/* Pending randevu için hızlı onay banner'ı — bekleme listesi hold'ları ile online randevuları ayır */}
+              {selectedAppointment.status === 'pending' && (() => {
+                const apt = selectedAppointment as AppointmentView & { held_until?: string | null; held_for_waitlist_entry_id?: string | null }
+                const isHeld = !!(apt.held_for_waitlist_entry_id || apt.held_until)
+                const holdRemaining = (() => {
+                  if (!apt.held_until) return null
+                  const diff = new Date(apt.held_until).getTime() - Date.now()
+                  if (diff <= 0) return 'Süresi doldu'
+                  const m = Math.floor(diff / 60000)
+                  const s = Math.floor((diff % 60000) / 1000)
+                  return `${m}:${String(s).padStart(2, '0')}`
+                })()
+
+                if (isHeld) {
+                  // Bekleme listesinden oluşturulmuş hold — müşteri SMS ile onay bekleniyor
+                  return (
+                    <div className="rounded-xl border border-blue-200 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-800 p-4 flex items-start gap-3">
+                      <div className="flex-shrink-0 mt-0.5">
+                        <Clock className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-semibold text-blue-900 dark:text-blue-200">Müşteri Onayı Bekleniyor</p>
+                          {holdRemaining && (
+                            <span className={cn(
+                              'text-[11px] px-2 py-0.5 rounded-full font-medium tabular-nums',
+                              holdRemaining === 'Süresi doldu'
+                                ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'
+                                : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                            )}>
+                              {holdRemaining === 'Süresi doldu' ? 'Süresi doldu' : `Kalan ${holdRemaining}`}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-blue-800 dark:text-blue-300 mt-1 leading-relaxed">
+                          Bekleme listesinden oluşturuldu. {customerLabel.toLowerCase()}ya SMS gönderildi — link üzerinden kendi onaylayabilir.
+                          Süre dolarsa rezervasyon iptal edilir ve sıradaki kişiye geçilir.
+                        </p>
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                          <button
+                            onClick={() => updateStatus(selectedAppointment.id, 'confirmed')}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-blue-300 dark:border-blue-700 bg-white dark:bg-gray-900 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 px-3 py-1.5 text-xs font-medium transition-colors"
+                            title="Müşteri yerine personel olarak onayla (örn: telefonda onayladı)"
+                          >
+                            <CheckCircle className="h-3.5 w-3.5" /> Personel olarak onayla
+                          </button>
+                          <button
+                            onClick={(e) => openCancelConfirm(selectedAppointment, e)}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 dark:border-red-800 bg-white dark:bg-gray-900 text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/30 px-3 py-1.5 text-xs font-medium transition-colors"
+                          >
+                            <XCircle className="h-3.5 w-3.5" /> Rezervasyonu iptal et
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                }
+
+                // Online randevu — personel onayı gerektirir
+                return (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800 p-4 flex items-start gap-3">
+                    <div className="flex-shrink-0 mt-0.5">
+                      <BellRing className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">Onay Bekliyor</p>
+                      <p className="text-xs text-amber-800 dark:text-amber-300 mt-0.5">
+                        Müşteri online randevu aldı. Onaylamak için aşağıdaki butona basın.
+                      </p>
+                      <button
+                        onClick={() => updateStatus(selectedAppointment.id, 'confirmed')}
+                        className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 text-sm font-medium transition-colors"
+                      >
+                        <CheckCircle className="h-4 w-4" /> Şimdi Onayla
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">Onay Bekliyor</p>
-                    <p className="text-xs text-amber-800 dark:text-amber-300 mt-0.5">
-                      Müşteri online randevu aldı. Onaylamak için aşağıdaki butona basın.
-                    </p>
-                    <button
-                      onClick={() => updateStatus(selectedAppointment.id, 'confirmed')}
-                      className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 text-sm font-medium transition-colors"
-                    >
-                      <CheckCircle className="h-4 w-4" /> Şimdi Onayla
-                    </button>
-                  </div>
-                </div>
-              )}
+                )
+              })()}
 
               {/* Bilgiler */}
               <div className="space-y-3">
