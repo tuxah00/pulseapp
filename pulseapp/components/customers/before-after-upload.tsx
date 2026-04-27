@@ -190,11 +190,13 @@ export function BeforeAfterUpload({ customerId, appointmentId, allowedTypes, ope
             <FileInput label="Sonrası" file={afterFile} onChange={setAfterFile} disabled={busy} />
           </div>
         ) : (
-          <div className="space-y-3">
+          // Tekil modda da grid-cols-2 — FileInput pair modundaki ile aynı boyut
+          // (yarım genişlik, kare aspect). Tür seçimi sağdaki kolona yerleştirilir.
+          <div className="grid grid-cols-2 gap-3 items-stretch">
             <FileInput label="Fotoğraf" file={singleFile} onChange={setSingleFile} disabled={busy} />
-            <div>
+            <div className="flex flex-col">
               <label className="label">Tür</label>
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-1.5">
                 {(['before', 'after', 'progress'] as const)
                   .filter(t => !allowedTypes || allowedTypes.includes(t))
                   .map(t => (
@@ -203,7 +205,7 @@ export function BeforeAfterUpload({ customerId, appointmentId, allowedTypes, ope
                     type="button"
                     onClick={() => setSingleType(t)}
                     className={cn(
-                      'flex-1 py-1.5 rounded-lg text-xs font-medium border',
+                      'w-full py-1.5 rounded-lg text-xs font-medium border',
                       singleType === t ? 'border-pulse-900 bg-pulse-50 text-pulse-900 dark:bg-pulse-900/20 dark:text-pulse-300' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'
                     )}
                   >

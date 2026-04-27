@@ -6,6 +6,10 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Loader2, ChevronLeft, ShieldCheck } from 'lucide-react'
 
+// Supabase Email OTP varsayılan uzunluğu — proje ayarından değiştirilirse buradaki
+// sabit de güncellenmeli (Authentication → Sign In / Providers → Email).
+const CODE_LENGTH = 8
+
 export default function VerifyCodePage() {
   return (
     <Suspense fallback={<div className="card p-8 text-center text-gray-400">Yükleniyor...</div>}>
@@ -20,7 +24,7 @@ export default function VerifyCodePage() {
  * URL: /auth/verify-code?email=xxx
  *
  * Akış:
- *   1) Kullanıcı 6 haneli kodu girer (e-postadan kopyaladığı)
+ *   1) Kullanıcı 8 haneli kodu girer (e-postadan kopyaladığı)
  *   2) supabase.auth.verifyOtp({ email, token, type: 'email' })
  *   3) Başarılıysa session kurulur → /auth/set-new-password'e yönlendirilir
  */
@@ -29,7 +33,7 @@ function VerifyCodeForm() {
   const searchParams = useSearchParams()
   const email = searchParams.get('email') || ''
 
-  const [code, setCode] = useState(['', '', '', '', '', ''])
+  const [code, setCode] = useState<string[]>(() => Array(CODE_LENGTH).fill(''))
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [resending, setResending] = useState(false)
@@ -54,7 +58,7 @@ function VerifyCodeForm() {
     newCode[index] = digit
     setCode(newCode)
     // Bir sonraki input'a otomatik geç
-    if (digit && index < 5) {
+    if (digit && index < CODE_LENGTH - 1) {
       inputsRef.current[index + 1]?.focus()
     }
   }
@@ -66,11 +70,11 @@ function VerifyCodeForm() {
   }
 
   function handlePaste(e: React.ClipboardEvent<HTMLInputElement>) {
-    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6)
-    if (pasted.length === 6) {
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, CODE_LENGTH)
+    if (pasted.length === CODE_LENGTH) {
       e.preventDefault()
       setCode(pasted.split(''))
-      inputsRef.current[5]?.focus()
+      inputsRef.current[CODE_LENGTH - 1]?.focus()
     }
   }
 
@@ -79,8 +83,8 @@ function VerifyCodeForm() {
     setError(null)
 
     const token = code.join('')
-    if (token.length !== 6) {
-      setError('Lütfen 6 haneli kodu eksiksiz gir.')
+    if (token.length !== CODE_LENGTH) {
+      setError(`Lütfen ${CODE_LENGTH} haneli kodu eksiksiz gir.`)
       return
     }
 
@@ -140,14 +144,14 @@ function VerifyCodeForm() {
         </div>
         <h2 className="text-2xl font-bold text-gray-900">Kodu Gir</h2>
         <p className="mt-1 text-sm text-gray-500">
-          <span className="font-medium text-gray-700">{email}</span> adresine 6 haneli bir doğrulama kodu gönderdik.
+          <span className="font-medium text-gray-700">{email}</span> adresine {CODE_LENGTH} haneli bir doğrulama kodu gönderdik.
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
         <div>
           <label className="label">Doğrulama Kodu</label>
-          <div className="flex gap-2 justify-between">
+          <div className="flex gap-1.5 justify-between">
             {code.map((digit, i) => (
               <input
                 key={i}
@@ -161,7 +165,7 @@ function VerifyCodeForm() {
                 onKeyDown={(e) => handleKeyDown(i, e)}
                 onPaste={handlePaste}
                 autoFocus={i === 0}
-                className="w-12 h-14 text-center text-xl font-bold rounded-lg border border-gray-200 focus:border-pulse-900 focus:ring-2 focus:ring-pulse-900/20 outline-none"
+                className="w-10 h-12 sm:w-11 sm:h-13 text-center text-lg sm:text-xl font-bold rounded-lg border border-gray-200 focus:border-pulse-900 focus:ring-2 focus:ring-pulse-900/20 outline-none"
               />
             ))}
           </div>
