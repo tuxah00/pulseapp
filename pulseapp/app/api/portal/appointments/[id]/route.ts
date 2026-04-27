@@ -107,7 +107,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
 
   const { data: appointment } = await admin
     .from('appointments')
-    .select('id, status, appointment_date, start_time, services(name), customers(name)')
+    .select('id, status, appointment_date, start_time, customer_package_id, services(name), customers(name)')
     .eq('id', params.id)
     .eq('business_id', businessId)
     .eq('customer_id', customerId)
@@ -129,6 +129,15 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
 
   if (updateError) {
     return NextResponse.json({ error: 'İptal işlemi başarısız' }, { status: 500 })
+  }
+
+  // Paket rezervasyon kaydını temizle — sessions_used hiç artmamıştı, sadece kaydı sil
+  const apptWithPkg = appointment as typeof appointment & { customer_package_id?: string | null }
+  if (apptWithPkg.customer_package_id) {
+    await admin
+      .from('package_usages')
+      .delete()
+      .eq('appointment_id', params.id)
   }
 
   const cancelSvc = Array.isArray(appointment.services) ? appointment.services[0] : appointment.services

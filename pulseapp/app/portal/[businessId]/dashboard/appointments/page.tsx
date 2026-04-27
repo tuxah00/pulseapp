@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import {
-  CalendarCheck, Clock, Loader2, X, Pencil, Ban, Plus, CalendarX2,
+  CalendarCheck, Clock, Loader2, X, Pencil, Ban, Plus, CalendarX2, Package,
 } from 'lucide-react'
 import { cn, formatTime, formatDateISO } from '@/lib/utils'
 import { useConfirm } from '@/lib/hooks/use-confirm'
@@ -28,6 +28,9 @@ interface Appointment {
   notes?: string | null
   services?: ServiceJoin | ServiceJoin[] | null
   staff_members?: StaffJoin | StaffJoin[] | null
+  customer_package_id?: string | null
+  package_name?: string | null
+  package_unit_price?: number | null
 }
 
 const TERMINAL_STATUSES = new Set(['cancelled', 'completed', 'no_show'])
@@ -163,13 +166,19 @@ export default function PortalAppointmentsPage() {
             const canEdit = tab === 'upcoming' && !TERMINAL_STATUSES.has(apt.status)
 
             return (
-              <div key={apt.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 px-5 flex items-center justify-between gap-3 h-[124px]">
+              <div key={apt.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 px-5 flex items-center justify-between gap-3 min-h-[124px]">
                 <div className="flex-1 min-w-0 py-3">
-                  <div className="flex items-center gap-2 mb-1.5">
+                  <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                     <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">{svc?.name || 'Randevu'}</h3>
                     <span className={cn('text-[11px] font-medium px-2 py-0.5 rounded-full border flex-shrink-0', STATUS_COLORS[apt.status] || 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400')}>
                       {STATUS_LABELS[apt.status] || apt.status}
                     </span>
+                    {apt.package_name && (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full border border-amber-200 bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-300 flex-shrink-0">
+                        <Package className="h-3 w-3" />
+                        Paket Seansı
+                      </span>
+                    )}
                   </div>
                   <div className="text-sm text-gray-500 dark:text-gray-400 space-y-0.5">
                     <div className="flex items-center gap-1.5">
@@ -183,6 +192,11 @@ export default function PortalAppointmentsPage() {
                     {staff?.name && (
                       <p className="text-xs text-gray-400 dark:text-gray-500">
                         Uzman: {staff.name}
+                      </p>
+                    )}
+                    {apt.package_name && apt.package_unit_price != null && (
+                      <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+                        {apt.package_name} · {new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(apt.package_unit_price)}/seans
                       </p>
                     )}
                   </div>
