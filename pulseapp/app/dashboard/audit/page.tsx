@@ -287,7 +287,15 @@ function formatAuditDetail(log: AuditLog): string {
     return parts.join(' · ')
   }
 
-  // Müşteri (ve diğer kaynaklar için fallback)
+  // Müşteri
+  if (log.resource === 'customer') {
+    const parts: string[] = []
+    if (d.name) parts.push(String(d.name))
+    if (d.phone) parts.push(String(d.phone))
+    return parts.join(' · ')
+  }
+
+  // Diğer kaynaklar için fallback
   if (d.name) return String(d.name)
 
   // Ödül şablonu

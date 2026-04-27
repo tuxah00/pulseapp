@@ -307,7 +307,7 @@ export default function CustomersPage() {
       action: editingCustomer ? 'update' : 'create',
       resource: 'customer',
       resourceId: editingCustomer?.id,
-      details: { name: customerData.name },
+      details: { name: customerData.name, phone: customerData.phone },
     })
   }
 
