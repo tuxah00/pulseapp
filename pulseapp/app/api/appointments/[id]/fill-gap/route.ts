@@ -96,7 +96,10 @@ export async function POST(
   // Geçmiş slot guard'ı — slot tarihi/saati zaten geçtiyse bildirim gönderme.
   // Müşteriye geçmiş zaman için "boşluk var" SMS'i gitmesi anlamsız ve karışıklık yaratır.
   // İptal/erteleme/silme akışlarının hepsi bu guard'dan geçer.
-  const slotDateTime = new Date(`${slotDate}T${slotTime}:00`)
+  // Türkiye saati (+03:00) ile parse — Vercel UTC sunucusunda timezone karışıklığı
+  // olmasın. Aksi halde Türkiye 14:00 slotu UTC 14:00 sanılır (= Türkiye 17:00) ve
+  // 0-3 saatlik geçmiş slotlar için yanlış bildirim gider.
+  const slotDateTime = new Date(`${slotDate}T${slotTime}:00+03:00`)
   if (Number.isFinite(slotDateTime.getTime()) && slotDateTime.getTime() < Date.now()) {
     return NextResponse.json({
       ok: true,

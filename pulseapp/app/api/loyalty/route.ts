@@ -218,6 +218,23 @@ export async function DELETE(request: NextRequest) {
     .eq('customer_id', customerId)
     .single()
 
+  // Harcanmış puan kontrolü — eğer mevcut bakiye geri alınacak puandan azsa,
+  // müşteri bu randevudan kazanılan puanın bir kısmını harcamış demektir.
+  // Sessizce 0'a çekersek total_spent > total_earned olur (imkânsız durum).
+  // Bu yüzden 409 dön ve sahip manuel düzeltsin.
+  if (loy && (loy.points_balance ?? 0) < totalPoints) {
+    const balance = loy.points_balance ?? 0
+    return NextResponse.json(
+      {
+        error: 'Bu randevudan kazanılan puanın bir kısmı harcanmış (indirim/ödül kullanılmış). Geri alma yapılamaz.',
+        code: 'points_already_spent',
+        pointsToRevert: totalPoints,
+        currentBalance: balance,
+      },
+      { status: 409 },
+    )
+  }
+
   if (loy) {
     await admin
       .from('loyalty_points')
