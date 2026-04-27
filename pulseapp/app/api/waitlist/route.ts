@@ -101,19 +101,32 @@ export async function POST(request: NextRequest) {
           }
           if (preferredTimeEnd) {
             const endMin = toMin(preferredTimeEnd.substring(0, 5))
-            if (endMin > closeMin) {
+            if (endMin <= startMin) {
               return NextResponse.json({
-                error: `Seçilen bitiş saati (${preferredTimeEnd.substring(0, 5)}) mesai bitiş saatini (${hours.close}) aşıyor.`
+                error: `Bitiş saati (${preferredTimeEnd.substring(0, 5)}) başlangıç saatinden (${preferredTimeStart.substring(0, 5)}) önce veya eşit olamaz.`
+              }, { status: 400 })
+            }
+            if (endMin < openMin || endMin > closeMin) {
+              return NextResponse.json({
+                error: `Bitiş saati (${preferredTimeEnd.substring(0, 5)}) mesai saatleri dışında. Çalışma saatleri: ${hours.open}–${hours.close}`
               }, { status: 400 })
             }
           }
         }
       } else if (preferredTimeStart) {
-        // Tarih seçilmemiş ama saat seçilmiş — en az bir günde başlangıç+bitiş mesai içinde olmalı
+        // Tarih seçilmemiş ama saat seçilmiş — bitiş başlangıçtan sonra ve en az bir günde mesai içinde olmalı
+        const startMin = toMin(preferredTimeStart.substring(0, 5))
+        if (preferredTimeEnd) {
+          const endMin = toMin(preferredTimeEnd.substring(0, 5))
+          if (endMin <= startMin) {
+            return NextResponse.json({
+              error: `Bitiş saati (${preferredTimeEnd.substring(0, 5)}) başlangıç saatinden (${preferredTimeStart.substring(0, 5)}) önce veya eşit olamaz.`
+            }, { status: 400 })
+          }
+        }
         const isAnyDayValid = DAY_KEYS.some(k => {
           const h = wh[k]
           if (!h) return false
-          const startMin = toMin(preferredTimeStart.substring(0, 5))
           const endMin = preferredTimeEnd ? toMin(preferredTimeEnd.substring(0, 5)) : startMin + 1
           return startMin >= toMin(h.open) && endMin <= toMin(h.close)
         })

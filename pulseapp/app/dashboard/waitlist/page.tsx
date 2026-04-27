@@ -320,8 +320,12 @@ export default function WaitlistPage() {
           toast.error(`Başlangıç saati mesai saatleri dışında. Çalışma saatleri: ${hours.open}–${hours.close}`)
           return
         }
-        if (endMin > closeMin) {
-          toast.error(`Randevu bitiş saati (${effectiveEnd}) mesai bitiş saatini (${hours.close}) aşıyor. Daha erken bir başlangıç saati veya daha kısa hizmet seçin.`)
+        if (endMin <= startMin) {
+          toast.error(`Bitiş saati (${effectiveEnd}) başlangıç saatinden (${bookTimeStart}) önce veya eşit olamaz.`)
+          return
+        }
+        if (endMin < openMin || endMin > closeMin) {
+          toast.error(`Randevu bitiş saati (${effectiveEnd}) mesai saatleri dışında. Çalışma saatleri: ${hours.open}–${hours.close}`)
           return
         }
       }
