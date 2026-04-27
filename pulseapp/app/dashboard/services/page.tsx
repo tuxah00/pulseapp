@@ -49,6 +49,10 @@ export default function ServicesPage() {
   const [price, setPrice] = useState('')
   const [recommendedInterval, setRecommendedInterval] = useState('')
   const [postCareNotes, setPostCareNotes] = useState('')
+  // Yorum talebi gecikmeleri — '' = devre dışı, sayı = gün (custom number),
+  // dropdown'da preset değerler vs. "Kullanma" seçenekleri.
+  const [experienceReviewDelay, setExperienceReviewDelay] = useState<string>('1')
+  const [resultReviewDelay, setResultReviewDelay] = useState<string>('')
 
   const supabase = createClient()
 
@@ -89,6 +93,8 @@ export default function ServicesPage() {
     setPrice('')
     setRecommendedInterval('')
     setPostCareNotes('')
+    setExperienceReviewDelay('1')
+    setResultReviewDelay('')
     setError(null)
     setContraindications([])
     setPendingContraindications([])
@@ -103,6 +109,13 @@ export default function ServicesPage() {
     setPrice(service.price ? String(service.price) : '')
     setRecommendedInterval(service.recommended_interval_days ? String(service.recommended_interval_days) : '')
     setPostCareNotes((service as Service & { default_post_care_notes?: string | null }).default_post_care_notes || '')
+    // Yorum gecikmeleri — null/undefined = "Kullanma" (boş string), number = preset/custom
+    setExperienceReviewDelay(
+      service.experience_review_delay_days == null ? '' : String(service.experience_review_delay_days)
+    )
+    setResultReviewDelay(
+      service.result_review_delay_days == null ? '' : String(service.result_review_delay_days)
+    )
     setError(null)
     setShowModal(true)
     fetchContraindications(service.id)
@@ -120,6 +133,8 @@ export default function ServicesPage() {
       price: price ? parseFloat(price) : null,
       recommended_interval_days: recommendedInterval ? parseInt(recommendedInterval) : null,
       default_post_care_notes: postCareNotes.trim() || null,
+      experience_review_delay_days: experienceReviewDelay === '' ? null : parseInt(experienceReviewDelay),
+      result_review_delay_days: resultReviewDelay === '' ? null : parseInt(resultReviewDelay),
       business_id: businessId,
     }
 
@@ -134,6 +149,8 @@ export default function ServicesPage() {
           price: price ? parseFloat(price) : null,
           recommended_interval_days: recommendedInterval ? parseInt(recommendedInterval) : null,
           default_post_care_notes: postCareNotes.trim() || null,
+          experience_review_delay_days: experienceReviewDelay === '' ? null : parseInt(experienceReviewDelay),
+          result_review_delay_days: resultReviewDelay === '' ? null : parseInt(resultReviewDelay),
         })
         .eq('id', editingService.id)
 
@@ -438,6 +455,55 @@ export default function ServicesPage() {
                   min="0"
                 />
                 <p className="text-xs text-gray-400 mt-1">Periyodik hatırlatma için. Boş bırakılırsa hatırlatma gönderilmez.</p>
+              </div>
+
+              <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-4 space-y-4">
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Yorum Talebi Zamanlaması</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    Hizmet tamamlandığında müşteriye otomatik yorum SMS'i gönderilir. Sonuçların geç görüldüğü
+                    işlemlerde (burun estetiği, implant vb.) ikinci bir &quot;sonuç yorumu&quot; talebi planlayabilirsin.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="label">Deneyim yorumu</label>
+                    <CustomSelect
+                      options={[
+                        { value: '', label: 'Kullanma' },
+                        { value: '0', label: 'Aynı gün' },
+                        { value: '1', label: '1 gün sonra' },
+                        { value: '2', label: '2 gün sonra' },
+                        { value: '3', label: '3 gün sonra' },
+                        { value: '7', label: '1 hafta sonra' },
+                      ]}
+                      value={experienceReviewDelay}
+                      onChange={setExperienceReviewDelay}
+                    />
+                    <p className="text-xs text-gray-400 mt-1">Klinik & personel deneyimi</p>
+                  </div>
+
+                  <div>
+                    <label className="label">Sonuç yorumu</label>
+                    <CustomSelect
+                      options={[
+                        { value: '', label: 'Kullanma' },
+                        { value: '7', label: '1 hafta sonra' },
+                        { value: '14', label: '2 hafta sonra' },
+                        { value: '21', label: '3 hafta sonra' },
+                        { value: '28', label: '4 hafta sonra' },
+                        { value: '30', label: '1 ay sonra' },
+                        { value: '42', label: '6 hafta sonra' },
+                        { value: '60', label: '2 ay sonra' },
+                        { value: '90', label: '3 ay sonra' },
+                      ]}
+                      value={resultReviewDelay}
+                      onChange={setResultReviewDelay}
+                    />
+                    <p className="text-xs text-gray-400 mt-1">Sonuçların görüldüğü süre</p>
+                  </div>
+                </div>
               </div>
 
               <div>

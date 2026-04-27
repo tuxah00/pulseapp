@@ -696,6 +696,10 @@ export interface Service {
   price: number | null
   sort_order: number
   recommended_interval_days: number | null
+  /** Hizmetten kaç gün sonra deneyim yorumu istensin (null = istenmez, 1 = ertesi gün varsayılan) */
+  experience_review_delay_days: number | null
+  /** Sonuçlar için kaç gün sonra ikinci yorum (sonuç) talebi gönderilsin (null = atla) */
+  result_review_delay_days: number | null
   is_active: boolean
   created_at: string
   updated_at: string
@@ -741,6 +745,8 @@ export interface Appointment {
   reminder_24h_sent: boolean
   reminder_2h_sent: boolean
   review_requested: boolean
+  /** Sonuç yorumu (ikinci dalga, gecikmeli) gönderildi mi — services.result_review_delay_days set ise kullanılır */
+  result_review_requested: boolean
   notes: string | null
   cancellation_reason: string | null
   recurrence_group_id: string | null
