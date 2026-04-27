@@ -49,6 +49,36 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'payments gerekli' }, { status: 400 })
   }
 
+  // Çift tahsilat guard'ı — appointment_id verildiyse, randevu paket seansı veya
+  // zaten ödenmiş bir faturayla bağlıysa yeni POS işlemi reddedilir.
+  if (appointment_id) {
+    const { data: apt } = await supabase
+      .from('appointments')
+      .select('id, customer_package_id, invoices(status, paid_amount)')
+      .eq('id', appointment_id)
+      .eq('business_id', businessId)
+      .is('deleted_at', null)
+      .single()
+    if (apt) {
+      if (apt.customer_package_id) {
+        return NextResponse.json(
+          { error: 'Bu randevu paket seansından kullanıldı; ödeme paket satışında alındı.' },
+          { status: 409 },
+        )
+      }
+      const invs = Array.isArray(apt.invoices) ? apt.invoices : []
+      const alreadyPaid = invs.some((i: { status: string; paid_amount: number | null }) =>
+        i.status === 'paid' || (i.paid_amount ?? 0) > 0,
+      )
+      if (alreadyPaid) {
+        return NextResponse.json(
+          { error: 'Bu randevunun tahsilatı zaten alınmış.' },
+          { status: 409 },
+        )
+      }
+    }
+  }
+
   const subtotal = items.reduce((sum: number, item: POSItem) => sum + item.total, 0)
 
   let discountCalc = 0

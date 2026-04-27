@@ -2704,14 +2704,30 @@ export default function AppointmentsPage() {
                     </button>
                   </>
                 )}
-                {selectedAppointment.status === 'completed' && (
+                {selectedAppointment.status === 'completed' && (() => {
+                  // Tahsilat butonunu gizleme koşulları:
+                  //   1) Paket seansı: ödeme paket satıldığında alındı
+                  //   2) Faturası ödenmiş randevu: paid_amount > 0 veya status='paid'
+                  const apt = selectedAppointment as AppointmentView
+                  const isPackageSession = !!apt.customer_package_id
+                  const invs = Array.isArray(apt.invoices) ? apt.invoices : []
+                  const isAlreadyPaid = invs.some(i => i.status === 'paid' || (i.paid_amount ?? 0) > 0)
+                  const paymentLocked = isPackageSession || isAlreadyPaid
+                  return (
                   <>
-                    <button
-                      onClick={() => setQuickPaymentTarget(selectedAppointment)}
-                      className="w-full flex items-center gap-2 rounded-lg border border-pulse-200 dark:border-pulse-800 bg-pulse-50 dark:bg-pulse-900/20 px-4 py-2.5 text-sm font-medium text-pulse-900 dark:text-pulse-300 hover:bg-pulse-100 dark:hover:bg-pulse-800/30 transition-colors"
-                    >
-                      <CheckCircle className="h-4 w-4" /> Tahsilat Al
-                    </button>
+                    {paymentLocked ? (
+                      <div className="w-full flex items-center gap-2 rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 px-4 py-2.5 text-sm font-medium text-emerald-700 dark:text-emerald-300">
+                        <CheckCircle className="h-4 w-4" />
+                        {isPackageSession ? 'Ödeme paket satışında alındı' : 'Tahsilat tamamlandı'}
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setQuickPaymentTarget(selectedAppointment)}
+                        className="w-full flex items-center gap-2 rounded-lg border border-pulse-200 dark:border-pulse-800 bg-pulse-50 dark:bg-pulse-900/20 px-4 py-2.5 text-sm font-medium text-pulse-900 dark:text-pulse-300 hover:bg-pulse-100 dark:hover:bg-pulse-800/30 transition-colors"
+                      >
+                        <CheckCircle className="h-4 w-4" /> Tahsilat Al
+                      </button>
+                    )}
                     {selectedAppointment.customer_id && selectedAppointment.customers?.name && (
                       <button
                         onClick={() => setFollowUpTarget({
@@ -2725,7 +2741,8 @@ export default function AppointmentsPage() {
                       </button>
                     )}
                   </>
-                )}
+                  )
+                })()}
                 {selectedAppointment.status === 'confirmed' && (
                   <>
                     <button onClick={() => updateStatus(selectedAppointment.id, 'completed')} className="w-full flex items-center gap-2 rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 px-4 py-2.5 text-sm font-medium text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-800/30 transition-colors">
