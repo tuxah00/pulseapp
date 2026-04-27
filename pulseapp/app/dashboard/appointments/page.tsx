@@ -2711,9 +2711,14 @@ export default function AppointmentsPage() {
                   </>
                 )}
                 {selectedAppointment.status === 'pending' && (
-                  <button onClick={() => updateStatus(selectedAppointment.id, 'confirmed')} className="btn-primary w-full justify-start gap-2">
-                    <CheckCircle className="h-4 w-4" /> Onayla
-                  </button>
+                  <>
+                    <button onClick={() => updateStatus(selectedAppointment.id, 'confirmed')} className="btn-primary w-full justify-start gap-2">
+                      <CheckCircle className="h-4 w-4" /> Onayla
+                    </button>
+                    <button onClick={(e) => openCancelConfirm(selectedAppointment, e)} className="w-full flex items-center gap-2 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-4 py-2.5 text-sm font-medium text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-800/30 transition-colors">
+                      <XCircle className="h-4 w-4" /> İptal Et
+                    </button>
+                  </>
                 )}
                 {(selectedAppointment.status === 'no_show' || selectedAppointment.status === 'cancelled') && (
                   <>

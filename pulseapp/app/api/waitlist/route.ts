@@ -67,6 +67,56 @@ export async function POST(request: NextRequest) {
     }, { status: 400 })
   }
 
+  // Kapalı gün ve mesai saati validasyonu
+  if (preferredDate || preferredTimeStart) {
+    const { data: biz } = await supabase
+      .from('businesses')
+      .select('working_hours')
+      .eq('id', staff.business_id)
+      .single()
+
+    if (biz?.working_hours) {
+      const wh = biz.working_hours as Record<string, { open: string; close: string } | null>
+      const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
+      const toMin = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
+
+      if (preferredDate) {
+        const dayKey = DAY_KEYS[new Date(preferredDate + 'T00:00:00').getDay()]
+        const hours = wh[dayKey]
+        if (!hours) {
+          const dayNames: Record<string, string> = { mon: 'Pazartesi', tue: 'Salı', wed: 'Çarşamba', thu: 'Perşembe', fri: 'Cuma', sat: 'Cumartesi', sun: 'Pazar' }
+          return NextResponse.json({
+            error: `Seçilen tarih ${dayNames[dayKey] || dayKey} gününe denk geliyor ve işletme o gün kapalı.`
+          }, { status: 400 })
+        }
+        // Tarih seçilmişse saat de varsa mesai kontrolü yap
+        if (preferredTimeStart) {
+          const reqMin = toMin(preferredTimeStart.substring(0, 5))
+          const openMin = toMin(hours.open)
+          const closeMin = toMin(hours.close)
+          if (reqMin < openMin || reqMin >= closeMin) {
+            return NextResponse.json({
+              error: `Seçilen saat (${preferredTimeStart.substring(0, 5)}) mesai saatleri dışında. Çalışma saatleri: ${hours.open}–${hours.close}`
+            }, { status: 400 })
+          }
+        }
+      } else if (preferredTimeStart) {
+        // Tarih seçilmemiş ama saat seçilmiş — en az bir günde bu saat mesai içinde olmalı
+        const isAnyDayValid = DAY_KEYS.some(k => {
+          const h = wh[k]
+          if (!h) return false
+          const reqMin = toMin(preferredTimeStart.substring(0, 5))
+          return reqMin >= toMin(h.open) && reqMin < toMin(h.close)
+        })
+        if (!isAnyDayValid) {
+          return NextResponse.json({
+            error: `Seçilen saat (${preferredTimeStart.substring(0, 5)}) hiçbir çalışma gününün mesai saatleri içinde değil.`
+          }, { status: 400 })
+        }
+      }
+    }
+  }
+
   const { data, error } = await supabase
     .from('waitlist_entries')
     .insert({

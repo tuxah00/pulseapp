@@ -299,6 +299,29 @@ export default function WaitlistPage() {
         effectiveEnd = `${eh}:${em}`
       }
 
+      // Kapalı gün + mesai saati kontrolü
+      const DAY_KEYS_WH = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
+      const toMinWH = (t: string) => { const [hh, mm] = t.split(':').map(Number); return hh * 60 + mm }
+      const { data: bizWH } = await supabase.from('businesses').select('working_hours').eq('id', businessId).single()
+      if (bizWH?.working_hours) {
+        const wh = bizWH.working_hours as Record<string, { open: string; close: string } | null>
+        const dayKey = DAY_KEYS_WH[new Date(bookDate + 'T00:00:00').getDay()]
+        const hours = wh[dayKey]
+        if (!hours) {
+          const dayNames: Record<string, string> = { mon: 'Pazartesi', tue: 'Salı', wed: 'Çarşamba', thu: 'Perşembe', fri: 'Cuma', sat: 'Cumartesi', sun: 'Pazar' }
+          toast.error(`${dayNames[dayKey] || dayKey} günü işletme kapalı, randevu alınamaz.`)
+          return
+        }
+        const startMin = toMinWH(bookTimeStart)
+        const endMin = toMinWH(effectiveEnd)
+        const openMin = toMinWH(hours.open)
+        const closeMin = toMinWH(hours.close)
+        if (startMin < openMin || endMin > closeMin) {
+          toast.error(`Seçilen saat mesai saatleri dışında. Çalışma saatleri: ${hours.open}–${hours.close}`)
+          return
+        }
+      }
+
       // Personel çakışma kontrolü — aynı personelin aynı gün örtüşen randevusu varsa engelle
       if (bookStaffId) {
         const toMin = (t: string) => {
