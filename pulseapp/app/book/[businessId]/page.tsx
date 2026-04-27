@@ -63,6 +63,32 @@ function generateTimeSlots(workingHours: WorkingHours, date: string, durationMin
   return slots
 }
 
+/**
+ * Tarihten bağımsız saat slot'ları — bekleme listesi için kullanılır.
+ * İşletmenin tüm açık günlerinin saat penceresinin BİRLEŞİMİ döner.
+ * "Herhangi bir gün, 13:30'da boş olursa bildir" senaryosunu mümkün kılar.
+ */
+function generateAggregatedTimeSlots(workingHours: WorkingHours, durationMinutes: number): string[] {
+  const days: (keyof WorkingHours)[] = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
+  const slotSet = new Set<string>()
+
+  for (const day of days) {
+    const hours = workingHours[day]
+    if (!hours) continue
+    const [openH, openM] = hours.open.split(':').map(Number)
+    const [closeH, closeM] = hours.close.split(':').map(Number)
+    const openMin = openH * 60 + openM
+    const closeMin = closeH * 60 + closeM
+    for (let m = openMin; m + durationMinutes <= closeMin; m += 30) {
+      const h = Math.floor(m / 60)
+      const min = m % 60
+      slotSet.add(`${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`)
+    }
+  }
+
+  return Array.from(slotSet).sort()
+}
+
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00')
   return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -685,8 +711,8 @@ export default function BookingPage() {
                         value={waitlistTime}
                         onChange={setWaitlistTime}
                         placeholder="Saat seçin"
-                        options={(business && selectedDate && selectedService
-                          ? generateTimeSlots(business.working_hours, selectedDate, selectedService.duration_minutes)
+                        options={(business && selectedService
+                          ? generateAggregatedTimeSlots(business.working_hours, selectedService.duration_minutes)
                           : []).map(t => ({ value: t, label: t }))}
                       />
                     </div>
