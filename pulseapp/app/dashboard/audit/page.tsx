@@ -117,10 +117,13 @@ function formatAuditDetail(log: AuditLog): string {
 
   // Yetki değişikliği
   if (log.resource === 'permissions') {
+    const target = d.target_name ? `${d.target_name}: ` : ''
+    // Toplu güncelleme (handleBatchSavePermissions)
+    if (d.action_desc) return `${target}${d.action_desc}`
+    // Tekil yetki (toggle)
     const label = d.permission_label || d.permission_key || ''
     const enabled = d.enabled === true || d.enabled === 'true'
-    const target = d.target_name || ''
-    return `${target}: "${label}" yetkisi ${enabled ? 'açıldı' : 'kapatıldı'}`
+    return `${target}${label ? `"${label}" yetkisi ` : ''}${enabled ? 'açıldı' : 'kapatıldı'}`
   }
 
   // Randevu durum değişikliği
@@ -266,16 +269,26 @@ function formatAuditDetail(log: AuditLog): string {
     return parts.join(' · ') || 'Ayarlar güncellendi'
   }
 
-  // Müşteri
-  if (d.name) return String(d.name)
-
-  // Personel
+  // Personel (catch-all'dan önce: şifre sıfırlama dahil tüm staff event'leri)
   if (log.resource === 'staff') {
+    const STAFF_EVENT_LABELS: Record<string, string> = {
+      password_reset_by_owner: 'Şifre Sıfırlandı',
+      password_changed_by_self: 'Şifre Değiştirildi',
+    }
     const parts: string[] = []
-    if (d.name) parts.push(String(d.name))
+    // İsim kaynakları: doğrudan name veya set-password'daki target_staff_name
+    const nameVal = d.name || d.target_staff_name
+    if (nameVal) parts.push(String(nameVal))
     if (d.role) parts.push(`(${d.role})`)
-    return parts.join(' ')
+    if (d.event) parts.push(STAFF_EVENT_LABELS[String(d.event)] ?? String(d.event))
+    if (d.service_count !== undefined && Number(d.service_count) > 0) {
+      parts.push(`${d.service_count} hizmet`)
+    }
+    return parts.join(' · ')
   }
+
+  // Müşteri (ve diğer kaynaklar için fallback)
+  if (d.name) return String(d.name)
 
   // Ödül şablonu
   if (log.resource === 'reward') {
