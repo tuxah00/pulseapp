@@ -109,7 +109,15 @@ function LoginForm() {
 
         {/* Şifre */}
         <div>
-          <label htmlFor="password" className="label">Şifre</label>
+          <div className="flex items-center justify-between mb-1">
+            <label htmlFor="password" className="label !mb-0">Şifre</label>
+            <Link
+              href="/auth/forgot-password"
+              className="text-xs font-medium text-pulse-900 hover:underline"
+            >
+              Şifremi unuttum
+            </Link>
+          </div>
           <div className="relative">
             <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
             <input
