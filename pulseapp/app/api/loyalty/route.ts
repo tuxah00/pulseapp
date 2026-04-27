@@ -171,6 +171,82 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ ok: true, pointsAdded: totalEarned, newBalance, thresholdCrossed })
 }
 
+// DELETE /api/loyalty?customerId=X&appointmentId=Y
+// Tamamlandı geri alındığında çağrılır — randevu için verilen puanları geri al.
+// Idempotent: ilgili randevu için earn transaction yoksa sessizce { ok: true, pointsReverted: 0 } döner.
+export async function DELETE(request: NextRequest) {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
+
+  const { data: staff } = await supabase
+    .from('staff_members')
+    .select('id, name, business_id')
+    .eq('user_id', user.id)
+    .single()
+  if (!staff) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
+
+  const customerId = request.nextUrl.searchParams.get('customerId')
+  const appointmentId = request.nextUrl.searchParams.get('appointmentId')
+  if (!customerId || !appointmentId) {
+    return NextResponse.json({ error: 'customerId ve appointmentId gerekli' }, { status: 400 })
+  }
+
+  const admin = createAdminClient()
+
+  // Randevuya ait earn transaction'ları (hizmet puanı + ziyaret bonusu)
+  const { data: txs } = await admin
+    .from('point_transactions')
+    .select('id, points')
+    .eq('business_id', staff.business_id)
+    .eq('customer_id', customerId)
+    .eq('reference_id', appointmentId)
+    .eq('type', 'earn')
+    .in('source', ['appointment', 'visit_bonus'])
+
+  if (!txs || txs.length === 0) {
+    return NextResponse.json({ ok: true, pointsReverted: 0 })
+  }
+
+  const totalPoints = txs.reduce((sum, t) => sum + (t.points || 0), 0)
+
+  // Mevcut bakiyeden düş — total_earned'dan da düş (sanki hiç verilmemiş gibi)
+  const { data: loy } = await admin
+    .from('loyalty_points')
+    .select('id, points_balance, total_earned')
+    .eq('business_id', staff.business_id)
+    .eq('customer_id', customerId)
+    .single()
+
+  if (loy) {
+    await admin
+      .from('loyalty_points')
+      .update({
+        points_balance: Math.max(0, (loy.points_balance ?? 0) - totalPoints),
+        total_earned: Math.max(0, (loy.total_earned ?? 0) - totalPoints),
+      })
+      .eq('id', loy.id)
+  }
+
+  // Transaction'ları kaldır — yeni earn yapılırsa idempotent kontrol tekrar geçerli olur
+  await admin
+    .from('point_transactions')
+    .delete()
+    .in('id', txs.map(t => t.id))
+
+  await logAuditServer({
+    businessId: staff.business_id,
+    staffId: staff.id,
+    staffName: staff.name,
+    action: 'update',
+    resource: 'customer',
+    resourceId: customerId,
+    details: { type: 'loyalty_revert', appointmentId, pointsReverted: totalPoints },
+  })
+
+  return NextResponse.json({ ok: true, pointsReverted: totalPoints })
+}
+
 // PATCH /api/loyalty — Manuel puan harcama (indirim uygulama)
 // Body: { customerId, points, description? }
 export async function PATCH(request: NextRequest) {

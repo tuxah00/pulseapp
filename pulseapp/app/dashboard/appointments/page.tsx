@@ -1176,7 +1176,12 @@ export default function AppointmentsPage() {
   async function handleRevertCompleted(appointmentId: string) {
     const ok = await confirm({
       title: 'Tamamlandı Durumunu Geri Al',
-      message: 'Randevu "Onaylandı" durumuna geri alınacak. Paket seansıysa kullanılan seans sayısı 1 azaltılacak. Emin misiniz?',
+      message:
+        'Randevu "Onaylandı" durumuna geri alınacak.\n\n' +
+        '• Paket seansıysa kullanılan seans 1 azaltılır.\n' +
+        '• Verilen sadakat puanı geri alınır.\n' +
+        '• Müşteriye bildirim GİTMEZ — sessiz işlem.\n\n' +
+        'Not: Tamamlandığında otomatik gönderilen mesajlar (yorum isteği vb.) varsa geri çekilemez.',
       confirmText: 'Geri Al',
       cancelText: 'Vazgeç',
       variant: 'warning',
@@ -1226,6 +1231,21 @@ export default function AppointmentsPage() {
       }
     }
 
+    // Sadakat puanı geri alma (idempotent — randevu için verilen earn'ler kaldırılır)
+    let pointsReverted = 0
+    if (apt.customer_id) {
+      try {
+        const res = await fetch(
+          `/api/loyalty?customerId=${apt.customer_id}&appointmentId=${appointmentId}`,
+          { method: 'DELETE' },
+        )
+        if (res.ok) {
+          const j = await res.json()
+          pointsReverted = j.pointsReverted || 0
+        }
+      } catch { /* puan geri alma hatası ana akışı durdurmasın */ }
+    }
+
     await logAudit({
       businessId: businessId!,
       staffId: currentStaffId,
@@ -1237,13 +1257,17 @@ export default function AppointmentsPage() {
         from: 'completed',
         to: 'confirmed',
         reason: 'manual_revert',
+        points_reverted: pointsReverted,
         customer_name: apt.customers?.name || null,
         service_name: apt.services?.name || null,
       },
     })
 
     fetchAppointments()
-    window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Durum geri alındı', body: 'Randevu "Onaylandı" olarak işaretlendi.' } }))
+    const toastBody = pointsReverted > 0
+      ? `Randevu "Onaylandı" olarak işaretlendi. ${pointsReverted} sadakat puanı geri alındı.`
+      : 'Randevu "Onaylandı" olarak işaretlendi.'
+    window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Durum geri alındı', body: toastBody } }))
   }
 
   function getDayKeyFromDate(dateStr: string): keyof WorkingHours {
