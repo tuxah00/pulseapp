@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import NextImage from 'next/image'
 import { useParams, useSearchParams } from 'next/navigation'
-import { Folder, Image as ImageIcon, Stethoscope, CalendarCheck } from 'lucide-react'
+import { Folder, Image as ImageIcon, Stethoscope, CalendarCheck, Package } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { FileCard, FileDetailModal, type PortalRecord } from '../_components/file-card'
 import { PhotoLightbox, type LightboxPhoto } from '../_components/photo-lightbox'
@@ -31,6 +31,8 @@ interface RawPhoto {
     id: string
     appointment_date: string
     start_time: string
+    customer_package_id?: string | null
+    package_name?: string | null
     service?: { id: string; name: string } | null
   } | null
 }
@@ -40,17 +42,19 @@ interface PhotoRow extends LightboxPhoto {
   session_id?: string | null
   appointment_id?: string | null
   appointment_date?: string | null
+  customer_package_id?: string | null
+  package_name?: string | null
 }
 
-// Grup tipi — randevu grubu, protokol grubu, ya da genel
-type GroupKind = 'appointment' | 'protocol'
+// Grup tipi — paket > protokol > randevu > diğer önceliği ile
+type GroupKind = 'package' | 'protocol' | 'appointment'
 
-// Protokol/randevu/hizmet grubunu temsil eder
+// Paket / protokol / randevu grubunu temsil eder
 interface PhotoGroup {
-  key: string           // 'appointment:<id>' | 'protocol:<id>'
+  key: string           // 'package:<id>' | 'protocol:<id>' | 'appointment:<id>'
   kind: GroupKind
-  serviceLabel: string  // Hizmet / protokol adı
-  firstDate: string     // Grup başlığında gösterilen tarih
+  serviceLabel: string  // Paket / protokol / hizmet adı
+  firstDate: string     // Grup başlığında gösterilen tarih (en yeni fotoğraf)
   photos: PhotoRow[]
 }
 
@@ -91,6 +95,8 @@ function normalizePhoto(raw: RawPhoto): PhotoRow {
     session_id: raw.session_id,
     appointment_id: raw.appointment_id,
     appointment_date: raw.appointment?.appointment_date ?? null,
+    customer_package_id: raw.appointment?.customer_package_id ?? null,
+    package_name: raw.appointment?.package_name ?? null,
   }
 }
 
@@ -138,31 +144,41 @@ function extractRecordPhotos(records: PortalRecord[]): PhotoRow[] {
   return out
 }
 
-// Fotoğrafları gruplama önceliği:
-//   1. appointment_id varsa → "Randevu" grubu (en üstte)
-//   2. protocol_id varsa → "Protokol" grubu
-//   3. ikisi de yoksa → general (Diğer Fotoğraflar)
-// Randevu grupları en yeni tarihe göre sıralanır.
+// Fotoğrafları gruplama önceliği (yüksekten düşüğe):
+//   1. customer_package_id varsa → "Paket" grubu (aynı paketin tüm seansları toplanır)
+//   2. protocol_id varsa → "Protokol" grubu (tüm seansları toplanır)
+//   3. appointment_id varsa → "Randevu" grubu (tek randevu)
+//   4. hiçbiri yoksa → general (Diğer Fotoğraflar)
+//
+// Aynı grubun fotoları kendi içinde tarihe göre sıralanır (en eski → en yeni
+// kronolojik akış için before/after takibi).
+// Gruplar arası sıralama: en yeni grup üstte (firstDate = grup içindeki en yeni foto).
 function groupPhotos(photos: PhotoRow[]): { groups: PhotoGroup[]; general: PhotoRow[] } {
-  const apptMap = new Map<string, PhotoGroup>()
+  const packageMap = new Map<string, PhotoGroup>()
   const protoMap = new Map<string, PhotoGroup>()
+  const apptMap = new Map<string, PhotoGroup>()
   const general: PhotoRow[] = []
 
+  const pickDate = (p: PhotoRow): string =>
+    p.taken_at || p.appointment_date || p.created_at || ''
+
   for (const p of photos) {
-    if (p.appointment_id) {
-      const key = `appointment:${p.appointment_id}`
-      if (!apptMap.has(key)) {
-        apptMap.set(key, {
+    // 1. Paket — aynı paketin tüm seans fotoları tek grupta
+    if (p.customer_package_id) {
+      const key = `package:${p.customer_package_id}`
+      if (!packageMap.has(key)) {
+        packageMap.set(key, {
           key,
-          kind: 'appointment',
-          serviceLabel: p.service_name || 'Randevu',
-          firstDate: p.appointment_date || p.taken_at || p.created_at || '',
+          kind: 'package',
+          serviceLabel: p.package_name || p.service_name || 'Paket',
+          firstDate: pickDate(p),
           photos: [],
         })
       }
-      apptMap.get(key)!.photos.push(p)
+      packageMap.get(key)!.photos.push(p)
       continue
     }
+    // 2. Protokol — aynı protokolün tüm seans fotoları tek grupta
     if (p.protocol_id) {
       const key = `protocol:${p.protocol_id}`
       if (!protoMap.has(key)) {
@@ -170,25 +186,54 @@ function groupPhotos(photos: PhotoRow[]): { groups: PhotoGroup[]; general: Photo
           key,
           kind: 'protocol',
           serviceLabel: p.service_name || p.protocol_name || 'Tedavi',
-          firstDate: p.taken_at || p.created_at || '',
+          firstDate: pickDate(p),
           photos: [],
         })
       }
       protoMap.get(key)!.photos.push(p)
       continue
     }
+    // 3. Randevu — tek randevuya bağlı fotolar
+    if (p.appointment_id) {
+      const key = `appointment:${p.appointment_id}`
+      if (!apptMap.has(key)) {
+        apptMap.set(key, {
+          key,
+          kind: 'appointment',
+          serviceLabel: p.service_name || 'Randevu',
+          firstDate: pickDate(p),
+          photos: [],
+        })
+      }
+      apptMap.get(key)!.photos.push(p)
+      continue
+    }
     general.push(p)
   }
 
-  // Randevu grupları en yeni tarih önce
-  const apptGroups = Array.from(apptMap.values()).sort((a, b) =>
-    (b.firstDate || '').localeCompare(a.firstDate || '')
-  )
-  const protoGroups = Array.from(protoMap.values())
-  return { groups: [...apptGroups, ...protoGroups], general }
+  // Her grubun firstDate'ini içindeki en yeni fotoğrafa eşitle + foto'ları
+  // kronolojik (eski→yeni) sırala: before/after takibi için doğal akış
+  const finalize = (g: PhotoGroup): PhotoGroup => {
+    const sorted = [...g.photos].sort((a, b) => pickDate(a).localeCompare(pickDate(b)))
+    const newest = sorted.length > 0 ? pickDate(sorted[sorted.length - 1]) : g.firstDate
+    return { ...g, photos: sorted, firstDate: newest }
+  }
+
+  // Tüm grupları birleştir — paket > protokol > randevu öncelik sırası içinde
+  // her kategori kendi içinde en yeni tarih önce
+  const sortDesc = (a: PhotoGroup, b: PhotoGroup) => (b.firstDate || '').localeCompare(a.firstDate || '')
+  const packageGroups = Array.from(packageMap.values()).map(finalize).sort(sortDesc)
+  const protoGroups = Array.from(protoMap.values()).map(finalize).sort(sortDesc)
+  const apptGroups = Array.from(apptMap.values()).map(finalize).sort(sortDesc)
+
+  return {
+    groups: [...packageGroups, ...protoGroups, ...apptGroups],
+    general: general.sort((a, b) => pickDate(b).localeCompare(pickDate(a))),
+  }
 }
 
-// Randevu grupları için: gün ay yıl. Protokol grupları için: ay yıl.
+// Randevu grupları için tek-gün gösterimi (gün ay yıl).
+// Paket / protokol grupları için ay-yıl (çoklu seans olabilir).
 function formatGroupDate(iso: string, kind: GroupKind): string {
   if (!iso) return ''
   try {
@@ -197,6 +242,13 @@ function formatGroupDate(iso: string, kind: GroupKind): string {
       : { month: 'long', year: 'numeric' }
     return new Date(iso).toLocaleDateString('tr-TR', opts)
   } catch { return '' }
+}
+
+// Grup başlığında gösterilecek tip etiketi
+const GROUP_KIND_LABELS: Record<GroupKind, string> = {
+  package: 'Paket',
+  protocol: 'Protokol',
+  appointment: 'Randevu',
 }
 
 export default function PortalFilesPage() {
@@ -344,7 +396,15 @@ export default function PortalFilesPage() {
                   )}
 
                   {groups.map((group) => {
-                    const GroupIcon = group.kind === 'appointment' ? CalendarCheck : Stethoscope
+                    const GroupIcon = group.kind === 'package'
+                      ? Package
+                      : group.kind === 'appointment'
+                        ? CalendarCheck
+                        : Stethoscope
+                    // Aynı paket/protokol içindeki benzersiz randevu sayısı (kaç seans?)
+                    const sessionCount = group.kind !== 'appointment'
+                      ? new Set(group.photos.map(p => p.appointment_id).filter(Boolean)).size
+                      : 0
                     return (
                     <div
                       key={group.key}
@@ -361,7 +421,8 @@ export default function PortalFilesPage() {
                           </p>
                           {group.firstDate && (
                             <p className="text-[11px] text-gray-400 dark:text-gray-500">
-                              {group.kind === 'appointment' ? 'Randevu • ' : ''}{formatGroupDate(group.firstDate, group.kind)}
+                              {GROUP_KIND_LABELS[group.kind]} • {formatGroupDate(group.firstDate, group.kind)}
+                              {sessionCount > 1 && ` • ${sessionCount} seans`}
                             </p>
                           )}
                         </div>

@@ -351,7 +351,7 @@ Aşağıdaki migration'lar Supabase SQL Editor'de manuel olarak çalıştırılm
 - `072_preferred_channel_email.sql` → **✅ Uygulandı (2026-04-25)** — `customers.preferred_channel` CHECK constraint'ına `'email'` değeri eklendi (portal bildirim tercihi)
 - `073_customer_referral_code.sql` → **✅ Uygulandı (2026-04-25)** — `customers.referral_code text` + UNIQUE index (müşteri tavsiye linki)
 - `074_consultation_requests.sql` → **✅ Uygulandı (2026-04-25)** — `customers.lead_source text` CHECK + `consultation_requests` tablosu (status workflow, photo_urls JSONB, KVKK consent fields, RLS 3 policy + trigger)
-- `075_photos_appointment_id.sql` → **⏳ Beklemede (2026-04-25)** — `customer_photos.appointment_id UUID` FK → appointments(id) ON DELETE SET NULL + partial index. Randevu öncesi/sonrası foto desteği için. Supabase Studio veya Management API ile uygulanmalı.
+- `075_photos_appointment_id.sql` → **✅ Uygulandı (2026-04-28)** — `customer_photos.appointment_id UUID` FK → appointments(id) ON DELETE SET NULL + partial index. Portal fotoğraf grup ekranı (paket/protokol/randevu kategorize gösterim) bu kolona dayanıyor.
 
 ### Migration Numaralandırma Kuralı (2026-04-18'den itibaren)
 Aynı numaraya denk gelen migration'lar `a/b/c` harf suffix'i ile ayrılır. Alfabetik sıralama doğru çalışma sırasını korur.
