@@ -3,7 +3,6 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendMessage } from '@/lib/messaging/send'
 import { logAuditServer } from '@/lib/utils/audit'
-import { addMonthsSafe } from '@/lib/utils/date-range'
 import { expireStaleWaitlistHolds } from '@/lib/waitlist/cleanup'
 
 export async function POST(
@@ -108,15 +107,16 @@ export async function POST(
     return NextResponse.json({ error: 'Boşluk doldurma özelliği kapalı. Ayarlar → Genel bölümünden açabilirsiniz.' }, { status: 400 })
   }
 
-  const lookbackMonths = (settings?.gap_fill_lookback_months as number) ?? 6
   const bizName = biz?.name || ''
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
+  // Hold süresi (dakika) — bu süre içinde randevu alınmazsa sıradakine geçilir.
+  // Ayarlardan değiştirilebilir, varsayılan 15 dk.
+  const holdMinutes = (settings?.gap_fill_hold_minutes as number) ?? 15
 
   const results = {
-    notified: 0, waitlistMatches: 0, historicMatches: 0,
+    notified: 0, waitlistMatches: 0,
     skippedDuplicates: 0, autoBooked: 0,
   }
-  const notifiedCustomerIds = new Set<string>()
 
   // Randevu tarihi için lokalize format
   const slotDateFormatted = new Date(slotDate).toLocaleDateString('tr-TR', {
@@ -126,7 +126,7 @@ export async function POST(
 
   /**
    * Müşteri tercihine göre kişiselleştirilmiş mesaj.
-   * Sadece müşterinin gerçekten tercih ettiği alanı öne çıkarır.
+   * Sadece müşterinin gerçekten tercih ettiği alanı öne çıkarır + süre limiti belirtir.
    */
   const buildMessage = (
     customerName: string,
@@ -143,9 +143,9 @@ export async function POST(
 
     return (
       `Merhaba ${customerName}! 👋\n\n` +
-      `${bizName} randevunuzda ${prefText}uygun boşluk açıldı.\n\n` +
-      `Hemen almak için:\n🔗 ${appUrl}/book/${staff.business_id}\n\n` +
-      `İyi günler dileriz!`
+      `${bizName} — ${prefText}uygun bir boşluk açıldı.\n\n` +
+      `🔗 ${appUrl}/book/${staff.business_id}\n\n` +
+      `Bu fırsat ${holdMinutes} dakika boyunca size tutuluyor. Bu süre içinde randevu almazsanız sıradaki kişiye geçer.`
     )
   }
 
@@ -252,14 +252,13 @@ export async function POST(
                   .eq('id', nextEntry.id),
               ])
 
-              notifiedCustomerIds.add(customerId)
               results.autoBooked++
               results.waitlistMatches++
               results.notified++
             }
           } else {
-            // Normal bildirim — 15 dk'lık hold, cevap yoksa "sıradakine gönder" butonu
-            const holdUntil = new Date(Date.now() + 15 * 60 * 1000).toISOString()
+            // Normal bildirim — holdMinutes kadar hold, cevap yoksa "sıradakine gönder" butonu
+            const holdUntil = new Date(Date.now() + holdMinutes * 60 * 1000).toISOString()
             await sendMessage({
               to: phone,
               body: buildMessage(name, pref),
@@ -285,7 +284,6 @@ export async function POST(
                 .eq('id', nextEntry.id),
             ])
 
-            if (customerId) notifiedCustomerIds.add(customerId)
             results.waitlistMatches++
             results.notified++
           }
@@ -293,82 +291,6 @@ export async function POST(
       }
     }
   }
-
-  // Waitlist eşleşmesi varsa boşluk tutuldu — historic fallback'e geçme
-  const hasWaitlistMatch = results.waitlistMatches > 0
-
-  // ── 2. Geçmiş müşteriler (waitlist eşleşmesi yoksa fallback) ──
-  // Waitlist'te eşleşen hasta varsa bildirim zaten ona gitti → historic atlanır.
-  if (!hasWaitlistMatch) {
-  const lookbackDate = addMonthsSafe(new Date(), -lookbackMonths)
-  const lookbackDateStr = lookbackDate.toISOString().split('T')[0]
-
-  const thisMonthStart = new Date()
-  thisMonthStart.setDate(1)
-  const thisMonthStartStr = thisMonthStart.toISOString().split('T')[0]
-
-  const { data: historicApts } = await admin
-    .from('appointments')
-    .select('customer_id')
-    .eq('business_id', staff.business_id)
-    .eq('service_id', serviceId)
-    .eq('status', 'completed')
-    .is('deleted_at', null)
-    .gte('appointment_date', lookbackDateStr)
-    .lt('appointment_date', thisMonthStartStr)
-
-  const historicCustomerIds = [...new Set((historicApts || []).map(a => a.customer_id).filter(Boolean))]
-
-  if (historicCustomerIds.length) {
-    const { data: historicCustomers } = await admin
-      .from('customers')
-      .select('id, name, phone')
-      .in('id', historicCustomerIds)
-      .eq('is_active', true)
-      .not('phone', 'is', null)
-
-    for (const customer of historicCustomers || []) {
-      if (notifiedCustomerIds.has(customer.id)) continue
-
-      const { data: existingNotif } = await admin
-        .from('gap_fill_notifications')
-        .select('id')
-        .eq('business_id', staff.business_id)
-        .eq('customer_id', customer.id)
-        .eq('slot_date', slotDate)
-        .eq('slot_start_time', slotTime)
-        .limit(1)
-
-      if (existingNotif?.length) { results.skippedDuplicates++; continue }
-
-      try {
-        await sendMessage({
-          to: customer.phone!,
-          body: buildMessage(customer.name, { staffId: null, date: null, time: null }),
-          businessId: staff.business_id,
-          customerId: customer.id,
-          messageType: 'system',
-          channel: 'auto',
-        })
-
-        await admin.from('gap_fill_notifications').insert({
-          business_id: staff.business_id,
-          appointment_id: appointmentId,
-          customer_id: customer.id,
-          slot_date: slotDate,
-          slot_start_time: slotTime,
-          service_id: serviceId,
-          staff_id: slotStaffId,
-          source: 'history',
-        })
-
-        notifiedCustomerIds.add(customer.id)
-        results.historicMatches++
-        results.notified++
-      } catch { /* bildirim hatası diğerlerini engellemez */ }
-    }
-  }
-  } // !hasWaitlistMatch
 
   await logAuditServer({
     businessId: staff.business_id,
@@ -381,7 +303,6 @@ export async function POST(
       type: 'gap_fill',
       notified: results.notified,
       waitlist: results.waitlistMatches,
-      historic: results.historicMatches,
       auto_booked: results.autoBooked,
     },
   })
