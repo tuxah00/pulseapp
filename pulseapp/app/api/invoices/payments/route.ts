@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requirePermission, requireWritePermission } from '@/lib/api/with-permission'
 import { logAuditServer } from '@/lib/utils/audit'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { awardPointsForAppointment, revertPointsForAppointment } from '@/lib/loyalty/award'
 
 // GET: Faturanın ödeme geçmişi
 export async function GET(req: NextRequest) {
@@ -203,6 +205,35 @@ export async function POST(req: NextRequest) {
         }
       }
     }
+  }
+
+  // Sadakat puanı: ilk kez 'paid' durumuna geçildiğinde ekle, iade ile çıkıldığında geri al.
+  // Reference: appointment_id varsa onu, yoksa invoice.id kullan (idempotency anahtarı).
+  // Tahsilatsız randevular puan kazanmasın — bu yüzden tetik 'paid' geçişi.
+  const wasPaid = invoice.status === 'paid'
+  const isNowPaid = newStatus === 'paid'
+  const referenceId = invoice.appointment_id || invoice_id
+  if (invoice.customer_id && referenceId) {
+    try {
+      const admin = createAdminClient()
+      if (!wasPaid && isNowPaid) {
+        // İlk kez tam ödendi → puan ekle (idempotent helper)
+        await awardPointsForAppointment(admin, {
+          businessId,
+          customerId: invoice.customer_id,
+          appointmentId: referenceId,
+          revenueAmount: invoiceTotal,
+        })
+      } else if (isRefund && wasPaid && !isNowPaid) {
+        // Paid'ten çıkış (kısmi/tam iade) → puanları geri al
+        // Harcanmış puan varsa sessizce başarısız olur (audit'te görülür)
+        await revertPointsForAppointment(admin, {
+          businessId,
+          customerId: invoice.customer_id,
+          appointmentId: referenceId,
+        })
+      }
+    } catch { /* sadakat hatası ödeme akışını durdurmasın */ }
   }
 
   // Audit log — staff kimliği auth'tan, IP header'dan
