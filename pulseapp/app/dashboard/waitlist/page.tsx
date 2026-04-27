@@ -202,7 +202,17 @@ export default function WaitlistPage() {
         }),
       })
       if (res.ok) {
-        toast.success('Bekleme listesine eklendi')
+        const json = await res.json().catch(() => ({}))
+        // Proaktif tarama sonucu — server yeni kayıt için takvimi taradı
+        if (json.autoMatch?.matched && json.autoMatch.slot) {
+          const { date, time } = json.autoMatch.slot
+          const formatted = new Date(date + 'T00:00:00').toLocaleDateString('tr-TR', {
+            day: 'numeric', month: 'long'
+          })
+          toast.success(`Eklendi — ${formatted} ${time.substring(0, 5)} için bildirim gönderildi`)
+        } else {
+          toast.success('Bekleme listesine eklendi (uygun slot bulunamadı, açıldıkça bildirilecek)')
+        }
         setClosingCreate(true)
         resetForm()
         fetchEntries()
@@ -340,6 +350,22 @@ export default function WaitlistPage() {
     } else {
       toast.error('Silinemedi')
     }
+  }
+
+  const handleAutoMatch = async (entry: WaitlistEntry) => {
+    try {
+      const res = await fetch(`/api/waitlist/${entry.id}/auto-match`, { method: 'POST' })
+      const json = await res.json()
+      if (res.ok && json.matched && json.slot) {
+        const formatted = new Date(json.slot.date + 'T00:00:00').toLocaleDateString('tr-TR', {
+          day: 'numeric', month: 'long'
+        })
+        toast.success(`${formatted} ${json.slot.time.substring(0, 5)} için bildirim gönderildi`)
+        fetchEntries()
+      } else {
+        toast.message(json.reason || 'Uygun slot bulunamadı')
+      }
+    } catch { toast.error('Bağlantı hatası') }
   }
 
   const handleNotifyNext = async (entry: WaitlistEntry) => {
@@ -520,6 +546,15 @@ export default function WaitlistPage() {
                       title="Sıradaki hastaya bildirim gönder"
                     >
                       <SkipForward className="h-4 w-4" />
+                    </button>
+                  )}
+                  {e.is_active && !e.is_notified && (
+                    <button
+                      onClick={ev => { ev.stopPropagation(); handleAutoMatch(e) }}
+                      className="text-emerald-600 hover:text-emerald-700 transition-colors p-1"
+                      title="Takvimde uygun slot ara ve bildirim gönder"
+                    >
+                      <Zap className="h-4 w-4" />
                     </button>
                   )}
                   {e.is_active && (
