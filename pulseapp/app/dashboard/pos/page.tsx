@@ -20,6 +20,7 @@ import {
   CreditCard, Banknote, ArrowRightLeft, ShoppingBag,
   Scissors, Package, User, Clock, Receipt,
   DoorOpen, DoorClosed, ChevronDown, ShieldX, Gift,
+  AlertCircle, Calendar,
 } from 'lucide-react'
 
 interface Product {
@@ -84,6 +85,18 @@ export default function KasaPage() {
   const [availableRewards, setAvailableRewards] = useState<Referral[]>([])
   const [appliedReferralId, setAppliedReferralId] = useState<string | null>(null)
   const [freeServiceItemKey, setFreeServiceItemKey] = useState<string | null>(null)
+
+  // Müşterinin ödenmemiş tamamlanmış randevuları
+  // Müşteri seçildiğinde bu liste banner'da görünür → "Sepete Ekle" ile direkt
+  // o randevunun hizmeti adisyona eklenir + linkedAppointmentId set edilir.
+  const [pendingPayments, setPendingPayments] = useState<Array<{
+    id: string
+    appointment_date: string
+    start_time: string
+    service_id: string | null
+    service_name: string
+    service_price: number
+  }>>([])
 
   // Sadakat puanı
   const [loyaltyBalance, setLoyaltyBalance] = useState(0)
@@ -172,6 +185,7 @@ export default function KasaPage() {
       setLoyaltyPointsInput('')
       setLoyaltyDiscountApplied(0)
       setAppliedLoyaltyPoints(0)
+      setPendingPayments([])
       return
     }
     const fetchRewards = async () => {
@@ -191,9 +205,50 @@ export default function KasaPage() {
         setLoyaltyRedemptionRate(json.redemptionRate ?? 10)
       } catch { /* ignore */ }
     }
+    // Tamamlanmış ama tahsilatı alınmamış randevular — banner için
+    // Paket seansları zaten paket satışında ödendiği için hariç tutulur
+    const fetchPendingPayments = async () => {
+      try {
+        const { data } = await supabase
+          .from('appointments')
+          .select(`
+            id, appointment_date, start_time, service_id,
+            services(name, price),
+            invoices(id, paid_amount, status, deleted_at)
+          `)
+          .eq('business_id', businessId)
+          .eq('customer_id', selectedCustomerId)
+          .eq('status', 'completed')
+          .is('deleted_at', null)
+          .is('customer_package_id', null)
+          .order('appointment_date', { ascending: false })
+          .limit(10)
+
+        const filtered = (data || []).filter(apt => {
+          const invs = (Array.isArray(apt.invoices) ? apt.invoices : []).filter((i: { deleted_at: string | null }) => !i.deleted_at)
+          // Hiç fatura yok VEYA hiçbiri ödenmemiş
+          return !invs.some((i: { status: string; paid_amount: number | string | null }) =>
+            i.status === 'paid' || (Number(i.paid_amount) || 0) > 0,
+          )
+        })
+        const mapped = filtered.map(apt => {
+          const svc = (Array.isArray(apt.services) ? apt.services[0] : apt.services) as { name?: string; price?: number } | null
+          return {
+            id: apt.id as string,
+            appointment_date: apt.appointment_date as string,
+            start_time: apt.start_time as string,
+            service_id: apt.service_id as string | null,
+            service_name: svc?.name || 'Hizmet',
+            service_price: Number(svc?.price) || 0,
+          }
+        }).filter(a => a.service_price > 0)
+        setPendingPayments(mapped)
+      } catch { /* ignore */ }
+    }
     fetchRewards()
     fetchLoyalty()
-  }, [selectedCustomerId, businessId])
+    fetchPendingPayments()
+  }, [selectedCustomerId, businessId, supabase])
 
   // ── Cart Hesaplamaları ──
   const subtotal = useMemo(() => cart.reduce((sum, item) => sum + item.total, 0), [cart])
@@ -231,6 +286,31 @@ export default function KasaPage() {
 
   function removeFromCart(key: string) {
     setCart(prev => prev.filter(c => c._key !== key))
+  }
+
+  // Ödenmemiş randevuyu sepete ekle — hizmeti cart'a koyar + linkedAppointmentId set eder.
+  // Aynı anda yalnızca tek randevu link'lenebilir (POS POST tek appointment_id alır).
+  function addPendingAppointmentToCart(apt: typeof pendingPayments[number]) {
+    if (!apt.service_id) {
+      showToast('Hata', 'Bu randevuda hizmet bilgisi eksik.')
+      return
+    }
+    if (linkedAppointmentId) {
+      showToast('Uyarı', 'Sepete zaten bir randevu bağlı. Önce işlemi tamamlayın veya adisyonu temizleyin.')
+      return
+    }
+    addToCart({
+      id: apt.service_id,
+      name: apt.service_name,
+      type: 'service',
+      quantity: 1,
+      unit_price: apt.service_price,
+      total: apt.service_price,
+      service_id: apt.service_id,
+    })
+    setLinkedAppointmentId(apt.id)
+    // Banner'dan bu randevuyu kaldır — diğerleri görünmeye devam etsin
+    setPendingPayments(prev => prev.filter(p => p.id !== apt.id))
   }
 
   function clearCart() {
@@ -691,6 +771,39 @@ export default function KasaPage() {
             businessId={businessId!}
             placeholder={`${getCustomerLabelSingular(sector ?? undefined)} seç (opsiyonel)...`}
           />
+
+          {/* Ödenmemiş randevular banner — tamamlanmış ama tahsilatı alınmamış randevular */}
+          {pendingPayments.length > 0 && (
+            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                <span className="text-sm font-medium text-amber-700 dark:text-amber-300">
+                  Tahsilatı Alınmamış Randevu ({pendingPayments.length})
+                </span>
+              </div>
+              {pendingPayments.map(apt => (
+                <div key={apt.id} className="flex items-center justify-between gap-2 bg-white dark:bg-gray-800 rounded-md px-3 py-2">
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-sm text-gray-700 dark:text-gray-200 truncate">
+                      {apt.service_name} — <span className="font-medium">{formatCurrency(apt.service_price)}</span>
+                    </span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      {new Date(apt.appointment_date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })} {apt.start_time?.substring(0, 5)}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => addPendingAppointmentToCart(apt)}
+                    disabled={!!linkedAppointmentId}
+                    className="text-xs px-3 py-1.5 rounded-md bg-amber-600 text-white hover:bg-amber-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                    title={linkedAppointmentId ? 'Sepete zaten bir randevu bağlı' : 'Sepete ekle'}
+                  >
+                    Sepete Ekle
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Referans ödülü banner */}
           {availableRewards.length > 0 && !appliedReferralId && (
