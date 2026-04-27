@@ -1233,8 +1233,10 @@ export default function AppointmentsPage() {
       if (a.status === 'cancelled' || a.status === 'no_show') continue
       if (a.status === 'completed') {
         // Tamamlandı ama ödeme alınmamışsa dikkat gerekiyor (ücretsiz hizmetler hariç)
+        // Paket seansı: ödeme paket satışında alındı — fatura beklenmez, kırmızı gösterme
+        const isPackageSession = !!(a as AppointmentView).customer_package_id
         const invs = Array.isArray(a.invoices) ? a.invoices : []
-        const hasPaid = invs.some(i => i.status === 'paid' || (i.paid_amount ?? 0) > 0)
+        const hasPaid = isPackageSession || invs.some(i => i.status === 'paid' || (i.paid_amount ?? 0) > 0)
         const svcPrice = a.services?.price ?? 0
         if (!hasPaid && svcPrice > 0) ids.add(a.id)
         continue
@@ -3088,7 +3090,11 @@ function ActionButtons({
     ? 'flex h-7 w-7 items-center justify-center rounded-lg transition-colors'
     : 'flex h-8 w-8 items-center justify-center rounded-lg transition-colors'
   const iconCls = size === 'sm' ? 'h-3.5 w-3.5' : 'h-4 w-4'
-  const isPastApt = apt.appointment_date < todayStr
+  // Tarih geçmişse VEYA bugün ama saat geçmişse → eski slot — doldurulamaz
+  const _now = new Date()
+  const nowTimeStr = `${String(_now.getHours()).padStart(2, '0')}:${String(_now.getMinutes()).padStart(2, '0')}`
+  const isPastApt = apt.appointment_date < todayStr ||
+    (apt.appointment_date === todayStr && apt.start_time <= nowTimeStr)
 
   return (
     <div className="flex items-center gap-1 flex-wrap">
