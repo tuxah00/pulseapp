@@ -1086,66 +1086,71 @@ export default function AppointmentsPage() {
         service_name: statusApt?.services?.name || null,
       },
     })
-    // Randevu tamamlandığında — paket seansıysa seans düş
-    // customer_package_id atanmış randevular için: o paketi düş (yanlış paket seçimi yok)
-    // Atanmamış randevular: paketten bağımsız sıradan randevu, dokunma
-    if (newStatus === 'completed' && statusApt?.customer_package_id) {
-      const { data: pkg } = await supabase
-        .from('customer_packages')
-        .select('id, sessions_used, sessions_total')
-        .eq('id', statusApt.customer_package_id)
-        .single()
-      if (pkg) {
-        const newUsed = pkg.sessions_used + 1
-        const newPkgStatus = newUsed >= pkg.sessions_total ? 'completed' : 'active'
-        await supabase
+    // Randevu tamamlandığında: paket seansı düşümü + sadakat puanı ekleme
+    if (newStatus === 'completed' && statusApt) {
+      // Paket seansı düşümü — yalnızca customer_package_id atanmış randevularda
+      if (statusApt.customer_package_id) {
+        const { data: pkg } = await supabase
           .from('customer_packages')
-          .update({ sessions_used: newUsed, status: newPkgStatus })
-          .eq('id', pkg.id)
-        // Rezervasyon kaydı zaten var (portal booking) — yoksa oluştur (staff-created)
-        const { data: existingUsage } = await supabase
-          .from('package_usages')
-          .select('id')
-          .eq('appointment_id', appointmentId)
-          .maybeSingle()
-        if (!existingUsage) {
-          await supabase.from('package_usages').insert({
-            business_id: businessId,
-            customer_package_id: pkg.id,
-            appointment_id: appointmentId,
-            staff_id: currentStaffId || null,
-            used_at: new Date().toISOString(),
-            notes: 'Randevu tamamlandı',
-          })
-        }
-      }
-      // Sadakat puanı ekle (ayar kapalıysa API sessizce döner)
-      try {
-        const revenueAmount = statusApt.services?.price ?? 0
-        const loyaltyRes = await fetch('/api/loyalty', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            customerId: statusApt.customer_id,
-            appointmentId,
-            revenueAmount,
-          }),
-        })
-        if (loyaltyRes.ok) {
-          const loyaltyData = await loyaltyRes.json()
-          if (loyaltyData.ok && loyaltyData.pointsAdded) {
-            window.dispatchEvent(new CustomEvent('pulse-toast', {
-              detail: {
-                type: 'system',
-                title: `+${loyaltyData.pointsAdded} Puan Kazanıldı`,
-                body: loyaltyData.thresholdCrossed
-                  ? 'Ödül eşiğine ulaşıldı! 🎉'
-                  : `Toplam: ${loyaltyData.newBalance} puan`,
-              },
-            }))
+          .select('id, sessions_used, sessions_total')
+          .eq('id', statusApt.customer_package_id)
+          .single()
+        if (pkg) {
+          const newUsed = pkg.sessions_used + 1
+          const newPkgStatus = newUsed >= pkg.sessions_total ? 'completed' : 'active'
+          await supabase
+            .from('customer_packages')
+            .update({ sessions_used: newUsed, status: newPkgStatus })
+            .eq('id', pkg.id)
+          // Rezervasyon kaydı zaten var (portal booking) — yoksa oluştur (staff-created)
+          const { data: existingUsage } = await supabase
+            .from('package_usages')
+            .select('id')
+            .eq('appointment_id', appointmentId)
+            .maybeSingle()
+          if (!existingUsage) {
+            await supabase.from('package_usages').insert({
+              business_id: businessId,
+              customer_package_id: pkg.id,
+              appointment_id: appointmentId,
+              staff_id: currentStaffId || null,
+              used_at: new Date().toISOString(),
+              notes: 'Randevu tamamlandı',
+            })
           }
         }
-      } catch { /* puan hatası ana akışı durdurmasın */ }
+      }
+
+      // Sadakat puanı ekle — TÜM tamamlanan randevular için (paketli/paketsiz fark etmez).
+      // API'de loyalty_enabled false ise sessizce döner, customer_id yoksa atlanır.
+      if (statusApt.customer_id) {
+        try {
+          const revenueAmount = statusApt.services?.price ?? 0
+          const loyaltyRes = await fetch('/api/loyalty', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              customerId: statusApt.customer_id,
+              appointmentId,
+              revenueAmount,
+            }),
+          })
+          if (loyaltyRes.ok) {
+            const loyaltyData = await loyaltyRes.json()
+            if (loyaltyData.ok && loyaltyData.pointsAdded) {
+              window.dispatchEvent(new CustomEvent('pulse-toast', {
+                detail: {
+                  type: 'system',
+                  title: `+${loyaltyData.pointsAdded} Puan Kazanıldı`,
+                  body: loyaltyData.thresholdCrossed
+                    ? 'Ödül eşiğine ulaşıldı! 🎉'
+                    : `Toplam: ${loyaltyData.newBalance} puan`,
+                },
+              }))
+            }
+          }
+        } catch { /* puan hatası ana akışı durdurmasın */ }
+      }
     }
 
     // İş akışı tetikleyicileri
