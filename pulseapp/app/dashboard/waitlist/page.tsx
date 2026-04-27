@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { requirePermission } from '@/lib/hooks/use-require-permission'
 import EmptyState from '@/components/ui/empty-state'
+import { logAudit } from '@/lib/utils/audit'
 
 interface WaitlistEntry {
   id: string
@@ -80,7 +81,7 @@ function CountdownBadge({ expiresAt }: { expiresAt: string | null }) {
 }
 
 export default function WaitlistPage() {
-  const { businessId, sector, loading: ctxLoading, permissions } = useBusinessContext()
+  const { businessId, staffId, staffName, sector, loading: ctxLoading, permissions } = useBusinessContext()
   const customerLabel = getCustomerLabelSingular(sector ?? undefined)
   const supabase = createClient()
   const { confirm } = useConfirm()
@@ -284,6 +285,15 @@ export default function WaitlistPage() {
             return
           }
           resolvedCustomerId = created.id
+          await logAudit({
+            businessId: businessId!,
+            staffId: staffId ?? null,
+            staffName: staffName ?? null,
+            action: 'create',
+            resource: 'customer',
+            resourceId: created.id,
+            details: { name: bookEntry.customer_name, phone },
+          })
         }
         // Waitlist entry'yi customer_id ile güncelle
         await supabase.from('waitlist_entries').update({ customer_id: resolvedCustomerId }).eq('id', bookEntry.id)
