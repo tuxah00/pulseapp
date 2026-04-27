@@ -316,8 +316,12 @@ export default function WaitlistPage() {
         const endMin = toMinWH(effectiveEnd)
         const openMin = toMinWH(hours.open)
         const closeMin = toMinWH(hours.close)
-        if (startMin < openMin || endMin > closeMin) {
-          toast.error(`Seçilen saat mesai saatleri dışında. Çalışma saatleri: ${hours.open}–${hours.close}`)
+        if (startMin < openMin || startMin >= closeMin) {
+          toast.error(`Başlangıç saati mesai saatleri dışında. Çalışma saatleri: ${hours.open}–${hours.close}`)
+          return
+        }
+        if (endMin > closeMin) {
+          toast.error(`Randevu bitiş saati (${effectiveEnd}) mesai bitiş saatini (${hours.close}) aşıyor. Daha erken bir başlangıç saati veya daha kısa hizmet seçin.`)
           return
         }
       }
