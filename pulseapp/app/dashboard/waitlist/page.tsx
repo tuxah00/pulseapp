@@ -178,6 +178,12 @@ export default function WaitlistPage() {
       toast.error('İsim ve telefon zorunludur')
       return
     }
+    // En az bir tercih kriteri (hizmet, personel, tarih veya saat) zorunlu —
+    // hepsi boş olursa müşteri her boşlukta bildirim alır, hedefsiz spam olur.
+    if (!formServiceId && !formStaffId && !formDate && !formTimeStart) {
+      toast.error('Hizmet, personel, tarih veya saat tercihlerinden en az birini seçmelisin')
+      return
+    }
     setSaving(true)
     try {
       const res = await fetch('/api/waitlist', {
@@ -638,6 +644,10 @@ export default function WaitlistPage() {
                   <input className="input w-full" placeholder="05XX XXX XXXX" value={formPhone} onChange={e => setFormPhone(e.target.value)} disabled={!!formCustomerId} />
                 </div>
               </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 -mt-1">
+                Hizmet, personel, tarih veya saat tercihlerinden <span className="font-medium">en az birini</span> seçmelisin —
+                tüm boşluklara eşleşmesin, sadece müşterinin gerçekten istediği zamana bildirim gitsin.
+              </p>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="label">Hizmet</label>

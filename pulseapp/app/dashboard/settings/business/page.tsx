@@ -65,7 +65,7 @@ const DEFAULT_SETTINGS: BusinessSettings = {
   periodic_reminder_enabled: false,
   periodic_reminder_advance_days: 3,
   gap_fill_enabled: true,
-  gap_fill_lookback_months: 6,
+  gap_fill_hold_minutes: 15,
   loyalty_enabled: false,
   points_per_currency: 1,
   visit_bonus_points: 50,
@@ -779,26 +779,27 @@ export default function BusinessSettingsPage() {
             <div className="card">
               <h2 className="h-section mb-1">Akıllı Boşluk Doldurma</h2>
               <p className="text-sm text-gray-500 mb-6">
-                Randevu iptal edildiğinde boş slota uygun müşterileri otomatik olarak bilgilendirin.
+                Randevu iptal edildiğinde bekleme listesindeki en uzun süredir bekleyen uygun müşteriye otomatik
+                bildirim gönderilir. Cevap gelmezse sıradakine geçilir.
               </p>
               <div className="space-y-4">
                 <ToggleSetting
                   label="Boşluk doldurma bildirimi"
-                  description="İptal edilen randevu için önce bekleme listesi, sonra geçmiş müşteriler arasından uygun adaylar bulunur ve SMS/WhatsApp gönderilir."
+                  description="İptal sonrası bekleme listesinden tercihlere uygun ilk müşteriye SMS/WhatsApp gönderilir. Geçmiş müşterilere toplu mesaj atılmaz."
                   checked={settings.gap_fill_enabled ?? true}
                   onChange={(v) => setSettings(prev => ({ ...prev, gap_fill_enabled: v }))}
                 />
                 {(settings.gap_fill_enabled ?? true) && (
                   <div className="ml-14">
-                    <label className="label">Geriye bakış süresi (ay)</label>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">Bu hizmeti son kaç ay içinde alan müşteriler bilgilendirilsin?</p>
+                    <label className="label">Cevap bekleme süresi (dakika)</label>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">Müşteri bu süre içinde randevu almazsa hak sıradakine geçer.</p>
                     <input
                       type="number"
-                      min={1}
-                      max={24}
+                      min={5}
+                      max={120}
                       className="input w-24"
-                      value={settings.gap_fill_lookback_months ?? 6}
-                      onChange={(e) => setSettings(prev => ({ ...prev, gap_fill_lookback_months: Number(e.target.value) || 6 }))}
+                      value={settings.gap_fill_hold_minutes ?? 15}
+                      onChange={(e) => setSettings(prev => ({ ...prev, gap_fill_hold_minutes: Number(e.target.value) || 15 }))}
                     />
                   </div>
                 )}

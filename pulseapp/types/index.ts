@@ -487,9 +487,12 @@ export interface BusinessSettings {
   // Periyodik kontrol hatırlatıcı
   periodic_reminder_enabled?: boolean
   periodic_reminder_advance_days?: number
-  // Akıllı boşluk doldurma
+  // Akıllı boşluk doldurma — sadece bekleme listesinden, sıralı tek bildirim
   gap_fill_enabled?: boolean
+  /** @deprecated historic fallback kaldırıldı — değer artık kullanılmıyor */
   gap_fill_lookback_months?: number
+  /** Bildirim sonrası müşterinin randevu alma süresi (dakika). Default 15. */
+  gap_fill_hold_minutes?: number
   // Sadakat puan sistemi
   loyalty_enabled?: boolean
   points_per_currency?: number

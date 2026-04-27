@@ -56,6 +56,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'İsim ve telefon zorunludur' }, { status: 400 })
   }
 
+  // En az bir tercih kriteri zorunlu — hepsi NULL olursa müşteri her boşluğa eşleşir
+  // ve hedefsiz bildirim alır. Hizmet, personel, tarih veya saatten en az biri seçilmeli.
+  const hasCriterion = !!(serviceId || staffId || preferredDate || preferredTimeStart)
+  if (!hasCriterion) {
+    return NextResponse.json({
+      error: 'Hizmet, personel, tarih veya saat tercihlerinden en az birini seçmelisin.'
+    }, { status: 400 })
+  }
+
   const { data, error } = await supabase
     .from('waitlist_entries')
     .insert({

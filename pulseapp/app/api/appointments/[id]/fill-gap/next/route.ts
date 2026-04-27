@@ -61,6 +61,7 @@ export async function POST(
   const slotStaffName = (apt.staff_members as any)?.name || null
   const bizName = biz?.name || ''
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
+  const holdMinutes = (settings?.gap_fill_hold_minutes as number) ?? 15
 
   const slotDateFormatted = new Date(slotDate).toLocaleDateString('tr-TR', {
     day: 'numeric', month: 'long', weekday: 'short'
@@ -78,9 +79,9 @@ export async function POST(
     const prefText = parts.length ? parts.join(', ') + ' için ' : ''
     return (
       `Merhaba ${customerName}! 👋\n\n` +
-      `${bizName} randevunuzda ${prefText}uygun boşluk açıldı.\n\n` +
-      `Hemen almak için:\n🔗 ${appUrl}/book/${staff.business_id}\n\n` +
-      `İyi günler dileriz!`
+      `${bizName} — ${prefText}uygun bir boşluk açıldı.\n\n` +
+      `🔗 ${appUrl}/book/${staff.business_id}\n\n` +
+      `Bu fırsat ${holdMinutes} dakika boyunca size tutuluyor. Bu süre içinde randevu almazsanız sıradaki kişiye geçer.`
     )
   }
 
@@ -199,7 +200,7 @@ export async function POST(
     }
 
     if (!autoBooked) {
-      const holdUntil = new Date(Date.now() + 15 * 60 * 1000).toISOString()
+      const holdUntil = new Date(Date.now() + holdMinutes * 60 * 1000).toISOString()
       await sendMessage({
         to: phone,
         body: buildMessage(name, pref),
