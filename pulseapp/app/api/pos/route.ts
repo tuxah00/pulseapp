@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { requirePermission } from '@/lib/api/with-permission'
 import { logAuditServer } from '@/lib/utils/audit'
+import { awardPointsForAppointment } from '@/lib/loyalty/award'
 import type { POSItem, InvoiceItem, POSPaymentStatus } from '@/types'
 
 // GET: İşlem listesi
@@ -255,6 +257,21 @@ export async function POST(req: NextRequest) {
       .eq('id', referral_id)
       .eq('business_id', businessId)
       .eq('reward_claimed', false)  // Race condition koruması
+  }
+
+  // Sadakat puanı: kasa işlemi 'paid' ise ve appointment_id varsa puan ekle.
+  // Reference: appointment_id (idempotent — aynı randevu için ikinci kez eklenmez).
+  // POS-only ürün/hizmet satışları (appointment_id yok) şu an puan kazanmıyor.
+  if (payment_status === 'paid' && customer_id && appointment_id) {
+    try {
+      const adminLoy = createAdminClient()
+      await awardPointsForAppointment(adminLoy, {
+        businessId,
+        customerId: customer_id,
+        appointmentId: appointment_id,
+        revenueAmount: total,
+      })
+    } catch { /* sadakat hatası kasa akışını durdurmasın */ }
   }
 
   return NextResponse.json({ transaction })
