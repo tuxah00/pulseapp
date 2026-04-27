@@ -93,6 +93,21 @@ export async function POST(
     serviceDuration = (apt.services as any)?.duration_minutes || 30
   }
 
+  // Geçmiş slot guard'ı — slot tarihi/saati zaten geçtiyse bildirim gönderme.
+  // Müşteriye geçmiş zaman için "boşluk var" SMS'i gitmesi anlamsız ve karışıklık yaratır.
+  // İptal/erteleme/silme akışlarının hepsi bu guard'dan geçer.
+  const slotDateTime = new Date(`${slotDate}T${slotTime}:00`)
+  if (Number.isFinite(slotDateTime.getTime()) && slotDateTime.getTime() < Date.now()) {
+    return NextResponse.json({
+      ok: true,
+      notified: 0,
+      waitlistMatches: 0,
+      skippedDuplicates: 0,
+      autoBooked: 0,
+      skipped: 'past_slot',
+    })
+  }
+
   // İşletme ayarları
   const { data: biz } = await admin
     .from('businesses')
