@@ -28,7 +28,7 @@ import {
   CalendarDays,
   CalendarRange,
   Search, Filter, ArrowUpDown,
-  Users, User, Building2, Ban, Lock, BellRing, Sparkles, ExternalLink, Package,
+  Users, User, Building2, Ban, Lock, BellRing, Sparkles, ExternalLink, Package, Wallet,
 } from 'lucide-react'
 import { formatTime, formatDate, getStatusColor, formatCurrency, cn, formatDateISO } from '@/lib/utils'
 import { STATUS_LABELS, type AppointmentStatus, type Service, type StaffMember, type WorkingHours, type BlockedSlot } from '@/types'
@@ -1292,85 +1292,6 @@ export default function AppointmentsPage() {
     return list
   })()
 
-  // Aksiyon butonları — hem liste hem kutu görünümünde kullanılır
-  function ActionButtons({ apt, size = 'md' }: { apt: AppointmentView; size?: 'sm' | 'md' }) {
-    const btnCls = size === 'sm'
-      ? 'flex h-7 w-7 items-center justify-center rounded-lg transition-colors'
-      : 'flex h-8 w-8 items-center justify-center rounded-lg transition-colors'
-    const iconCls = size === 'sm' ? 'h-3.5 w-3.5' : 'h-4 w-4'
-
-    return (
-      <div className="flex items-center gap-1 flex-wrap">
-        {(apt.status === 'confirmed' || apt.status === 'pending') && (
-          <>
-            <button onClick={(e) => openEditModal(apt, e)} title="Düzenle" className={cn(btnCls, 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700')}>
-              <Pencil className={iconCls} />
-            </button>
-            <button onClick={(e) => openRescheduleModal(apt, e)} title="Ertele" className={cn(btnCls, 'text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30')}>
-              <CalendarClock className={iconCls} />
-            </button>
-          </>
-        )}
-        {apt.status === 'confirmed' && (
-          <>
-            <button onClick={(e) => updateStatus(apt.id, 'completed', e)} title="Tamamlandı" className={cn(btnCls, 'text-green-500 hover:bg-green-50 dark:hover:bg-green-900/30')}>
-              <CheckCircle className={size === 'sm' ? 'h-4 w-4' : 'h-5 w-5'} />
-            </button>
-            <button onClick={(e) => updateStatus(apt.id, 'no_show', e)} title="Gelmedi" className={cn(btnCls, 'text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30')}>
-              <AlertTriangle className={size === 'sm' ? 'h-4 w-4' : 'h-5 w-5'} />
-            </button>
-            <button onClick={(e) => openCancelConfirm(apt, e)} title="İptal" className={cn(btnCls, 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700')}>
-              <XCircle className={size === 'sm' ? 'h-4 w-4' : 'h-5 w-5'} />
-            </button>
-          </>
-        )}
-        {(apt.status === 'no_show' || apt.status === 'cancelled') && (
-          <>
-            {apt.status === 'cancelled' && (
-              <button
-                onClick={(e) => handleFillGap(apt.id, e)}
-                title="Boşluğu Doldur — Uygun müşterilere bildirim gönder"
-                disabled={fillGapLoading === apt.id}
-                className={cn(btnCls, 'text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/30')}
-              >
-                {fillGapLoading === apt.id
-                  ? <Loader2 className={cn(iconCls, 'animate-spin')} />
-                  : <BellRing className={iconCls} />}
-              </button>
-            )}
-            <button
-              onClick={(e) => { e.stopPropagation(); updateStatus(apt.id, 'confirmed') }}
-              className={cn(
-                'flex items-center gap-1 rounded-lg bg-blue-50 dark:bg-blue-900/30 font-medium text-blue-700 dark:text-blue-300 transition-colors hover:bg-blue-100 dark:hover:bg-blue-800/40',
-                size === 'sm' ? 'h-7 px-2 text-xs' : 'h-8 px-3 text-sm'
-              )}
-            >
-              <CheckCircle className={iconCls} /> Aktif Et
-            </button>
-            <button
-              onClick={(e) => handleDeleteAppointment(apt.id, e)}
-              title="Sil"
-              className={cn(btnCls, 'text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30')}
-            >
-              <Trash2 className={iconCls} />
-            </button>
-          </>
-        )}
-        {apt.status === 'pending' && (
-          <button
-            onClick={(e) => { e.stopPropagation(); updateStatus(apt.id, 'confirmed') }}
-            className={cn(
-              'flex items-center gap-1 rounded-lg bg-blue-50 dark:bg-blue-900/30 font-medium text-blue-700 dark:text-blue-300 transition-colors hover:bg-blue-100 dark:hover:bg-blue-800/40',
-              size === 'sm' ? 'h-7 px-2 text-xs' : 'h-8 px-3 text-sm'
-            )}
-          >
-            <CheckCircle className={iconCls} /> Onayla
-          </button>
-        )}
-      </div>
-    )
-  }
-
   return (
     <div className="space-y-5">
       {/* Başlık */}
@@ -2530,7 +2451,7 @@ export default function AppointmentsPage() {
                     </div>
                   </div>
                   <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                    <ActionButtons apt={apt} size="md" />
+                    <ActionButtons apt={apt} size="md" todayStr={todayStr} fillGapLoading={fillGapLoading} onEdit={openEditModal} onReschedule={openRescheduleModal} onUpdateStatus={updateStatus} onCancelConfirm={openCancelConfirm} onFillGap={handleFillGap} onDelete={handleDeleteAppointment} onQuickPayment={setQuickPaymentTarget} onFollowUp={setFollowUpTarget} />
                   </div>
                 </div>
               </AnimatedItem>
@@ -2584,7 +2505,7 @@ export default function AppointmentsPage() {
                 }
 
                 <div className="mt-auto pt-3 flex items-center justify-end" onClick={(e) => e.stopPropagation()}>
-                  <ActionButtons apt={apt} size="sm" />
+                  <ActionButtons apt={apt} size="sm" todayStr={todayStr} fillGapLoading={fillGapLoading} onEdit={openEditModal} onReschedule={openRescheduleModal} onUpdateStatus={updateStatus} onCancelConfirm={openCancelConfirm} onFillGap={handleFillGap} onDelete={handleDeleteAppointment} onQuickPayment={setQuickPaymentTarget} onFollowUp={setFollowUpTarget} />
                 </div>
               </AnimatedItem>
             )
@@ -3136,6 +3057,135 @@ export default function AppointmentsPage() {
           staffId={currentStaffId}
           onCreated={() => fetchAppointments()}
         />
+      )}
+    </div>
+  )
+}
+
+// ── Aksiyon butonları — modül seviyesinde (sayfa içinde tanımlanırsa 1sn interval render'ı
+//    sebebiyle her saniye remount olur, hover state sıfırlanır). ──
+interface ActionButtonsProps {
+  apt: AppointmentView
+  size?: 'sm' | 'md'
+  todayStr: string
+  fillGapLoading: string | null
+  onEdit: (apt: AppointmentView, e: React.MouseEvent) => void
+  onReschedule: (apt: AppointmentView, e: React.MouseEvent) => void
+  onUpdateStatus: (id: string, status: AppointmentStatus, e?: React.MouseEvent) => void
+  onCancelConfirm: (apt: AppointmentView, e: React.MouseEvent) => void
+  onFillGap: (id: string, e: React.MouseEvent) => void
+  onDelete: (id: string, e?: React.MouseEvent) => void
+  onQuickPayment: (apt: AppointmentView) => void
+  onFollowUp: (target: { appointmentId: string; customerId: string; customerName: string }) => void
+}
+
+function ActionButtons({
+  apt, size = 'md', todayStr, fillGapLoading,
+  onEdit, onReschedule, onUpdateStatus, onCancelConfirm,
+  onFillGap, onDelete, onQuickPayment, onFollowUp,
+}: ActionButtonsProps) {
+  const btnCls = size === 'sm'
+    ? 'flex h-7 w-7 items-center justify-center rounded-lg transition-colors'
+    : 'flex h-8 w-8 items-center justify-center rounded-lg transition-colors'
+  const iconCls = size === 'sm' ? 'h-3.5 w-3.5' : 'h-4 w-4'
+  const isPastApt = apt.appointment_date < todayStr
+
+  return (
+    <div className="flex items-center gap-1 flex-wrap">
+      {(apt.status === 'confirmed' || apt.status === 'pending') && (
+        <>
+          <button onClick={(e) => onEdit(apt, e)} title="Düzenle" className={cn(btnCls, 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700')}>
+            <Pencil className={iconCls} />
+          </button>
+          <button onClick={(e) => onReschedule(apt, e)} title="Ertele" className={cn(btnCls, 'text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30')}>
+            <CalendarClock className={iconCls} />
+          </button>
+        </>
+      )}
+      {apt.status === 'confirmed' && (
+        <>
+          <button onClick={(e) => onUpdateStatus(apt.id, 'completed', e)} title="Tamamlandı" className={cn(btnCls, 'text-green-500 hover:bg-green-50 dark:hover:bg-green-900/30')}>
+            <CheckCircle className={size === 'sm' ? 'h-4 w-4' : 'h-5 w-5'} />
+          </button>
+          <button onClick={(e) => onUpdateStatus(apt.id, 'no_show', e)} title="Gelmedi" className={cn(btnCls, 'text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30')}>
+            <AlertTriangle className={size === 'sm' ? 'h-4 w-4' : 'h-5 w-5'} />
+          </button>
+          <button onClick={(e) => onCancelConfirm(apt, e)} title="İptal" className={cn(btnCls, 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700')}>
+            <XCircle className={size === 'sm' ? 'h-4 w-4' : 'h-5 w-5'} />
+          </button>
+        </>
+      )}
+      {apt.status === 'completed' && (() => {
+        const isPackageSession = !!apt.customer_package_id
+        const invs = Array.isArray(apt.invoices) ? apt.invoices : []
+        const isAlreadyPaid = invs.some(i => i.status === 'paid' || (i.paid_amount ?? 0) > 0)
+        const paymentLocked = isPackageSession || isAlreadyPaid
+        return (
+          <>
+            {!paymentLocked && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onQuickPayment(apt) }}
+                title="Tahsilat Al"
+                className={cn(btnCls, 'text-pulse-700 dark:text-pulse-300 hover:bg-pulse-50 dark:hover:bg-pulse-900/30')}
+              >
+                <Wallet className={iconCls} />
+              </button>
+            )}
+            {apt.customer_id && apt.customers?.name && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onFollowUp({ appointmentId: apt.id, customerId: apt.customer_id!, customerName: apt.customers!.name }) }}
+                title="Takip Başlat"
+                className={cn(btnCls, 'text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30')}
+              >
+                <BellRing className={iconCls} />
+              </button>
+            )}
+          </>
+        )
+      })()}
+      {(apt.status === 'no_show' || apt.status === 'cancelled') && (
+        <>
+          {/* Boşluğu Doldur: yalnızca gelecek/bugün iptalleri için — geçmiş slotları doldurmak anlamsız */}
+          {apt.status === 'cancelled' && !isPastApt && (
+            <button
+              onClick={(e) => onFillGap(apt.id, e)}
+              title="Boşluğu Doldur — Uygun müşterilere bildirim gönder"
+              disabled={fillGapLoading === apt.id}
+              className={cn(btnCls, 'text-purple-600 dark:text-purple-400 bg-purple-50/60 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/40')}
+            >
+              {fillGapLoading === apt.id
+                ? <Loader2 className={cn(iconCls, 'animate-spin')} />
+                : <BellRing className={iconCls} />}
+            </button>
+          )}
+          <button
+            onClick={(e) => { e.stopPropagation(); onUpdateStatus(apt.id, 'confirmed') }}
+            className={cn(
+              'flex items-center gap-1 rounded-lg bg-blue-50 dark:bg-blue-900/30 font-medium text-blue-700 dark:text-blue-300 transition-colors hover:bg-blue-100 dark:hover:bg-blue-800/40',
+              size === 'sm' ? 'h-7 px-2 text-xs' : 'h-8 px-3 text-sm'
+            )}
+          >
+            <CheckCircle className={iconCls} /> Aktif Et
+          </button>
+          <button
+            onClick={(e) => onDelete(apt.id, e)}
+            title="Sil"
+            className={cn(btnCls, 'text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30')}
+          >
+            <Trash2 className={iconCls} />
+          </button>
+        </>
+      )}
+      {apt.status === 'pending' && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onUpdateStatus(apt.id, 'confirmed') }}
+          className={cn(
+            'flex items-center gap-1 rounded-lg bg-blue-50 dark:bg-blue-900/30 font-medium text-blue-700 dark:text-blue-300 transition-colors hover:bg-blue-100 dark:hover:bg-blue-800/40',
+            size === 'sm' ? 'h-7 px-2 text-xs' : 'h-8 px-3 text-sm'
+          )}
+        >
+          <CheckCircle className={iconCls} /> Onayla
+        </button>
       )}
     </div>
   )
