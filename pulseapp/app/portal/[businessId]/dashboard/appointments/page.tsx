@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import {
-  CalendarCheck, Clock, Loader2, X, Pencil, Ban, Plus, CalendarX2, Package,
+  CalendarCheck, Clock, Loader2, X, Pencil, Ban, Plus, CalendarX2, Package, CheckCircle2,
 } from 'lucide-react'
 import { cn, formatTime, formatDateISO } from '@/lib/utils'
 import { useConfirm } from '@/lib/hooks/use-confirm'
@@ -31,6 +31,7 @@ interface Appointment {
   customer_package_id?: string | null
   package_name?: string | null
   package_unit_price?: number | null
+  is_paid?: boolean  // Tahsilatı alınmış randevu — düzenleme/iptal kilitlenir
 }
 
 const TERMINAL_STATUSES = new Set(['cancelled', 'completed', 'no_show'])
@@ -163,7 +164,10 @@ export default function PortalAppointmentsPage() {
           {appointments.map((apt) => {
             const svc = Array.isArray(apt.services) ? apt.services[0] : apt.services
             const staff = Array.isArray(apt.staff_members) ? apt.staff_members[0] : apt.staff_members
-            const canEdit = tab === 'upcoming' && !TERMINAL_STATUSES.has(apt.status)
+            // Ödenmiş randevu üstünde değişiklik yapılamaz — para zaten alındı,
+            // tarih/saat değiştirme veya iptal müşteri-iletişim sorunu yaratır.
+            // Personel "Tamamlandı Geri Al → Sadece Status" sonrası bu durum oluşabilir.
+            const canEdit = tab === 'upcoming' && !TERMINAL_STATUSES.has(apt.status) && !apt.is_paid
 
             return (
               <div key={apt.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 px-5 flex items-center justify-between gap-3 min-h-[124px]">
@@ -177,6 +181,12 @@ export default function PortalAppointmentsPage() {
                       <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full border border-amber-200 bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-300 flex-shrink-0">
                         <Package className="h-3 w-3" />
                         Paket Seansı
+                      </span>
+                    )}
+                    {apt.is_paid && (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full border border-emerald-200 bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-300 flex-shrink-0">
+                        <CheckCircle2 className="h-3 w-3" />
+                        Ödendi
                       </span>
                     )}
                   </div>
