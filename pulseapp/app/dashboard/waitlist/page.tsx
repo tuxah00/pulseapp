@@ -126,7 +126,16 @@ export default function WaitlistPage() {
     try {
       const res = await fetch(`/api/waitlist?active=${showActive}`)
       const json = await res.json()
-      setEntries(json.entries || [])
+      // Sıralama: önce müşteri onayı bekleyenler (is_notified=true && is_active=true,
+      // amber çan ikonu), sonra diğerleri öncelik (FIFO = created_at ascending) sırasına göre.
+      // Bu sayede personel acil aksiyon gerektiren kayıtları en üstte görür.
+      const sorted: WaitlistEntry[] = ((json.entries || []) as WaitlistEntry[]).sort((a, b) => {
+        const aWaiting = a.is_notified && a.is_active ? 0 : 1
+        const bWaiting = b.is_notified && b.is_active ? 0 : 1
+        if (aWaiting !== bWaiting) return aWaiting - bWaiting
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      })
+      setEntries(sorted)
     } catch { /* ignore */ } finally { setLoading(false) }
   }, [businessId, showActive])
 
