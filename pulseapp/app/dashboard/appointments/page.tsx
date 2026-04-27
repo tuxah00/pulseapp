@@ -1702,6 +1702,8 @@ export default function AppointmentsPage() {
                                         staffColors[colorIdx]
                                       )}
                                       style={{ top: topPos, height: h, opacity: mergedIsPast ? 0.5 : 1 }}
+                                      onMouseDown={(e) => e.stopPropagation()}
+                                      onMouseUp={(e) => e.stopPropagation()}
                                       onClick={(e) => {
                                         e.stopPropagation()
                                         const hour = Math.floor(earliest / 60)
@@ -1746,6 +1748,8 @@ export default function AppointmentsPage() {
                                           'border border-white/20'
                                         )}
                                         style={{ opacity: visual.isDim ? 0.5 : 1 }}
+                                        onMouseDown={(e) => e.stopPropagation()}
+                                        onMouseUp={(e) => e.stopPropagation()}
                                         onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
                                       >
                                         <p className={cn('text-[10px] font-semibold truncate', staffTextColors[colorIdx])}>
@@ -2063,6 +2067,8 @@ export default function AppointmentsPage() {
                                   'border border-white/20'
                                 )}
                                 style={{ opacity: visual.isDim ? 0.5 : 1 }}
+                                onMouseDown={(e) => e.stopPropagation()}
+                                onMouseUp={(e) => e.stopPropagation()}
                                 onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
                               >
                                 <p className={cn('text-[10px] font-semibold truncate', staffTextColors[col.colorIdx])}>
@@ -2271,6 +2277,8 @@ export default function AppointmentsPage() {
                                   'border border-white/20'
                                 )}
                                 style={{ backgroundColor: col.color, opacity: visual.isDim ? 0.5 : 1 }}
+                                onMouseDown={(e) => e.stopPropagation()}
+                                onMouseUp={(e) => e.stopPropagation()}
                                 onClick={(e) => { e.stopPropagation(); setSelectedAppointment(apt) }}
                               >
                                 <p className="text-[10px] font-semibold truncate">{apt.customers?.name || 'İsimsiz'}</p>
