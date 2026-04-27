@@ -132,6 +132,7 @@ export default function AppointmentsPage() {
   // Bekleme listesindeki müşteri auto_book_on_match=true ile kayıt olduğu zaman ayrı bir
   // sahip onayına gerek kalmıyor. Hiç eşleşme yoksa fill-gap silent dönüyor.
   const [fillGapLoading, setFillGapLoading] = useState<string | null>(null)
+  const [statusLoadingId, setStatusLoadingId] = useState<string | null>(null)
   const [cancelNotifyCustomer, setCancelNotifyCustomer] = useState(true)
   const [slotPopup, setSlotPopup] = useState<{ day: string; hour: number; apts: AppointmentView[]; x: number; y: number } | null>(null)
   const [saving, setSaving] = useState(false)
@@ -1050,8 +1051,10 @@ export default function AppointmentsPage() {
 
   async function updateStatus(appointmentId: string, newStatus: AppointmentStatus, e?: React.MouseEvent) {
     e?.stopPropagation()
+    setStatusLoadingId(appointmentId)
     const { error } = await supabase.from('appointments').update({ status: newStatus }).eq('id', appointmentId)
     if (error) {
+      setStatusLoadingId(null)
       if (error.message.includes('segment') && error.message.includes('customer_segment')) {
         window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Veritabanı Hatası', body: 'Randevu güncellemesi veritabanı ayarı nedeniyle başarısız. Supabase SQL Editor\'den 003_fix_appointment_customer_segment.sql dosyasını çalıştırın.' } }))
       } else {
@@ -1063,6 +1066,9 @@ export default function AppointmentsPage() {
     if (selectedAppointment?.id === appointmentId) {
       setSelectedAppointment((prev) => prev ? { ...prev, status: newStatus } : null)
     }
+    // Toast'u DB güncellemesinden hemen sonra göster — arka plan işlemleri (paket, puan, workflow) beklenmez
+    const statusLabels: Record<string, string> = { completed: 'Tamamlandı', cancelled: 'İptal edildi', no_show: 'Gelmedi olarak işaretlendi', confirmed: 'Onaylandı', pending: 'Beklemede' }
+    window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: statusLabels[newStatus] || 'Durum güncellendi' } }))
     const statusApt = appointments.find(a => a.id === appointmentId)
 
     // Not: Randevu tamamlandığında takip modal'ı OTOMATİK açılmaz.
@@ -1174,8 +1180,7 @@ export default function AppointmentsPage() {
     }
 
     fetchAppointments()
-    const statusLabels: Record<string, string> = { completed: 'Tamamlandı', cancelled: 'İptal edildi', no_show: 'Gelmedi olarak işaretlendi', confirmed: 'Onaylandı', pending: 'Beklemede' }
-    window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: statusLabels[newStatus] || 'Durum güncellendi' } }))
+    setStatusLoadingId(null)
   }
 
   async function handleRevertCompleted(appointmentId: string) {
@@ -2560,7 +2565,7 @@ export default function AppointmentsPage() {
                     </div>
                   </div>
                   <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                    <ActionButtons apt={apt} size="md" todayStr={todayStr} fillGapLoading={fillGapLoading} onEdit={openEditModal} onReschedule={openRescheduleModal} onUpdateStatus={updateStatus} onCancelConfirm={openCancelConfirm} onFillGap={handleFillGap} onDelete={handleDeleteAppointment} onQuickPayment={setQuickPaymentTarget} onFollowUp={setFollowUpTarget} />
+                    <ActionButtons apt={apt} size="md" todayStr={todayStr} fillGapLoading={fillGapLoading} statusLoadingId={statusLoadingId} onEdit={openEditModal} onReschedule={openRescheduleModal} onUpdateStatus={updateStatus} onCancelConfirm={openCancelConfirm} onFillGap={handleFillGap} onDelete={handleDeleteAppointment} onQuickPayment={setQuickPaymentTarget} onFollowUp={setFollowUpTarget} />
                   </div>
                 </div>
               </AnimatedItem>
@@ -2614,7 +2619,7 @@ export default function AppointmentsPage() {
                 }
 
                 <div className="mt-auto pt-3 flex items-center justify-end" onClick={(e) => e.stopPropagation()}>
-                  <ActionButtons apt={apt} size="sm" todayStr={todayStr} fillGapLoading={fillGapLoading} onEdit={openEditModal} onReschedule={openRescheduleModal} onUpdateStatus={updateStatus} onCancelConfirm={openCancelConfirm} onFillGap={handleFillGap} onDelete={handleDeleteAppointment} onQuickPayment={setQuickPaymentTarget} onFollowUp={setFollowUpTarget} />
+                  <ActionButtons apt={apt} size="sm" todayStr={todayStr} fillGapLoading={fillGapLoading} statusLoadingId={statusLoadingId} onEdit={openEditModal} onReschedule={openRescheduleModal} onUpdateStatus={updateStatus} onCancelConfirm={openCancelConfirm} onFillGap={handleFillGap} onDelete={handleDeleteAppointment} onQuickPayment={setQuickPaymentTarget} onFollowUp={setFollowUpTarget} />
                 </div>
               </AnimatedItem>
             )
@@ -2871,8 +2876,11 @@ export default function AppointmentsPage() {
                 })()}
                 {selectedAppointment.status === 'confirmed' && (
                   <>
-                    <button onClick={() => updateStatus(selectedAppointment.id, 'completed')} className="w-full flex items-center gap-2 rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 px-4 py-2.5 text-sm font-medium text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-800/30 transition-colors">
-                      <CheckCircle className="h-4 w-4" /> Tamamlandı İşaretle
+                    <button onClick={() => updateStatus(selectedAppointment.id, 'completed')} disabled={statusLoadingId === selectedAppointment.id} className={cn('w-full flex items-center gap-2 rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 px-4 py-2.5 text-sm font-medium text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-800/30 transition-colors', statusLoadingId === selectedAppointment.id && 'opacity-60 cursor-not-allowed')}>
+                      {statusLoadingId === selectedAppointment.id
+                        ? <Loader2 className="h-4 w-4 animate-spin" />
+                        : <CheckCircle className="h-4 w-4" />}
+                      {statusLoadingId === selectedAppointment.id ? 'Tamamlanıyor...' : 'Tamamlandı İşaretle'}
                     </button>
                     <button onClick={() => updateStatus(selectedAppointment.id, 'no_show')} className="w-full flex items-center gap-2 rounded-lg border border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/20 px-4 py-2.5 text-sm font-medium text-orange-700 dark:text-orange-300 hover:bg-orange-100 dark:hover:bg-orange-800/30 transition-colors">
                       <AlertTriangle className="h-4 w-4" /> Gelmedi İşaretle
@@ -3267,6 +3275,7 @@ interface ActionButtonsProps {
   size?: 'sm' | 'md'
   todayStr: string
   fillGapLoading: string | null
+  statusLoadingId?: string | null
   onEdit: (apt: AppointmentView, e: React.MouseEvent) => void
   onReschedule: (apt: AppointmentView, e: React.MouseEvent) => void
   onUpdateStatus: (id: string, status: AppointmentStatus, e?: React.MouseEvent) => void
@@ -3278,7 +3287,7 @@ interface ActionButtonsProps {
 }
 
 function ActionButtons({
-  apt, size = 'md', todayStr, fillGapLoading,
+  apt, size = 'md', todayStr, fillGapLoading, statusLoadingId,
   onEdit, onReschedule, onUpdateStatus, onCancelConfirm,
   onFillGap, onDelete, onQuickPayment, onFollowUp,
 }: ActionButtonsProps) {
@@ -3306,8 +3315,10 @@ function ActionButtons({
       )}
       {apt.status === 'confirmed' && (
         <>
-          <button onClick={(e) => onUpdateStatus(apt.id, 'completed', e)} title="Tamamlandı" className={cn(btnCls, 'text-green-500 hover:bg-green-50 dark:hover:bg-green-900/30')}>
-            <CheckCircle className={size === 'sm' ? 'h-4 w-4' : 'h-5 w-5'} />
+          <button onClick={(e) => onUpdateStatus(apt.id, 'completed', e)} title="Tamamlandı" disabled={statusLoadingId === apt.id} className={cn(btnCls, 'text-green-500 hover:bg-green-50 dark:hover:bg-green-900/30', statusLoadingId === apt.id && 'opacity-60 cursor-not-allowed')}>
+            {statusLoadingId === apt.id
+              ? <Loader2 className={cn(size === 'sm' ? 'h-4 w-4' : 'h-5 w-5', 'animate-spin')} />
+              : <CheckCircle className={size === 'sm' ? 'h-4 w-4' : 'h-5 w-5'} />}
           </button>
           <button onClick={(e) => onUpdateStatus(apt.id, 'no_show', e)} title="Gelmedi" className={cn(btnCls, 'text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30')}>
             <AlertTriangle className={size === 'sm' ? 'h-4 w-4' : 'h-5 w-5'} />
