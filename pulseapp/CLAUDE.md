@@ -456,6 +456,16 @@ ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'tutoring';
 -- app/r/[code]/page.tsx kısa kodu çözerek /book/<businessId>?c=<recipientId> yönlendirmesi yapar
 ```
 
+38. **İki katmanlı yorum talebi** (`077_dual_review_requests.sql`): ⏳ Beklemede (2026-04-27)
+```sql
+-- services.experience_review_delay_days INTEGER DEFAULT 1 — deneyim yorumu kaç gün sonra
+-- services.result_review_delay_days INTEGER NULL — sonuçların görülmesi için süre (NULL = sonuç yorumu atla)
+-- appointments.result_review_requested BOOLEAN DEFAULT FALSE — ikinci dalga işareti
+-- idx_appointments_result_review_pending partial index (status='completed' AND result_review_requested=false)
+-- Tipik gecikmeli sonuç hizmetleri için akıllı default'lar (burun estetiği 28g, implant 30g, saç ekimi 90g, botoks/dolgu 14g, vb.)
+-- Cron /api/cron/review-requests artık iki geçişli: önce deneyim, sonra sonuç yorumu
+```
+
 ## Faz 2: Estetik Klinik Özellik Seti (2026-04-04)
 
 ### Yeni Tablolar
