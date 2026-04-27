@@ -89,28 +89,37 @@ export async function POST(request: NextRequest) {
             error: `Seçilen tarih ${dayNames[dayKey] || dayKey} gününe denk geliyor. İşletme ${dayNames[dayKey] || dayKey} günleri hizmet vermiyor — lütfen farklı bir gün seçin.`
           }, { status: 400 })
         }
-        // Tarih seçilmişse saat de varsa mesai kontrolü yap
+        // Tarih seçilmişse saat de varsa mesai kontrolü yap (başlangıç + bitiş)
         if (preferredTimeStart) {
-          const reqMin = toMin(preferredTimeStart.substring(0, 5))
+          const startMin = toMin(preferredTimeStart.substring(0, 5))
           const openMin = toMin(hours.open)
           const closeMin = toMin(hours.close)
-          if (reqMin < openMin || reqMin >= closeMin) {
+          if (startMin < openMin || startMin >= closeMin) {
             return NextResponse.json({
-              error: `Seçilen saat (${preferredTimeStart.substring(0, 5)}) mesai saatleri dışında. Çalışma saatleri: ${hours.open}–${hours.close}`
+              error: `Seçilen başlangıç saati (${preferredTimeStart.substring(0, 5)}) mesai saatleri dışında. Çalışma saatleri: ${hours.open}–${hours.close}`
             }, { status: 400 })
+          }
+          if (preferredTimeEnd) {
+            const endMin = toMin(preferredTimeEnd.substring(0, 5))
+            if (endMin > closeMin) {
+              return NextResponse.json({
+                error: `Seçilen bitiş saati (${preferredTimeEnd.substring(0, 5)}) mesai bitiş saatini (${hours.close}) aşıyor.`
+              }, { status: 400 })
+            }
           }
         }
       } else if (preferredTimeStart) {
-        // Tarih seçilmemiş ama saat seçilmiş — en az bir günde bu saat mesai içinde olmalı
+        // Tarih seçilmemiş ama saat seçilmiş — en az bir günde başlangıç+bitiş mesai içinde olmalı
         const isAnyDayValid = DAY_KEYS.some(k => {
           const h = wh[k]
           if (!h) return false
-          const reqMin = toMin(preferredTimeStart.substring(0, 5))
-          return reqMin >= toMin(h.open) && reqMin < toMin(h.close)
+          const startMin = toMin(preferredTimeStart.substring(0, 5))
+          const endMin = preferredTimeEnd ? toMin(preferredTimeEnd.substring(0, 5)) : startMin + 1
+          return startMin >= toMin(h.open) && endMin <= toMin(h.close)
         })
         if (!isAnyDayValid) {
           return NextResponse.json({
-            error: `Seçilen saat (${preferredTimeStart.substring(0, 5)}) hiçbir çalışma gününün mesai saatleri içinde değil.`
+            error: `Seçilen saat aralığı (${preferredTimeStart.substring(0, 5)}${preferredTimeEnd ? '–' + preferredTimeEnd.substring(0, 5) : ''}) hiçbir çalışma gününün mesai saatleri içinde değil.`
           }, { status: 400 })
         }
       }
