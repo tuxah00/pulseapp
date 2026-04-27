@@ -603,7 +603,7 @@ export default function AuditPage() {
                     <td className="table-cell text-gray-600 dark:text-gray-400">
                       {resourceLabels[log.resource] ?? log.resource}
                     </td>
-                    <td className="table-cell text-gray-500 dark:text-gray-400 hidden md:table-cell max-w-xs truncate" title={formatAuditDetail(log)}>
+                    <td className="table-cell text-xs text-gray-500 dark:text-gray-400 hidden md:table-cell max-w-xs truncate" title={formatAuditDetail(log)}>
                       {formatAuditDetail(log) || '—'}
                     </td>
                   </tr>
