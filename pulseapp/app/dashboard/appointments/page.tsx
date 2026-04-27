@@ -28,7 +28,7 @@ import {
   CalendarDays,
   CalendarRange,
   Search, Filter, ArrowUpDown,
-  Users, User, Building2, Ban, Lock, BellRing, Sparkles, ExternalLink, Package, Wallet,
+  Users, User, Building2, Ban, Lock, BellRing, Sparkles, ExternalLink, Package, Wallet, RotateCcw,
 } from 'lucide-react'
 import { formatTime, formatDate, getStatusColor, formatCurrency, cn, formatDateISO } from '@/lib/utils'
 import { STATUS_LABELS, type AppointmentStatus, type Service, type StaffMember, type WorkingHours, type BlockedSlot } from '@/types'
@@ -504,7 +504,12 @@ export default function AppointmentsPage() {
   function openCancelConfirm(apt: AppointmentView, e?: React.MouseEvent) {
     e?.stopPropagation()
     setCancelConfirmAppointment(apt)
-    setCancelNotifyCustomer(true)
+    // Geçmiş randevular için bildirim varsayılan KAPALI — saati geçmiş iptale bildirim anlamsız
+    const now = new Date()
+    const todayISO = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+    const nowTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+    const isAptPast = apt.appointment_date < todayISO || (apt.appointment_date === todayISO && apt.start_time <= nowTime)
+    setCancelNotifyCustomer(!isAptPast)
   }
 
   function calculateEndTime(start: string, durationMinutes: number): string {
@@ -1166,6 +1171,79 @@ export default function AppointmentsPage() {
     fetchAppointments()
     const statusLabels: Record<string, string> = { completed: 'Tamamlandı', cancelled: 'İptal edildi', no_show: 'Gelmedi olarak işaretlendi', confirmed: 'Onaylandı', pending: 'Beklemede' }
     window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: statusLabels[newStatus] || 'Durum güncellendi' } }))
+  }
+
+  async function handleRevertCompleted(appointmentId: string) {
+    const ok = await confirm({
+      title: 'Tamamlandı Durumunu Geri Al',
+      message: 'Randevu "Onaylandı" durumuna geri alınacak. Paket seansıysa kullanılan seans sayısı 1 azaltılacak. Emin misiniz?',
+      confirmText: 'Geri Al',
+      cancelText: 'Vazgeç',
+      variant: 'warning',
+    })
+    if (!ok) return
+
+    const apt = appointments.find(a => a.id === appointmentId) ?? selectedAppointment
+    if (!apt) return
+
+    // Randevu durumunu geri al
+    const { error } = await supabase
+      .from('appointments')
+      .update({ status: 'confirmed' })
+      .eq('id', appointmentId)
+
+    if (error) {
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: error.message } }))
+      return
+    }
+
+    // Detay panelindeki anlık güncelleme
+    if (selectedAppointment?.id === appointmentId) {
+      setSelectedAppointment(prev => prev ? { ...prev, status: 'confirmed' } : null)
+    }
+
+    // Paket seansıysa seans sayısını geri al
+    if (apt.customer_package_id) {
+      const { data: pkg } = await supabase
+        .from('customer_packages')
+        .select('id, sessions_used, sessions_total, status')
+        .eq('id', apt.customer_package_id)
+        .single()
+
+      if (pkg) {
+        const newUsed = Math.max(0, pkg.sessions_used - 1)
+        const newPkgStatus = pkg.status === 'completed' ? 'active' : pkg.status
+        await supabase
+          .from('customer_packages')
+          .update({ sessions_used: newUsed, status: newPkgStatus })
+          .eq('id', pkg.id)
+
+        // Rezervasyon kaydını sil (tamamlanma sonrası tekrar rezervasyon gibi)
+        await supabase
+          .from('package_usages')
+          .delete()
+          .eq('appointment_id', appointmentId)
+      }
+    }
+
+    await logAudit({
+      businessId: businessId!,
+      staffId: currentStaffId,
+      staffName: currentStaffName,
+      action: 'status_change',
+      resource: 'appointment',
+      resourceId: appointmentId,
+      details: {
+        from: 'completed',
+        to: 'confirmed',
+        reason: 'manual_revert',
+        customer_name: apt.customers?.name || null,
+        service_name: apt.services?.name || null,
+      },
+    })
+
+    fetchAppointments()
+    window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Durum geri alındı', body: 'Randevu "Onaylandı" olarak işaretlendi.' } }))
   }
 
   function getDayKeyFromDate(dateStr: string): keyof WorkingHours {
@@ -2694,6 +2772,12 @@ export default function AppointmentsPage() {
                         <BellRing className="h-4 w-4" /> Takip Başlat
                       </button>
                     )}
+                    <button
+                      onClick={() => handleRevertCompleted(selectedAppointment.id)}
+                      className="w-full flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-4 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
+                    >
+                      <RotateCcw className="h-4 w-4" /> Tamamlandı Geri Al
+                    </button>
                   </>
                   )
                 })()}
@@ -3017,10 +3101,29 @@ export default function AppointmentsPage() {
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
               {cancelConfirmAppointment?.customers?.name} — {cancelConfirmAppointment ? formatTime(cancelConfirmAppointment.start_time) : ''} randevusunu iptal etmek istediğinize emin misiniz?
             </p>
-            <label className="flex items-center gap-2 cursor-pointer mb-3">
-              <input type="checkbox" checked={cancelNotifyCustomer} onChange={(e) => setCancelNotifyCustomer(e.target.checked)} className="rounded border-gray-300" />
-              <span className="text-sm text-gray-700 dark:text-gray-300">Müşteriye iptal bildirimi gönder</span>
-            </label>
+            {(() => {
+              const apt = cancelConfirmAppointment
+              if (!apt) return null
+              const now = new Date()
+              const todayISO = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+              const nowTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+              const isAptPast = apt.appointment_date < todayISO || (apt.appointment_date === todayISO && apt.start_time <= nowTime)
+              return (
+                <label className={`flex items-center gap-2 mb-3 ${isAptPast ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
+                  <input
+                    type="checkbox"
+                    checked={cancelNotifyCustomer}
+                    onChange={(e) => { if (!isAptPast) setCancelNotifyCustomer(e.target.checked) }}
+                    disabled={isAptPast}
+                    className="rounded border-gray-300 disabled:cursor-not-allowed"
+                  />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                    Müşteriye iptal bildirimi gönder
+                    {isAptPast && <span className="ml-1 text-xs text-gray-400">(geçmiş randevu — gönderilmez)</span>}
+                  </span>
+                </label>
+              )
+            })()}
             <p className="text-xs text-gray-500 dark:text-gray-400 mb-4 flex items-start gap-1.5">
               <BellRing className="h-3.5 w-3.5 mt-0.5 flex-shrink-0 text-amber-500" />
               <span>İptal sonrası bekleme listesi otomatik kontrol edilir. Otomatik randevu isteyen müşteri varsa boşluk anında doldurulur, diğerlerine SMS bildirim gider.</span>
