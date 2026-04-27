@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
     action: 'create',
     resource: 'waitlist',
     resourceId: data.id,
-    details: { name: customerName, phone: customerPhone, service_id: serviceId || null },
+    details: { customer_name: customerName, phone: customerPhone, service_id: serviceId || null },
   })
 
   return NextResponse.json({ entry: data })
@@ -113,6 +113,14 @@ export async function PATCH(request: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   if (updates.is_active === false) {
+    const { data: entryAudit } = await supabase
+      .from('waitlist_entries')
+      .select('customer_name, customer_phone, services(name)')
+      .eq('id', id)
+      .eq('business_id', staff.business_id)
+      .maybeSingle()
+    const rawSvcAudit = entryAudit?.services
+    const svcAudit = (Array.isArray(rawSvcAudit) ? rawSvcAudit[0] : rawSvcAudit) as { name: string } | null
     await logAuditServer({
       businessId: staff.business_id,
       staffId: staff.id,
@@ -120,6 +128,10 @@ export async function PATCH(request: NextRequest) {
       action: 'delete',
       resource: 'waitlist',
       resourceId: id,
+      details: {
+        customer_name: entryAudit?.customer_name || null,
+        service_name: svcAudit?.name || null,
+      },
     })
   }
 
@@ -136,6 +148,14 @@ export async function DELETE(request: NextRequest) {
   const id = url.searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'ID gerekli' }, { status: 400 })
 
+  // Silmeden önce detayları al (audit log için)
+  const { data: delEntry } = await supabase
+    .from('waitlist_entries')
+    .select('customer_name, customer_phone, services(name)')
+    .eq('id', id)
+    .eq('business_id', staff.business_id)
+    .maybeSingle()
+
   const { error } = await supabase
     .from('waitlist_entries')
     .delete()
@@ -144,6 +164,8 @@ export async function DELETE(request: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
+  const rawDelSvc = delEntry?.services
+  const delSvc = (Array.isArray(rawDelSvc) ? rawDelSvc[0] : rawDelSvc) as { name: string } | null
   await logAuditServer({
     businessId: staff.business_id,
     staffId: staff.id,
@@ -151,6 +173,10 @@ export async function DELETE(request: NextRequest) {
     action: 'delete',
     resource: 'waitlist',
     resourceId: id,
+    details: {
+      customer_name: delEntry?.customer_name || null,
+      service_name: delSvc?.name || null,
+    },
   })
 
   return NextResponse.json({ ok: true })

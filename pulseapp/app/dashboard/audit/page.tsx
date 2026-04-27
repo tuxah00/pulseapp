@@ -131,8 +131,22 @@ function formatAuditDetail(log: AuditLog): string {
     return `${name ? name + ' — ' : ''}${from} → ${to}`
   }
 
-  // Randevu (oluşturma / iptal / erteleme)
+  // Randevu (oluşturma / iptal / erteleme / boşluk doldurma)
   if (log.resource === 'appointment') {
+    // Boşluk doldurma bildirimi
+    if (log.action === 'send') {
+      const parts: string[] = []
+      if (d.type === 'gap_fill') {
+        if (d.notified !== undefined) parts.push(`${d.notified} kişi bildirildi`)
+        if (Number(d.auto_booked) > 0) parts.push(`${d.auto_booked} otomatik randevu`)
+        return parts.join(' · ') || 'Boşluk doldurma bildirimi'
+      }
+      if (d.type === 'gap_fill_next') {
+        if (Number(d.autoBooked) > 0) parts.push('Otomatik randevu oluşturuldu')
+        if (Number(d.skippedHeld) > 0) parts.push(`${d.skippedHeld} bekleyen atlandı`)
+        return parts.join(' · ') || 'Sıradaki randevu bildirimi'
+      }
+    }
     // Erteleme: {from: {date, time/startTime}, to: {date, time/startTime}}
     if (log.action === 'appointment_reschedule' && d.from && d.to) {
       const from = d.from as unknown as Record<string, string>
@@ -357,6 +371,26 @@ function formatAuditDetail(log: AuditLog): string {
     return parts.join(' · ')
   }
 
+  // Bekleme listesi
+  if (log.resource === 'waitlist') {
+    const parts: string[] = []
+    const custName = d.customer_name || d.name
+    if (custName) parts.push(String(custName))
+    if (d.service_name) parts.push(String(d.service_name))
+    if (d.phone) parts.push(String(d.phone))
+    return parts.join(' · ')
+  }
+
+  // Kasa işlemi
+  if (log.resource === 'pos_transaction') {
+    const parts: string[] = []
+    if (d.receipt_number) parts.push(String(d.receipt_number))
+    if (d.customer_name) parts.push(String(d.customer_name))
+    if (d.total !== undefined && d.total !== null) parts.push(`₺${d.total}`)
+    if (d.items_count !== undefined) parts.push(`${d.items_count} kalem`)
+    return parts.join(' · ')
+  }
+
   return ''
 }
 
@@ -510,7 +544,7 @@ export default function AuditPage() {
                   <th className="table-head-cell">Personel</th>
                   <th className="table-head-cell">Eylem</th>
                   <th className="table-head-cell">Kaynak</th>
-                  <th className="table-head-cell hidden md:table-cell">Detay</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 hidden md:table-cell">Detay</th>
                 </tr>
               </thead>
               <tbody>
@@ -548,7 +582,7 @@ export default function AuditPage() {
                     <td className="table-cell text-gray-600 dark:text-gray-400">
                       {resourceLabels[log.resource] ?? log.resource}
                     </td>
-                    <td className="table-cell text-gray-500 dark:text-gray-400 text-xs hidden md:table-cell max-w-xs truncate" title={formatAuditDetail(log)}>
+                    <td className="table-cell text-gray-500 dark:text-gray-400 hidden md:table-cell max-w-xs truncate" title={formatAuditDetail(log)}>
                       {formatAuditDetail(log) || '—'}
                     </td>
                   </tr>

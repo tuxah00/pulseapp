@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/api/with-permission'
+import { logAuditServer } from '@/lib/utils/audit'
 import type { POSItem, InvoiceItem, POSPaymentStatus } from '@/types'
 
 // GET: İşlem listesi
@@ -32,7 +33,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const auth = await requirePermission(req, 'pos')
   if (!auth.ok) return auth.response
-  const { businessId, userId } = auth.ctx
+  const { businessId, userId, staffId, staffName } = auth.ctx
 
   const supabase = createServerSupabaseClient()
   const body = await req.json()
@@ -228,6 +229,23 @@ export async function POST(req: NextRequest) {
   if (transaction && invoice_id) {
     await supabase.from('invoices').update({ pos_transaction_id: transaction.id }).eq('id', invoice_id)
   }
+
+  // Audit log
+  const txCustomer = transaction?.customers as { name?: string } | null
+  await logAuditServer({
+    businessId,
+    staffId,
+    staffName,
+    action: 'create',
+    resource: 'pos_transaction',
+    resourceId: transaction.id,
+    details: {
+      receipt_number: transaction.receipt_number,
+      customer_name: txCustomer?.name || null,
+      total: transaction.total,
+      items_count: (transaction.items as unknown[]).length,
+    },
+  })
 
   // Referans ödülü kullanıldıysa işaretle
   if (referral_id) {
