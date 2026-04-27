@@ -184,29 +184,60 @@ export async function scanAndNotifyWaitlistEntry(
       })
 
       if (matchedStaff) {
-        // Uygun slot bulundu — bildirim at
+        // Uygun slot bulundu — bildirim at + takvime placeholder yaz
         const slotTimeFull = `${slot}:00`
         const slotEndH = String(Math.floor(slotEnd / 60)).padStart(2, '0')
         const slotEndM = String(slotEnd % 60).padStart(2, '0')
+        const slotEndFull = `${slotEndH}:${slotEndM}:00`
 
         const customer = entry.customers as any
         const phone = customer?.phone || entry.customer_phone
         const name = customer?.name || entry.customer_name
-        const customerId = customer?.id || entry.customer_id || null
+        let customerId: string | null = customer?.id || entry.customer_id || null
         if (!phone) return { matched: false, reason: 'Telefon yok' }
 
-        // Aynı slot için zaten bildirim atılmış mı?
-        if (customerId) {
-          const { data: existing } = await supabase
-            .from('gap_fill_notifications')
+        // customer_id yoksa: telefonla lookup, yoksa yeni müşteri oluştur.
+        // appointments.customer_id NOT NULL — placeholder oluşturmak için zorunlu.
+        if (!customerId) {
+          const { data: existingCustomer } = await supabase
+            .from('customers')
             .select('id')
             .eq('business_id', businessId)
-            .eq('customer_id', customerId)
-            .eq('slot_date', date)
-            .eq('slot_start_time', slotTimeFull)
+            .eq('phone', phone)
             .limit(1)
-          if (existing?.length) continue
+            .maybeSingle()
+
+          if (existingCustomer) {
+            customerId = existingCustomer.id
+          } else {
+            const { data: newCustomer, error: createErr } = await supabase
+              .from('customers')
+              .insert({ business_id: businessId, name, phone, segment: 'new' })
+              .select('id')
+              .single()
+            if (createErr || !newCustomer) {
+              return { matched: false, reason: `Müşteri kaydı oluşturulamadı: ${createErr?.message || 'bilinmiyor'}` }
+            }
+            customerId = newCustomer.id
+          }
+
+          // Waitlist entry'yi customer_id ile güncelle (geri besleme)
+          await supabase
+            .from('waitlist_entries')
+            .update({ customer_id: customerId })
+            .eq('id', entry.id)
         }
+
+        // Aynı slot için zaten bildirim atılmış mı?
+        const { data: existing } = await supabase
+          .from('gap_fill_notifications')
+          .select('id')
+          .eq('business_id', businessId)
+          .eq('customer_id', customerId)
+          .eq('slot_date', date)
+          .eq('slot_start_time', slotTimeFull)
+          .limit(1)
+        if (existing?.length) continue
 
         // Personel adı (mesaj kişiselleştirme için)
         let staffName: string | null = null
@@ -222,34 +253,72 @@ export async function scanAndNotifyWaitlistEntry(
         const slotDateFormatted = new Date(date + 'T00:00:00').toLocaleDateString('tr-TR', {
           day: 'numeric', month: 'long', weekday: 'short'
         })
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
         const parts: string[] = []
         if (entry.staff_id && staffName) parts.push(`tercih ettiğiniz ${staffName}`)
         if (entry.preferred_date) parts.push(`tercih ettiğiniz ${slotDateFormatted}`)
         if (entry.preferred_time_start) parts.push(`tercih ettiğiniz saat ${slot}`)
         const prefText = parts.length ? parts.join(', ') + ' için ' : ''
 
+        // ─── Placeholder appointment yaz ───
+        // status='pending' (mevcut çakışma kontrolleri otomatik dolu sayar)
+        // held_until = hold süresi sonu (cleanup bu süre dolanları soft delete edecek)
+        // manage_token = müşterinin onay/iptal linki için
+        // service_id NULL'dan kurtulmak için: tercih yoksa duration=30 ile herhangi bir
+        //   hizmet seçmek yerine NULL bırakıyoruz — booking sayfasında müşteri seçer.
+        const holdUntilDate = new Date(Date.now() + holdMinutes * 60 * 1000)
+        const holdUntilIso = holdUntilDate.toISOString()
+        const tokenExpiresAt = holdUntilIso // Hold süresi = link süresi
+
+        const { data: heldApt, error: insertErr } = await supabase
+          .from('appointments')
+          .insert({
+            business_id: businessId,
+            customer_id: customerId,
+            service_id: entry.service_id,
+            staff_id: matchedStaff,
+            appointment_date: date,
+            start_time: slotTimeFull,
+            end_time: slotEndFull,
+            status: 'pending',
+            source: 'web',
+            held_until: holdUntilIso,
+            held_for_waitlist_entry_id: entry.id,
+            token_expires_at: tokenExpiresAt,
+            notes: 'Bekleme listesi — müşteri onayı bekleniyor',
+          })
+          .select('id, manage_token')
+          .single()
+
+        if (insertErr || !heldApt) {
+          // Slot insert başarısız (race condition?) → bu slotu atla, sıradakine bak
+          continue
+        }
+
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
+        const manageLink = heldApt.manage_token
+          ? `${appUrl}/book/manage/${heldApt.manage_token}`
+          : `${appUrl}/book/${businessId}`
+
         const body =
           `Merhaba ${name}! 👋\n\n` +
-          `${bizName} — ${prefText}uygun bir boşluk açıldı: ${slotDateFormatted} ${slot}\n\n` +
-          `🔗 ${appUrl}/book/${businessId}\n\n` +
-          `Bu fırsat ${holdMinutes} dakika boyunca size tutuluyor. Bu süre içinde randevu almazsanız sıradaki kişiye geçer.`
+          `${bizName} — ${prefText}sizin için ${slotDateFormatted} ${slot} randevu rezerve edildi.\n\n` +
+          `Onaylamak için linke tıklayın:\n🔗 ${manageLink}\n\n` +
+          `Bu rezervasyon ${holdMinutes} dakika boyunca tutulacak. Bu süre içinde onaylamazsanız iptal edilir ve sıradaki kişiye geçilir.`
 
         try {
           await sendMessage({
             to: phone,
             body,
             businessId,
-            customerId: customerId || undefined,
+            customerId: customerId ?? undefined,
             messageType: 'system',
             channel: 'auto',
           })
 
-          const holdUntil = new Date(Date.now() + holdMinutes * 60 * 1000).toISOString()
           await Promise.all([
             supabase.from('gap_fill_notifications').insert({
               business_id: businessId,
-              appointment_id: null, // Proaktif → mevcut randevu yok
+              appointment_id: heldApt.id,
               customer_id: customerId,
               slot_date: date,
               slot_start_time: slotTimeFull,
@@ -260,15 +329,20 @@ export async function scanAndNotifyWaitlistEntry(
             supabase.from('waitlist_entries')
               .update({
                 is_notified: true,
-                notification_expires_at: holdUntil,
-                // notified_for_appointment_id NULL — proaktif (mevcut randevu yok)
+                notification_expires_at: holdUntilIso,
+                notified_for_appointment_id: heldApt.id,
               })
               .eq('id', entry.id),
           ])
 
-          return { matched: true, slot: { date, time: `${slot}:00` } }
-        } catch {
-          return { matched: false, reason: 'Bildirim hatası' }
+          return { matched: true, slot: { date, time: slotTimeFull } }
+        } catch (sendErr) {
+          // SMS başarısız — placeholder appointment'ı geri al (rollback)
+          await supabase
+            .from('appointments')
+            .update({ deleted_at: new Date().toISOString() })
+            .eq('id', heldApt.id)
+          return { matched: false, reason: 'Bildirim hatası — slot serbest bırakıldı' }
         }
       }
     }

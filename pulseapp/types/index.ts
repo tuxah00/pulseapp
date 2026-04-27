@@ -750,6 +750,10 @@ export interface Appointment {
   review_requested: boolean
   /** Sonuç yorumu (ikinci dalga, gecikmeli) gönderildi mi — services.result_review_delay_days set ise kullanılır */
   result_review_requested: boolean
+  /** Bekleme listesi proaktif tarama placeholder'ı — bu süreden önce müşteri onayı yoksa cleanup soft delete yapar */
+  held_until?: string | null
+  /** Hangi bekleme listesi kaydı için tutuldu */
+  held_for_waitlist_entry_id?: string | null
   notes: string | null
   cancellation_reason: string | null
   recurrence_group_id: string | null
