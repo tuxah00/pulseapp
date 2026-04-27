@@ -473,13 +473,25 @@ export default function WaitlistPage() {
           {filtered.map(e => (
             <AnimatedItem key={e.id} className="card p-4 cursor-pointer hover:ring-1 hover:ring-pulse-900/40 transition-all" onClick={() => openBook(e)}>
               <div className="flex items-start gap-4">
+                {/* Avatar — 3 durum:
+                    1) Pasif (is_active=false): gri BellOff = sürç dolmuş veya silinmiş
+                    2) Onay bekleniyor (is_notified=true && is_active=true): amber Bell = SMS gitti, müşteri onayı bekleniyor
+                    3) Sırada bekliyor (is_notified=false): mavi Clock = bildirim henüz atılmadı
+                    Yeşil CheckCircle = onaylanmış randevu YOK; held_until null olunca normal randevu olur,
+                    bekleme listesi kaydı is_active=false olur (artık burada görünmez). */}
                 <div className={cn(
                   'h-10 w-10 rounded-xl flex items-center justify-center text-sm font-bold flex-shrink-0',
-                  e.is_notified
-                    ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-                    : 'bg-pulse-100 dark:bg-pulse-900/30 text-pulse-700 dark:text-pulse-300'
+                  !e.is_active
+                    ? 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'
+                    : e.is_notified
+                      ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
+                      : 'bg-pulse-100 dark:bg-pulse-900/30 text-pulse-700 dark:text-pulse-300'
                 )}>
-                  {e.is_notified ? <CheckCircle className="h-5 w-5" /> : <Clock className="h-5 w-5" />}
+                  {!e.is_active
+                    ? <BellOff className="h-5 w-5" />
+                    : e.is_notified
+                      ? <Bell className="h-5 w-5" />
+                      : <Clock className="h-5 w-5" />}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
