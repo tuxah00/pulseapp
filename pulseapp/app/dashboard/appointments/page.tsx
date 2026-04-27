@@ -1066,9 +1066,6 @@ export default function AppointmentsPage() {
     if (selectedAppointment?.id === appointmentId) {
       setSelectedAppointment((prev) => prev ? { ...prev, status: newStatus } : null)
     }
-    // Toast'u DB güncellemesinden hemen sonra göster — arka plan işlemleri (paket, puan, workflow) beklenmez
-    const statusLabels: Record<string, string> = { completed: 'Tamamlandı', cancelled: 'İptal edildi', no_show: 'Gelmedi olarak işaretlendi', confirmed: 'Onaylandı', pending: 'Beklemede' }
-    window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: statusLabels[newStatus] || 'Durum güncellendi' } }))
     const statusApt = appointments.find(a => a.id === appointmentId)
 
     // Not: Randevu tamamlandığında takip modal'ı OTOMATİK açılmaz.
@@ -1179,7 +1176,9 @@ export default function AppointmentsPage() {
       } catch { /* workflow tetikleme hatası ana akışı durdurmasın */ }
     }
 
-    fetchAppointments()
+    await fetchAppointments()
+    const statusLabels: Record<string, string> = { completed: 'Tamamlandı', cancelled: 'İptal edildi', no_show: 'Gelmedi olarak işaretlendi', confirmed: 'Onaylandı', pending: 'Beklemede' }
+    window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: statusLabels[newStatus] || 'Durum güncellendi' } }))
     setStatusLoadingId(null)
   }
 
