@@ -73,6 +73,12 @@ export async function GET(request: NextRequest) {
 
       // Mesajı gönder
       if (customer?.phone) {
+        // Intent: Workflow'un ilk adımı, follow-up cron ile çakışabilir
+        // (örn. randevu tamamlandığında hem workflow hem manuel takip
+        // tetiklenir). Aynı intent + 6 saat dedup window → ikinci mesaj
+        // skip edilir. Sonraki adımlar (hatırlatma vb.) farklı zamanda
+        // gittiği için dedup'a gerek yok.
+        const intent = stepIndex === 0 ? 'auto_followup' : undefined
         await sendMessage({
           to: customer.phone,
           body: message,
@@ -80,6 +86,8 @@ export async function GET(request: NextRequest) {
           customerId: run.customer_id,
           messageType: 'template',
           channel: 'auto',
+          intent,
+          dedupWindowHours: 6,
         })
       }
 

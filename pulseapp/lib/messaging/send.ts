@@ -20,6 +20,15 @@ interface SendMessageParams {
   staffName?: string
   templateName?: string
   templateParams?: Record<string, string>
+  /**
+   * Dedup anahtarı — aynı müşteriye aynı amaçla son N saat içinde mesaj
+   * gönderildiyse skip eder. Otomatik sistemler (workflow + follow-up cron)
+   * arasında çakışmayı engeller. Örn: 'post_session_feedback'.
+   * Verildiğinde template_name olarak da kaydedilir.
+   */
+  intent?: string
+  /** Dedup penceresi (saat) — default 24 saat */
+  dedupWindowHours?: number
 }
 
 interface SendMessageResult {
@@ -27,6 +36,8 @@ interface SendMessageResult {
   channel: MessageChannel
   messageSid?: string
   error?: string
+  /** intent dedup tarafından engellendiyse true */
+  skipped?: boolean
 }
 
 /**
@@ -51,10 +62,44 @@ export async function sendMessage(params: SendMessageParams): Promise<SendMessag
     staffName,
     templateName,
     templateParams,
+    intent,
+    dedupWindowHours = 24,
   } = params
 
+  // Dedup kontrolü — intent verildiyse aynı müşteriye aynı amaçla son N saat
+  // içinde mesaj gidip gitmediğini sorgula. İlk gelen kazanır, ikincisi skip.
+  if (intent && customerId) {
+    const admin = createAdminClient()
+    const sinceIso = new Date(Date.now() - dedupWindowHours * 60 * 60 * 1000).toISOString()
+    const { data: existing } = await admin
+      .from('messages')
+      .select('id, created_at, channel')
+      .eq('business_id', businessId)
+      .eq('customer_id', customerId)
+      .eq('template_name', intent)
+      .eq('direction', 'outbound')
+      .gte('created_at', sinceIso)
+      .limit(1)
+      .maybeSingle()
+
+    if (existing) {
+      log.info(
+        { businessId, customerId, intent, existingMessageId: existing.id, dedupWindowHours },
+        'Mesaj dedup tarafından engellendi (aynı amaçla yakın zamanda gönderildi)',
+      )
+      return {
+        success: true,
+        channel: existing.channel as MessageChannel,
+        skipped: true,
+      }
+    }
+  }
+
+  // intent verildiyse template_name'e de yaz (dedup'ın gelecekteki mesajları görebilmesi için)
+  const effectiveTemplateName = templateName ?? intent
+
   // Tüm kanallara geçilen ortak metadata
-  const meta = { staffId, staffName, templateName, templateParams }
+  const meta = { staffId, staffName, templateName: effectiveTemplateName, templateParams }
 
   // Belirli kanal isteniyorsa doğrudan gönder
   if (channel === 'whatsapp') {

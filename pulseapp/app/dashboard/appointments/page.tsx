@@ -1009,14 +1009,12 @@ export default function AppointmentsPage() {
     }
     const statusApt = appointments.find(a => a.id === appointmentId)
 
-    // Tamamlandı → takip teklif modal'ını HEMEN aç (paket/sadakat/audit beklemeden)
-    if (newStatus === 'completed' && statusApt?.customer_id && statusApt?.customers?.name) {
-      setFollowUpTarget({
-        appointmentId,
-        customerId: statusApt.customer_id,
-        customerName: statusApt.customers.name,
-      })
-    }
+    // Not: Randevu tamamlandığında takip modal'ı OTOMATİK açılmaz.
+    // Otomatik mesaj akışları (workflow) zaten gerekli mesajları gönderiyor.
+    // Personel özel/kişiye özel takip ihtiyacı duyarsa randevu detay
+    // panelindeki "Takip Başlat" butonundan veya /dashboard/follow-ups
+    // sayfasından manuel başlatabilir. Bu sayede workflow ile çakışma
+    // riski azalır + her tamamlanan randevuda gereksiz modal açılmaz.
 
     await logAudit({
       businessId: businessId!,

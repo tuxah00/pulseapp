@@ -70,6 +70,13 @@ export async function GET(request: NextRequest) {
         message: '',
       })
 
+      // Intent: workflow ile çakışma engeli. Aynı intent + 6 saat dedup
+      // window → workflow zaten gönderdiyse follow-up skip edilir (ya da
+      // tersi). 'manual' tipi özel mesaj olduğundan dedup'tan muaf tutulur.
+      const intent = followUp.type && followUp.type !== 'manual'
+        ? 'auto_followup'
+        : undefined
+
       await sendMessage({
         to: customer.phone,
         body: messageBody,
@@ -77,6 +84,8 @@ export async function GET(request: NextRequest) {
         customerId: customer.id,
         messageType: 'system',
         channel: 'auto',
+        intent,
+        dedupWindowHours: 6,
       })
 
       // Durumu sent olarak güncelle
