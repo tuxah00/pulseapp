@@ -1184,6 +1184,18 @@ export default function AppointmentsPage() {
   }
 
   async function handleRevertCompleted(appointmentId: string) {
+    const apt = appointments.find(a => a.id === appointmentId) ?? selectedAppointment
+    if (!apt) return
+
+    // Çift-tık koruması — randevu zaten 'completed' değilse erken çık.
+    // Hızlı art arda tıklamada paket sessions_used iki kez azaltılırdı.
+    if (apt.status !== 'completed') {
+      window.dispatchEvent(new CustomEvent('pulse-toast', {
+        detail: { type: 'error', title: 'İşlem yapılamaz', body: 'Randevu zaten tamamlandı durumunda değil.' },
+      }))
+      return
+    }
+
     const ok = await confirm({
       title: 'Tamamlandı Durumunu Geri Al',
       message:
@@ -1198,17 +1210,24 @@ export default function AppointmentsPage() {
     })
     if (!ok) return
 
-    const apt = appointments.find(a => a.id === appointmentId) ?? selectedAppointment
-    if (!apt) return
-
-    // Randevu durumunu geri al
-    const { error } = await supabase
+    // Randevu durumunu geri al — yalnızca hâlâ 'completed' ise (concurrency guard).
+    // İki sekme aynı anda tıklarsa sadece biri başarılı olur, diğeri 0 satır günceller.
+    const { data: updatedRows, error } = await supabase
       .from('appointments')
       .update({ status: 'confirmed' })
       .eq('id', appointmentId)
+      .eq('status', 'completed')
+      .select('id')
 
     if (error) {
       window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: error.message } }))
+      return
+    }
+    // Başka bir oturum/sekme zaten geri almışsa erken çık
+    if (!updatedRows || updatedRows.length === 0) {
+      window.dispatchEvent(new CustomEvent('pulse-toast', {
+        detail: { type: 'error', title: 'İşlem yapılamaz', body: 'Randevu durumu bu arada başka bir kullanıcı tarafından değiştirildi.' },
+      }))
       return
     }
 
@@ -1242,16 +1261,20 @@ export default function AppointmentsPage() {
     }
 
     // Sadakat puanı geri alma (idempotent — randevu için verilen earn'ler kaldırılır)
+    // Harcanmış puan varsa API 409 döner → kullanıcıya uyarı, ana akışı durdurmaz
     let pointsReverted = 0
+    let loyaltyWarning: string | null = null
     if (apt.customer_id) {
       try {
         const res = await fetch(
           `/api/loyalty?customerId=${apt.customer_id}&appointmentId=${appointmentId}`,
           { method: 'DELETE' },
         )
+        const j = await res.json().catch(() => ({}))
         if (res.ok) {
-          const j = await res.json()
           pointsReverted = j.pointsReverted || 0
+        } else if (res.status === 409 && j.code === 'points_already_spent') {
+          loyaltyWarning = `Müşteri ${j.pointsToRevert} puanın bir kısmını harcamış (mevcut bakiye: ${j.currentBalance}). Sadakat puanı manuel düzeltilmeli.`
         }
       } catch { /* puan geri alma hatası ana akışı durdurmasın */ }
     }
@@ -1274,10 +1297,17 @@ export default function AppointmentsPage() {
     })
 
     fetchAppointments()
-    const toastBody = pointsReverted > 0
-      ? `Randevu "Onaylandı" olarak işaretlendi. ${pointsReverted} sadakat puanı geri alındı.`
-      : 'Randevu "Onaylandı" olarak işaretlendi.'
+    let toastBody = 'Randevu "Onaylandı" olarak işaretlendi.'
+    if (pointsReverted > 0) {
+      toastBody = `Randevu "Onaylandı" olarak işaretlendi. ${pointsReverted} sadakat puanı geri alındı.`
+    }
     window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Durum geri alındı', body: toastBody } }))
+    if (loyaltyWarning) {
+      // Harcanmış puan uyarısı — başarı toast'ından sonra ayrı uyarı göster
+      window.dispatchEvent(new CustomEvent('pulse-toast', {
+        detail: { type: 'error', title: 'Sadakat Puanı Geri Alınamadı', body: loyaltyWarning },
+      }))
+    }
   }
 
   function getDayKeyFromDate(dateStr: string): keyof WorkingHours {

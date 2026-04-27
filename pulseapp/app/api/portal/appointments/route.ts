@@ -127,8 +127,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: whError.error }, { status: whError.status })
   }
 
-  // Geçmiş tarih reddi
-  const requested = new Date(`${date}T${startTime}:00`)
+  // Geçmiş tarih reddi — Türkiye saati (+03:00) ile parse, UTC sunucu yorumu
+  // hatasını engelle. Aksi halde müşteri Türkiye 16:00'da "saat 14:00 randevu"
+  // talebi yapabilir (sunucu UTC 14:00 = Türkiye 17:00 sanır).
+  const requested = new Date(`${date}T${startTime}:00+03:00`)
   if (requested.getTime() < Date.now()) {
     return NextResponse.json({ error: 'Geçmiş bir tarihe randevu oluşturulamaz' }, { status: 400 })
   }
