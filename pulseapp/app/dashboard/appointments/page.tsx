@@ -1124,36 +1124,9 @@ export default function AppointmentsPage() {
         }
       }
 
-      // Sadakat puanı ekle — TÜM tamamlanan randevular için (paketli/paketsiz fark etmez).
-      // API'de loyalty_enabled false ise sessizce döner, customer_id yoksa atlanır.
-      if (statusApt.customer_id) {
-        try {
-          const revenueAmount = statusApt.services?.price ?? 0
-          const loyaltyRes = await fetch('/api/loyalty', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              customerId: statusApt.customer_id,
-              appointmentId,
-              revenueAmount,
-            }),
-          })
-          if (loyaltyRes.ok) {
-            const loyaltyData = await loyaltyRes.json()
-            if (loyaltyData.ok && loyaltyData.pointsAdded) {
-              window.dispatchEvent(new CustomEvent('pulse-toast', {
-                detail: {
-                  type: 'system',
-                  title: `+${loyaltyData.pointsAdded} Puan Kazanıldı`,
-                  body: loyaltyData.thresholdCrossed
-                    ? 'Ödül eşiğine ulaşıldı! 🎉'
-                    : `Toplam: ${loyaltyData.newBalance} puan`,
-                },
-              }))
-            }
-          }
-        } catch { /* puan hatası ana akışı durdurmasın */ }
-      }
+      // NOT: Sadakat puanı artık randevu tamamlandığında değil, TAHSİLAT alındığında eklenir.
+      // Tetikleyiciler: /api/invoices/payments (paid geçişi) + /api/pos (paid status).
+      // Tahsilatsız tamamlanan randevular için puan eklenmez — gerçek müşteri davranışına uygun.
     }
 
     // İş akışı tetikleyicileri
@@ -1195,19 +1168,79 @@ export default function AppointmentsPage() {
       return
     }
 
+    // Randevuya bağlı tahsilat (fatura) var mı? Varsa kullanıcıya iade seçeneği sun.
+    let paidInvoice: { id: string; paid_amount: number; total: number } | null = null
+    {
+      const { data: inv } = await supabase
+        .from('invoices')
+        .select('id, paid_amount, total, status')
+        .eq('appointment_id', appointmentId)
+        .eq('business_id', businessId!)
+        .is('deleted_at', null)
+        .gt('paid_amount', 0)
+        .maybeSingle()
+      if (inv) paidInvoice = { id: inv.id, paid_amount: Number(inv.paid_amount), total: Number(inv.total) }
+    }
+
+    let confirmMessage =
+      'Randevu "Onaylandı" durumuna geri alınacak.\n\n' +
+      '• Paket seansıysa kullanılan seans 1 azaltılır.\n' +
+      '• Verilen sadakat puanı geri alınır.\n' +
+      '• Müşteriye bildirim GİTMEZ — sessiz işlem.\n\n' +
+      'Not: Tamamlandığında otomatik gönderilen mesajlar (yorum isteği vb.) varsa geri çekilemez.'
+
+    let refundDecision: 'refund' | 'keep' | null = null
+    if (paidInvoice) {
+      // İlk soru: iade et mi, yoksa para kalsın mı?
+      const refundOk = await confirm({
+        title: 'Tahsilat Mevcut',
+        message:
+          `Bu randevu için ${paidInvoice.paid_amount.toFixed(2)}₺ tahsilat alınmış.\n\n` +
+          'Tahsilatı da iade etmek ister misin?\n\n' +
+          '• "Evet, İade Et" → Para iade kaydı oluşturulur, fatura partial/pending duruma döner, sadakat puanı geri alınır.\n' +
+          '• "Sadece Status" → Para olduğu yerde kalır, sadakat puanı dokunulmaz (zaten ödendi).',
+        confirmText: 'Evet, İade Et',
+        cancelText: 'Sadece Status',
+        variant: 'warning',
+      })
+      refundDecision = refundOk ? 'refund' : 'keep'
+      // Status revert kullanıcı isteğine bağlı — iade yoksa hâlâ status'u geri almak isteyebilir,
+      // bu yüzden ikinci bir onay sormaya gerek yok; doğrudan revert akışına devam.
+      confirmMessage = refundDecision === 'refund'
+        ? `Tahsilat ${paidInvoice.paid_amount.toFixed(2)}₺ iade edilecek + status "Onaylandı" yapılacak. Onaylıyor musun?`
+        : 'Status "Onaylandı" yapılacak, tahsilat olduğu gibi kalacak. Onaylıyor musun?'
+    }
+
     const ok = await confirm({
       title: 'Tamamlandı Durumunu Geri Al',
-      message:
-        'Randevu "Onaylandı" durumuna geri alınacak.\n\n' +
-        '• Paket seansıysa kullanılan seans 1 azaltılır.\n' +
-        '• Verilen sadakat puanı geri alınır.\n' +
-        '• Müşteriye bildirim GİTMEZ — sessiz işlem.\n\n' +
-        'Not: Tamamlandığında otomatik gönderilen mesajlar (yorum isteği vb.) varsa geri çekilemez.',
+      message: confirmMessage,
       confirmText: 'Geri Al',
       cancelText: 'Vazgeç',
       variant: 'warning',
     })
     if (!ok) return
+
+    // İade kararı 'refund' ise — önce iade kaydını yap (loyalty geri alma da bunun içinde olur)
+    if (refundDecision === 'refund' && paidInvoice) {
+      const refundRes = await fetch('/api/invoices/payments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          invoice_id: paidInvoice.id,
+          amount: paidInvoice.paid_amount,
+          method: 'cash',
+          payment_type: 'refund',
+          notes: 'Tamamlandı geri alma — randevu revert',
+        }),
+      })
+      if (!refundRes.ok) {
+        const errJson = await refundRes.json().catch(() => ({}))
+        window.dispatchEvent(new CustomEvent('pulse-toast', {
+          detail: { type: 'error', title: 'İade başarısız', body: errJson.error || 'İade kaydedilemedi.' },
+        }))
+        return
+      }
+    }
 
     // Randevu durumunu geri al — yalnızca hâlâ 'completed' ise (concurrency guard).
     // İki sekme aynı anda tıklarsa sadece biri başarılı olur, diğeri 0 satır günceller.
@@ -1259,11 +1292,13 @@ export default function AppointmentsPage() {
       }
     }
 
-    // Sadakat puanı geri alma (idempotent — randevu için verilen earn'ler kaldırılır)
-    // Harcanmış puan varsa API 409 döner → kullanıcıya uyarı, ana akışı durdurmaz
+    // Sadakat puanı geri alma:
+    // - refundDecision === 'refund' → refund endpoint zaten geri aldı, çift işlem yapma
+    // - refundDecision === 'keep' → para kaldı, puanı da bırak (müşteri hak etti)
+    // - paidInvoice yok → eski sistemden (completion-trigger) kalmış puanlar olabilir, geri al
     let pointsReverted = 0
     let loyaltyWarning: string | null = null
-    if (apt.customer_id) {
+    if (apt.customer_id && refundDecision !== 'keep' && refundDecision !== 'refund') {
       try {
         const res = await fetch(
           `/api/loyalty?customerId=${apt.customer_id}&appointmentId=${appointmentId}`,
@@ -1289,6 +1324,8 @@ export default function AppointmentsPage() {
         from: 'completed',
         to: 'confirmed',
         reason: 'manual_revert',
+        refund_decision: refundDecision,  // 'refund' | 'keep' | null (tahsilat yoktu)
+        refund_amount: refundDecision === 'refund' && paidInvoice ? paidInvoice.paid_amount : 0,
         points_reverted: pointsReverted,
         customer_name: apt.customers?.name || null,
         service_name: apt.services?.name || null,
@@ -1297,7 +1334,11 @@ export default function AppointmentsPage() {
 
     fetchAppointments()
     let toastBody = 'Randevu "Onaylandı" olarak işaretlendi.'
-    if (pointsReverted > 0) {
+    if (refundDecision === 'refund' && paidInvoice) {
+      toastBody = `Randevu geri alındı + ${paidInvoice.paid_amount.toFixed(2)}₺ iade kaydedildi.`
+    } else if (refundDecision === 'keep') {
+      toastBody = 'Randevu geri alındı. Tahsilat olduğu gibi kaldı.'
+    } else if (pointsReverted > 0) {
       toastBody = `Randevu "Onaylandı" olarak işaretlendi. ${pointsReverted} sadakat puanı geri alındı.`
     }
     window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Durum geri alındı', body: toastBody } }))
