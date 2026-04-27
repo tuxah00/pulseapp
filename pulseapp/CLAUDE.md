@@ -456,7 +456,7 @@ ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'tutoring';
 -- app/r/[code]/page.tsx kısa kodu çözerek /book/<businessId>?c=<recipientId> yönlendirmesi yapar
 ```
 
-38. **İki katmanlı yorum talebi** (`077_dual_review_requests.sql`): ⏳ Beklemede (2026-04-27)
+38. **İki katmanlı yorum talebi** (`077_dual_review_requests.sql`): ✅ Uygulandı (2026-04-27)
 ```sql
 -- services.experience_review_delay_days INTEGER DEFAULT 1 — deneyim yorumu kaç gün sonra
 -- services.result_review_delay_days INTEGER NULL — sonuçların görülmesi için süre (NULL = sonuç yorumu atla)
