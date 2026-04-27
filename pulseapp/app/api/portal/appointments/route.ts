@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
     .from('appointments')
     .select(`
       id, appointment_date, start_time, end_time, status, notes,
+      customer_package_id, package_name, package_unit_price,
       services(id, name, price, duration_minutes),
       staff_members(id, name)
     `)
@@ -62,9 +63,13 @@ export async function GET(request: NextRequest) {
  * POST /api/portal/appointments
  *
  * Müşteri portal'dan online randevu oluşturur.
- * - Cookie üzerinden customerId + businessId çekilir
- * - Doğrudan INSERT yapılır (createBooking yerine) — müşteri datasını sıfırlamaz,
- *   appointment_source enum sorunu yaratmaz
+ *
+ * Paket seansı akışı (packageId verilince):
+ *   1. Paket doğrulanır (active, kalan seans > 0, müşteriye ait)
+ *   2. Randevu oluşturulurken customer_package_id + package_name + package_unit_price atanır
+ *   3. package_usages tablosuna rezervasyon kaydı girilir (used_at = randevu saati)
+ *   4. sessions_used DEĞİŞMEZ — seans düşümü randevu tamamlanınca yapılır
+ *   5. İptal olursa rezervasyon silinir, seans korunur
  */
 export async function POST(request: NextRequest) {
   const guard = requirePortalSession(request)
@@ -73,11 +78,32 @@ export async function POST(request: NextRequest) {
 
   const parsed = await validateBody(request, portalAppointmentCreateSchema)
   if (!parsed.ok) return parsed.response
-  const { serviceId, staffId = null, date, startTime, notes = null } = parsed.data
+  const { serviceId, staffId = null, date, startTime, notes = null, packageId = null } = parsed.data
 
   const admin = createAdminClient()
 
-  // Bağımsız sorgular paralel çalışır — 3 serial RTT → 1 paralel RTT
+  // Paket varsa önceden doğrula (INSERT öncesi — fiyat bilgisi lazım)
+  let linkedPkg: { id: string; package_name: string; price_paid: number; sessions_total: number; sessions_used: number } | null = null
+  if (packageId) {
+    const { data: fetchedPkg } = await admin
+      .from('customer_packages')
+      .select('id, package_name, price_paid, sessions_total, sessions_used')
+      .eq('id', packageId)
+      .eq('customer_id', customerId)
+      .eq('business_id', businessId)
+      .eq('status', 'active')
+      .single()
+
+    if (!fetchedPkg) {
+      return NextResponse.json({ error: 'Geçerli aktif paket bulunamadı' }, { status: 400 })
+    }
+    if (fetchedPkg.sessions_used >= fetchedPkg.sessions_total) {
+      return NextResponse.json({ error: 'Bu pakette kullanılabilir seans kalmadı' }, { status: 400 })
+    }
+    linkedPkg = fetchedPkg
+  }
+
+  // Bağımsız sorgular paralel çalışır
   const [
     { data: service, error: svcErr },
     { data: business },
@@ -132,7 +158,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Bu saat dolu. Lütfen başka bir saat seçin.' }, { status: 409 })
   }
 
-  // Randevu INSERT — mevcut müşteri ID kullanılır, enum alanı dahil edilmez
+  // Randevu INSERT
   const apptData: Record<string, unknown> = {
     business_id: businessId,
     customer_id: customerId,
@@ -148,6 +174,16 @@ export async function POST(request: NextRequest) {
   }
   if (staffId) apptData.staff_id = staffId
 
+  // Paket bağlantısı — seans fiyatı hesapla ve randevuya kaydet
+  if (linkedPkg) {
+    apptData.customer_package_id = linkedPkg.id
+    apptData.package_name = linkedPkg.package_name
+    // Paket birim fiyatı: ödenen toplam / toplam seans (1 seans ne kadara denk geliyor)
+    apptData.package_unit_price = linkedPkg.sessions_total > 0
+      ? Math.round((linkedPkg.price_paid / linkedPkg.sessions_total) * 100) / 100
+      : 0
+  }
+
   const { data: appt, error: apptErr } = await admin
     .from('appointments')
     .insert(apptData)
@@ -159,18 +195,31 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Randevu oluşturulamadı' }, { status: 500 })
   }
 
+  // Paket rezervasyon kaydı — seans düşümü YAPILMAZ, sadece "bu randevu bu pakete ait" işareti
+  // Seans used_at: randevu saatine set edilir (ne zaman kullanılacağını gösterir)
+  // sessions_used artışı: randevu tamamlanınca updateStatus içinde yapılır
+  if (linkedPkg) {
+    await admin.from('package_usages').insert({
+      business_id: businessId,
+      customer_package_id: linkedPkg.id,
+      appointment_id: appt.id,
+      used_at: `${date}T${startTime}:00`,
+      notes: 'Rezervasyon — randevu tamamlanınca seans düşülecek',
+    })
+  }
+
   // İşletmeye bildirim (fire-and-forget)
   admin.from('notifications').insert({
     business_id: businessId,
     type: 'appointment',
     title: 'Yeni Online Randevu',
-    body: `${customerForNotif?.name || 'Müşteri'} — ${service.name} — ${date} ${startTime}`,
+    body: `${customerForNotif?.name || 'Müşteri'} — ${service.name} — ${date} ${startTime}${linkedPkg ? ' (Paket Seansı)' : ''}`,
     related_id: appt.id,
     related_type: 'appointment',
     is_read: false,
   }).then(() => undefined, () => undefined)
 
-  // Audit log (fire-and-forget — log hatası müşteriye HTTP 500 döndürmemeli)
+  // Audit log (fire-and-forget)
   logPortalAction({
     customerId,
     businessId,
@@ -184,6 +233,8 @@ export async function POST(request: NextRequest) {
       time: startTime,
       serviceId,
       staffId,
+      package_id: linkedPkg?.id || null,
+      package_name: linkedPkg?.package_name || null,
     },
     ipAddress: getClientIp(request),
   })
@@ -194,7 +245,10 @@ export async function POST(request: NextRequest) {
       appointment_date: date,
       start_time: startTime,
       end_time: endTime,
-      service: { name: service.name, price: service.price },
+      service: { name: service.name, price: linkedPkg
+        ? Math.round((linkedPkg.price_paid / linkedPkg.sessions_total) * 100) / 100
+        : service.price,
+      },
     },
   })
 }

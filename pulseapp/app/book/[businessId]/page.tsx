@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { useParams, useSearchParams } from 'next/navigation'
 import {
   CheckCircle2, ChevronLeft, Loader2, Clock, Calendar,
-  User, Phone, AlertCircle, Bell, MapPin, Zap, CalendarPlus, UserCircle2, Sparkles,
+  User, Phone, AlertCircle, Bell, MapPin, Zap, CalendarPlus, UserCircle2, Sparkles, Package,
 } from 'lucide-react'
 import type { WorkingHours } from '@/types'
 import { getInitials } from '@/lib/utils'
@@ -34,6 +34,15 @@ interface ServiceData {
 interface StaffData {
   id: string
   name: string
+}
+
+interface ServicePackageData {
+  id: string
+  name: string
+  sessions_total: number
+  price: number
+  validity_days: number | null
+  service?: { id: string; name: string } | null
 }
 
 const STEPS = ['Hizmet', 'Tarih & Saat', 'Bilgiler', 'Onay'] as const
@@ -114,6 +123,7 @@ export default function BookingPage() {
   const [business, setBusiness] = useState<BusinessData | null>(null)
   const [services, setServices] = useState<ServiceData[]>([])
   const [staff, setStaff] = useState<StaffData[]>([])
+  const [servicePackages, setServicePackages] = useState<ServicePackageData[]>([])
   const [campaignInfo, setCampaignInfo] = useState<{ name: string; description: string | null } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -143,6 +153,20 @@ export default function BookingPage() {
   const selectedService = services.find(s => s.id === selectedServiceId) || null
   const [availableSlots, setAvailableSlots] = useState<string[]>([])
   const [slotsLoading, setSlotsLoading] = useState(false)
+
+  // Hizmet seçilince → o hizmete ait paketleri çek (keşif banner'ı için)
+  useEffect(() => {
+    if (!businessId || !selectedServiceId) {
+      setServicePackages([])
+      return
+    }
+    let cancelled = false
+    fetch(`/api/public/business/${businessId}/packages?serviceId=${selectedServiceId}`)
+      .then((r) => r.ok ? r.json() : { packages: [] })
+      .then((d) => { if (!cancelled) setServicePackages(d.packages || []) })
+      .catch(() => { if (!cancelled) setServicePackages([]) })
+    return () => { cancelled = true }
+  }, [businessId, selectedServiceId])
 
   // Hizmet değişince → o hizmeti yapabilen personeli yeniden çek
   useEffect(() => {
@@ -548,6 +572,39 @@ export default function BookingPage() {
                 })}
               </div>
             )}
+            {/* Paket keşif banner'ı — seçili hizmet için paket varsa göster */}
+            {selectedServiceId && servicePackages.length > 0 && (
+              <div className="mt-4 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-4">
+                <div className="flex items-start gap-3">
+                  <Package className="h-5 w-5 text-amber-700 dark:text-amber-400 mt-0.5 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+                      Bu hizmet için {servicePackages.length > 1 ? `${servicePackages.length} paket` : 'paket'} mevcut
+                    </p>
+                    <div className="mt-2 space-y-2">
+                      {servicePackages.map((pkg) => (
+                        <div key={pkg.id} className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="text-xs font-medium text-amber-800 dark:text-amber-300 truncate">{pkg.name}</p>
+                            <p className="text-xs text-amber-700 dark:text-amber-400">
+                              {pkg.sessions_total} seans
+                              {pkg.validity_days ? ` · ${pkg.validity_days} gün geçerli` : ''}
+                            </p>
+                          </div>
+                          <p className="text-xs font-bold text-amber-800 dark:text-amber-300 whitespace-nowrap shrink-0">
+                            {formatPrice(pkg.price)}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="mt-2.5 text-[11px] text-amber-600 dark:text-amber-500">
+                      💡 İlk ziyaretinizde klinikte bu paketi satın alabilirsiniz.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="mt-5 pt-4 border-t border-gray-100 dark:border-gray-800">
               <button
                 onClick={() => setStep(2)}

@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { Package, CalendarClock, CheckCircle2 } from 'lucide-react'
+import { Package, CalendarClock, CheckCircle2, CalendarPlus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   TreatmentProgressCard,
@@ -11,8 +11,9 @@ import {
 } from '../_components/treatment-progress-card'
 import { SectionHeader } from '../_components/section-header'
 import { getTreatmentsPageTitle } from '@/lib/portal/sector-labels'
-import { formatUntil, daysSince } from '@/lib/portal/date-helpers'
+import { formatUntil } from '@/lib/portal/date-helpers'
 import { SkeletonList } from '../_components/skeleton-card'
+import BookingModal from '../_components/booking-modal'
 
 interface CustomerPackage {
   id: string
@@ -53,6 +54,13 @@ function first<T>(v: T | T[] | null | undefined): T | null {
   return v
 }
 
+interface BookingTarget {
+  packageId: string
+  packageName: string
+  serviceId: string
+  sessionsRemaining: number
+}
+
 export default function PortalTreatmentsPage() {
   const params = useParams()
   const businessId = params.businessId as string
@@ -61,6 +69,7 @@ export default function PortalTreatmentsPage() {
   const [packages, setPackages] = useState<CustomerPackage[]>([])
   const [sector, setSector] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [bookingTarget, setBookingTarget] = useState<BookingTarget | null>(null)
 
   useEffect(() => {
     (async () => {
@@ -83,6 +92,34 @@ export default function PortalTreatmentsPage() {
       }
     })()
   }, [])
+
+  const handleBookPackage = useCallback((pkg: CustomerPackage) => {
+    const service = first(pkg.service)
+    if (!service) return
+    setBookingTarget({
+      packageId: pkg.id,
+      packageName: pkg.package_name,
+      serviceId: service.id,
+      sessionsRemaining: Math.max(0, pkg.sessions_total - pkg.sessions_used),
+    })
+  }, [])
+
+  const handleBookingCreated = useCallback(() => {
+    // Seans düşümü API tarafında yapıldı; packages state'ini güncelle
+    if (bookingTarget) {
+      setPackages((prev) =>
+        prev.map((p) => {
+          if (p.id !== bookingTarget.packageId) return p
+          const newUsed = p.sessions_used + 1
+          return {
+            ...p,
+            sessions_used: newUsed,
+            status: newUsed >= p.sessions_total ? 'completed' : p.status,
+          }
+        }),
+      )
+    }
+  }, [bookingTarget])
 
   const title = getTreatmentsPageTitle(sector)
 
@@ -149,7 +186,11 @@ export default function PortalTreatmentsPage() {
               />
               <div className="grid gap-3 sm:grid-cols-2">
                 {activePackages.map((pkg) => (
-                  <PackageCard key={pkg.id} pkg={pkg} />
+                  <PackageCard
+                    key={pkg.id}
+                    pkg={pkg}
+                    onBookSession={handleBookPackage}
+                  />
                 ))}
               </div>
             </section>
@@ -184,15 +225,33 @@ export default function PortalTreatmentsPage() {
           )}
         </>
       )}
+
+      {/* Paket seansı randevu modalı */}
+      <BookingModal
+        businessId={businessId}
+        open={!!bookingTarget}
+        onClose={() => setBookingTarget(null)}
+        onCreated={handleBookingCreated}
+        preselectedServiceId={bookingTarget?.serviceId}
+        customerPackageId={bookingTarget?.packageId}
+        packageName={bookingTarget?.packageName}
+        sessionsRemaining={bookingTarget?.sessionsRemaining}
+      />
     </div>
   )
 }
 
-function PackageCard({ pkg }: { pkg: CustomerPackage }) {
+interface PackageCardProps {
+  pkg: CustomerPackage
+  onBookSession?: (pkg: CustomerPackage) => void
+}
+
+function PackageCard({ pkg, onBookSession }: PackageCardProps) {
   const service = first(pkg.service)
   const remaining = Math.max(0, pkg.sessions_total - pkg.sessions_used)
   const progress = pkg.sessions_total > 0 ? Math.round((pkg.sessions_used / pkg.sessions_total) * 100) : 0
   const isActive = pkg.status === 'active'
+  const canBook = isActive && remaining > 0 && !!service?.id && !!onBookSession
 
   return (
     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-5">
@@ -251,6 +310,17 @@ function PackageCard({ pkg }: { pkg: CustomerPackage }) {
         <p className="mt-3 text-xs text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800/50 rounded-lg p-2.5">
           {pkg.notes}
         </p>
+      )}
+
+      {/* Seans kullan butonu */}
+      {canBook && (
+        <button
+          onClick={() => onBookSession(pkg)}
+          className="mt-4 w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-pulse-900 hover:bg-pulse-800 text-white text-sm font-medium transition-colors"
+        >
+          <CalendarPlus className="w-4 h-4" />
+          Seans Planla
+        </button>
       )}
     </div>
   )

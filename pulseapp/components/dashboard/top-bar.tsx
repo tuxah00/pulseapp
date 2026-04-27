@@ -59,6 +59,8 @@ const ROUTE_LABELS: Record<string, string> = {
   rewards: 'Ödüller',
   records: 'Dosya Kayıtları',
   new: 'Yeni',
+  account: 'Hesabım',
+  features: 'Özellikler',
 }
 
 const RECORDS_LABELS: Partial<Record<string, string>> = {

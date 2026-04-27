@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { requirePermission } from '@/lib/api/with-permission'
+import { logAuditServer } from '@/lib/utils/audit'
 import type { POSItem, InvoiceItem, POSPaymentStatus } from '@/types'
 
 // GET: İşlem listesi
@@ -32,7 +33,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const auth = await requirePermission(req, 'pos')
   if (!auth.ok) return auth.response
-  const { businessId, userId } = auth.ctx
+  const { businessId, userId, staffId, staffName } = auth.ctx
 
   const supabase = createServerSupabaseClient()
   const body = await req.json()
@@ -47,6 +48,36 @@ export async function POST(req: NextRequest) {
   }
   if (!payments || !Array.isArray(payments) || payments.length === 0) {
     return NextResponse.json({ error: 'payments gerekli' }, { status: 400 })
+  }
+
+  // Çift tahsilat guard'ı — appointment_id verildiyse, randevu paket seansı veya
+  // zaten ödenmiş bir faturayla bağlıysa yeni POS işlemi reddedilir.
+  if (appointment_id) {
+    const { data: apt } = await supabase
+      .from('appointments')
+      .select('id, customer_package_id, invoices(status, paid_amount)')
+      .eq('id', appointment_id)
+      .eq('business_id', businessId)
+      .is('deleted_at', null)
+      .single()
+    if (apt) {
+      if (apt.customer_package_id) {
+        return NextResponse.json(
+          { error: 'Bu randevu paket seansından kullanıldı; ödeme paket satışında alındı.' },
+          { status: 409 },
+        )
+      }
+      const invs = Array.isArray(apt.invoices) ? apt.invoices : []
+      const alreadyPaid = invs.some((i: { status: string; paid_amount: number | null }) =>
+        i.status === 'paid' || (i.paid_amount ?? 0) > 0,
+      )
+      if (alreadyPaid) {
+        return NextResponse.json(
+          { error: 'Bu randevunun tahsilatı zaten alınmış.' },
+          { status: 409 },
+        )
+      }
+    }
   }
 
   const subtotal = items.reduce((sum: number, item: POSItem) => sum + item.total, 0)
@@ -198,6 +229,23 @@ export async function POST(req: NextRequest) {
   if (transaction && invoice_id) {
     await supabase.from('invoices').update({ pos_transaction_id: transaction.id }).eq('id', invoice_id)
   }
+
+  // Audit log
+  const txCustomer = transaction?.customers as { name?: string } | null
+  await logAuditServer({
+    businessId,
+    staffId,
+    staffName,
+    action: 'create',
+    resource: 'pos_transaction',
+    resourceId: transaction.id,
+    details: {
+      receipt_number: transaction.receipt_number,
+      customer_name: txCustomer?.name || null,
+      total: transaction.total,
+      items_count: (transaction.items as unknown[]).length,
+    },
+  })
 
   // Referans ödülü kullanıldıysa işaretle
   if (referral_id) {

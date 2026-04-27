@@ -28,7 +28,7 @@ import {
   CalendarDays,
   CalendarRange,
   Search, Filter, ArrowUpDown,
-  Users, User, Building2, Ban, Lock, BellRing, Sparkles, ExternalLink,
+  Users, User, Building2, Ban, Lock, BellRing, Sparkles, ExternalLink, Package,
 } from 'lucide-react'
 import { formatTime, formatDate, getStatusColor, formatCurrency, cn, formatDateISO } from '@/lib/utils'
 import { STATUS_LABELS, type AppointmentStatus, type Service, type StaffMember, type WorkingHours, type BlockedSlot } from '@/types'
@@ -43,6 +43,10 @@ type AppointmentView = AppointmentRow & {
   staff_members: { name: string } | null
   campaigns: { name: string } | null
   invoices: { id: string; status: string; paid_amount: number }[] | null
+  // Paket seansı bağlantısı (migration 077)
+  customer_package_id?: string | null
+  package_name?: string | null
+  package_unit_price?: number | null
 }
 import { logAudit } from '@/lib/utils/audit'
 import { addMonthsSafe } from '@/lib/utils/date-range'
@@ -1077,31 +1081,38 @@ export default function AppointmentsPage() {
         service_name: statusApt?.services?.name || null,
       },
     })
-    // Randevu tamamlandığında müşterinin aktif paketinden seans düş
-    if (newStatus === 'completed' && statusApt?.customer_id) {
-      const { data: activePkgs } = await supabase
+    // Randevu tamamlandığında — paket seansıysa seans düş
+    // customer_package_id atanmış randevular için: o paketi düş (yanlış paket seçimi yok)
+    // Atanmamış randevular: paketten bağımsız sıradan randevu, dokunma
+    if (newStatus === 'completed' && statusApt?.customer_package_id) {
+      const { data: pkg } = await supabase
         .from('customer_packages')
         .select('id, sessions_used, sessions_total')
-        .eq('business_id', businessId!)
-        .eq('customer_id', statusApt.customer_id)
-        .eq('status', 'active')
-        .order('purchase_date', { ascending: true })
-        .limit(1)
-      if (activePkgs && activePkgs.length > 0) {
-        const pkg = activePkgs[0]
+        .eq('id', statusApt.customer_package_id)
+        .single()
+      if (pkg) {
         const newUsed = pkg.sessions_used + 1
         const newPkgStatus = newUsed >= pkg.sessions_total ? 'completed' : 'active'
         await supabase
           .from('customer_packages')
           .update({ sessions_used: newUsed, status: newPkgStatus })
           .eq('id', pkg.id)
-        await supabase.from('package_usages').insert({
-          business_id: businessId,
-          customer_package_id: pkg.id,
-          appointment_id: appointmentId,
-          staff_id: currentStaffId || null,
-          notes: 'Randevu tamamlandı — otomatik seans düşümü',
-        })
+        // Rezervasyon kaydı zaten var (portal booking) — yoksa oluştur (staff-created)
+        const { data: existingUsage } = await supabase
+          .from('package_usages')
+          .select('id')
+          .eq('appointment_id', appointmentId)
+          .maybeSingle()
+        if (!existingUsage) {
+          await supabase.from('package_usages').insert({
+            business_id: businessId,
+            customer_package_id: pkg.id,
+            appointment_id: appointmentId,
+            staff_id: currentStaffId || null,
+            used_at: new Date().toISOString(),
+            notes: 'Randevu tamamlandı',
+          })
+        }
       }
       // Sadakat puanı ekle (ayar kapalıysa API sessizce döner)
       try {
@@ -2501,10 +2512,19 @@ export default function AppointmentsPage() {
                       <span className="font-semibold text-sm text-gray-900 dark:text-gray-100">{apt.customers?.name || 'İsimsiz'}</span>
                       <span className={`badge text-xs ${getStatusColor(apt.status)}`}>{STATUS_LABELS[apt.status as keyof typeof STATUS_LABELS]}</span>
                       {apt.recurrence_group_id && <span title="Tekrarlayan randevu"><Repeat className="h-3.5 w-3.5 text-purple-400" /></span>}
+                      {apt.package_name && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" title={apt.package_name}>
+                          <Package className="h-3 w-3" /> Paket
+                        </span>
+                      )}
                       {isPastUnresolved(apt) && <span className="h-2.5 w-2.5 rounded-full bg-red-500 flex-shrink-0" title={apt.status === 'completed' ? 'Tahsilat yapılmamış' : 'Sonuç girilmemiş'} />}
                     </div>
                     <div className="mt-0.5 flex items-center gap-2 text-xs text-gray-400">
                       {apt.services?.name && <span>{apt.services.name}</span>}
+                      {apt.package_unit_price != null
+                        ? <><span>·</span><span className="text-amber-600 dark:text-amber-400 font-medium">{formatCurrency(apt.package_unit_price)}/seans</span></>
+                        : apt.services?.price ? <><span>·</span><span>{formatCurrency(apt.services.price)}</span></> : null
+                      }
                       {apt.staff_members?.name && <><span>·</span><span>{apt.staff_members.name}</span></>}
                       {apt.notes && <><span>·</span><span className="truncate italic">{apt.notes}</span></>}
                     </div>
@@ -2553,11 +2573,15 @@ export default function AppointmentsPage() {
                 <div className="flex items-center gap-1 mb-2 flex-wrap">
                   <span className={`badge text-xs ${getStatusColor(apt.status)}`}>{STATUS_LABELS[apt.status as keyof typeof STATUS_LABELS]}</span>
                   {apt.recurrence_group_id && <Repeat className="h-3 w-3 text-purple-400" />}
+                  {apt.package_name && <Package className="h-3 w-3 text-amber-500" aria-label={apt.package_name} />}
                 </div>
                 <p className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{apt.customers?.name || 'İsimsiz'}</p>
                 <p className="text-xs text-gray-400 truncate mt-0.5">{apt.services?.name || '—'}</p>
                 {apt.staff_members?.name && <p className="text-xs text-gray-400 truncate">{apt.staff_members.name}</p>}
-                {apt.services?.price && <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 mt-1">{formatCurrency(apt.services.price)}</p>}
+                {apt.package_unit_price != null
+                  ? <p className="text-xs font-medium text-amber-600 dark:text-amber-400 mt-1">{formatCurrency(apt.package_unit_price)}/seans</p>
+                  : apt.services?.price ? <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 mt-1">{formatCurrency(apt.services.price)}</p> : null
+                }
 
                 <div className="mt-auto pt-3 flex items-center justify-end" onClick={(e) => e.stopPropagation()}>
                   <ActionButtons apt={apt} size="sm" />
@@ -2608,6 +2632,15 @@ export default function AppointmentsPage() {
                     >
                       <Sparkles className="h-3 w-3 mr-1" />
                       {selectedAppointment.campaigns.name}
+                    </span>
+                  )}
+                  {(selectedAppointment as AppointmentView).package_name && (
+                    <span className="badge bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300">
+                      <Package className="h-3 w-3 mr-1" />
+                      {(selectedAppointment as AppointmentView).package_name}
+                      {(selectedAppointment as AppointmentView).package_unit_price != null && (
+                        <> · {formatCurrency((selectedAppointment as AppointmentView).package_unit_price!)}/seans</>
+                      )}
                     </span>
                   )}
                 </div>
@@ -2702,14 +2735,30 @@ export default function AppointmentsPage() {
                     </button>
                   </>
                 )}
-                {selectedAppointment.status === 'completed' && (
+                {selectedAppointment.status === 'completed' && (() => {
+                  // Tahsilat butonunu gizleme koşulları:
+                  //   1) Paket seansı: ödeme paket satıldığında alındı
+                  //   2) Faturası ödenmiş randevu: paid_amount > 0 veya status='paid'
+                  const apt = selectedAppointment as AppointmentView
+                  const isPackageSession = !!apt.customer_package_id
+                  const invs = Array.isArray(apt.invoices) ? apt.invoices : []
+                  const isAlreadyPaid = invs.some(i => i.status === 'paid' || (i.paid_amount ?? 0) > 0)
+                  const paymentLocked = isPackageSession || isAlreadyPaid
+                  return (
                   <>
-                    <button
-                      onClick={() => setQuickPaymentTarget(selectedAppointment)}
-                      className="w-full flex items-center gap-2 rounded-lg border border-pulse-200 dark:border-pulse-800 bg-pulse-50 dark:bg-pulse-900/20 px-4 py-2.5 text-sm font-medium text-pulse-900 dark:text-pulse-300 hover:bg-pulse-100 dark:hover:bg-pulse-800/30 transition-colors"
-                    >
-                      <CheckCircle className="h-4 w-4" /> Tahsilat Al
-                    </button>
+                    {paymentLocked ? (
+                      <div className="w-full flex items-center gap-2 rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 px-4 py-2.5 text-sm font-medium text-emerald-700 dark:text-emerald-300">
+                        <CheckCircle className="h-4 w-4" />
+                        {isPackageSession ? 'Ödeme paket satışında alındı' : 'Tahsilat tamamlandı'}
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setQuickPaymentTarget(selectedAppointment)}
+                        className="w-full flex items-center gap-2 rounded-lg border border-pulse-200 dark:border-pulse-800 bg-pulse-50 dark:bg-pulse-900/20 px-4 py-2.5 text-sm font-medium text-pulse-900 dark:text-pulse-300 hover:bg-pulse-100 dark:hover:bg-pulse-800/30 transition-colors"
+                      >
+                        <CheckCircle className="h-4 w-4" /> Tahsilat Al
+                      </button>
+                    )}
                     {selectedAppointment.customer_id && selectedAppointment.customers?.name && (
                       <button
                         onClick={() => setFollowUpTarget({
@@ -2723,7 +2772,8 @@ export default function AppointmentsPage() {
                       </button>
                     )}
                   </>
-                )}
+                  )
+                })()}
                 {selectedAppointment.status === 'confirmed' && (
                   <>
                     <button onClick={() => updateStatus(selectedAppointment.id, 'completed')} className="w-full flex items-center gap-2 rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 px-4 py-2.5 text-sm font-medium text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-800/30 transition-colors">
