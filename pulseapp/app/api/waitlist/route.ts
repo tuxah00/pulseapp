@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { logAuditServer } from '@/lib/utils/audit'
 import { expireStaleWaitlistHolds } from '@/lib/waitlist/cleanup'
+import { scanAndNotifyWaitlistEntry } from '@/lib/waitlist/scan'
 
 async function getStaffInfo(supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>) {
   const { data: { user } } = await supabase.auth.getUser()
@@ -95,7 +97,17 @@ export async function POST(request: NextRequest) {
     details: { customer_name: customerName, phone: customerPhone, service_id: serviceId || null },
   })
 
-  return NextResponse.json({ entry: data })
+  // Proaktif tarama — yeni kayıt için takvimde uygun slot var mı?
+  // RLS bypass ile çalışır (cross-table read: appointments + shifts + blocked_slots).
+  // Hata olursa kayıt eklenmiş sayılır, sadece otomatik bildirim atlanmış olur.
+  let autoMatch: { matched: boolean; slot?: { date: string; time: string }; reason?: string } | null = null
+  try {
+    autoMatch = await scanAndNotifyWaitlistEntry(createAdminClient(), staff.business_id, data.id)
+  } catch (err) {
+    console.error('[waitlist] proaktif tarama hatası:', err)
+  }
+
+  return NextResponse.json({ entry: data, autoMatch })
 }
 
 // PATCH — Kaydı güncelle (deaktif et, bildirim gönderildi işaretle)

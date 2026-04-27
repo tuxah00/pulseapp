@@ -456,6 +456,14 @@ ALTER TYPE sector_type ADD VALUE IF NOT EXISTS 'tutoring';
 -- app/r/[code]/page.tsx kısa kodu çözerek /book/<businessId>?c=<recipientId> yönlendirmesi yapar
 ```
 
+39. **Bekleme listesi proaktif tarama** (`078_gap_fill_appointment_optional.sql`): ✅ Uygulandı (2026-04-27)
+```sql
+-- gap_fill_notifications.appointment_id NOT NULL → NULL'a izin verir
+-- source CHECK'e 'proactive' değeri eklendi (yeni kayıt sonrası takvim taraması)
+-- Yeni kayıt eklendiğinde / manuel "Otomatik bul" butonu ile takvimde uygun slot
+-- aranır, bulunursa direkt bildirim gider (iptal beklemeden)
+```
+
 38. **İki katmanlı yorum talebi** (`077_dual_review_requests.sql`): ✅ Uygulandı (2026-04-27)
 ```sql
 -- services.experience_review_delay_days INTEGER DEFAULT 1 — deneyim yorumu kaç gün sonra
