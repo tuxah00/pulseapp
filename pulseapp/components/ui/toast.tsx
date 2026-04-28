@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Calendar, Star, CreditCard, Users, Settings, Package,
-  X, Bell, ClipboardCheck, Loader2, CheckCircle2, AlertCircle,
+  X, Bell, ClipboardCheck,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -19,16 +19,14 @@ interface ToastItem {
   created_at: number // timestamp for auto-dismiss
 }
 
-const TYPE_CONFIG: Record<string, { icon: any; bgColor: string; borderColor: string; iconColor: string; spin?: boolean }> = {
+const TYPE_CONFIG: Record<string, { icon: any; bgColor: string; borderColor: string; iconColor: string }> = {
   appointment: { icon: Calendar, bgColor: 'bg-blue-50 dark:bg-blue-900/30', borderColor: 'border-blue-200 dark:border-blue-800', iconColor: 'text-blue-500' },
   review: { icon: Star, bgColor: 'bg-amber-50 dark:bg-amber-900/30', borderColor: 'border-amber-200 dark:border-amber-800', iconColor: 'text-amber-500' },
   payment: { icon: CreditCard, bgColor: 'bg-green-50 dark:bg-green-900/30', borderColor: 'border-green-200 dark:border-green-800', iconColor: 'text-green-500' },
   customer: { icon: Users, bgColor: 'bg-purple-50 dark:bg-purple-900/30', borderColor: 'border-purple-200 dark:border-purple-800', iconColor: 'text-purple-500' },
   system: { icon: Settings, bgColor: 'bg-gray-50 dark:bg-gray-800', borderColor: 'border-gray-200 dark:border-gray-700', iconColor: 'text-gray-500' },
   stock_alert: { icon: Package, bgColor: 'bg-red-50 dark:bg-red-900/30', borderColor: 'border-red-200 dark:border-red-800', iconColor: 'text-red-500' },
-  error: { icon: AlertCircle, bgColor: 'bg-red-50 dark:bg-red-900/30', borderColor: 'border-red-300 dark:border-red-700', iconColor: 'text-red-600 dark:text-red-400' },
-  success: { icon: CheckCircle2, bgColor: 'bg-green-50 dark:bg-green-900/30', borderColor: 'border-green-200 dark:border-green-800', iconColor: 'text-green-600 dark:text-green-400' },
-  pending: { icon: Loader2, bgColor: 'bg-gray-50 dark:bg-gray-800/60', borderColor: 'border-gray-200 dark:border-gray-700', iconColor: 'text-gray-500 dark:text-gray-400', spin: true },
+  error: { icon: X, bgColor: 'bg-red-50 dark:bg-red-900/30', borderColor: 'border-red-300 dark:border-red-700', iconColor: 'text-red-600 dark:text-red-400' },
   consultation_request: { icon: ClipboardCheck, bgColor: 'bg-violet-50 dark:bg-violet-900/30', borderColor: 'border-violet-200 dark:border-violet-800', iconColor: 'text-violet-600 dark:text-violet-400' },
 }
 
@@ -54,6 +52,9 @@ export default function ToastContainer() {
   }, [])
 
   const addToast = useCallback((detail: any) => {
+    // pending/success/error → üst orta operasyon bildirimine yönlendiriliyor (DashboardShell handle ediyor)
+    // Bu container yalnızca sistem/uygulama bildirimleri (appointment, review, payment vb.)
+    if (['pending', 'success', 'error'].includes(detail.type)) return
     const toast: ToastItem = {
       id: detail.id || crypto.randomUUID(),
       type: detail.type || 'system',
@@ -64,28 +65,11 @@ export default function ToastContainer() {
       created_at: Date.now(),
     }
     setToasts(prev => {
-      // Aynı ID varsa: pending → success/error geçişi gibi durumlarda update et
-      const existingIndex = prev.findIndex(t => t.id === toast.id)
-      if (existingIndex >= 0) {
-        const next = [...prev]
-        next[existingIndex] = toast
-        return next
-      }
       const next = [toast, ...prev]
       if (next.length > MAX_TOASTS) return next.slice(0, MAX_TOASTS)
       return next
     })
   }, [])
-
-  // Toast'u dışarıdan kapatmak için event (pending toast'lar için)
-  useEffect(() => {
-    function handleDismiss(e: Event) {
-      const detail = (e as CustomEvent).detail
-      if (detail?.id) removeToast(detail.id)
-    }
-    window.addEventListener('pulse-toast-dismiss', handleDismiss)
-    return () => window.removeEventListener('pulse-toast-dismiss', handleDismiss)
-  }, [removeToast])
 
   useEffect(() => {
     function handleToastEvent(e: Event) {
@@ -96,12 +80,12 @@ export default function ToastContainer() {
     return () => window.removeEventListener('pulse-toast', handleToastEvent)
   }, [addToast])
 
-  // Auto-dismiss — pending toast'lar otomatik kapanmaz, dış olayla kapatılır
+  // Auto-dismiss
   useEffect(() => {
     if (toasts.length === 0) return
     const interval = setInterval(() => {
       const now = Date.now()
-      setToasts(prev => prev.filter(t => t.type === 'pending' || now - t.created_at < AUTO_DISMISS_MS))
+      setToasts(prev => prev.filter(t => now - t.created_at < AUTO_DISMISS_MS))
     }, 500)
     return () => clearInterval(interval)
   }, [toasts.length])
@@ -139,7 +123,7 @@ export default function ToastContainer() {
           >
             <div className="flex items-start gap-3 p-3">
               <div className={cn('mt-0.5 flex-shrink-0', config.iconColor)}>
-                <Icon className={cn('h-5 w-5', config.spin && 'animate-spin')} />
+                <Icon className="h-5 w-5" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
@@ -158,16 +142,12 @@ export default function ToastContainer() {
                 <X className="h-3.5 w-3.5" />
               </button>
             </div>
-            {/* Progress bar — pending'de sürekli akan animasyon, diğerlerinde geri sayım */}
-            <div className="h-0.5 bg-gray-200/50 dark:bg-gray-700/50 overflow-hidden">
-              {toast.type === 'pending' ? (
-                <div className={cn('h-full w-1/3 animate-pending-bar', config.iconColor.replace('text-', 'bg-'))} />
-              ) : (
-                <div
-                  className={cn('h-full transition-all duration-500', config.iconColor.replace('text-', 'bg-'))}
-                  style={{ width: `${progress * 100}%` }}
-                />
-              )}
+            {/* Progress bar */}
+            <div className="h-0.5 bg-gray-200/50 dark:bg-gray-700/50">
+              <div
+                className={cn('h-full transition-all duration-500', config.iconColor.replace('text-', 'bg-'))}
+                style={{ width: `${progress * 100}%` }}
+              />
             </div>
           </div>
         )

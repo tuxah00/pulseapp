@@ -55,9 +55,16 @@ function DashboardShellInner({
   const router = useRouter()
   const [commandOpen, setCommandOpen] = useState(false)
   const [isDesktop, setIsDesktop] = useState(false)
-  const [successNotif, setSuccessNotif] = useState<{ title: string; body?: string } | null>(null)
+  // Üst orta bildirim — pending/success/error variant'ı destekler.
+  // Aynı id ile yeniden dispatch edilirse REPLACE (pending → success/error geçişi).
+  const [opNotif, setOpNotif] = useState<{
+    id?: string
+    variant: 'pending' | 'success' | 'error'
+    title: string
+    body?: string
+  } | null>(null)
 
-  const dismissSuccess = useCallback(() => setSuccessNotif(null), [])
+  const dismissOpNotif = useCallback(() => setOpNotif(null), [])
 
   // Breakpoint detection
   useEffect(() => {
@@ -110,9 +117,14 @@ function DashboardShellInner({
     function handlePulseToast(e: Event) {
       const detail = (e as CustomEvent).detail
       if (!detail) return
-      // Success type → üst-orta bildirim bileşeni
-      if (detail.type === 'success') {
-        setSuccessNotif({ title: detail.title, body: detail.body ?? undefined })
+      // pending / success / error → üst-orta operasyon bildirimi (id ile replace edilebilir)
+      if (detail.type === 'pending' || detail.type === 'success' || detail.type === 'error') {
+        setOpNotif({
+          id: detail.id,
+          variant: detail.type,
+          title: detail.title,
+          body: detail.body ?? undefined,
+        })
         return
       }
       const fn = TYPE_MAP[detail.type] ?? toast
@@ -197,12 +209,13 @@ function DashboardShellInner({
         closeButton
       />
 
-      {/* Başarı bildirimi — üst orta */}
+      {/* Operasyon bildirimi — üst orta. Pending → success/error geçişi tek bileşende */}
       <SuccessNotification
-        show={!!successNotif}
-        title={successNotif?.title || ''}
-        body={successNotif?.body}
-        onDismiss={dismissSuccess}
+        show={!!opNotif}
+        variant={opNotif?.variant ?? 'success'}
+        title={opNotif?.title || ''}
+        body={opNotif?.body}
+        onDismiss={dismissOpNotif}
       />
     </div>
   )
