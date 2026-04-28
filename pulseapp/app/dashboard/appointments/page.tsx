@@ -1060,6 +1060,27 @@ export default function AppointmentsPage() {
 
   async function updateStatus(appointmentId: string, newStatus: AppointmentStatus, e?: React.MouseEvent) {
     e?.stopPropagation()
+
+    // 'Tamamlandı' işareti için veri bütünlüğü guard'ı:
+    // service_id null olan randevular bekleme listesi hold'undan veya eksik
+    // veriden gelmiş olabilir → tamamlandı işaretlemek tahsilat/sadakat tetikleyicilerini
+    // bozar. Kullanıcıya onay sor, yanlışlıkla işaretlemeyi engelle.
+    if (newStatus === 'completed') {
+      const apt = appointments.find(a => a.id === appointmentId)
+      if (apt && !apt.service_id) {
+        const proceed = await confirm({
+          title: 'Hizmet Seçilmemiş',
+          message:
+            'Bu randevuda hizmet seçilmemiş. Tamamlandı işaretlersen tahsilat ve sadakat takibi düzgün çalışmaz.\n\n' +
+            'Önce randevuyu düzenleyip hizmet seçmen önerilir. Yine de devam etmek istiyor musun?',
+          confirmText: 'Yine de İşaretle',
+          cancelText: 'Vazgeç',
+          variant: 'warning',
+        })
+        if (!proceed) return
+      }
+    }
+
     setStatusLoadingId(appointmentId)
     const { error } = await supabase.from('appointments').update({ status: newStatus }).eq('id', appointmentId)
     if (error) {
