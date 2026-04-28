@@ -6,7 +6,7 @@ import { getCustomerLabelSingular } from '@/lib/config/sector-modules'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import {
-  Plus, Clock, Search, Loader2, Phone, Calendar, User, Bell, BellOff, Trash2, X, ShieldX, CheckCircle, CalendarPlus, Zap, UserCircle2, SkipForward
+  Plus, Clock, Search, Loader2, Phone, Calendar, User, Bell, BellOff, Trash2, X, ShieldX, CheckCircle, CalendarPlus, Zap, UserCircle2, SkipForward, ToggleLeft, ToggleRight
 } from 'lucide-react'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import { CustomerSearchSelect } from '@/components/ui/customer-search-select'
@@ -86,6 +86,9 @@ export default function WaitlistPage() {
   const supabase = createClient()
   const { confirm } = useConfirm()
 
+  // Bugünün tarihi — geçmiş tarih girişini engellemek için
+  const today = new Date().toISOString().split('T')[0]
+
   const [entries, setEntries] = useState<WaitlistEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -108,6 +111,8 @@ export default function WaitlistPage() {
   const [formTimeStart, setFormTimeStart] = useState('')
   const [formTimeEnd, setFormTimeEnd] = useState('')
   const [formNotes, setFormNotes] = useState('')
+  // [FIX-P0] autoBookOnMatch artık form'da toggle ile seçiliyor
+  const [formAutoBook, setFormAutoBook] = useState(false)
 
   // Modal state — Randevu Oluştur
   const [showBook, setShowBook] = useState(false)
@@ -126,10 +131,8 @@ export default function WaitlistPage() {
     setLoading(true)
     try {
       const res = await fetch(`/api/waitlist?active=${showActive}`)
+      if (!res.ok) throw new Error('Sunucu hatası')
       const json = await res.json()
-      // Sıralama: önce müşteri onayı bekleyenler (is_notified=true && is_active=true,
-      // amber çan ikonu), sonra diğerleri öncelik (FIFO = created_at ascending) sırasına göre.
-      // Bu sayede personel acil aksiyon gerektiren kayıtları en üstte görür.
       const sorted: WaitlistEntry[] = ((json.entries || []) as WaitlistEntry[]).sort((a, b) => {
         const aWaiting = a.is_notified && a.is_active ? 0 : 1
         const bWaiting = b.is_notified && b.is_active ? 0 : 1
@@ -137,33 +140,44 @@ export default function WaitlistPage() {
         return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
       })
       setEntries(sorted)
-    } catch { /* ignore */ } finally { setLoading(false) }
+    } catch {
+      // [FIX-P3] Sessiz yutma kaldırıldı — kullanıcıya hata bildirilir
+      toast.error('Bekleme listesi yüklenemedi')
+    } finally {
+      setLoading(false)
+    }
   }, [businessId, showActive])
 
   const fetchServices = useCallback(async () => {
     if (!businessId) return
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('services')
         .select('id, name')
         .eq('business_id', businessId)
         .eq('is_active', true)
         .order('sort_order')
+      if (error) throw error
       setServices((data || []).map((s: any) => ({ id: s.id, name: s.name })))
-    } catch { /* ignore */ }
+    } catch {
+      toast.error('Hizmet listesi yüklenemedi')
+    }
   }, [businessId, supabase])
 
   const fetchStaff = useCallback(async () => {
     if (!businessId) return
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('staff_members')
         .select('id, name')
         .eq('business_id', businessId)
         .eq('is_active', true)
         .order('name')
+      if (error) throw error
       setStaffMembers((data || []).map((s: any) => ({ id: s.id, name: s.name })))
-    } catch { /* ignore */ }
+    } catch {
+      toast.error('Personel listesi yüklenemedi')
+    }
   }, [businessId, supabase])
 
   useEffect(() => { fetchEntries() }, [fetchEntries])
@@ -188,10 +202,8 @@ export default function WaitlistPage() {
       toast.error('İsim ve telefon zorunludur')
       return
     }
-    // En az bir tercih kriteri (hizmet, personel, tarih veya saat) zorunlu —
-    // hepsi boş olursa müşteri her boşlukta bildirim alır, hedefsiz spam olur.
     if (!formServiceId && !formStaffId && !formDate && !formTimeStart) {
-      toast.error('Hizmet, personel, tarih veya saat tercihlerinden en az birini seçmelisin')
+      toast.error('Hizmet, personel, tarih veya saat tercihlerinden en az birini seçin')
       return
     }
     setSaving(true)
@@ -209,11 +221,12 @@ export default function WaitlistPage() {
           preferredTimeStart: formTimeStart || null,
           preferredTimeEnd: formTimeEnd || null,
           notes: formNotes || null,
+          // [FIX-P0] autoBookOnMatch artık form'dan geliyor
+          autoBookOnMatch: formAutoBook,
         }),
       })
       if (res.ok) {
         const json = await res.json().catch(() => ({}))
-        // Proaktif tarama sonucu — server yeni kayıt için takvimi taradı
         if (json.autoMatch?.matched && json.autoMatch.slot) {
           const { date, time } = json.autoMatch.slot
           const formatted = new Date(date + 'T00:00:00').toLocaleDateString('tr-TR', {
@@ -221,7 +234,7 @@ export default function WaitlistPage() {
           })
           toast.success(`Eklendi — ${formatted} ${time.substring(0, 5)} için bildirim gönderildi`)
         } else {
-          toast.success('Bekleme listesine eklendi (uygun slot bulunamadı, açıldıkça bildirilecek)')
+          toast.success('Bekleme listesine eklendi — uygun slot açılınca bildirilecek')
         }
         setClosingCreate(true)
         resetForm()
@@ -237,6 +250,8 @@ export default function WaitlistPage() {
     setFormCustomerId(''); setFormName(''); setFormPhone('')
     setFormServiceId(''); setFormStaffId(''); setFormDate(''); setFormTimeStart('')
     setFormTimeEnd(''); setFormNotes('')
+    // [FIX-P0] toggle da sıfırlanır
+    setFormAutoBook(false)
   }
 
   const openBook = (entry: WaitlistEntry) => {
@@ -257,12 +272,13 @@ export default function WaitlistPage() {
     }
     setBookSaving(true)
     try {
-      // customer_id yoksa telefona göre müşteriyi bul, yoksa oluştur
+      // [FIX-P1] Müşteri oluşturma — race condition güvenli (23505 → tekrar sorgula)
       let resolvedCustomerId: string | null = bookEntry.customer_id || null
       if (!resolvedCustomerId) {
         const phone = bookEntry.customer_phone
         if (!phone) {
           toast.error('Müşteri telefon numarası eksik.')
+          setBookSaving(false)
           return
         }
         const { data: existing } = await supabase
@@ -270,8 +286,8 @@ export default function WaitlistPage() {
           .select('id')
           .eq('business_id', businessId)
           .eq('phone', phone)
-          .limit(1)
           .maybeSingle()
+
         if (existing) {
           resolvedCustomerId = existing.id
         } else {
@@ -280,20 +296,40 @@ export default function WaitlistPage() {
             .insert({ business_id: businessId, name: bookEntry.customer_name, phone, segment: 'new' })
             .select('id')
             .single()
-          if (createErr || !created) {
-            toast.error('Müşteri kaydı oluşturulamadı: ' + (createErr?.message || 'bilinmiyor'))
-            return
+
+          if (createErr) {
+            // [FIX-P1] 23505 = unique ihlali → paralel istek yarışı → tekrar ara
+            if ((createErr as any).code === '23505') {
+              const { data: raceWinner } = await supabase
+                .from('customers')
+                .select('id')
+                .eq('business_id', businessId)
+                .eq('phone', phone)
+                .maybeSingle()
+              if (raceWinner) {
+                resolvedCustomerId = raceWinner.id
+              } else {
+                toast.error('Müşteri kaydı oluşturulamadı, lütfen tekrar deneyin.')
+                setBookSaving(false)
+                return
+              }
+            } else {
+              toast.error('Müşteri kaydı oluşturulamadı: ' + (createErr?.message || 'bilinmiyor'))
+              setBookSaving(false)
+              return
+            }
+          } else if (created) {
+            resolvedCustomerId = created.id
+            await logAudit({
+              businessId: businessId!,
+              staffId: staffId ?? null,
+              staffName: staffName ?? null,
+              action: 'create',
+              resource: 'customer',
+              resourceId: created.id,
+              details: { name: bookEntry.customer_name, phone },
+            })
           }
-          resolvedCustomerId = created.id
-          await logAudit({
-            businessId: businessId!,
-            staffId: staffId ?? null,
-            staffName: staffName ?? null,
-            action: 'create',
-            resource: 'customer',
-            resourceId: created.id,
-            details: { name: bookEntry.customer_name, phone },
-          })
         }
         // Waitlist entry'yi customer_id ile güncelle
         await supabase.from('waitlist_entries').update({ customer_id: resolvedCustomerId }).eq('id', bookEntry.id)
@@ -312,9 +348,15 @@ export default function WaitlistPage() {
           if (svc?.duration_minutes) duration = svc.duration_minutes
         }
         const [h, m] = bookTimeStart.split(':').map(Number)
-        const total = h * 60 + m + duration
-        const eh = String(Math.floor(total / 60)).padStart(2, '0')
-        const em = String(total % 60).padStart(2, '0')
+        const totalMin = h * 60 + m + duration
+        // [FIX-P1] Gece yarısı geçişi engeli
+        if (totalMin >= 24 * 60) {
+          toast.error('Hizmet süresi gece yarısını aşıyor. Başlangıç saatini daha erken seçin.')
+          setBookSaving(false)
+          return
+        }
+        const eh = String(Math.floor(totalMin / 60)).padStart(2, '0')
+        const em = String(totalMin % 60).padStart(2, '0')
         effectiveEnd = `${eh}:${em}`
       }
 
@@ -329,6 +371,7 @@ export default function WaitlistPage() {
         if (!hours) {
           const dayNames: Record<string, string> = { mon: 'Pazartesi', tue: 'Salı', wed: 'Çarşamba', thu: 'Perşembe', fri: 'Cuma', sat: 'Cumartesi', sun: 'Pazar' }
           toast.error(`${dayNames[dayKey] || dayKey} günü işletme kapalı, randevu alınamaz.`)
+          setBookSaving(false)
           return
         }
         const startMin = toMinWH(bookTimeStart)
@@ -337,19 +380,22 @@ export default function WaitlistPage() {
         const closeMin = toMinWH(hours.close)
         if (startMin < openMin || startMin >= closeMin) {
           toast.error(`Başlangıç saati mesai saatleri dışında. Çalışma saatleri: ${hours.open}–${hours.close}`)
+          setBookSaving(false)
           return
         }
         if (endMin <= startMin) {
           toast.error(`Bitiş saati (${effectiveEnd}) başlangıç saatinden (${bookTimeStart}) önce veya eşit olamaz.`)
+          setBookSaving(false)
           return
         }
         if (endMin < openMin || endMin > closeMin) {
           toast.error(`Randevu bitiş saati (${effectiveEnd}) mesai saatleri dışında. Çalışma saatleri: ${hours.open}–${hours.close}`)
+          setBookSaving(false)
           return
         }
       }
 
-      // Personel çakışma kontrolü — aynı personelin aynı gün örtüşen randevusu varsa engelle
+      // Personel çakışma kontrolü
       if (bookStaffId) {
         const toMin = (t: string) => {
           const [hh, mm] = t.split(':').map(Number)
@@ -373,11 +419,14 @@ export default function WaitlistPage() {
         })
         if (hasConflict) {
           toast.error('Bu personelin seçilen saatte zaten randevusu var. Farklı saat veya personel seçin.')
+          setBookSaving(false)
           return
         }
       }
 
-      const { error } = await supabase.from('appointments').insert({
+      // [FIX-P1] status: 'pending' — bekleme listesinden gelen randevular onay bekler
+      // [FIX-P3] select('id') eklendi — audit log için ID gerekiyor
+      const { data: newAppt, error } = await supabase.from('appointments').insert({
         business_id: businessId,
         customer_id: resolvedCustomerId,
         service_id: bookServiceId || null,
@@ -386,9 +435,10 @@ export default function WaitlistPage() {
         start_time: bookTimeStart,
         end_time: effectiveEnd,
         notes: bookNotes || null,
-        status: 'confirmed',
+        status: 'pending',
         source: 'manual',
-      })
+      }).select('id').single()
+
       if (error) {
         const raw = (error.message || '').toLowerCase()
         let msg = error.message
@@ -400,15 +450,35 @@ export default function WaitlistPage() {
           msg = 'Bu randevu zaten kayıtlı.'
         }
         toast.error(msg)
+        setBookSaving(false)
         return
       }
+
+      // [FIX-P3] Bekleme listesi kaynaklı randevular artık audit log'a düşüyor
+      if (newAppt?.id) {
+        await logAudit({
+          businessId: businessId!,
+          staffId: staffId ?? null,
+          staffName: staffName ?? null,
+          action: 'create',
+          resource: 'appointment',
+          resourceId: newAppt.id,
+          details: {
+            customer_name: bookEntry.customer_name,
+            date: bookDate,
+            time: bookTimeStart,
+            source: 'waitlist',
+          },
+        })
+      }
+
       // Bekleme listesinden kaldır
       await fetch('/api/waitlist', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: bookEntry.id, is_active: false }),
       })
-      toast.success('Randevu oluşturuldu, bekleme listesinden kaldırıldı')
+      toast.success('Randevu oluşturuldu — onay bekliyor durumuna alındı')
       setClosingBook(true)
       fetchEntries()
     } catch { toast.error('Bağlantı hatası') } finally { setBookSaving(false) }
@@ -480,7 +550,8 @@ export default function WaitlistPage() {
   })
 
   const activeCount = entries.filter(e => e.is_active).length
-  const notifiedCount = entries.filter(e => e.is_notified).length
+  // [FIX-P2] Yalnızca aktif + bildirim gönderilmiş sayılır
+  const notifiedCount = entries.filter(e => e.is_active && e.is_notified).length
 
   // Permission check
   requirePermission(permissions, 'waitlist')
@@ -511,7 +582,8 @@ export default function WaitlistPage() {
           <p className="text-2xl font-bold text-gray-900 dark:text-white">{activeCount}</p>
         </div>
         <div className="card p-4">
-          <p className="text-xs text-gray-500 dark:text-gray-400">Bildirim Gönderilen</p>
+          {/* [FIX-P2] notifiedCount artık sadece aktif + bildirim gönderilenleri sayıyor */}
+          <p className="text-xs text-gray-500 dark:text-gray-400">Bildirim Bekliyor</p>
           <p className="text-2xl font-bold text-green-600">{notifiedCount}</p>
         </div>
         <div className="card p-4">
@@ -545,19 +617,19 @@ export default function WaitlistPage() {
         <EmptyState
           icon={<Clock className="h-8 w-8" />}
           title="Bekleme listesi boş"
-          description="Yeni bir kayıt eklemek için butonu kullanın"
+          description="Yeni bir kayıt eklemek için 'Listeye Ekle' butonunu kullanın"
         />
       ) : (
         <AnimatedList className="space-y-3">
           {filtered.map(e => (
-            <AnimatedItem key={e.id} className="card p-4 cursor-pointer hover:ring-1 hover:ring-pulse-900/40 transition-all" onClick={() => openBook(e)}>
+            // [FIX-P0] Kart tıklaması kaldırıldı — yanlışlıkla randevu açılmasını önler.
+            // Randevu oluşturmak için sağdaki CalendarPlus butonunu kullanın.
+            <AnimatedItem key={e.id} className="card p-4 transition-all">
               <div className="flex items-start gap-4">
                 {/* Avatar — 3 durum:
-                    1) Pasif (is_active=false): gri BellOff = sürç dolmuş veya silinmiş
-                    2) Onay bekleniyor (is_notified=true && is_active=true): amber Bell = SMS gitti, müşteri onayı bekleniyor
-                    3) Sırada bekliyor (is_notified=false): mavi Clock = bildirim henüz atılmadı
-                    Yeşil CheckCircle = onaylanmış randevu YOK; held_until null olunca normal randevu olur,
-                    bekleme listesi kaydı is_active=false olur (artık burada görünmez). */}
+                    1) Pasif (is_active=false): gri BellOff
+                    2) Onay bekleniyor (is_notified=true && is_active=true): amber Bell
+                    3) Sırada bekliyor (is_notified=false): mavi Clock */}
                 <div className={cn(
                   'h-10 w-10 rounded-xl flex items-center justify-center text-sm font-bold flex-shrink-0',
                   !e.is_active
@@ -584,40 +656,36 @@ export default function WaitlistPage() {
                       </span>
                     )}
                   </div>
-                  {/* Tercih rozetleri */}
+                  {/* [FIX-P2] Tercih rozetleri — sadece dolu olanlar gösterilir, "fark etmez" badge'i kaldırıldı */}
                   <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-                    {e.services?.name ? (
+                    {e.services?.name && (
                       <span className="text-[11px] px-2 py-0.5 rounded-full bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300">
                         {e.services.name}
                       </span>
-                    ) : (
-                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">Hizmet: fark etmez</span>
                     )}
-                    {e.preferred_date ? (
+                    {e.preferred_date && (
                       <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 flex items-center gap-1">
                         <Calendar className="h-3 w-3" /> {formatDateShort(e.preferred_date)}
                       </span>
-                    ) : (
-                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">Tarih: fark etmez</span>
                     )}
-                    {e.preferred_time_start ? (
+                    {e.preferred_time_start && (
                       <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 flex items-center gap-1">
                         <Clock className="h-3 w-3" /> {e.preferred_time_start.substring(0, 5)}
                         {e.preferred_time_end && `-${e.preferred_time_end.substring(0, 5)}`}
                       </span>
-                    ) : (
-                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">Saat: fark etmez</span>
                     )}
-                    {e.staff_members?.name ? (
+                    {e.staff_members?.name && (
                       <span className="text-[11px] px-2 py-0.5 rounded-full bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300 flex items-center gap-1">
                         <UserCircle2 className="h-3 w-3" /> {e.staff_members.name}
                       </span>
-                    ) : (
-                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">Personel: fark etmez</span>
+                    )}
+                    {/* Hiç tercih girilmemişse kısa not */}
+                    {!e.services?.name && !e.preferred_date && !e.preferred_time_start && !e.staff_members?.name && (
+                      <span className="text-[11px] text-gray-400 dark:text-gray-500">Tercih belirtilmemiş</span>
                     )}
                   </div>
                 </div>
-                <div className="flex-shrink-0 flex items-center gap-2 self-center" onClick={ev => ev.stopPropagation()}>
+                <div className="flex-shrink-0 flex items-center gap-2 self-center">
                   {e.is_notified && e.is_active && <CountdownBadge expiresAt={e.notification_expires_at} />}
                   {e.is_notified && !e.is_active && (
                     <span className="badge-success text-xs">
@@ -632,7 +700,7 @@ export default function WaitlistPage() {
                   <p className="text-[10px] text-gray-400">{new Date(e.created_at).toLocaleDateString('tr-TR')}</p>
                   {e.is_active && e.is_notified && e.notified_for_appointment_id && (
                     <button
-                      onClick={ev => { ev.stopPropagation(); handleNotifyNext(e) }}
+                      onClick={() => handleNotifyNext(e)}
                       className="text-amber-600 hover:text-amber-700 transition-colors p-1"
                       title="Sıradaki hastaya bildirim gönder"
                     >
@@ -641,7 +709,7 @@ export default function WaitlistPage() {
                   )}
                   {e.is_active && !e.is_notified && (
                     <button
-                      onClick={ev => { ev.stopPropagation(); handleAutoMatch(e) }}
+                      onClick={() => handleAutoMatch(e)}
                       className="text-emerald-600 hover:text-emerald-700 transition-colors p-1"
                       title="Takvimde uygun slot ara ve bildirim gönder"
                     >
@@ -650,14 +718,14 @@ export default function WaitlistPage() {
                   )}
                   {e.is_active && (
                     <button
-                      onClick={ev => { ev.stopPropagation(); openBook(e) }}
+                      onClick={() => openBook(e)}
                       className="text-pulse-600 hover:text-pulse-700 transition-colors p-1"
                       title="Randevu Oluştur"
                     >
                       <CalendarPlus className="h-4 w-4" />
                     </button>
                   )}
-                  <button onClick={ev => { ev.stopPropagation(); handleDelete(e.id) }} className="text-gray-400 hover:text-red-500 transition-colors p-1" title="Kaydı Sil">
+                  <button onClick={() => handleDelete(e.id)} className="text-gray-400 hover:text-red-500 transition-colors p-1" title="Kaydı Sil">
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
@@ -687,7 +755,8 @@ export default function WaitlistPage() {
                 <div className="grid grid-cols-3 gap-4">
                   <div className="col-span-3 sm:col-span-1">
                     <label className="label label-required">Tarih</label>
-                    <input type="date" className="input w-full" value={bookDate} onChange={e => setBookDate(e.target.value)} />
+                    {/* [FIX-P3] Geçmiş tarih girişi engellendi */}
+                    <input type="date" className="input w-full" value={bookDate} min={today} onChange={e => setBookDate(e.target.value)} />
                   </div>
                   <div>
                     <label className="label label-required">Başlangıç</label>
@@ -770,10 +839,6 @@ export default function WaitlistPage() {
                   <input className="input w-full" placeholder="05XX XXX XXXX" value={formPhone} onChange={e => setFormPhone(e.target.value)} disabled={!!formCustomerId} />
                 </div>
               </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 -mt-1">
-                Hizmet, personel, tarih veya saat tercihlerinden <span className="font-medium">en az birini</span> seçmelisin —
-                tüm boşluklara eşleşmesin, sadece müşterinin gerçekten istediği zamana bildirim gitsin.
-              </p>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="label">Hizmet</label>
@@ -797,24 +862,43 @@ export default function WaitlistPage() {
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="label">Tercih Tarihi</label>
-                  <input type="date" className="input w-full" value={formDate} onChange={e => setFormDate(e.target.value)} />
-                  <p className="text-[10px] text-gray-400 mt-1">Boş = fark etmez</p>
+                  {/* [FIX-P3] Geçmiş tarih girişi engellendi */}
+                  <input type="date" className="input w-full" min={today} value={formDate} onChange={e => setFormDate(e.target.value)} />
                 </div>
                 <div>
                   <label className="label">Başlangıç</label>
                   <input type="time" className="input w-full" value={formTimeStart} onChange={e => setFormTimeStart(e.target.value)} />
-                  <p className="text-[10px] text-gray-400 mt-1">Boş = fark etmez</p>
                 </div>
                 <div>
                   <label className="label">Bitiş</label>
                   <input type="time" className="input w-full" value={formTimeEnd} onChange={e => setFormTimeEnd(e.target.value)} />
-                  <p className="text-[10px] text-gray-400 mt-1">Boş = fark etmez</p>
                 </div>
               </div>
               <div>
                 <label className="label">Not</label>
                 <textarea className="input w-full" rows={2} placeholder="Opsiyonel not..." value={formNotes} onChange={e => setFormNotes(e.target.value)} />
               </div>
+              {/* [FIX-P0] Otomatik Randevu toggle — artık gerçekten çalışıyor */}
+              <button
+                type="button"
+                onClick={() => setFormAutoBook(v => !v)}
+                className={cn(
+                  'w-full flex items-center justify-between px-3 py-2.5 rounded-lg border transition-colors text-sm',
+                  formAutoBook
+                    ? 'border-pulse-900/40 bg-pulse-50 dark:bg-pulse-900/10 text-pulse-900 dark:text-pulse-300'
+                    : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                )}
+              >
+                <span className="flex items-center gap-2">
+                  <Zap className="h-4 w-4" />
+                  <span className="font-medium">Otomatik Randevu</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">Uygun slot bulunursa direkt randevu aç</span>
+                </span>
+                {formAutoBook
+                  ? <ToggleRight className="h-5 w-5 text-pulse-900 dark:text-pulse-300" />
+                  : <ToggleLeft className="h-5 w-5 text-gray-400" />
+                }
+              </button>
             </div>
             <div className="flex justify-end gap-2 mt-4">
               <button onClick={() => setClosingCreate(true)} className="btn-secondary">İptal</button>
