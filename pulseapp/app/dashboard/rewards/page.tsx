@@ -196,34 +196,36 @@ export default function RewardsPage() {
         if (existing) {
           referredCustomerId = existing.id
         } else if (trimmedName) {
-          // Yeni müşteri — onay iste
+          // Yeni müşteri — onay iste; iptal edilirse referans da oluşturulmasın
           const ok = await confirm({
             title: 'Yeni müşteri bulundu',
             message: `"${trimmedName}" (${trimmedPhone}) sistemde kayıtlı değil. ${customerLabel} olarak kayıt edilsin mi?`,
             confirmText: 'Evet, kaydet',
-            cancelText: 'Hayır, sadece referans',
+            cancelText: 'Vazgeç',
             variant: 'warning',
           })
-          if (ok) {
-            const { data: newCustomer, error: createErr } = await supabase
-              .from('customers')
-              .insert({
-                business_id: businessId,
-                name: trimmedName,
-                phone: trimmedPhone,
-                segment: 'new',
-                is_active: true,
-              })
-              .select('id')
-              .single()
-            if (createErr) {
-              toast.error(createErr.message || 'Müşteri kaydedilemedi')
-              setRefSaving(false)
-              return
-            }
-            referredCustomerId = newCustomer?.id || null
-            toast.success('Yeni müşteri kaydedildi')
+          if (!ok) {
+            setRefSaving(false)
+            return
           }
+          const { data: newCustomer, error: createErr } = await supabase
+            .from('customers')
+            .insert({
+              business_id: businessId,
+              name: trimmedName,
+              phone: trimmedPhone,
+              segment: 'new',
+              is_active: true,
+            })
+            .select('id')
+            .single()
+          if (createErr) {
+            toast.error(createErr.message || 'Müşteri kaydedilemedi')
+            setRefSaving(false)
+            return
+          }
+          referredCustomerId = newCustomer?.id || null
+          toast.success('Yeni müşteri kaydedildi')
         }
       }
 
