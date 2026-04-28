@@ -614,10 +614,10 @@ function ConvertModal({ request, businessId, onClose, onSuccess }: ConvertModalP
     async function load() {
       const [svcRes, staffRes] = await Promise.all([
         fetch(`/api/public/business/${businessId}/services`),
-        fetch(`/api/staff?businessId=${businessId}`),
+        fetch(`/api/public/business/${businessId}/staff`),
       ])
-      if (svcRes.ok) { const d = await svcRes.json(); setServices(d.data || d) }
-      if (staffRes.ok) { const d = await staffRes.json(); setStaff(d.data || d) }
+      if (svcRes.ok) { const d = await svcRes.json(); setServices(d.services || d.data || []) }
+      if (staffRes.ok) { const d = await staffRes.json(); setStaff(d.staff || d.data || []) }
     }
     load()
   }, [businessId])
