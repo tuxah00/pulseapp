@@ -38,6 +38,9 @@ import {
   Area, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip as RTooltip, XAxis, YAxis,
 } from 'recharts'
 
+// Supabase istemcisi modül seviyesinde — component re-render'larında yeniden oluşmaz
+const supabase = createClient()
+
 /**
  * Gelir-Gider paneli — 4 bölüm.
  *
@@ -161,8 +164,6 @@ export default function AnalyticsPage() {
   const [commissions, setCommissions] = useState<CommissionEarning[]>([])
   const [commissionsLoading, setCommissionsLoading] = useState(false)
 
-  const supabase = createClient()
-
   const fetchData = useCallback(async () => {
     if (!businessId) return
     setLoading(true)
@@ -170,30 +171,39 @@ export default function AnalyticsPage() {
     const { start, end } = getPeriodDates(period, 0)
     const { start: prevStart, end: prevEnd } = getPeriodDates(period, 1)
 
-    const [aptRes, prevAptRes, custRes, revRes, svcRes, staffRes, invRes] = await Promise.all([
-      supabase.from('appointments').select('*, services(name, price)')
-        .eq('business_id', businessId).is('deleted_at', null).gte('appointment_date', start).lte('appointment_date', end).order('appointment_date'),
-      supabase.from('appointments').select('status, services(price)')
-        .eq('business_id', businessId).is('deleted_at', null).gte('appointment_date', prevStart).lte('appointment_date', prevEnd),
-      supabase.from('customers').select('id, name, segment, total_revenue').eq('business_id', businessId).eq('is_active', true),
-      supabase.from('reviews').select('*').eq('business_id', businessId).gte('created_at', start + 'T00:00:00'),
-      supabase.from('services').select('*').eq('business_id', businessId).eq('is_active', true),
-      supabase.from('staff_members').select('id, name').eq('business_id', businessId).eq('is_active', true),
-      // Ödenen + kısmi ödenen faturalar (dönem filtresine göre)
-      supabase.from('invoices').select('id, total, paid_amount, status, appointment_id, paid_at, created_at')
-        .eq('business_id', businessId).in('status', ['paid', 'partial']).is('deleted_at', null)
-        .gte('paid_at', start + 'T00:00:00').lte('paid_at', end + 'T23:59:59'),
-    ])
+    try {
+      const [aptRes, prevAptRes, custRes, revRes, svcRes, staffRes, invRes] = await Promise.all([
+        supabase.from('appointments').select('*, services(name, price)')
+          .eq('business_id', businessId).is('deleted_at', null).gte('appointment_date', start).lte('appointment_date', end).order('appointment_date'),
+        supabase.from('appointments').select('status, services(price)')
+          .eq('business_id', businessId).is('deleted_at', null).gte('appointment_date', prevStart).lte('appointment_date', prevEnd),
+        supabase.from('customers').select('id, name, segment, total_revenue').eq('business_id', businessId).eq('is_active', true),
+        // reviews — dönem başı + sonu filtresi (lte eksikti; düzeltildi)
+        supabase.from('reviews').select('*').eq('business_id', businessId)
+          .gte('created_at', start + 'T00:00:00').lte('created_at', end + 'T23:59:59'),
+        supabase.from('services').select('*').eq('business_id', businessId).eq('is_active', true),
+        supabase.from('staff_members').select('id, name').eq('business_id', businessId).eq('is_active', true),
+        // Ödenen + kısmi ödenen faturalar (dönem filtresine göre)
+        supabase.from('invoices').select('id, total, paid_amount, status, appointment_id, paid_at, created_at')
+          .eq('business_id', businessId).in('status', ['paid', 'partial']).is('deleted_at', null)
+          .gte('paid_at', start + 'T00:00:00').lte('paid_at', end + 'T23:59:59'),
+      ])
 
-    if (aptRes.data) setAppointments(aptRes.data as unknown as AnalyticsAppointment[])
-    if (prevAptRes.data) setPrevAppointments(prevAptRes.data as unknown as PrevAppointment[])
-    if (custRes.data) setCustomers(custRes.data as CustomerRow[])
-    if (revRes.data) setReviews(revRes.data as ReviewRow[])
-    if (svcRes.data) setServices(svcRes.data as ServiceRow[])
-    if (staffRes.data) setStaffMembers(staffRes.data as StaffSummary[])
-    if (invRes.data) setPaidInvoices(invRes.data as AnalyticsInvoice[])
-    setLoading(false)
-  }, [businessId, period, supabase])
+      if (aptRes.data) setAppointments(aptRes.data as unknown as AnalyticsAppointment[])
+      if (prevAptRes.data) setPrevAppointments(prevAptRes.data as unknown as PrevAppointment[])
+      if (custRes.data) setCustomers(custRes.data as CustomerRow[])
+      if (revRes.data) setReviews(revRes.data as ReviewRow[])
+      if (svcRes.data) setServices(svcRes.data as ServiceRow[])
+      if (staffRes.data) setStaffMembers(staffRes.data as StaffSummary[])
+      if (invRes.data) setPaidInvoices(invRes.data as AnalyticsInvoice[])
+    } catch {
+      window.dispatchEvent(new CustomEvent('pulse-toast', {
+        detail: { type: 'error', title: 'Veriler yüklenemedi', description: 'Lütfen sayfayı yenileyin.' },
+      }))
+    } finally {
+      setLoading(false)
+    }
+  }, [businessId, period])
 
   const fetchExpenses = useCallback(async () => {
     if (!businessId) return
@@ -242,7 +252,7 @@ export default function AnalyticsPage() {
     if (!expCategory || !expAmount || !expDate) return
     setSavingExpense(true)
     try {
-      await fetch('/api/expenses', {
+      const res = await fetch('/api/expenses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -256,6 +266,10 @@ export default function AnalyticsPage() {
           custom_interval_days: expIsRecurring && expRecurringPeriod === 'custom' ? parseInt(expCustomDays) || null : null,
         }),
       })
+      if (!res.ok) {
+        window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Kaydedilemedi', description: 'Gider oluşturulurken bir hata oluştu.' } }))
+        return
+      }
       setShowExpenseForm(false)
       logAudit({ businessId: businessId!, staffId: staffId || null, staffName: staffName || null, action: 'create', resource: 'expense', details: { category: expCategory, amount: parseFloat(expAmount), description: expDescription || null } })
       setExpCategory(''); setExpDescription(''); setExpAmount('')
@@ -272,7 +286,11 @@ export default function AnalyticsPage() {
     const ok = await confirm({ title: 'Onay', message: 'Bu gideri silmek istediğinize emin misiniz?' })
     if (!ok) return
     const expense = expenses.find(e => e.id === id)
-    await fetch(`/api/expenses?id=${id}`, { method: 'DELETE' })
+    const res = await fetch(`/api/expenses?id=${id}`, { method: 'DELETE' })
+    if (!res.ok) {
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Silinemedi', description: 'Gider silinirken bir hata oluştu.' } }))
+      return
+    }
     logAudit({ businessId: businessId!, staffId: staffId || null, staffName: staffName || null, action: 'delete', resource: 'expense', details: { category: expense?.category || null, amount: expense?.amount || null } })
     fetchExpenses()
     window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Silindi' } }))
@@ -283,7 +301,7 @@ export default function AnalyticsPage() {
     if (!incCategory || !incAmount || !incDate) return
     setSavingIncome(true)
     try {
-      await fetch('/api/income', {
+      const res = await fetch('/api/income', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -297,6 +315,10 @@ export default function AnalyticsPage() {
           custom_interval_days: incIsRecurring && incRecurringPeriod === 'custom' ? parseInt(incCustomDays) || null : null,
         }),
       })
+      if (!res.ok) {
+        window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Kaydedilemedi', description: 'Gelir oluşturulurken bir hata oluştu.' } }))
+        return
+      }
       setShowIncomeForm(false)
       logAudit({ businessId: businessId!, staffId: staffId || null, staffName: staffName || null, action: 'create', resource: 'income', details: { category: incCategory, amount: parseFloat(incAmount), description: incDescription || null } })
       setIncCategory(''); setIncDescription(''); setIncAmount('')
@@ -313,7 +335,11 @@ export default function AnalyticsPage() {
     const ok = await confirm({ title: 'Onay', message: 'Bu geliri silmek istediğinize emin misiniz?' })
     if (!ok) return
     const income = incomes.find(i => i.id === id)
-    await fetch(`/api/income?id=${id}`, { method: 'DELETE' })
+    const res = await fetch(`/api/income?id=${id}`, { method: 'DELETE' })
+    if (!res.ok) {
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Silinemedi', description: 'Gelir silinirken bir hata oluştu.' } }))
+      return
+    }
     logAudit({ businessId: businessId!, staffId: staffId || null, staffName: staffName || null, action: 'delete', resource: 'income', details: { category: income?.category || null, amount: income?.amount || null } })
     fetchIncome()
     window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Silindi' } }))
@@ -321,9 +347,16 @@ export default function AnalyticsPage() {
 
   useEffect(() => { if (!ctxLoading) fetchData() }, [fetchData, ctxLoading])
 
-  // Varsayılan "Özet & Trend" sekmesi açıldığında forecast + insights summary'yi yükle
+  // Dönem değişince sezonsal/tahmin verileri sıfırlanır (stale gösterim önlenir)
+  useEffect(() => {
+    setInsightsSummary(null)
+    setForecastData(null)
+  }, [period])
+
+  // Tab açıldığında forecast + insights summary lazy fetch
   useEffect(() => {
     if (ctxLoading || !businessId) return
+    const forecastMonths = period === 'year' ? 12 : period === 'week' ? 1 : 3
     if (activeTab === 'summary' || activeTab === 'people') {
       if (!insightsSummary && !insightsLoading) {
         setInsightsLoading(true)
@@ -336,18 +369,18 @@ export default function AnalyticsPage() {
     }
     if (activeTab === 'summary' && !forecastData && !forecastLoading) {
       setForecastLoading(true)
-      fetch('/api/analytics/forecast?months=3')
+      fetch(`/api/analytics/forecast?businessId=${businessId}&period=${period}&months=${forecastMonths}`)
         .then(r => r.json())
         .then(d => setForecastData(d))
         .catch(() => {})
         .finally(() => setForecastLoading(false))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, businessId, ctxLoading])
+  }, [activeTab, businessId, ctxLoading, period])
 
   requirePermission(permissions, 'analytics')
 
-  if (loading || ctxLoading) {
+  if (ctxLoading) {
     return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-pulse-900" /></div>
   }
 
@@ -501,14 +534,6 @@ export default function AnalyticsPage() {
       })
   const maxRevenue = Math.max(...trendRevenue.map(d => d.revenue), ...trendExpenses, 1)
 
-  // Saat dağılımı
-  const hourDist = Array.from({ length: 14 }, (_, i) => {
-    const hour = i + 8
-    const count = appointments.filter(a => parseInt(a.start_time?.split(':')[0] || '0') === hour).length
-    return { hour: `${String(hour).padStart(2, '0')}`, count }
-  })
-  const maxHour = Math.max(...hourDist.map(h => h.count), 1)
-
   // En popüler hizmetler
   const serviceStats = services.map(svc => {
     const count = completed.filter(a => a.service_id === svc.id).length
@@ -559,11 +584,33 @@ export default function AnalyticsPage() {
 
   return (
     <div className="space-y-5">
+      {/* İskelet — yükleme sırasında gösterilir */}
+      {(loading && appointments.length === 0) && (
+        <div className="space-y-5 animate-pulse">
+          <div className="flex items-center justify-between">
+            <div className="space-y-2">
+              <div className="h-7 w-40 bg-gray-200 dark:bg-gray-700 rounded-lg" />
+              <div className="h-4 w-56 bg-gray-100 dark:bg-gray-800 rounded" />
+            </div>
+            <div className="h-9 w-48 bg-gray-100 dark:bg-gray-800 rounded-xl" />
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="rounded-2xl border border-gray-100 dark:border-gray-800 p-4 bg-gray-50 dark:bg-gray-900 h-24" />
+            ))}
+          </div>
+          <div className="h-10 bg-gray-100 dark:bg-gray-800 rounded" />
+          <div className="card p-4 h-64" />
+        </div>
+      )}
+      {!(loading && appointments.length === 0) && (<>
       {/* Başlık */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="h-page">Gelir-Gider</h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{periodLabel} · önceki dönemle karşılaştırmalı</p>
+          <h1 className="h-page">İş Zekası</h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            {activeTab === 'finance' ? `${periodLabel} gelir-gider yönetimi` : activeTab === 'breakdown' ? `${periodLabel} hizmet ve kaynak kırılımı` : activeTab === 'people' ? `${periodLabel} personel ve müşteri analizi` : `${periodLabel} · önceki dönemle karşılaştırmalı`}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -593,8 +640,12 @@ export default function AnalyticsPage() {
           value={formatCurrency(totalRevenue)} trend={revenueTrend} color="green" currency />
         <KPICard icon={<TrendingDown className="h-5 w-5" />} label="Toplam Gider"
           value={formatCurrency(grandTotalExpenses)} color="amber" currency />
-        <KPICard icon={<Wallet className="h-5 w-5" />} label="Net Kâr"
-          value={formatCurrency(totalRevenue - grandTotalExpenses)} color={(totalRevenue - grandTotalExpenses) >= 0 ? 'blue' : 'red'} currency />
+        {(() => {
+          const netProfit = totalRevenue - grandTotalExpenses
+          const netColor = netProfit > 0 ? 'blue' : netProfit < 0 ? 'red' : 'amber'
+          return <KPICard icon={<Wallet className="h-5 w-5" />} label="Net Kâr"
+            value={formatCurrency(netProfit)} color={netColor} currency />
+        })()}
         <KPICard icon={<UserCheck className="h-5 w-5" />} label="Tamamlanan"
           value={completed.length} color="blue" />
       </div>
@@ -611,34 +662,7 @@ export default function AnalyticsPage() {
 
           const handleTabClick = (key: AnalyticsTab) => {
             setActiveTab(key)
-            // Özet & Trend → forecast + sezonsal grafik için lazy fetch
-            if (key === 'summary') {
-              if (!forecastData && !forecastLoading) {
-                setForecastLoading(true)
-                fetch('/api/analytics/forecast?months=3')
-                  .then(r => r.json())
-                  .then(d => setForecastData(d))
-                  .catch(() => {})
-                  .finally(() => setForecastLoading(false))
-              }
-              if (!insightsSummary && !insightsLoading && businessId) {
-                setInsightsLoading(true)
-                fetch(`/api/insights/summary?businessId=${businessId}`)
-                  .then(r => r.json())
-                  .then(d => setInsightsSummary(d))
-                  .catch(() => {})
-                  .finally(() => setInsightsLoading(false))
-              }
-            }
-            // Personel & Müşteri → kohort + quadrant için lazy fetch
-            if (key === 'people' && !insightsSummary && !insightsLoading && businessId) {
-              setInsightsLoading(true)
-              fetch(`/api/insights/summary?businessId=${businessId}`)
-                .then(r => r.json())
-                .then(d => setInsightsSummary(d))
-                .catch(() => {})
-                .finally(() => setInsightsLoading(false))
-            }
+            // Lazy fetch (forecast + insights) useEffect tarafından yönetilir — burada tekrarlama yok
           }
 
           const renderTab = ([key, label, icon]: readonly [string, string, React.ReactElement]) => (
@@ -663,21 +687,21 @@ export default function AnalyticsPage() {
       {/* 1. Bölüm — Özet & Trend (overview + forecast + sezonsal) */}
       {activeTab === 'summary' && (
         <div className="space-y-6">
-          {/* İkinci KPI satırı */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <KPICard icon={<TrendingUp className="h-5 w-5" />} label="Tahmini Aylık Gelir"
+          {/* İkinci KPI satırı — destekleyici metrikler, daha küçük gösterim */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <KPICard secondary icon={<TrendingUp className="h-4 w-4" />} label="Tahmini Aylık Gelir"
               value={formatCurrency(Math.round(totalRevenue * periodMultiplier))} color="green" currency />
-            <KPICard icon={<Star className="h-5 w-5" />} label={`${customerLabel} Memnuniyeti`}
+            <KPICard secondary icon={<Star className="h-4 w-4" />} label={`${customerLabel} Memnuniyeti`}
               value={avgRating !== '—' ? `${avgRating} / 5` : '—'} color="amber" />
-            <KPICard icon={<Clock className="h-5 w-5" />} label="Tamamlanma Oranı"
+            <KPICard secondary icon={<Clock className="h-4 w-4" />} label="Tamamlanma Oranı"
               value={`%${completionRate}`} color="blue" />
-            <KPICard icon={<AlertTriangle className="h-5 w-5" />} label={`Risk ${customerLabelPlural}`}
+            <KPICard secondary icon={<AlertTriangle className="h-4 w-4" />} label={`Risk ${customerLabelPlural}`}
               value={riskCustomers.length} color="amber" />
           </div>
           {/* Gelir-Gider Trendi */}
           <div className="card p-4">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+              <h3 className="h-sub text-gray-700 dark:text-gray-300 flex items-center gap-2">
                 <Activity className="h-4 w-4" /> Gelir-Gider Trendi — {periodLabel}
               </h3>
               <div className="flex items-center gap-3 text-[10px] text-gray-500">
@@ -686,8 +710,9 @@ export default function AnalyticsPage() {
               </div>
             </div>
             {trendRevenue.every(d => d.revenue === 0) && trendExpenses.every(e => e === 0) && totalRevenue === 0 && totalExpenses === 0 ? (
-              <div className="flex items-center justify-center h-44 text-sm text-gray-400">
-                Bu dönem için veri bulunmuyor
+              <div className="flex flex-col items-center justify-center h-44 gap-2 text-sm text-gray-400 dark:text-gray-500">
+                <Activity className="h-8 w-8 opacity-30" />
+                <span>Bu dönem için veri bulunmuyor</span>
               </div>
             ) : (
               <div className="relative">
@@ -719,9 +744,9 @@ export default function AnalyticsPage() {
                                 {expense > 0 && <span className="text-red-300">{formatCurrency(expense)}</span>}
                               </div>
                             )}
-                            <div className="flex-1 bg-emerald-400 dark:bg-emerald-600 rounded-t-sm transition-all"
+                            <div className="flex-1 bg-emerald-400 dark:bg-emerald-600 rounded-t-sm transition-all duration-500"
                               style={{ height: `${revPct}%`, minHeight: revenue > 0 ? '4px' : '0' }} />
-                            <div className="flex-1 bg-red-300 dark:bg-red-500 rounded-t-sm transition-all"
+                            <div className="flex-1 bg-red-300 dark:bg-red-500 rounded-t-sm transition-all duration-500"
                               style={{ height: `${expPct}%`, minHeight: expense > 0 ? '4px' : '0' }} />
                           </div>
                           <span className="text-[9px] text-gray-400 truncate w-full text-center flex-shrink-0">{label}</span>
@@ -760,7 +785,7 @@ export default function AnalyticsPage() {
       {activeTab === 'people' && (
         <div className="space-y-6">
           <section>
-            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+            <h3 className="h-sub text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
               <Users className="h-4 w-4" /> Personel Karnesi
             </h3>
           {staffStats.length === 0 ? (
@@ -778,7 +803,7 @@ export default function AnalyticsPage() {
                 return (
                   <div key={s.id} className="card p-5">
                     <div className="flex items-center gap-3 mb-4">
-                      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-sm font-bold flex-shrink-0">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-pulse-100 dark:bg-pulse-900/30 text-pulse-900 dark:text-pulse-300 text-sm font-bold flex-shrink-0">
                         {initials}
                       </div>
                       <div>
@@ -817,11 +842,10 @@ export default function AnalyticsPage() {
 
           {/* Müşteri Özet Kartları */}
           <section>
-            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+            <h3 className="h-sub text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
               <UserCheck className="h-4 w-4" /> {customerLabelPlural} Analizi
             </h3>
             <div className="space-y-6">
-          {/* Müşteri Özet Kartları */}
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="card p-4 text-center">
               <p className="text-2xl font-bold text-blue-600">{newCustomers}</p>
@@ -839,7 +863,7 @@ export default function AnalyticsPage() {
 
           {/* Segment Dağılımı */}
           <div className="card p-4">
-            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">{customerLabel} Segmentleri</h3>
+            <h3 className="h-sub text-gray-700 dark:text-gray-300 mb-4">{customerLabel} Segmentleri</h3>
             <div className="space-y-3">
               {segmentData.map(({ segment, label, count }) => {
                 const pct = totalCustomers > 0 ? Math.round((count / totalCustomers) * 100) : 0
@@ -850,7 +874,7 @@ export default function AnalyticsPage() {
                   <div key={segment} className="flex items-center gap-3">
                     <span className="text-sm w-16 text-gray-600 dark:text-gray-400">{label}</span>
                     <div className="flex-1 h-5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                      <div className={cn('h-full rounded-full', colors[segment])} style={{ width: `${pct}%` }} />
+                      <div className={cn('h-full rounded-full transition-all duration-700', colors[segment])} style={{ width: `${pct}%` }} />
                     </div>
                     <span className="text-sm font-medium text-gray-900 dark:text-gray-100 w-16 text-right">{count} (%{pct})</span>
                   </div>
@@ -903,7 +927,7 @@ export default function AnalyticsPage() {
             <>
               {insightsSummary.cohort && insightsSummary.cohort.length > 0 && (
                 <section>
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                  <h3 className="h-sub text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
                     <Activity className="h-4 w-4" /> Kohort Retansiyon
                   </h3>
                   <div className="card p-4">
@@ -914,7 +938,7 @@ export default function AnalyticsPage() {
 
               {insightsSummary.margin && insightsSummary.margin.length > 0 && (
                 <section>
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                  <h3 className="h-sub text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
                     <Layers className="h-4 w-4" /> Hizmet Performans Matrisi
                   </h3>
                   <QuadrantTable rows={insightsSummary.margin} />
@@ -937,43 +961,29 @@ export default function AnalyticsPage() {
         <div className="space-y-6">
           {/* Kar-Zarar Özeti */}
           <div className="grid grid-cols-3 gap-4">
-            <div className="card p-4 text-center">
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Toplam Gelir</p>
-              <p className="text-xl font-bold text-green-600">{formatCurrency(totalRevenue)}</p>
-              {invoiceOnlyRevenue > 0 && (
-                <p className="text-[10px] text-gray-400 mt-1">
-                  Randevu: {formatCurrency(appointmentRevenue)} · Fatura: {formatCurrency(invoiceOnlyRevenue)}
-                </p>
-              )}
-              {manualIncome > 0 && (
-                <p className="text-[10px] text-gray-400 mt-0.5">
-                  Manuel Gelir: {formatCurrency(manualIncome)}
-                </p>
-              )}
-            </div>
-            <div className="card p-4 text-center">
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Toplam Gider</p>
-              <p className="text-xl font-bold text-red-600">{formatCurrency(grandTotalExpenses)}</p>
-              {(commissionTotal > 0 || pulseappCost > 0) && (
-                <p className="text-[10px] text-gray-400 mt-1">
-                  {commissionTotal > 0 && `Primler: ${formatCurrency(commissionTotal)}`}
-                  {commissionTotal > 0 && pulseappCost > 0 && ' · '}
-                  {pulseappCost > 0 && `PulseApp: ${formatCurrency(pulseappCost)}`}
-                </p>
-              )}
-            </div>
-            <div className="card p-4 text-center">
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Net Kâr</p>
-              {(() => {
-                const net = totalRevenue - grandTotalExpenses
-                return <p className={cn('text-xl font-bold', net >= 0 ? 'text-pulse-900 dark:text-pulse-400' : 'text-red-600')}>{formatCurrency(net)}</p>
-              })()}
-            </div>
+            <KPICard icon={<TrendingUp className="h-5 w-5" />} label="Toplam Gelir" value={formatCurrency(totalRevenue)} color="green" currency />
+            <KPICard icon={<TrendingDown className="h-5 w-5" />} label="Toplam Gider" value={formatCurrency(grandTotalExpenses)} color="amber" currency />
+            <KPICard
+              icon={<Wallet className="h-5 w-5" />}
+              label="Net Kâr"
+              value={formatCurrency(totalRevenue - grandTotalExpenses)}
+              color={(totalRevenue - grandTotalExpenses) > 0 ? 'blue' : (totalRevenue - grandTotalExpenses) < 0 ? 'red' : 'amber'}
+              currency
+            />
           </div>
+          {/* Gelir/Gider detayı */}
+          {(invoiceOnlyRevenue > 0 || manualIncome > 0 || commissionTotal > 0 || pulseappCost > 0) && (
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-gray-400 dark:text-gray-500 px-1">
+              {invoiceOnlyRevenue > 0 && <span>Randevu: {formatCurrency(appointmentRevenue)} · Fatura: {formatCurrency(invoiceOnlyRevenue)}</span>}
+              {manualIncome > 0 && <span>Manuel: {formatCurrency(manualIncome)}</span>}
+              {commissionTotal > 0 && <span>Primler: {formatCurrency(commissionTotal)}</span>}
+              {pulseappCost > 0 && <span>PulseApp: {formatCurrency(pulseappCost)}</span>}
+            </div>
+          )}
 
           {/* Gider Listesi Başlığı */}
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{periodLabel} Giderleri</h3>
+            <h3 className="h-sub text-gray-700 dark:text-gray-300">{periodLabel} Giderleri</h3>
             <div className="flex items-center gap-2">
               {expenses.length > 0 && (
                 <button
@@ -999,9 +1009,6 @@ export default function AnalyticsPage() {
                   <Download className="h-3.5 w-3.5" />Dışa Aktar
                 </button>
               )}
-              <button onClick={() => setShowIncomeForm(v => !v)} className="btn-success text-sm">
-                <Plus className="mr-1.5 h-4 w-4" />Gelir Ekle
-              </button>
               <button onClick={() => setShowExpenseForm(v => !v)} className="btn-primary text-sm">
                 <Plus className="mr-1.5 h-4 w-4" />Gider Ekle
               </button>
@@ -1196,7 +1203,7 @@ export default function AnalyticsPage() {
                       <td className="table-cell text-gray-500 dark:text-gray-400">{expense.description || '—'}</td>
                       <td className="table-cell text-right font-medium text-red-600">{formatCurrency(expense.amount)}</td>
                       <td className="table-cell">
-                        <button onClick={() => handleDeleteExpense(expense.id)} className="text-gray-400 hover:text-red-500 transition-colors">
+                        <button onClick={() => handleDeleteExpense(expense.id)} className="p-1 -m-1 text-gray-400 hover:text-red-500 transition-colors rounded">
                           <X className="h-4 w-4" />
                         </button>
                       </td>
@@ -1243,11 +1250,16 @@ export default function AnalyticsPage() {
           )}
 
           {/* Gelir Listesi */}
+          <div className="flex items-center justify-between">
+            <h3 className="h-sub text-gray-700 dark:text-gray-300">{periodLabel} Gelirleri</h3>
+            <button onClick={() => setShowIncomeForm(v => !v)} className="btn-success text-sm">
+              <Plus className="mr-1.5 h-4 w-4" />Gelir Ekle
+            </button>
+          </div>
           {incomesLoading ? (
             <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-pulse-900" /></div>
           ) : (completed.length > 0 || incomes.length > 0) && (
             <div>
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">{periodLabel} Gelirleri</h3>
               <div className="table-wrapper">
                 <table className="table-base">
                   <thead className="table-head-row">
@@ -1283,7 +1295,7 @@ export default function AnalyticsPage() {
                         <td className="table-cell text-gray-500 dark:text-gray-400">{income.description || '—'}</td>
                         <td className="table-cell text-right font-medium text-green-600">{formatCurrency(income.amount)}</td>
                         <td className="table-cell">
-                          <button onClick={() => handleDeleteIncome(income.id)} className="text-gray-400 hover:text-red-500 transition-colors">
+                          <button onClick={() => handleDeleteIncome(income.id)} className="p-1 -m-1 text-gray-400 hover:text-red-500 transition-colors rounded">
                             <X className="h-4 w-4" />
                           </button>
                         </td>
@@ -1354,7 +1366,7 @@ export default function AnalyticsPage() {
                         <span className={cn('text-base font-bold flex-shrink-0', isTop ? 'text-amber-700 dark:text-amber-400' : 'text-gray-900 dark:text-gray-100')}>{formatCurrency(svc.revenue)}</span>
                       </div>
                       <div className="h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden mb-2.5">
-                        <div className={cn('h-full rounded-full transition-all', isTop ? 'bg-amber-500' : 'bg-pulse-900 dark:bg-pulse-400')} style={{ width: `${svc.pctOfTotal}%` }} />
+                        <div className={cn('h-full rounded-full transition-all duration-700', isTop ? 'bg-amber-500' : 'bg-pulse-900 dark:bg-pulse-400')} style={{ width: `${svc.pctOfTotal}%` }} />
                       </div>
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
                         <span>{svc.count} randevu</span>
@@ -1387,13 +1399,11 @@ export default function AnalyticsPage() {
               ['phone', 'Telefon', sourceCounts.phone, 'green'],
             ] as const).map(([key, label, count, color]) => {
               const pct = total > 0 ? Math.round((count / total) * 100) : 0
-              const colorMap: Record<string, string> = { blue: 'text-blue-600', purple: 'text-purple-600', green: 'text-green-600' }
-              const bgMap: Record<string, string> = { blue: 'bg-blue-100', purple: 'bg-purple-100', green: 'bg-green-100' }
+              const colorMap: Record<string, string> = { blue: 'text-blue-600', purple: 'text-pulse-900 dark:text-pulse-400', green: 'text-green-600' }
+              const bgMap: Record<string, string> = { blue: 'bg-blue-100 dark:bg-blue-900/20', purple: 'bg-pulse-100 dark:bg-pulse-900/20', green: 'bg-green-100 dark:bg-green-900/20' }
               return (
-                <div key={key} className="card p-4 text-center">
-                  <div className={cn('inline-flex rounded-full px-3 py-1 text-2xl font-bold mb-1', colorMap[color])}>
-                    {count}
-                  </div>
+                <div key={key} className={cn('card p-4 text-center', bgMap[color])}>
+                  <p className={cn('text-2xl font-bold mb-1', colorMap[color])}>{count}</p>
                   <p className="text-xs text-gray-500">{label}</p>
                   <p className={cn('text-xs font-medium mt-1', colorMap[color])}>%{pct}</p>
                 </div>
@@ -1404,13 +1414,13 @@ export default function AnalyticsPage() {
           {/* Görsel çubuk */}
           {total > 0 && (
             <div className="card p-4">
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Kaynak Dağılımı</h3>
+              <h3 className="h-sub text-gray-700 dark:text-gray-300 mb-3">Kaynak Dağılımı</h3>
               <div className="h-6 rounded-full overflow-hidden flex">
                 {sourceCounts.web > 0 && (
                   <div className="bg-blue-400 h-full" style={{ width: `${(sourceCounts.web / total) * 100}%` }} title={`Online: ${sourceCounts.web}`} />
                 )}
                 {sourceCounts.manual > 0 && (
-                  <div className="bg-purple-400 h-full" style={{ width: `${(sourceCounts.manual / total) * 100}%` }} title={`Manuel: ${sourceCounts.manual}`} />
+                  <div className="bg-pulse-700 dark:bg-pulse-500 h-full" style={{ width: `${(sourceCounts.manual / total) * 100}%` }} title={`Manuel: ${sourceCounts.manual}`} />
                 )}
                 {sourceCounts.phone > 0 && (
                   <div className="bg-green-400 h-full" style={{ width: `${(sourceCounts.phone / total) * 100}%` }} title={`Telefon: ${sourceCounts.phone}`} />
@@ -1418,7 +1428,7 @@ export default function AnalyticsPage() {
               </div>
               <div className="flex gap-4 mt-3 text-xs">
                 <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-blue-400 inline-block" />Online</span>
-                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-purple-400 inline-block" />Manuel</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-pulse-700 inline-block" />Manuel</span>
                 <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-green-400 inline-block" />Telefon</span>
               </div>
             </div>
@@ -1430,15 +1440,24 @@ export default function AnalyticsPage() {
       {activeTab === 'summary' && (
         <div className="space-y-6">
           {forecastLoading && (
-            <div className="flex items-center justify-center py-16">
-              <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+            <div className="card p-6 animate-pulse">
+              <div className="flex items-center justify-between mb-4">
+                <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
+                <div className="h-4 w-24 bg-gray-100 dark:bg-gray-800 rounded" />
+              </div>
+              <div className="h-64 bg-gray-100 dark:bg-gray-800 rounded-lg" />
             </div>
           )}
 
           {!forecastLoading && !forecastData && (
-            <div className="card p-6 text-center py-16">
-              <Sparkles className="h-10 w-10 text-gray-200 mx-auto mb-3" />
-              <p className="text-gray-500">Tahmin verisi yüklenemedi.</p>
+            <div className="card p-8 flex flex-col items-center justify-center gap-3 text-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800">
+                <Sparkles className="h-6 w-6 text-gray-400 dark:text-gray-500" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Tahmin verisi yüklenemedi</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Yeterli randevu verisi oluştuğunda tahminler otomatik hesaplanır.</p>
+              </div>
             </div>
           )}
 
@@ -1448,7 +1467,7 @@ export default function AnalyticsPage() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div className="card p-4 text-center">
                   <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Tahmini Gelir (Sonraki Ay)</p>
-                  <p className="text-2xl font-bold text-pulse-900 dark:text-pulse-300">{formatCurrency(forecastData.insights.nextMonthForecast)}</p>
+                  <p className="text-xl font-bold text-pulse-900 dark:text-pulse-300">{formatCurrency(forecastData.insights.nextMonthForecast)}</p>
                 </div>
                 <div className="card p-4 text-center">
                   <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">En Yoğun Gün</p>
@@ -1597,8 +1616,8 @@ export default function AnalyticsPage() {
                   <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">En Çok Gelir Getiren Hizmetler</h3>
                   <div className="space-y-3">
                     {forecastData.insights.topServices.map((svc, i) => {
-                      const maxRevenue = forecastData.insights.topServices[0]?.revenue || 1
-                      const pct = Math.round((svc.revenue / maxRevenue) * 100)
+                      const topServiceMax = forecastData.insights.topServices[0]?.revenue || 1
+                      const pct = Math.round((svc.revenue / topServiceMax) * 100)
                       const medals = ['🥇', '🥈', '🥉']
                       return (
                         <div key={i} className="space-y-1">
@@ -1607,7 +1626,7 @@ export default function AnalyticsPage() {
                             <span className="text-gray-600 dark:text-gray-400">{formatCurrency(svc.revenue)} <span className="text-gray-400">({svc.count} randevu)</span></span>
                           </div>
                           <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                            <div className="h-full bg-pulse-900 dark:bg-pulse-400 rounded-full" style={{ width: `${pct}%` }} />
+                            <div className="h-full bg-pulse-900 dark:bg-pulse-400 rounded-full transition-all duration-700" style={{ width: `${pct}%` }} />
                           </div>
                         </div>
                       )
@@ -1642,12 +1661,10 @@ export default function AnalyticsPage() {
                               <div
                                 key={hour}
                                 title={`${dayLabel} ${hour}:00 — ${count} randevu`}
-                                className="flex-1 h-6 rounded-sm transition-colors"
-                                style={{
-                                  backgroundColor: count === 0
-                                    ? 'var(--heatmap-empty)'
-                                    : `rgba(var(--heatmap-fill), ${0.15 + intensity * 0.85})`,
-                                }}
+                                className={`flex-1 h-6 rounded-sm transition-colors${count === 0 ? ' bg-gray-100 dark:bg-gray-800' : ''}`}
+                                style={count > 0 ? {
+                                  backgroundColor: `rgba(25, 61, 143, ${0.15 + intensity * 0.85})`,
+                                } : undefined}
                               />
                             )
                           })}
@@ -1658,7 +1675,7 @@ export default function AnalyticsPage() {
                     <div className="flex items-center gap-2 mt-2 text-xs text-gray-400">
                       <span>Az</span>
                       {[0.15, 0.3, 0.45, 0.6, 0.75, 1.0].map((op, i) => (
-                        <div key={i} className="w-5 h-3 rounded-sm" style={{ backgroundColor: `rgba(var(--heatmap-fill), ${op})` }} />
+                        <div key={i} className="w-5 h-3 rounded-sm" style={{ backgroundColor: `rgba(25, 61, 143, ${op})` }} />
                       ))}
                       <span>Çok</span>
                     </div>
@@ -1670,27 +1687,40 @@ export default function AnalyticsPage() {
         </div>
       )}
 
+      </>)}
     </div>
   )
 }
 
 function TrendBadge({ value }: { value: number }) {
-  if (value === 0) return <span className="flex items-center gap-0.5 text-xs text-gray-400"><Minus className="h-3 w-3" />%0</span>
-  if (value > 0) return <span className="flex items-center gap-0.5 text-xs text-green-600"><TrendingUp className="h-3 w-3" />%{value}</span>
-  return <span className="flex items-center gap-0.5 text-xs text-red-500"><TrendingDown className="h-3 w-3" />%{Math.abs(value)}</span>
+  if (value === 0) return <span role="status" aria-label="Değişim yok" className="flex items-center gap-0.5 text-xs text-gray-400"><Minus className="h-3 w-3" />%0</span>
+  if (value > 0) return <span role="status" aria-label={`Yüzde ${value} artış`} className="flex items-center gap-0.5 text-xs text-green-600"><TrendingUp className="h-3 w-3" />%{value}</span>
+  return <span role="status" aria-label={`Yüzde ${Math.abs(value)} düşüş`} className="flex items-center gap-0.5 text-xs text-red-500"><TrendingDown className="h-3 w-3" />%{Math.abs(value)}</span>
 }
 
-function KPICard({ icon, label, value, trend, color, currency }: {
-  icon: React.ReactNode; label: string; value: string | number; trend?: number; color: string; currency?: boolean
+function KPICard({ icon, label, value, trend, color, currency, secondary }: {
+  icon: React.ReactNode; label: string; value: string | number; trend?: number; color: string; currency?: boolean; secondary?: boolean
 }) {
-  const colorMap: Record<string, { icon: string; bg: string }> = {
-    blue:   { icon: 'bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400',   bg: 'bg-blue-50 dark:bg-blue-950/40' },
-    green:  { icon: 'bg-green-500/10 dark:bg-green-500/20 text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-950/40' },
-    purple: { icon: 'bg-purple-500/10 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-950/40' },
-    amber:  { icon: 'bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400',  bg: 'bg-amber-50 dark:bg-amber-950/40' },
-    red:    { icon: 'bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400',        bg: 'bg-red-50 dark:bg-red-950/40' },
+  const colorMap: Record<string, { icon: string; bg: string; text: string }> = {
+    blue:   { icon: 'bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400',   bg: 'bg-blue-50 dark:bg-blue-950/40',   text: 'text-blue-600 dark:text-blue-400' },
+    green:  { icon: 'bg-green-500/10 dark:bg-green-500/20 text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-950/40', text: 'text-green-600 dark:text-green-400' },
+    purple: { icon: 'bg-purple-500/10 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-950/40', text: 'text-purple-600 dark:text-purple-400' },
+    amber:  { icon: 'bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400',  bg: 'bg-amber-50 dark:bg-amber-950/40',  text: 'text-amber-600 dark:text-amber-400' },
+    red:    { icon: 'bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400',        bg: 'bg-red-50 dark:bg-red-950/40',        text: 'text-red-600 dark:text-red-400' },
   }
   const cfg = colorMap[color] || colorMap.blue
+  if (secondary) {
+    return (
+      <div className="flex items-center gap-3 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-3">
+        <div className={cn('shrink-0', cfg.text)}>{icon}</div>
+        <div className="min-w-0">
+          <p className="text-[11px] font-medium text-gray-400 dark:text-gray-500 truncate">{label}</p>
+          <p className="text-base font-semibold text-gray-800 dark:text-gray-100 leading-tight">{value}</p>
+        </div>
+        {trend !== undefined && <div className="ml-auto shrink-0"><TrendBadge value={trend} /></div>}
+      </div>
+    )
+  }
   return (
     <div className={cn('relative overflow-hidden rounded-2xl border border-gray-100 dark:border-gray-800 p-4 transition-all hover:shadow-sm', cfg.bg)}>
       <div className="flex items-start justify-between mb-3">

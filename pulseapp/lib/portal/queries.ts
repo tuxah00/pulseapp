@@ -21,14 +21,17 @@ export async function getCustomerVisibleRecords(businessId: string, customerId: 
 
 export async function getCustomerVisiblePhotos(businessId: string, customerId: string) {
   const admin = createAdminClient()
-  // Not: appointment_id kolonu migration 075 ile eklenecek.
-  // Eklendiğinde buraya 'appointment_id' ve appointment join'i geri ekle:
-  // appointment_id, appointment:appointments(id, appointment_date, start_time, service:services(id, name))
+  // appointment + paket bağlamı join edilir — portal grup ekranı için.
+  // appointment.customer_package_id varsa paket grubu, yoksa randevu grubu.
   return admin
     .from('customer_photos')
     .select(`
-      id, photo_url, photo_type, tags, notes, taken_at, protocol_id, session_id, created_at,
-      protocol:treatment_protocols(id, name, service:services(id, name))
+      id, photo_url, photo_type, tags, notes, taken_at, protocol_id, session_id, appointment_id, created_at,
+      protocol:treatment_protocols(id, name, service:services(id, name)),
+      appointment:appointments(
+        id, appointment_date, start_time, customer_package_id, package_name,
+        service:services(id, name)
+      )
     `)
     .eq('business_id', businessId)
     .eq('customer_id', customerId)

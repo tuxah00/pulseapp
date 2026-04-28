@@ -1060,6 +1060,27 @@ export default function AppointmentsPage() {
 
   async function updateStatus(appointmentId: string, newStatus: AppointmentStatus, e?: React.MouseEvent) {
     e?.stopPropagation()
+
+    // 'Tamamlandı' işareti için veri bütünlüğü guard'ı:
+    // service_id null olan randevular bekleme listesi hold'undan veya eksik
+    // veriden gelmiş olabilir → tamamlandı işaretlemek tahsilat/sadakat tetikleyicilerini
+    // bozar. Kullanıcıya onay sor, yanlışlıkla işaretlemeyi engelle.
+    if (newStatus === 'completed') {
+      const apt = appointments.find(a => a.id === appointmentId)
+      if (apt && !apt.service_id) {
+        const proceed = await confirm({
+          title: 'Hizmet Seçilmemiş',
+          message:
+            'Bu randevuda hizmet seçilmemiş. Tamamlandı işaretlersen tahsilat ve sadakat takibi düzgün çalışmaz.\n\n' +
+            'Önce randevuyu düzenleyip hizmet seçmen önerilir. Yine de devam etmek istiyor musun?',
+          confirmText: 'Yine de İşaretle',
+          cancelText: 'Vazgeç',
+          variant: 'warning',
+        })
+        if (!proceed) return
+      }
+    }
+
     setStatusLoadingId(appointmentId)
     const { error } = await supabase.from('appointments').update({ status: newStatus }).eq('id', appointmentId)
     if (error) {
@@ -1207,17 +1228,17 @@ export default function AppointmentsPage() {
           `Bu randevu için ${paidInvoice.paid_amount.toFixed(2)}₺ tahsilat alınmış.\n\n` +
           'Tahsilatı da iade etmek ister misin?\n\n' +
           '• "Evet, İade Et" → Para iade kaydı oluşturulur, fatura partial/pending duruma döner, sadakat puanı geri alınır.\n' +
-          '• "Sadece Status" → Para olduğu yerde kalır, sadakat puanı dokunulmaz (zaten ödendi).',
+          '• "Sadece Durumu Geri Al" → Para olduğu yerde kalır, sadakat puanı dokunulmaz (zaten ödendi).',
         confirmText: 'Evet, İade Et',
-        cancelText: 'Sadece Status',
+        cancelText: 'Sadece Durumu Geri Al',
         variant: 'warning',
       })
       refundDecision = refundOk ? 'refund' : 'keep'
       // Status revert kullanıcı isteğine bağlı — iade yoksa hâlâ status'u geri almak isteyebilir,
       // bu yüzden ikinci bir onay sormaya gerek yok; doğrudan revert akışına devam.
       confirmMessage = refundDecision === 'refund'
-        ? `Tahsilat ${paidInvoice.paid_amount.toFixed(2)}₺ iade edilecek + status "Onaylandı" yapılacak. Onaylıyor musun?`
-        : 'Status "Onaylandı" yapılacak, tahsilat olduğu gibi kalacak. Onaylıyor musun?'
+        ? `Tahsilat ${paidInvoice.paid_amount.toFixed(2)}₺ iade edilecek + durum "Onaylandı" yapılacak. Onaylıyor musun?`
+        : 'Durum "Onaylandı" yapılacak, tahsilat olduğu gibi kalacak. Onaylıyor musun?'
     }
 
     const ok = await confirm({
@@ -1423,13 +1444,22 @@ export default function AppointmentsPage() {
       if (isInPast) pids.add(a.id)
       if (a.status === 'cancelled' || a.status === 'no_show') continue
       if (a.status === 'completed') {
-        // Tamamlandı ama ödeme alınmamışsa dikkat gerekiyor (ücretsiz hizmetler hariç)
-        // Paket seansı: ödeme paket satışında alındı — fatura beklenmez, kırmızı gösterme
+        // Tamamlandı ama ödeme alınmamışsa dikkat gerekiyor.
+        // Paket seansı: ödeme paket satışında alındı — fatura beklenmez, kırmızı gösterme.
         const isPackageSession = !!(a as AppointmentView).customer_package_id
         const invs = Array.isArray(a.invoices) ? a.invoices : []
         const hasPaid = isPackageSession || invs.some(i => i.status === 'paid' || (i.paid_amount ?? 0) > 0)
-        const svcPrice = a.services?.price ?? 0
-        if (!hasPaid && svcPrice > 0) ids.add(a.id)
+        if (!hasPaid) {
+          // Üç senaryo:
+          // 1) hizmet seçilmemiş (service_id null) → veri eksikliği, KIRMIZI (yanlışlıkla tamamlandı işaretlendi)
+          // 2) hizmet var, fiyat > 0, ödeme yok → KIRMIZI (tahsilat alınmamış)
+          // 3) hizmet var, fiyat == 0 → ücretsiz konsültasyon vb. → kırmızı YOK
+          const hasService = !!a.service_id
+          const svcPrice = a.services?.price ?? null
+          if (!hasService || (svcPrice != null && svcPrice > 0)) {
+            ids.add(a.id)
+          }
+        }
         continue
       }
       // Geçmişteki ama sonuçlandırılmamış randevular

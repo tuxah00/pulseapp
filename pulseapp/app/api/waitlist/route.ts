@@ -63,8 +63,18 @@ export async function POST(request: NextRequest) {
   const hasCriterion = !!(serviceId || staffId || preferredDate || preferredTimeStart)
   if (!hasCriterion) {
     return NextResponse.json({
-      error: 'Hizmet, personel, tarih veya saat tercihlerinden en az birini seçmelisin.'
+      error: 'Hizmet, personel, tarih veya saat tercihlerinden en az biri seçilmeli.'
     }, { status: 400 })
+  }
+
+  // [FIX-P3] Geçmiş tarih reddedilir
+  if (preferredDate) {
+    const today = new Date().toISOString().split('T')[0]
+    if (preferredDate < today) {
+      return NextResponse.json({
+        error: 'Tercih tarihi geçmişte olamaz. Lütfen bugün veya sonraki bir tarih seçin.'
+      }, { status: 400 })
+    }
   }
 
   // Kapalı gün ve mesai saati validasyonu

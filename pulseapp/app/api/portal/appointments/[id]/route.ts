@@ -25,7 +25,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 
   const { data: appointment } = await admin
     .from('appointments')
-    .select('id, status, staff_id, appointment_date, start_time, services(name), customers(name)')
+    .select('id, status, staff_id, appointment_date, start_time, services(name), customers(name), invoices(paid_amount, status, deleted_at)')
     .eq('id', params.id)
     .eq('business_id', businessId)
     .eq('customer_id', customerId)
@@ -38,6 +38,16 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 
   if ((TERMINAL_STATUSES as readonly string[]).includes(appointment.status)) {
     return NextResponse.json({ error: 'Bu randevu artık düzenlenemez' }, { status: 400 })
+  }
+
+  // Ödenmiş randevu üstünde değişiklik yapılamaz — para alındıktan sonra
+  // tarih/saat değişimi muhasebe ve müşteri-iletişim açısından sorun yaratır
+  const aptInvs = Array.isArray(appointment.invoices) ? appointment.invoices : []
+  const isAptPaid = aptInvs.some((i: { status: string; paid_amount: number | string | null; deleted_at: string | null }) =>
+    !i.deleted_at && (i.status === 'paid' || (Number(i.paid_amount) || 0) > 0),
+  )
+  if (isAptPaid) {
+    return NextResponse.json({ error: 'Tahsilatı alınmış randevu düzenlenemez. Lütfen işletme ile iletişime geçin.' }, { status: 400 })
   }
 
   if (appointment.staff_id) {
@@ -107,7 +117,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
 
   const { data: appointment } = await admin
     .from('appointments')
-    .select('id, status, appointment_date, start_time, customer_package_id, services(name), customers(name)')
+    .select('id, status, appointment_date, start_time, customer_package_id, services(name), customers(name), invoices(paid_amount, status, deleted_at)')
     .eq('id', params.id)
     .eq('business_id', businessId)
     .eq('customer_id', customerId)
@@ -120,6 +130,15 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
 
   if ((TERMINAL_STATUSES as readonly string[]).includes(appointment.status)) {
     return NextResponse.json({ error: 'Bu randevu zaten iptal edilmiş veya tamamlanmış' }, { status: 400 })
+  }
+
+  // Ödenmiş randevu iptal edilemez — iade için işletme ile iletişim gerekir
+  const cancelInvs = Array.isArray(appointment.invoices) ? appointment.invoices : []
+  const isCancelAptPaid = cancelInvs.some((i: { status: string; paid_amount: number | string | null; deleted_at: string | null }) =>
+    !i.deleted_at && (i.status === 'paid' || (Number(i.paid_amount) || 0) > 0),
+  )
+  if (isCancelAptPaid) {
+    return NextResponse.json({ error: 'Tahsilatı alınmış randevu iptal edilemez. İade için lütfen işletme ile iletişime geçin.' }, { status: 400 })
   }
 
   const { error: updateError } = await admin
