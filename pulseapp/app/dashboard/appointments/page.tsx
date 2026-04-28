@@ -1423,13 +1423,22 @@ export default function AppointmentsPage() {
       if (isInPast) pids.add(a.id)
       if (a.status === 'cancelled' || a.status === 'no_show') continue
       if (a.status === 'completed') {
-        // Tamamlandı ama ödeme alınmamışsa dikkat gerekiyor (ücretsiz hizmetler hariç)
-        // Paket seansı: ödeme paket satışında alındı — fatura beklenmez, kırmızı gösterme
+        // Tamamlandı ama ödeme alınmamışsa dikkat gerekiyor.
+        // Paket seansı: ödeme paket satışında alındı — fatura beklenmez, kırmızı gösterme.
         const isPackageSession = !!(a as AppointmentView).customer_package_id
         const invs = Array.isArray(a.invoices) ? a.invoices : []
         const hasPaid = isPackageSession || invs.some(i => i.status === 'paid' || (i.paid_amount ?? 0) > 0)
-        const svcPrice = a.services?.price ?? 0
-        if (!hasPaid && svcPrice > 0) ids.add(a.id)
+        if (!hasPaid) {
+          // Üç senaryo:
+          // 1) hizmet seçilmemiş (service_id null) → veri eksikliği, KIRMIZI (yanlışlıkla tamamlandı işaretlendi)
+          // 2) hizmet var, fiyat > 0, ödeme yok → KIRMIZI (tahsilat alınmamış)
+          // 3) hizmet var, fiyat == 0 → ücretsiz konsültasyon vb. → kırmızı YOK
+          const hasService = !!a.service_id
+          const svcPrice = a.services?.price ?? null
+          if (!hasService || (svcPrice != null && svcPrice > 0)) {
+            ids.add(a.id)
+          }
+        }
         continue
       }
       // Geçmişteki ama sonuçlandırılmamış randevular
