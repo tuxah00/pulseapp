@@ -10,3 +10,5 @@
 .claude/telemetry/
 .claude/plans/
 .claude/worktrees/
+.claire/
+.next/
