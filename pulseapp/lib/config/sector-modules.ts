@@ -290,6 +290,7 @@ const SIDEBAR_KEY_TO_PERM: Record<string, keyof StaffPermissions | null> = {
   orders: 'orders',
   reservations: 'reservations',
   portfolio: 'portfolio',
+  consultations: 'consultations',
 }
 
 /**
