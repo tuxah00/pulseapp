@@ -380,7 +380,7 @@ export default function AnalyticsPage() {
 
   requirePermission(permissions, 'analytics')
 
-  if (loading || ctxLoading) {
+  if (ctxLoading) {
     return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-pulse-900" /></div>
   }
 
@@ -584,11 +584,33 @@ export default function AnalyticsPage() {
 
   return (
     <div className="space-y-5">
+      {/* İskelet — yükleme sırasında gösterilir */}
+      {(loading && appointments.length === 0) && (
+        <div className="space-y-5 animate-pulse">
+          <div className="flex items-center justify-between">
+            <div className="space-y-2">
+              <div className="h-7 w-40 bg-gray-200 dark:bg-gray-700 rounded-lg" />
+              <div className="h-4 w-56 bg-gray-100 dark:bg-gray-800 rounded" />
+            </div>
+            <div className="h-9 w-48 bg-gray-100 dark:bg-gray-800 rounded-xl" />
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="rounded-2xl border border-gray-100 dark:border-gray-800 p-4 bg-gray-50 dark:bg-gray-900 h-24" />
+            ))}
+          </div>
+          <div className="h-10 bg-gray-100 dark:bg-gray-800 rounded" />
+          <div className="card p-4 h-64" />
+        </div>
+      )}
+      {!(loading && appointments.length === 0) && (<>
       {/* Başlık */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="h-page">Gelir-Gider</h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{periodLabel} · önceki dönemle karşılaştırmalı</p>
+          <h1 className="h-page">İş Zekası</h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            {activeTab === 'finance' ? `${periodLabel} gelir-gider yönetimi` : activeTab === 'breakdown' ? `${periodLabel} hizmet ve kaynak kırılımı` : activeTab === 'people' ? `${periodLabel} personel ve müşteri analizi` : `${periodLabel} · önceki dönemle karşılaştırmalı`}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -618,8 +640,12 @@ export default function AnalyticsPage() {
           value={formatCurrency(totalRevenue)} trend={revenueTrend} color="green" currency />
         <KPICard icon={<TrendingDown className="h-5 w-5" />} label="Toplam Gider"
           value={formatCurrency(grandTotalExpenses)} color="amber" currency />
-        <KPICard icon={<Wallet className="h-5 w-5" />} label="Net Kâr"
-          value={formatCurrency(totalRevenue - grandTotalExpenses)} color={(totalRevenue - grandTotalExpenses) >= 0 ? 'blue' : 'red'} currency />
+        {(() => {
+          const netProfit = totalRevenue - grandTotalExpenses
+          const netColor = netProfit > 0 ? 'blue' : netProfit < 0 ? 'red' : 'amber'
+          return <KPICard icon={<Wallet className="h-5 w-5" />} label="Net Kâr"
+            value={formatCurrency(netProfit)} color={netColor} currency />
+        })()}
         <KPICard icon={<UserCheck className="h-5 w-5" />} label="Tamamlanan"
           value={completed.length} color="blue" />
       </div>
@@ -675,7 +701,7 @@ export default function AnalyticsPage() {
           {/* Gelir-Gider Trendi */}
           <div className="card p-4">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+              <h3 className="h-sub text-gray-700 dark:text-gray-300 flex items-center gap-2">
                 <Activity className="h-4 w-4" /> Gelir-Gider Trendi — {periodLabel}
               </h3>
               <div className="flex items-center gap-3 text-[10px] text-gray-500">
@@ -684,8 +710,9 @@ export default function AnalyticsPage() {
               </div>
             </div>
             {trendRevenue.every(d => d.revenue === 0) && trendExpenses.every(e => e === 0) && totalRevenue === 0 && totalExpenses === 0 ? (
-              <div className="flex items-center justify-center h-44 text-sm text-gray-400">
-                Bu dönem için veri bulunmuyor
+              <div className="flex flex-col items-center justify-center h-44 gap-2 text-sm text-gray-400 dark:text-gray-500">
+                <Activity className="h-8 w-8 opacity-30" />
+                <span>Bu dönem için veri bulunmuyor</span>
               </div>
             ) : (
               <div className="relative">
@@ -717,9 +744,9 @@ export default function AnalyticsPage() {
                                 {expense > 0 && <span className="text-red-300">{formatCurrency(expense)}</span>}
                               </div>
                             )}
-                            <div className="flex-1 bg-emerald-400 dark:bg-emerald-600 rounded-t-sm transition-all"
+                            <div className="flex-1 bg-emerald-400 dark:bg-emerald-600 rounded-t-sm transition-all duration-500"
                               style={{ height: `${revPct}%`, minHeight: revenue > 0 ? '4px' : '0' }} />
-                            <div className="flex-1 bg-red-300 dark:bg-red-500 rounded-t-sm transition-all"
+                            <div className="flex-1 bg-red-300 dark:bg-red-500 rounded-t-sm transition-all duration-500"
                               style={{ height: `${expPct}%`, minHeight: expense > 0 ? '4px' : '0' }} />
                           </div>
                           <span className="text-[9px] text-gray-400 truncate w-full text-center flex-shrink-0">{label}</span>
@@ -758,7 +785,7 @@ export default function AnalyticsPage() {
       {activeTab === 'people' && (
         <div className="space-y-6">
           <section>
-            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+            <h3 className="h-sub text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
               <Users className="h-4 w-4" /> Personel Karnesi
             </h3>
           {staffStats.length === 0 ? (
@@ -776,7 +803,7 @@ export default function AnalyticsPage() {
                 return (
                   <div key={s.id} className="card p-5">
                     <div className="flex items-center gap-3 mb-4">
-                      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-sm font-bold flex-shrink-0">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-pulse-100 dark:bg-pulse-900/30 text-pulse-900 dark:text-pulse-300 text-sm font-bold flex-shrink-0">
                         {initials}
                       </div>
                       <div>
@@ -815,11 +842,10 @@ export default function AnalyticsPage() {
 
           {/* Müşteri Özet Kartları */}
           <section>
-            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+            <h3 className="h-sub text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
               <UserCheck className="h-4 w-4" /> {customerLabelPlural} Analizi
             </h3>
             <div className="space-y-6">
-          {/* Müşteri Özet Kartları */}
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="card p-4 text-center">
               <p className="text-2xl font-bold text-blue-600">{newCustomers}</p>
@@ -837,7 +863,7 @@ export default function AnalyticsPage() {
 
           {/* Segment Dağılımı */}
           <div className="card p-4">
-            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">{customerLabel} Segmentleri</h3>
+            <h3 className="h-sub text-gray-700 dark:text-gray-300 mb-4">{customerLabel} Segmentleri</h3>
             <div className="space-y-3">
               {segmentData.map(({ segment, label, count }) => {
                 const pct = totalCustomers > 0 ? Math.round((count / totalCustomers) * 100) : 0
@@ -848,7 +874,7 @@ export default function AnalyticsPage() {
                   <div key={segment} className="flex items-center gap-3">
                     <span className="text-sm w-16 text-gray-600 dark:text-gray-400">{label}</span>
                     <div className="flex-1 h-5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                      <div className={cn('h-full rounded-full', colors[segment])} style={{ width: `${pct}%` }} />
+                      <div className={cn('h-full rounded-full transition-all duration-700', colors[segment])} style={{ width: `${pct}%` }} />
                     </div>
                     <span className="text-sm font-medium text-gray-900 dark:text-gray-100 w-16 text-right">{count} (%{pct})</span>
                   </div>
@@ -901,7 +927,7 @@ export default function AnalyticsPage() {
             <>
               {insightsSummary.cohort && insightsSummary.cohort.length > 0 && (
                 <section>
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                  <h3 className="h-sub text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
                     <Activity className="h-4 w-4" /> Kohort Retansiyon
                   </h3>
                   <div className="card p-4">
@@ -912,7 +938,7 @@ export default function AnalyticsPage() {
 
               {insightsSummary.margin && insightsSummary.margin.length > 0 && (
                 <section>
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                  <h3 className="h-sub text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
                     <Layers className="h-4 w-4" /> Hizmet Performans Matrisi
                   </h3>
                   <QuadrantTable rows={insightsSummary.margin} />
@@ -971,7 +997,7 @@ export default function AnalyticsPage() {
 
           {/* Gider Listesi Başlığı */}
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{periodLabel} Giderleri</h3>
+            <h3 className="h-sub text-gray-700 dark:text-gray-300">{periodLabel} Giderleri</h3>
             <div className="flex items-center gap-2">
               {expenses.length > 0 && (
                 <button
@@ -1191,7 +1217,7 @@ export default function AnalyticsPage() {
                       <td className="table-cell text-gray-500 dark:text-gray-400">{expense.description || '—'}</td>
                       <td className="table-cell text-right font-medium text-red-600">{formatCurrency(expense.amount)}</td>
                       <td className="table-cell">
-                        <button onClick={() => handleDeleteExpense(expense.id)} className="text-gray-400 hover:text-red-500 transition-colors">
+                        <button onClick={() => handleDeleteExpense(expense.id)} className="p-1 -m-1 text-gray-400 hover:text-red-500 transition-colors rounded">
                           <X className="h-4 w-4" />
                         </button>
                       </td>
@@ -1239,7 +1265,7 @@ export default function AnalyticsPage() {
 
           {/* Gelir Listesi */}
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{periodLabel} Gelirleri</h3>
+            <h3 className="h-sub text-gray-700 dark:text-gray-300">{periodLabel} Gelirleri</h3>
             <button onClick={() => setShowIncomeForm(v => !v)} className="btn-success text-sm">
               <Plus className="mr-1.5 h-4 w-4" />Gelir Ekle
             </button>
@@ -1283,7 +1309,7 @@ export default function AnalyticsPage() {
                         <td className="table-cell text-gray-500 dark:text-gray-400">{income.description || '—'}</td>
                         <td className="table-cell text-right font-medium text-green-600">{formatCurrency(income.amount)}</td>
                         <td className="table-cell">
-                          <button onClick={() => handleDeleteIncome(income.id)} className="text-gray-400 hover:text-red-500 transition-colors">
+                          <button onClick={() => handleDeleteIncome(income.id)} className="p-1 -m-1 text-gray-400 hover:text-red-500 transition-colors rounded">
                             <X className="h-4 w-4" />
                           </button>
                         </td>
@@ -1387,8 +1413,8 @@ export default function AnalyticsPage() {
               ['phone', 'Telefon', sourceCounts.phone, 'green'],
             ] as const).map(([key, label, count, color]) => {
               const pct = total > 0 ? Math.round((count / total) * 100) : 0
-              const colorMap: Record<string, string> = { blue: 'text-blue-600', purple: 'text-purple-600', green: 'text-green-600' }
-              const bgMap: Record<string, string> = { blue: 'bg-blue-100', purple: 'bg-purple-100', green: 'bg-green-100' }
+              const colorMap: Record<string, string> = { blue: 'text-blue-600', purple: 'text-pulse-900 dark:text-pulse-400', green: 'text-green-600' }
+              const bgMap: Record<string, string> = { blue: 'bg-blue-100 dark:bg-blue-900/20', purple: 'bg-pulse-100 dark:bg-pulse-900/20', green: 'bg-green-100 dark:bg-green-900/20' }
               return (
                 <div key={key} className="card p-4 text-center">
                   <div className={cn('inline-flex rounded-full px-3 py-1 text-2xl font-bold mb-1', colorMap[color])}>
@@ -1404,13 +1430,13 @@ export default function AnalyticsPage() {
           {/* Görsel çubuk */}
           {total > 0 && (
             <div className="card p-4">
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Kaynak Dağılımı</h3>
+              <h3 className="h-sub text-gray-700 dark:text-gray-300 mb-3">Kaynak Dağılımı</h3>
               <div className="h-6 rounded-full overflow-hidden flex">
                 {sourceCounts.web > 0 && (
                   <div className="bg-blue-400 h-full" style={{ width: `${(sourceCounts.web / total) * 100}%` }} title={`Online: ${sourceCounts.web}`} />
                 )}
                 {sourceCounts.manual > 0 && (
-                  <div className="bg-purple-400 h-full" style={{ width: `${(sourceCounts.manual / total) * 100}%` }} title={`Manuel: ${sourceCounts.manual}`} />
+                  <div className="bg-pulse-700 dark:bg-pulse-500 h-full" style={{ width: `${(sourceCounts.manual / total) * 100}%` }} title={`Manuel: ${sourceCounts.manual}`} />
                 )}
                 {sourceCounts.phone > 0 && (
                   <div className="bg-green-400 h-full" style={{ width: `${(sourceCounts.phone / total) * 100}%` }} title={`Telefon: ${sourceCounts.phone}`} />
@@ -1418,7 +1444,7 @@ export default function AnalyticsPage() {
               </div>
               <div className="flex gap-4 mt-3 text-xs">
                 <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-blue-400 inline-block" />Online</span>
-                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-purple-400 inline-block" />Manuel</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-pulse-700 inline-block" />Manuel</span>
                 <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-green-400 inline-block" />Telefon</span>
               </div>
             </div>
@@ -1436,9 +1462,14 @@ export default function AnalyticsPage() {
           )}
 
           {!forecastLoading && !forecastData && (
-            <div className="card p-6 text-center py-16">
-              <Sparkles className="h-10 w-10 text-gray-200 mx-auto mb-3" />
-              <p className="text-gray-500">Tahmin verisi yüklenemedi.</p>
+            <div className="card p-8 flex flex-col items-center justify-center gap-3 text-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800">
+                <Sparkles className="h-6 w-6 text-gray-400 dark:text-gray-500" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Tahmin verisi yüklenemedi</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Yeterli randevu verisi oluştuğunda tahminler otomatik hesaplanır.</p>
+              </div>
             </div>
           )}
 
@@ -1448,7 +1479,7 @@ export default function AnalyticsPage() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div className="card p-4 text-center">
                   <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Tahmini Gelir (Sonraki Ay)</p>
-                  <p className="text-2xl font-bold text-pulse-900 dark:text-pulse-300">{formatCurrency(forecastData.insights.nextMonthForecast)}</p>
+                  <p className="text-xl font-bold text-pulse-900 dark:text-pulse-300">{formatCurrency(forecastData.insights.nextMonthForecast)}</p>
                 </div>
                 <div className="card p-4 text-center">
                   <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">En Yoğun Gün</p>
@@ -1620,7 +1651,13 @@ export default function AnalyticsPage() {
               <div className="card p-5">
                 <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">Haftalık Yoğunluk Haritası</h3>
                 <div className="overflow-x-auto">
-                  <div className="min-w-[480px]">
+                  <div
+                    className="min-w-[480px]"
+                    style={{
+                      '--heatmap-empty': 'rgb(243, 244, 246)',
+                      '--heatmap-fill': '25, 61, 143',
+                    } as React.CSSProperties}
+                  >
                     {/* Saat başlıkları */}
                     <div className="flex mb-1">
                       <div className="w-20 flex-shrink-0" />
@@ -1670,14 +1707,15 @@ export default function AnalyticsPage() {
         </div>
       )}
 
+      </>)}
     </div>
   )
 }
 
 function TrendBadge({ value }: { value: number }) {
-  if (value === 0) return <span className="flex items-center gap-0.5 text-xs text-gray-400"><Minus className="h-3 w-3" />%0</span>
-  if (value > 0) return <span className="flex items-center gap-0.5 text-xs text-green-600"><TrendingUp className="h-3 w-3" />%{value}</span>
-  return <span className="flex items-center gap-0.5 text-xs text-red-500"><TrendingDown className="h-3 w-3" />%{Math.abs(value)}</span>
+  if (value === 0) return <span role="status" aria-label="Değişim yok" className="flex items-center gap-0.5 text-xs text-gray-400"><Minus className="h-3 w-3" />%0</span>
+  if (value > 0) return <span role="status" aria-label={`Yüzde ${value} artış`} className="flex items-center gap-0.5 text-xs text-green-600"><TrendingUp className="h-3 w-3" />%{value}</span>
+  return <span role="status" aria-label={`Yüzde ${Math.abs(value)} düşüş`} className="flex items-center gap-0.5 text-xs text-red-500"><TrendingDown className="h-3 w-3" />%{Math.abs(value)}</span>
 }
 
 function KPICard({ icon, label, value, trend, color, currency, secondary }: {
