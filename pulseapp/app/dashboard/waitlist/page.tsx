@@ -502,6 +502,12 @@ export default function WaitlistPage() {
   }
 
   const handleAutoMatch = async (entry: WaitlistEntry) => {
+    const ok = await confirm({
+      title: 'Uygun Slot Ara',
+      message: `${entry.customer_name} için takvimde uygun slot aranacak ve bulunursa bildirim gönderilecek. Devam etmek istiyor musunuz?`,
+      confirmText: 'Evet, Ara',
+    })
+    if (!ok) return
     try {
       const res = await fetch(`/api/waitlist/${entry.id}/auto-match`, { method: 'POST' })
       const json = await res.json()
