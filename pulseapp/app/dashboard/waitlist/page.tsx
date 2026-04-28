@@ -717,7 +717,7 @@ export default function WaitlistPage() {
                     <button
                       onClick={() => handleAutoMatch(e)}
                       className="text-emerald-600 hover:text-emerald-700 transition-colors p-1"
-                      title="Takvimde uygun slot ara ve bildirim gönder"
+                      title="Takvimde uygun boşluk ara"
                     >
                       <Zap className="h-4 w-4" />
                     </button>
