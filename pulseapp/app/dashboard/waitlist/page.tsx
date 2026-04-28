@@ -544,6 +544,7 @@ export default function WaitlistPage() {
       title: 'Uygun Slot Ara',
       message: `${entry.customer_name} için takvimde uygun slot aranacak ve bulunursa bildirim gönderilecek. Devam etmek istiyor musunuz?`,
       confirmText: 'Evet, Ara',
+      variant: 'warning',
     })
     if (!ok) return
     try {
