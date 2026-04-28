@@ -1,18 +1,20 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   TrendingUp,
   TrendingDown,
-  Wallet,
   Scissors,
   Megaphone,
   MessageSquare,
   Activity,
   UserCircle2,
+  Users,
+  Clock,
   Loader2,
   AlertTriangle,
   Sparkles,
+  RotateCw,
 } from 'lucide-react'
 import { useBusinessContext } from '@/lib/hooks/use-business-context'
 import { requirePermission } from '@/lib/hooks/use-require-permission'
@@ -81,6 +83,30 @@ function KpiCard({
       {hint && (
         <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">{hint}</div>
       )}
+    </div>
+  )
+}
+
+function KpiCardSkeleton() {
+  return (
+    <div className="card p-4 cursor-default animate-pulse">
+      <div className="flex items-center gap-2 mb-2">
+        <div className="h-4 w-4 bg-gray-200 dark:bg-gray-700 rounded" />
+        <div className="h-3 w-24 bg-gray-100 dark:bg-gray-800 rounded" />
+      </div>
+      <div className="h-7 w-32 bg-gray-200 dark:bg-gray-700 rounded mb-2" />
+      <div className="h-3 w-20 bg-gray-100 dark:bg-gray-800 rounded" />
+    </div>
+  )
+}
+
+function StrategyCardSkeleton() {
+  return (
+    <div className="card p-4 cursor-default animate-pulse space-y-2">
+      <div className="h-3 w-16 bg-gray-100 dark:bg-gray-800 rounded-full" />
+      <div className="h-4 w-3/4 bg-gray-200 dark:bg-gray-700 rounded" />
+      <div className="h-3 w-full bg-gray-100 dark:bg-gray-800 rounded" />
+      <div className="h-3 w-5/6 bg-gray-100 dark:bg-gray-800 rounded" />
     </div>
   )
 }
@@ -263,12 +289,35 @@ export default function InsightsPage() {
   const [customerMix, setCustomerMix] = useState<EndpointState<CustomerMixResp>>(initialState())
 
   const [period, setPeriod] = useState<PeriodKey>('weekly')
+  const [refreshKey, setRefreshKey] = useState(0)
 
-  // İlk yükleme — sayfa açılırken paralel fetch
+  // Tek bir endpoint'i yeniden çekmek için kullanılabilir loader (retry için)
+  const loadEndpoint = useCallback(
+    function load<T>(
+      url: string,
+      setter: React.Dispatch<React.SetStateAction<EndpointState<T>>>,
+    ) {
+      setter({ data: null, loading: true, error: null })
+      return fetchJson<T>(url)
+        .then((data) => {
+          setter({ data, loading: false, error: null })
+        })
+        .catch((err: unknown) => {
+          setter({
+            data: null,
+            loading: false,
+            error: err instanceof Error ? err.message : 'Hata',
+          })
+        })
+    },
+    [],
+  )
+
+  // İlk yükleme + manuel yenileme — sayfa açılırken / refreshKey değişince paralel fetch
   useEffect(() => {
     let cancelled = false
 
-    function load<T>(
+    function loadCancellable<T>(
       url: string,
       setter: React.Dispatch<React.SetStateAction<EndpointState<T>>>,
     ) {
@@ -288,20 +337,31 @@ export default function InsightsPage() {
         })
     }
 
-    load<OverviewResponse>('/api/insights/overview?days=30', setOverview)
-    load<InsightsSummary>('/api/insights/summary', setSummary)
-    load<RevenueResp>('/api/insights/revenue-breakdown?days=30', setRevenue)
-    load<ExpenseResp>('/api/insights/expense-breakdown?days=30', setExpense)
-    load<ServicesResp>('/api/insights/services?days=30', setServices)
-    load<CampaignsResp>('/api/insights/campaigns-roi?days=30', setCampaigns)
-    load<FlowsResp>('/api/insights/message-flows-roi?days=30', setFlows)
-    load<NoShowResp>('/api/insights/no-show?days=30', setNoShow)
-    load<CustomerMixResp>('/api/insights/customer-mix?days=30', setCustomerMix)
+    loadCancellable<OverviewResponse>('/api/insights/overview?days=30', setOverview)
+    loadCancellable<InsightsSummary>('/api/insights/summary', setSummary)
+    loadCancellable<RevenueResp>('/api/insights/revenue-breakdown?days=30', setRevenue)
+    loadCancellable<ExpenseResp>('/api/insights/expense-breakdown?days=30', setExpense)
+    loadCancellable<ServicesResp>('/api/insights/services?days=30', setServices)
+    loadCancellable<CampaignsResp>('/api/insights/campaigns-roi?days=30', setCampaigns)
+    loadCancellable<FlowsResp>('/api/insights/message-flows-roi?days=30', setFlows)
+    loadCancellable<NoShowResp>('/api/insights/no-show?days=30', setNoShow)
+    loadCancellable<CustomerMixResp>('/api/insights/customer-mix?days=30', setCustomerMix)
 
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [refreshKey])
+
+  const isRefreshing =
+    overview.loading ||
+    summary.loading ||
+    revenue.loading ||
+    expense.loading ||
+    services.loading ||
+    campaigns.loading ||
+    flows.loading ||
+    noShow.loading ||
+    customerMix.loading
 
   // Period değiştikçe yalnızca doluluk endpoint'i yenilenir
   useEffect(() => {
@@ -360,27 +420,51 @@ export default function InsightsPage() {
   return (
     <div className="space-y-6">
       {/* Başlık */}
-      <div>
-        <h1 className="h-page flex items-center gap-2">
-          <Sparkles className="w-6 h-6 text-pulse-900 dark:text-pulse-300" />
-          İş Zekası
-        </h1>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-          İşletmenin nabzı, fırsatlar ve önerilen aksiyonlar.
-        </p>
+      <div className="flex items-start justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="h-page flex items-center gap-2">
+            <Sparkles className="w-6 h-6 text-pulse-900 dark:text-pulse-300" />
+            İş Zekası
+          </h1>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            İşletmenin nabzı, fırsatlar ve önerilen aksiyonlar · Son 30 gün
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setRefreshKey((k) => k + 1)}
+          disabled={isRefreshing}
+          className="btn-secondary text-sm gap-1.5 disabled:opacity-60"
+          title="Tüm bölümleri yeniden yükle"
+        >
+          <RotateCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+          {isRefreshing ? 'Yenileniyor…' : 'Yenile'}
+        </button>
       </div>
 
       {/* Overview KPI strip */}
       {overview.loading ? (
-        <div className="card p-6 flex items-center justify-center">
-          <Loader2 className="w-4 h-4 animate-spin text-pulse-900 dark:text-pulse-300" />
-        </div>
+        <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <KpiCardSkeleton />
+          <KpiCardSkeleton />
+          <KpiCardSkeleton />
+          <KpiCardSkeleton />
+        </section>
       ) : overview.error ? (
         <div className="card p-4 border-danger-200 dark:border-danger-800 flex items-start gap-3 cursor-default">
           <AlertTriangle className="w-5 h-5 text-danger-500 shrink-0 mt-0.5" />
-          <div className="text-sm text-danger-700 dark:text-danger-300">
-            Özet yüklenemedi — {overview.error}
+          <div className="flex-1 text-sm text-danger-700 dark:text-danger-300">
+            <div className="font-medium">Özet yüklenemedi</div>
+            <div className="text-xs text-danger-600/80 dark:text-danger-400/80 mt-0.5">{overview.error}</div>
           </div>
+          <button
+            type="button"
+            onClick={() => loadEndpoint<OverviewResponse>('/api/insights/overview?days=30', setOverview)}
+            className="text-xs px-3 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-danger-200 dark:border-danger-800 text-danger-700 dark:text-danger-300 hover:bg-danger-50 dark:hover:bg-danger-900/20 transition-colors flex items-center gap-1.5 shrink-0"
+          >
+            <RotateCw className="w-3.5 h-3.5" />
+            Tekrar Dene
+          </button>
         </div>
       ) : overview.data ? (
         <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -419,7 +503,7 @@ export default function InsightsPage() {
       ) : null}
 
       {/* Öncelikli Öneriler — eski summary'den gelen 3 strateji kartı */}
-      {topRecs.length > 0 && (
+      {(summary.loading || topRecs.length > 0) && (
         <section className="space-y-3">
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-pulse-900 dark:text-pulse-300" />
@@ -428,9 +512,15 @@ export default function InsightsPage() {
             </h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {topRecs.map((rec) => (
-              <StrategyCard key={rec.id} rec={rec} compact />
-            ))}
+            {summary.loading ? (
+              <>
+                <StrategyCardSkeleton />
+                <StrategyCardSkeleton />
+                <StrategyCardSkeleton />
+              </>
+            ) : (
+              topRecs.map((rec) => <StrategyCard key={rec.id} rec={rec} compact />)
+            )}
           </div>
         </section>
       )}
@@ -439,6 +529,7 @@ export default function InsightsPage() {
       <InsightSection
         title="Gelir Dağılımı"
         description="Hizmet, ürün, paket ve manuel gelir kırılımı"
+        icon={<TrendingUp className="w-4 h-4" />}
         meta={
           revenue.data ? (
             <span className="text-[11px] text-gray-500 dark:text-gray-400 tabular-nums">
@@ -448,6 +539,7 @@ export default function InsightsPage() {
         }
         loading={revenue.loading}
         error={revenue.error}
+        onRetry={() => loadEndpoint<RevenueResp>('/api/insights/revenue-breakdown?days=30', setRevenue)}
         chart={
           <ChartPie
             data={revenuePie}
@@ -462,6 +554,7 @@ export default function InsightsPage() {
       <InsightSection
         title="Gider Dağılımı"
         description="Kategori bazında giderler"
+        icon={<TrendingDown className="w-4 h-4" />}
         meta={
           expense.data ? (
             <span className="text-[11px] text-gray-500 dark:text-gray-400 tabular-nums">
@@ -471,6 +564,7 @@ export default function InsightsPage() {
         }
         loading={expense.loading}
         error={expense.error}
+        onRetry={() => loadEndpoint<ExpenseResp>('/api/insights/expense-breakdown?days=30', setExpense)}
         chart={
           <ChartPie
             data={expensePie}
@@ -485,6 +579,7 @@ export default function InsightsPage() {
       <InsightSection
         title="Hizmet Gelirleri"
         description="En çok gelir getiren hizmetler ve ortalama bilet"
+        icon={<Scissors className="w-4 h-4" />}
         meta={
           <span className="text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-1">
             <Scissors className="w-3.5 h-3.5" />
@@ -493,23 +588,28 @@ export default function InsightsPage() {
         }
         loading={services.loading}
         error={services.error}
+        onRetry={() => loadEndpoint<ServicesResp>('/api/insights/services?days=30', setServices)}
         chart={<ChartBar data={servicesBar} currency />}
         insight={services.data?.insight ?? null}
       />
 
       {/* 4 — Kampanya & Mesaj Akışı Etkinliği */}
       <section className="card cursor-default overflow-hidden">
-        <header className="px-5 pt-5">
-          <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-            <Megaphone className="w-4 h-4 text-pulse-900 dark:text-pulse-300" />
-            Kampanya & Mesaj Akışı Etkinliği
-          </h2>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            Her kampanyanın ve otomatik mesaj akışının attribute edilen cirosu
-          </p>
+        <header className="flex items-start gap-3 px-5 pt-5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-pulse-50 dark:bg-pulse-950/40 text-pulse-900 dark:text-pulse-300 shrink-0 mt-0.5">
+            <Megaphone className="w-4 h-4" />
+          </div>
+          <div>
+            <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+              Kampanya & Mesaj Akışı Etkinliği
+            </h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              Her kampanyanın ve otomatik mesaj akışının attribute edilen cirosu
+            </p>
+          </div>
         </header>
 
-        <div className="px-5 pt-3 grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="px-5 pt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
@@ -523,13 +623,24 @@ export default function InsightsPage() {
               )}
             </div>
             {campaigns.loading ? (
-              <div className="h-48 flex items-center justify-center text-sm text-gray-500 dark:text-gray-400">
-                <Loader2 className="w-4 h-4 animate-spin mr-2" /> Yükleniyor…
+              <div className="h-48 rounded-xl bg-gray-50 dark:bg-gray-900/40 border border-dashed border-gray-200 dark:border-gray-800 animate-pulse flex items-center justify-center">
+                <span className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-2">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  Veri hazırlanıyor…
+                </span>
               </div>
             ) : campaigns.error ? (
-              <div className="h-48 flex items-center justify-center text-sm text-danger-600 dark:text-danger-400">
-                <AlertTriangle className="w-4 h-4 mr-2" />
-                {campaigns.error}
+              <div className="h-48 flex flex-col items-center justify-center gap-2 text-center">
+                <AlertTriangle className="w-5 h-5 text-danger-500 dark:text-danger-400" />
+                <p className="text-xs text-gray-500 dark:text-gray-400">{campaigns.error}</p>
+                <button
+                  type="button"
+                  onClick={() => loadEndpoint<CampaignsResp>('/api/insights/campaigns-roi?days=30', setCampaigns)}
+                  className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-pulse-300 dark:hover:border-pulse-700 hover:text-pulse-900 dark:hover:text-pulse-300 transition-colors flex items-center gap-1.5 text-gray-600 dark:text-gray-400"
+                >
+                  <RotateCw className="w-3 h-3" />
+                  Tekrar Dene
+                </button>
               </div>
             ) : (
               <ChartBar
@@ -555,13 +666,24 @@ export default function InsightsPage() {
               )}
             </div>
             {flows.loading ? (
-              <div className="h-48 flex items-center justify-center text-sm text-gray-500 dark:text-gray-400">
-                <Loader2 className="w-4 h-4 animate-spin mr-2" /> Yükleniyor…
+              <div className="h-48 rounded-xl bg-gray-50 dark:bg-gray-900/40 border border-dashed border-gray-200 dark:border-gray-800 animate-pulse flex items-center justify-center">
+                <span className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-2">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  Veri hazırlanıyor…
+                </span>
               </div>
             ) : flows.error ? (
-              <div className="h-48 flex items-center justify-center text-sm text-danger-600 dark:text-danger-400">
-                <AlertTriangle className="w-4 h-4 mr-2" />
-                {flows.error}
+              <div className="h-48 flex flex-col items-center justify-center gap-2 text-center">
+                <AlertTriangle className="w-5 h-5 text-danger-500 dark:text-danger-400" />
+                <p className="text-xs text-gray-500 dark:text-gray-400">{flows.error}</p>
+                <button
+                  type="button"
+                  onClick={() => loadEndpoint<FlowsResp>('/api/insights/message-flows-roi?days=30', setFlows)}
+                  className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-pulse-300 dark:hover:border-pulse-700 hover:text-pulse-900 dark:hover:text-pulse-300 transition-colors flex items-center gap-1.5 text-gray-600 dark:text-gray-400"
+                >
+                  <RotateCw className="w-3 h-3" />
+                  Tekrar Dene
+                </button>
               </div>
             ) : (
               <ChartBar data={flowsBar} currency limit={6} />
@@ -570,8 +692,8 @@ export default function InsightsPage() {
         </div>
 
         <div className="px-5 pb-5 pt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <InsightSideBlock insight={campaigns.data?.insight ?? null} />
-          <InsightSideBlock insight={flows.data?.insight ?? null} />
+          <InsightSideBlock insight={campaigns.data?.insight ?? null} loading={campaigns.loading} />
+          <InsightSideBlock insight={flows.data?.insight ?? null} loading={flows.loading} />
         </div>
       </section>
 
@@ -579,6 +701,8 @@ export default function InsightsPage() {
       <InsightSection
         title="Doluluk & No-show"
         description="Zaman bazlı doluluk ve gelmeyen müşteri oranı"
+        icon={<Activity className="w-4 h-4" />}
+        onRetry={() => loadEndpoint<OccupancyResp>(`/api/insights/occupancy-periodic?days=30&period=${period}`, setOccupancy)}
         headerExtra={
           <PeriodSelector
             value={period}
@@ -635,6 +759,8 @@ export default function InsightsPage() {
         <InsightSection
           title="No-show Detayı"
           description="Personel kırılımı ve riskli müşteri sayısı"
+          icon={<AlertTriangle className="w-4 h-4" />}
+          onRetry={() => loadEndpoint<NoShowResp>('/api/insights/no-show?days=30', setNoShow)}
           chart={
             <div className="space-y-2">
               {noShow.data.staffBreakdown.length > 0 ? (
@@ -696,6 +822,7 @@ export default function InsightsPage() {
       <InsightSection
         title="Müşteri Mix"
         description="Yeni / Düzenli / VIP / Risk / Kayıp segmentlerinin dağılımı"
+        icon={<Users className="w-4 h-4" />}
         meta={
           customerMix.data ? (
             <span className="text-[11px] text-gray-500 dark:text-gray-400 tabular-nums">
@@ -706,6 +833,7 @@ export default function InsightsPage() {
         }
         loading={customerMix.loading}
         error={customerMix.error}
+        onRetry={() => loadEndpoint<CustomerMixResp>('/api/insights/customer-mix?days=30', setCustomerMix)}
         chart={<ChartPie data={segmentPie} highlightKey={customerMix.data && customerMix.data.totals.riskGrowthRatio > 1.15 ? 'risk' : undefined} />}
         insight={customerMix.data?.segmentInsight ?? null}
       />
@@ -714,6 +842,7 @@ export default function InsightsPage() {
         <InsightSection
           title="Bekleme Listesi"
           description="Son 90 günde waitlist aktivitesi"
+          icon={<Clock className="w-4 h-4" />}
           chart={
             <div className="grid grid-cols-3 gap-3">
               <WaitlistStat
@@ -747,11 +876,27 @@ export default function InsightsPage() {
  * Aksiyon butonları burada yok — kampanya/mesaj akışı için "Uygula" akışı
  * ayrı bir epik; önce metrik güveni oluşsun.
  */
-function InsightSideBlock({ insight }: { insight: InsightBlock | null }) {
+function InsightSideBlock({
+  insight,
+  loading,
+}: {
+  insight: InsightBlock | null
+  loading?: boolean
+}) {
+  if (loading) {
+    return (
+      <div className="rounded-xl border border-dashed border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/40 p-3 animate-pulse space-y-2">
+        <div className="h-3 w-2/3 bg-gray-200 dark:bg-gray-700 rounded" />
+        <div className="h-3 w-full bg-gray-100 dark:bg-gray-800 rounded" />
+        <div className="h-3 w-5/6 bg-gray-100 dark:bg-gray-800 rounded" />
+      </div>
+    )
+  }
   if (!insight) {
     return (
-      <div className="rounded-xl border border-dashed border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/40 p-3 text-xs text-gray-500 dark:text-gray-400">
-        Yeterli veri yok.
+      <div className="rounded-xl border border-dashed border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/40 p-3 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+        <Sparkles className="w-3.5 h-3.5 opacity-60" />
+        <span>Yeterli veri olunca burada öneri görünecek.</span>
       </div>
     )
   }

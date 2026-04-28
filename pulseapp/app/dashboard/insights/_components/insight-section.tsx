@@ -6,6 +6,7 @@ import {
   ArrowRight,
   CheckCircle2,
   Loader2,
+  RotateCw,
   Sparkles,
 } from 'lucide-react'
 import type { InsightAction, InsightBlock, InsightSeverity } from '@/lib/insights/types'
@@ -31,6 +32,8 @@ import { useRouter } from 'next/navigation'
 interface Props {
   title: string
   description?: string
+  /** Opsiyonel — başlığın yanında gösterilen leading icon (Lucide veya benzeri) */
+  icon?: ReactNode
   chart: ReactNode
   insight: InsightBlock | null
   /** Opsiyonel — null/undefined olursa insight.actions kullanılır. */
@@ -41,6 +44,8 @@ interface Props {
   headerExtra?: ReactNode
   loading?: boolean
   error?: string | null
+  /** Hata durumunda gösterilen "Tekrar Dene" butonu için callback */
+  onRetry?: () => void
 }
 
 const SEVERITY_STYLES: Record<
@@ -72,6 +77,7 @@ const SEVERITY_STYLES: Record<
 export default function InsightSection({
   title,
   description,
+  icon,
   chart,
   insight,
   actions,
@@ -79,6 +85,7 @@ export default function InsightSection({
   headerExtra,
   loading,
   error,
+  onRetry,
 }: Props) {
   const router = useRouter()
   const { confirm } = useConfirm()
@@ -193,17 +200,24 @@ export default function InsightSection({
   return (
     <section className="card cursor-default overflow-hidden">
       <header className="flex items-start justify-between gap-3 px-5 pt-5">
-        <div>
-          <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">
-            {title}
-          </h2>
-          {description && (
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-              {description}
-            </p>
+        <div className="flex items-start gap-3 min-w-0">
+          {icon && (
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-pulse-50 dark:bg-pulse-950/40 text-pulse-900 dark:text-pulse-300 shrink-0 mt-0.5">
+              {icon}
+            </div>
           )}
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+              {title}
+            </h2>
+            {description && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                {description}
+              </p>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {meta}
           {headerExtra}
         </div>
@@ -212,14 +226,31 @@ export default function InsightSection({
       <div className="mt-4 grid grid-cols-1 lg:grid-cols-5 gap-5 px-5 pb-5">
         <div className="lg:col-span-3 min-h-[260px]">
           {loading ? (
-            <div className="h-64 flex items-center justify-center text-sm text-gray-500 dark:text-gray-400">
-              <Loader2 className="w-4 h-4 animate-spin mr-2" />
-              Yükleniyor…
+            <div className="h-64 rounded-xl bg-gray-50 dark:bg-gray-900/40 border border-dashed border-gray-200 dark:border-gray-800 animate-pulse flex items-center justify-center">
+              <span className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-2">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                Veri hazırlanıyor…
+              </span>
             </div>
           ) : error ? (
-            <div className="h-64 flex items-center justify-center text-sm text-danger-600 dark:text-danger-400">
-              <AlertTriangle className="w-4 h-4 mr-2" />
-              {error}
+            <div className="h-64 flex flex-col items-center justify-center gap-3 text-center">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-danger-50 dark:bg-danger-900/20 text-danger-500 dark:text-danger-400">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Veri yüklenemedi</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{error}</p>
+              </div>
+              {onRetry && (
+                <button
+                  type="button"
+                  onClick={onRetry}
+                  className="text-xs px-3 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-pulse-300 dark:hover:border-pulse-700 hover:text-pulse-900 dark:hover:text-pulse-300 transition-colors flex items-center gap-1.5"
+                >
+                  <RotateCw className="w-3.5 h-3.5" />
+                  Tekrar Dene
+                </button>
+              )}
             </div>
           ) : (
             chart
