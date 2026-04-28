@@ -100,9 +100,9 @@ export async function scanAndNotifyWaitlistEntry(
   }
 
   // Şu anki zaman — bugünkü slotlar için "geçmişe gönderme" koruması.
-  // Buffer: rezervasyon ile randevu arasında en az 30 dk olmalı (müşteri SMS'i
-  // okuyup gelmesi için makul süre).
-  const SLOT_BUFFER_MINUTES = 30
+  // Buffer: rezervasyon ile randevu arasında en az 2 saat (120 dk) olmalı —
+  // müşterinin SMS'i okuyup gelmesi + hazırlanması için gerekli minimum süre.
+  const SLOT_BUFFER_MINUTES = 120
   const today = new Date().toISOString().split('T')[0]
   const nowMin = new Date().getHours() * 60 + new Date().getMinutes()
 
