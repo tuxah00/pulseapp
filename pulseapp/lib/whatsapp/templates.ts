@@ -18,8 +18,13 @@ export type WhatsAppTemplateType =
   | 'cancellation_notice'
   | 'follow_up'
   | 'post_care'
+  // Ön Konsültasyon şablonları
+  | 'consultation_received'
+  | 'consultation_suitable'
+  | 'consultation_not_suitable'
+  | 'consultation_more_info'
 
-export type WhatsAppTemplateCategory = 'randevu' | 'dogum_gunu' | 'follow_up' | 'kampanya'
+export type WhatsAppTemplateCategory = 'randevu' | 'dogum_gunu' | 'follow_up' | 'kampanya' | 'konsultasyon'
 
 export interface TemplateParams {
   customerName: string
@@ -50,6 +55,7 @@ export const TEMPLATE_CATEGORY_LABELS: Record<WhatsAppTemplateCategory, string> 
   dogum_gunu: 'Doğum Günü',
   follow_up: 'Takip / Bakım',
   kampanya: 'Kampanya',
+  konsultasyon: 'Ön Konsültasyon',
 }
 
 /**
@@ -144,6 +150,38 @@ export const TEMPLATE_META: Record<WhatsAppTemplateType, TemplateMeta> = {
     category: 'kampanya',
     placeholders: [],
   },
+  // ── Ön Konsültasyon ──
+  consultation_received: {
+    type: 'consultation_received',
+    label: 'Konsültasyon Talebi Alındı',
+    category: 'konsultasyon',
+    placeholders: [],
+  },
+  consultation_suitable: {
+    type: 'consultation_suitable',
+    label: 'Konsültasyon — Uygun Bulundu',
+    category: 'konsultasyon',
+    placeholders: [
+      { key: 'serviceName', label: 'Hizmet Adı', required: false, placeholder: 'Örn: Burun Estetiği' },
+      { key: 'bookingUrl', label: 'Randevu Linki', required: false, placeholder: 'https://…/book/…' },
+    ],
+  },
+  consultation_not_suitable: {
+    type: 'consultation_not_suitable',
+    label: 'Konsültasyon — Uygun Değil',
+    category: 'konsultasyon',
+    placeholders: [
+      { key: 'reason', label: 'Gerekçe (opsiyonel)', required: false, placeholder: 'Örn: Mevcut durumunuz için farklı bir yaklaşım öneriyoruz.' },
+    ],
+  },
+  consultation_more_info: {
+    type: 'consultation_more_info',
+    label: 'Konsültasyon — Ek Bilgi İsteniyor',
+    category: 'konsultasyon',
+    placeholders: [
+      { key: 'message', label: 'İstenen Bilgi', required: true, placeholder: 'Örn: Son 6 aydaki ilaç kullanımınızı paylaşabilir misiniz?' },
+    ],
+  },
 }
 
 const templates: Record<WhatsAppTemplateType, (params: TemplateParams) => string> = {
@@ -176,6 +214,19 @@ const templates: Record<WhatsAppTemplateType, (params: TemplateParams) => string
 
   post_care: ({ customerName, businessName, serviceName, message }) =>
     `Merhaba ${customerName} 📋\n\n${businessName} - ${serviceName || 'Tedavi'} Sonrası Bakım Talimatları:\n\n${message}\n\nSorularınız için bize ulaşabilirsiniz.`,
+
+  // ── Ön Konsültasyon ──
+  consultation_received: ({ customerName, businessName }) =>
+    `Merhaba ${customerName} 🙏\n\n${businessName} ön konsültasyon talebinizi aldık. Uzmanlarımız en kısa sürede inceleyip size dönüş yapacaktır.\n\nTeşekkür ederiz!`,
+
+  consultation_suitable: ({ customerName, businessName, serviceName, bookingUrl }) =>
+    `Merhaba ${customerName} ✅\n\n${businessName} ekibimiz konsültasyon talebinizi inceledi. ${serviceName ? `*${serviceName}* için` : ''} uygun olduğunuzu değerlendirdik.\n\n${bookingUrl ? `Randevu almak için: ${bookingUrl}` : 'Randevu almak için bize yazabilirsiniz.'}\n\nSağlıklı günler dileriz! 😊`,
+
+  consultation_not_suitable: ({ customerName, businessName, reason }) =>
+    `Merhaba ${customerName}\n\n${businessName} ekibimiz konsültasyon talebinizi özenle inceledi.\n\n${reason || 'Mevcut durumunuz için şu an farklı bir yaklaşım öneriyoruz.'}\n\nSorularınız için her zaman ulaşabilirsiniz. 💙`,
+
+  consultation_more_info: ({ customerName, businessName, message }) =>
+    `Merhaba ${customerName} 📋\n\n${businessName} konsültasyon talebinizi değerlendirirken ek bilgiye ihtiyaç duyduk:\n\n${message}\n\nBu soruları yanıtladıktan sonra size en doğru değerlendirmeyi yapabiliriz.`,
 }
 
 /**

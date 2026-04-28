@@ -34,6 +34,7 @@ const TEMPLATES_BY_CATEGORY: Record<WhatsAppTemplateCategory, WhatsAppTemplateTy
     dogum_gunu: [],
     follow_up: [],
     kampanya: [],
+    konsultasyon: [],
   }
   for (const meta of Object.values(TEMPLATE_META)) {
     map[meta.category].push(meta.type)
