@@ -1639,13 +1639,7 @@ export default function AnalyticsPage() {
               <div className="card p-5">
                 <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">Haftalık Yoğunluk Haritası</h3>
                 <div className="overflow-x-auto">
-                  <div
-                    className="min-w-[480px]"
-                    style={{
-                      '--heatmap-empty': 'rgb(243, 244, 246)',
-                      '--heatmap-fill': '25, 61, 143',
-                    } as React.CSSProperties}
-                  >
+                  <div className="min-w-[480px]">
                     {/* Saat başlıkları */}
                     <div className="flex mb-1">
                       <div className="w-20 flex-shrink-0" />
@@ -1667,12 +1661,10 @@ export default function AnalyticsPage() {
                               <div
                                 key={hour}
                                 title={`${dayLabel} ${hour}:00 — ${count} randevu`}
-                                className="flex-1 h-6 rounded-sm transition-colors"
-                                style={{
-                                  backgroundColor: count === 0
-                                    ? 'var(--heatmap-empty)'
-                                    : `rgba(var(--heatmap-fill), ${0.15 + intensity * 0.85})`,
-                                }}
+                                className={`flex-1 h-6 rounded-sm transition-colors${count === 0 ? ' bg-gray-100 dark:bg-gray-800' : ''}`}
+                                style={count > 0 ? {
+                                  backgroundColor: `rgba(25, 61, 143, ${0.15 + intensity * 0.85})`,
+                                } : undefined}
                               />
                             )
                           })}
@@ -1683,7 +1675,7 @@ export default function AnalyticsPage() {
                     <div className="flex items-center gap-2 mt-2 text-xs text-gray-400">
                       <span>Az</span>
                       {[0.15, 0.3, 0.45, 0.6, 0.75, 1.0].map((op, i) => (
-                        <div key={i} className="w-5 h-3 rounded-sm" style={{ backgroundColor: `rgba(var(--heatmap-fill), ${op})` }} />
+                        <div key={i} className="w-5 h-3 rounded-sm" style={{ backgroundColor: `rgba(25, 61, 143, ${op})` }} />
                       ))}
                       <span>Çok</span>
                     </div>
