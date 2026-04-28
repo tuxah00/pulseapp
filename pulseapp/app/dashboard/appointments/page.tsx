@@ -1224,7 +1224,7 @@ export default function AppointmentsPage() {
       // İlk soru: iade et mi, yoksa para kalsın mı?
       const refundOk = await confirm({
         title: 'Bu randevunun ödemesi alınmış',
-        message: `${paidInvoice.paid_amount.toFixed(2)}₺ tahsilat geri alınsın mı?`,
+        message: `${paidInvoice.paid_amount.toFixed(2)}₺ iade edilsin mi?`,
         confirmText: 'Evet, İade Et',
         cancelText: 'Sadece Durumu Geri Al',
         variant: 'warning',
