@@ -1223,12 +1223,11 @@ export default function AppointmentsPage() {
     if (paidInvoice) {
       // İlk soru: iade et mi, yoksa para kalsın mı?
       const refundOk = await confirm({
-        title: 'Tahsilat Mevcut',
+        title: 'Bu randevunun ödemesi alınmış',
         message:
-          `Bu randevu için ${paidInvoice.paid_amount.toFixed(2)}₺ tahsilat alınmış.\n\n` +
-          'Tahsilatı da iade etmek ister misin?\n\n' +
-          '• "Evet, İade Et" → Para iade kaydı oluşturulur, fatura partial/pending duruma döner, sadakat puanı geri alınır.\n' +
-          '• "Sadece Durumu Geri Al" → Para olduğu yerde kalır, sadakat puanı dokunulmaz (zaten ödendi).',
+          `${paidInvoice.paid_amount.toFixed(2)}₺ tahsilat kaydı var.\n\n` +
+          '• "Evet, İade Et" seçersen ödeme iade edilmiş sayılır, fatura sıfırlanır.\n' +
+          '• "Sadece Durumu Geri Al" seçersen para olduğu yerde kalır, sadece randevu "Onaylandı" durumuna döner.',
         confirmText: 'Evet, İade Et',
         cancelText: 'Sadece Durumu Geri Al',
         variant: 'warning',
