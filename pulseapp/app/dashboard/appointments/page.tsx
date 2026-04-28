@@ -53,6 +53,7 @@ import { addMonthsSafe } from '@/lib/utils/date-range'
 import { humanizeSupabaseError } from '@/lib/utils/humanize-supabase-error'
 import { getCustomerLabelSingular } from '@/lib/config/sector-modules'
 import { useConfirm } from '@/lib/hooks/use-confirm'
+import { useOperation } from '@/lib/hooks/use-operation'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import { ToolbarPopover, SortPopoverContent, FilterPopoverList } from '@/components/ui/toolbar-popover'
 import { CustomSelect } from '@/components/ui/custom-select'
@@ -110,6 +111,7 @@ export default function AppointmentsPage() {
   const { businessId, staffId: currentStaffId, staffName: currentStaffName, sector, permissions, writePermissions, loading: ctxLoading } = useBusinessContext()
   const customerLabel = getCustomerLabelSingular(sector ?? undefined)
   const { confirm } = useConfirm()
+  const { run: runOperation } = useOperation()
   const [appointments, setAppointments] = useState<AppointmentView[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedDate, setSelectedDate] = useState(formatDateISO(new Date()))
@@ -132,7 +134,10 @@ export default function AppointmentsPage() {
   // Bekleme listesindeki müşteri auto_book_on_match=true ile kayıt olduğu zaman ayrı bir
   // sahip onayına gerek kalmıyor. Hiç eşleşme yoksa fill-gap silent dönüyor.
   const [fillGapLoading, setFillGapLoading] = useState<string | null>(null)
-  const [statusLoadingId, setStatusLoadingId] = useState<string | null>(null)
+  // Loading state'i hem hangi randevu hem hangi aksiyon — spinner doğru butonda gösterilir
+  const [statusLoadingAction, setStatusLoadingAction] = useState<{ id: string; status: AppointmentStatus } | null>(null)
+  const isLoading = (id: string, status?: AppointmentStatus) =>
+    statusLoadingAction?.id === id && (!status || statusLoadingAction.status === status)
   const [cancelNotifyCustomer, setCancelNotifyCustomer] = useState(true)
   const [slotPopup, setSlotPopup] = useState<{ day: string; hour: number; apts: AppointmentView[]; x: number; y: number } | null>(null)
   const [saving, setSaving] = useState(false)
@@ -1081,15 +1086,57 @@ export default function AppointmentsPage() {
       }
     }
 
-    setStatusLoadingId(appointmentId)
-    const { error } = await supabase.from('appointments').update({ status: newStatus }).eq('id', appointmentId)
-    if (error) {
-      setStatusLoadingId(null)
-      if (error.message.includes('segment') && error.message.includes('customer_segment')) {
-        window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Veritabanı Hatası', body: 'Randevu güncellemesi veritabanı ayarı nedeniyle başarısız. Supabase SQL Editor\'den 003_fix_appointment_customer_segment.sql dosyasını çalıştırın.' } }))
-      } else {
-        window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: 'Güncelleme hatası: ' + error.message } }))
-      }
+    // 'Gelmedi' işareti — geri alınamaz + workflow tetikliyor (SMS olabilir),
+    // yanlışlıkla tıklamayı engellemek için onay sor.
+    if (newStatus === 'no_show') {
+      const proceed = await confirm({
+        title: 'Gelmedi İşaretle',
+        message: 'Müşteri randevuya gelmedi olarak işaretlenecek. Otomatik mesaj akışları varsa müşteriye bildirim gidebilir. Devam edelim mi?',
+        confirmText: 'Evet, İşaretle',
+        cancelText: 'Vazgeç',
+        variant: 'warning',
+      })
+      if (!proceed) return
+    }
+
+    setStatusLoadingAction({ id: appointmentId, status: newStatus })
+
+    // pending → success/error akışı için merkezi mesajlar
+    const pendingLabels: Record<string, string> = {
+      completed: 'Tamamlandı işaretleniyor...',
+      cancelled: 'İptal ediliyor...',
+      no_show: 'Gelmedi işaretleniyor...',
+      confirmed: 'Onaylanıyor...',
+      pending: 'Beklemeye alınıyor...',
+    }
+    const successLabels: Record<string, string> = {
+      completed: 'Tamamlandı',
+      cancelled: 'İptal edildi',
+      no_show: 'Gelmedi olarak işaretlendi',
+      confirmed: 'Onaylandı',
+      pending: 'Beklemede',
+    }
+
+    const result = await runOperation(
+      async () => {
+        const { error } = await supabase.from('appointments').update({ status: newStatus }).eq('id', appointmentId)
+        if (error) {
+          if (error.message.includes('segment') && error.message.includes('customer_segment')) {
+            throw new Error('Veritabanı ayarı eksik — Supabase\'de 003_fix_appointment_customer_segment.sql migration\'ını çalıştırın.')
+          }
+          throw error
+        }
+        return true
+      },
+      {
+        pending: pendingLabels[newStatus] || 'Güncelleniyor...',
+        success: successLabels[newStatus] || 'Durum güncellendi',
+        error: 'Durum güncellenemedi',
+      },
+    )
+
+    if (!result) {
+      setStatusLoadingAction(null)
       return
     }
     // Detay panelindeki randevuyu güncelle
@@ -1180,9 +1227,8 @@ export default function AppointmentsPage() {
     }
 
     await fetchAppointments()
-    const statusLabels: Record<string, string> = { completed: 'Tamamlandı', cancelled: 'İptal edildi', no_show: 'Gelmedi olarak işaretlendi', confirmed: 'Onaylandı', pending: 'Beklemede' }
-    window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: statusLabels[newStatus] || 'Durum güncellendi' } }))
-    setStatusLoadingId(null)
+    // Başarı toast'u zaten runOperation içinde dispatch edildi
+    setStatusLoadingAction(null)
   }
 
   async function handleRevertCompleted(appointmentId: string) {
@@ -2680,7 +2726,7 @@ export default function AppointmentsPage() {
                     </div>
                   </div>
                   <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                    <ActionButtons apt={apt} size="md" todayStr={todayStr} fillGapLoading={fillGapLoading} statusLoadingId={statusLoadingId} onEdit={openEditModal} onReschedule={openRescheduleModal} onUpdateStatus={updateStatus} onCancelConfirm={openCancelConfirm} onFillGap={handleFillGap} onDelete={handleDeleteAppointment} onQuickPayment={setQuickPaymentTarget} onFollowUp={setFollowUpTarget} />
+                    <ActionButtons apt={apt} size="md" todayStr={todayStr} fillGapLoading={fillGapLoading} statusLoadingAction={statusLoadingAction} onEdit={openEditModal} onReschedule={openRescheduleModal} onUpdateStatus={updateStatus} onCancelConfirm={openCancelConfirm} onFillGap={handleFillGap} onDelete={handleDeleteAppointment} onQuickPayment={setQuickPaymentTarget} onFollowUp={setFollowUpTarget} />
                   </div>
                 </div>
               </AnimatedItem>
@@ -2734,7 +2780,7 @@ export default function AppointmentsPage() {
                 }
 
                 <div className="mt-auto pt-3 flex items-center justify-end" onClick={(e) => e.stopPropagation()}>
-                  <ActionButtons apt={apt} size="sm" todayStr={todayStr} fillGapLoading={fillGapLoading} statusLoadingId={statusLoadingId} onEdit={openEditModal} onReschedule={openRescheduleModal} onUpdateStatus={updateStatus} onCancelConfirm={openCancelConfirm} onFillGap={handleFillGap} onDelete={handleDeleteAppointment} onQuickPayment={setQuickPaymentTarget} onFollowUp={setFollowUpTarget} />
+                  <ActionButtons apt={apt} size="sm" todayStr={todayStr} fillGapLoading={fillGapLoading} statusLoadingAction={statusLoadingAction} onEdit={openEditModal} onReschedule={openRescheduleModal} onUpdateStatus={updateStatus} onCancelConfirm={openCancelConfirm} onFillGap={handleFillGap} onDelete={handleDeleteAppointment} onQuickPayment={setQuickPaymentTarget} onFollowUp={setFollowUpTarget} />
                 </div>
               </AnimatedItem>
             )
@@ -2989,22 +3035,27 @@ export default function AppointmentsPage() {
                   </>
                   )
                 })()}
-                {selectedAppointment.status === 'confirmed' && (
-                  <>
-                    <button onClick={() => updateStatus(selectedAppointment.id, 'completed')} disabled={statusLoadingId === selectedAppointment.id} className={cn('w-full flex items-center gap-2 rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 px-4 py-2.5 text-sm font-medium text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-800/30 transition-colors', statusLoadingId === selectedAppointment.id && 'opacity-60 cursor-not-allowed')}>
-                      {statusLoadingId === selectedAppointment.id
-                        ? <Loader2 className="h-4 w-4 animate-spin" />
-                        : <CheckCircle className="h-4 w-4" />}
-                      {statusLoadingId === selectedAppointment.id ? 'Tamamlanıyor...' : 'Tamamlandı İşaretle'}
-                    </button>
-                    <button onClick={() => updateStatus(selectedAppointment.id, 'no_show')} className="w-full flex items-center gap-2 rounded-lg border border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/20 px-4 py-2.5 text-sm font-medium text-orange-700 dark:text-orange-300 hover:bg-orange-100 dark:hover:bg-orange-800/30 transition-colors">
-                      <AlertTriangle className="h-4 w-4" /> Gelmedi İşaretle
-                    </button>
-                    <button onClick={(e) => openCancelConfirm(selectedAppointment, e)} className="w-full flex items-center gap-2 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-4 py-2.5 text-sm font-medium text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-800/30 transition-colors">
-                      <XCircle className="h-4 w-4" /> İptal Et
-                    </button>
-                  </>
-                )}
+                {selectedAppointment.status === 'confirmed' && (() => {
+                  const aptId = selectedAppointment.id
+                  const completing = isLoading(aptId, 'completed')
+                  const noShowing = isLoading(aptId, 'no_show')
+                  const anyLoading = isLoading(aptId)
+                  return (
+                    <>
+                      <button onClick={() => updateStatus(aptId, 'completed')} disabled={anyLoading} className={cn('w-full flex items-center gap-2 rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 px-4 py-2.5 text-sm font-medium text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-800/30 transition-colors', anyLoading && 'opacity-60 cursor-not-allowed')}>
+                        {completing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+                        {completing ? 'Tamamlanıyor...' : 'Tamamlandı İşaretle'}
+                      </button>
+                      <button onClick={() => updateStatus(aptId, 'no_show')} disabled={anyLoading} className={cn('w-full flex items-center gap-2 rounded-lg border border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/20 px-4 py-2.5 text-sm font-medium text-orange-700 dark:text-orange-300 hover:bg-orange-100 dark:hover:bg-orange-800/30 transition-colors', anyLoading && 'opacity-60 cursor-not-allowed')}>
+                        {noShowing ? <Loader2 className="h-4 w-4 animate-spin" /> : <AlertTriangle className="h-4 w-4" />}
+                        {noShowing ? 'İşaretleniyor...' : 'Gelmedi İşaretle'}
+                      </button>
+                      <button onClick={(e) => openCancelConfirm(selectedAppointment, e)} disabled={anyLoading} className={cn('w-full flex items-center gap-2 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-4 py-2.5 text-sm font-medium text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-800/30 transition-colors', anyLoading && 'opacity-60 cursor-not-allowed')}>
+                        <XCircle className="h-4 w-4" /> İptal Et
+                      </button>
+                    </>
+                  )
+                })()}
                 {selectedAppointment.status === 'pending' && (
                   <>
                     <button onClick={() => updateStatus(selectedAppointment.id, 'confirmed')} className="btn-primary w-full justify-start gap-2">
@@ -3390,7 +3441,7 @@ interface ActionButtonsProps {
   size?: 'sm' | 'md'
   todayStr: string
   fillGapLoading: string | null
-  statusLoadingId?: string | null
+  statusLoadingAction?: { id: string; status: AppointmentStatus } | null
   onEdit: (apt: AppointmentView, e: React.MouseEvent) => void
   onReschedule: (apt: AppointmentView, e: React.MouseEvent) => void
   onUpdateStatus: (id: string, status: AppointmentStatus, e?: React.MouseEvent) => void
@@ -3402,10 +3453,13 @@ interface ActionButtonsProps {
 }
 
 function ActionButtons({
-  apt, size = 'md', todayStr, fillGapLoading, statusLoadingId,
+  apt, size = 'md', todayStr, fillGapLoading, statusLoadingAction,
   onEdit, onReschedule, onUpdateStatus, onCancelConfirm,
   onFillGap, onDelete, onQuickPayment, onFollowUp,
 }: ActionButtonsProps) {
+  const isLoadingAction = (status: AppointmentStatus) =>
+    statusLoadingAction?.id === apt.id && statusLoadingAction.status === status
+  const isAnyLoading = statusLoadingAction?.id === apt.id
   const btnCls = size === 'sm'
     ? 'flex h-7 w-7 items-center justify-center rounded-lg transition-colors'
     : 'flex h-8 w-8 items-center justify-center rounded-lg transition-colors'
@@ -3430,15 +3484,17 @@ function ActionButtons({
       )}
       {apt.status === 'confirmed' && (
         <>
-          <button onClick={(e) => onUpdateStatus(apt.id, 'completed', e)} title="Tamamlandı" disabled={statusLoadingId === apt.id} className={cn(btnCls, 'text-green-500 hover:bg-green-50 dark:hover:bg-green-900/30', statusLoadingId === apt.id && 'opacity-60 cursor-not-allowed')}>
-            {statusLoadingId === apt.id
+          <button onClick={(e) => onUpdateStatus(apt.id, 'completed', e)} title="Tamamlandı" disabled={isAnyLoading} className={cn(btnCls, 'text-green-500 hover:bg-green-50 dark:hover:bg-green-900/30', isAnyLoading && 'opacity-60 cursor-not-allowed')}>
+            {isLoadingAction('completed')
               ? <Loader2 className={cn(size === 'sm' ? 'h-4 w-4' : 'h-5 w-5', 'animate-spin')} />
               : <CheckCircle className={size === 'sm' ? 'h-4 w-4' : 'h-5 w-5'} />}
           </button>
-          <button onClick={(e) => onUpdateStatus(apt.id, 'no_show', e)} title="Gelmedi" className={cn(btnCls, 'text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30')}>
-            <AlertTriangle className={size === 'sm' ? 'h-4 w-4' : 'h-5 w-5'} />
+          <button onClick={(e) => onUpdateStatus(apt.id, 'no_show', e)} title="Gelmedi" disabled={isAnyLoading} className={cn(btnCls, 'text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30', isAnyLoading && 'opacity-60 cursor-not-allowed')}>
+            {isLoadingAction('no_show')
+              ? <Loader2 className={cn(size === 'sm' ? 'h-4 w-4' : 'h-5 w-5', 'animate-spin')} />
+              : <AlertTriangle className={size === 'sm' ? 'h-4 w-4' : 'h-5 w-5'} />}
           </button>
-          <button onClick={(e) => onCancelConfirm(apt, e)} title="İptal" className={cn(btnCls, 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700')}>
+          <button onClick={(e) => onCancelConfirm(apt, e)} title="İptal" disabled={isAnyLoading} className={cn(btnCls, 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700', isAnyLoading && 'opacity-60 cursor-not-allowed')}>
             <XCircle className={size === 'sm' ? 'h-4 w-4' : 'h-5 w-5'} />
           </button>
         </>

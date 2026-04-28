@@ -588,6 +588,13 @@
 }
 .toast-enter { animation: toast-slide-in 0.3s ease-out forwards; }
 
+/* Pending toast — sonsuz akan ilerleme barı */
+@keyframes pending-bar {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+.animate-pending-bar { animation: pending-bar 1.4s ease-in-out infinite; }
+
 /* ── Sticky Save Bar ── */
 @keyframes sticky-bar-in {
   from { transform: translateY(8px); opacity: 0; }
