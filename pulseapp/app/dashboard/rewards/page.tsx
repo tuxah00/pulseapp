@@ -202,6 +202,7 @@ export default function RewardsPage() {
             message: `"${trimmedName}" (${trimmedPhone}) sistemde kayıtlı değil. ${customerLabel} olarak kayıt edilsin mi?`,
             confirmText: 'Evet, kaydet',
             cancelText: 'Hayır, sadece referans',
+            variant: 'warning',
           })
           if (ok) {
             const { data: newCustomer, error: createErr } = await supabase
