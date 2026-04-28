@@ -961,39 +961,25 @@ export default function AnalyticsPage() {
         <div className="space-y-6">
           {/* Kar-Zarar Özeti */}
           <div className="grid grid-cols-3 gap-4">
-            <div className="card p-4 text-center">
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Toplam Gelir</p>
-              <p className="text-xl font-bold text-green-600">{formatCurrency(totalRevenue)}</p>
-              {invoiceOnlyRevenue > 0 && (
-                <p className="text-[10px] text-gray-400 mt-1">
-                  Randevu: {formatCurrency(appointmentRevenue)} · Fatura: {formatCurrency(invoiceOnlyRevenue)}
-                </p>
-              )}
-              {manualIncome > 0 && (
-                <p className="text-[10px] text-gray-400 mt-0.5">
-                  Manuel Gelir: {formatCurrency(manualIncome)}
-                </p>
-              )}
-            </div>
-            <div className="card p-4 text-center">
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Toplam Gider</p>
-              <p className="text-xl font-bold text-red-600">{formatCurrency(grandTotalExpenses)}</p>
-              {(commissionTotal > 0 || pulseappCost > 0) && (
-                <p className="text-[10px] text-gray-400 mt-1">
-                  {commissionTotal > 0 && `Primler: ${formatCurrency(commissionTotal)}`}
-                  {commissionTotal > 0 && pulseappCost > 0 && ' · '}
-                  {pulseappCost > 0 && `PulseApp: ${formatCurrency(pulseappCost)}`}
-                </p>
-              )}
-            </div>
-            <div className="card p-4 text-center">
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Net Kâr</p>
-              {(() => {
-                const net = totalRevenue - grandTotalExpenses
-                return <p className={cn('text-xl font-bold', net >= 0 ? 'text-pulse-900 dark:text-pulse-400' : 'text-red-600')}>{formatCurrency(net)}</p>
-              })()}
-            </div>
+            <KPICard icon={<TrendingUp className="h-5 w-5" />} label="Toplam Gelir" value={formatCurrency(totalRevenue)} color="green" currency />
+            <KPICard icon={<TrendingDown className="h-5 w-5" />} label="Toplam Gider" value={formatCurrency(grandTotalExpenses)} color="amber" currency />
+            <KPICard
+              icon={<Wallet className="h-5 w-5" />}
+              label="Net Kâr"
+              value={formatCurrency(totalRevenue - grandTotalExpenses)}
+              color={(totalRevenue - grandTotalExpenses) > 0 ? 'blue' : (totalRevenue - grandTotalExpenses) < 0 ? 'red' : 'amber'}
+              currency
+            />
           </div>
+          {/* Gelir/Gider detayı */}
+          {(invoiceOnlyRevenue > 0 || manualIncome > 0 || commissionTotal > 0 || pulseappCost > 0) && (
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-gray-400 dark:text-gray-500 px-1">
+              {invoiceOnlyRevenue > 0 && <span>Randevu: {formatCurrency(appointmentRevenue)} · Fatura: {formatCurrency(invoiceOnlyRevenue)}</span>}
+              {manualIncome > 0 && <span>Manuel: {formatCurrency(manualIncome)}</span>}
+              {commissionTotal > 0 && <span>Primler: {formatCurrency(commissionTotal)}</span>}
+              {pulseappCost > 0 && <span>PulseApp: {formatCurrency(pulseappCost)}</span>}
+            </div>
+          )}
 
           {/* Gider Listesi Başlığı */}
           <div className="flex items-center justify-between">
@@ -1380,7 +1366,7 @@ export default function AnalyticsPage() {
                         <span className={cn('text-base font-bold flex-shrink-0', isTop ? 'text-amber-700 dark:text-amber-400' : 'text-gray-900 dark:text-gray-100')}>{formatCurrency(svc.revenue)}</span>
                       </div>
                       <div className="h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden mb-2.5">
-                        <div className={cn('h-full rounded-full transition-all', isTop ? 'bg-amber-500' : 'bg-pulse-900 dark:bg-pulse-400')} style={{ width: `${svc.pctOfTotal}%` }} />
+                        <div className={cn('h-full rounded-full transition-all duration-700', isTop ? 'bg-amber-500' : 'bg-pulse-900 dark:bg-pulse-400')} style={{ width: `${svc.pctOfTotal}%` }} />
                       </div>
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
                         <span>{svc.count} randevu</span>
@@ -1416,10 +1402,8 @@ export default function AnalyticsPage() {
               const colorMap: Record<string, string> = { blue: 'text-blue-600', purple: 'text-pulse-900 dark:text-pulse-400', green: 'text-green-600' }
               const bgMap: Record<string, string> = { blue: 'bg-blue-100 dark:bg-blue-900/20', purple: 'bg-pulse-100 dark:bg-pulse-900/20', green: 'bg-green-100 dark:bg-green-900/20' }
               return (
-                <div key={key} className="card p-4 text-center">
-                  <div className={cn('inline-flex rounded-full px-3 py-1 text-2xl font-bold mb-1', colorMap[color])}>
-                    {count}
-                  </div>
+                <div key={key} className={cn('card p-4 text-center', bgMap[color])}>
+                  <p className={cn('text-2xl font-bold mb-1', colorMap[color])}>{count}</p>
                   <p className="text-xs text-gray-500">{label}</p>
                   <p className={cn('text-xs font-medium mt-1', colorMap[color])}>%{pct}</p>
                 </div>
@@ -1456,8 +1440,12 @@ export default function AnalyticsPage() {
       {activeTab === 'summary' && (
         <div className="space-y-6">
           {forecastLoading && (
-            <div className="flex items-center justify-center py-16">
-              <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+            <div className="card p-6 animate-pulse">
+              <div className="flex items-center justify-between mb-4">
+                <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
+                <div className="h-4 w-24 bg-gray-100 dark:bg-gray-800 rounded" />
+              </div>
+              <div className="h-64 bg-gray-100 dark:bg-gray-800 rounded-lg" />
             </div>
           )}
 
@@ -1638,7 +1626,7 @@ export default function AnalyticsPage() {
                             <span className="text-gray-600 dark:text-gray-400">{formatCurrency(svc.revenue)} <span className="text-gray-400">({svc.count} randevu)</span></span>
                           </div>
                           <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                            <div className="h-full bg-pulse-900 dark:bg-pulse-400 rounded-full" style={{ width: `${pct}%` }} />
+                            <div className="h-full bg-pulse-900 dark:bg-pulse-400 rounded-full transition-all duration-700" style={{ width: `${pct}%` }} />
                           </div>
                         </div>
                       )
