@@ -1229,6 +1229,7 @@ export default function AppointmentsPage() {
         cancelText: 'Sadece Durumu Geri Al',
         variant: 'warning',
       })
+      if (refundOk === null) return  // X'e basıldı — tüm işlemi iptal et
       refundDecision = refundOk ? 'refund' : 'keep'
       // Status revert kullanıcı isteğine bağlı — iade yoksa hâlâ status'u geri almak isteyebilir,
       // bu yüzden ikinci bir onay sormaya gerek yok; doğrudan revert akışına devam.
