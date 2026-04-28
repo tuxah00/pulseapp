@@ -9,7 +9,7 @@ import {
   Loader2, Save, Building2, Bell, Sparkles, Cake,
   CreditCard, MapPin, Phone, Mail, Globe,
   MessageSquare, ChevronDown, ChevronUp, Camera, X, Smartphone,
-  DoorOpen, Plus, Pencil, Trash2, Users,
+  DoorOpen, Plus, Pencil, Trash2, Users, ClipboardCheck, Link2, Share2,
 } from 'lucide-react'
 import {
   SECTOR_LABELS, PLAN_LABELS, PLAN_PRICES,
@@ -1169,6 +1169,73 @@ export default function BusinessSettingsPage() {
                 </div>
               )}
             </div>
+
+            {/* ── Ön Konsültasyon ── */}
+            {(sector === 'medical_aesthetic' || sector === 'dental_clinic' || settings.consultations_enabled) && (
+              <div>
+                <SectionHeader
+                  icon={<ClipboardCheck className="h-4 w-4" />}
+                  title="Ön Konsültasyon"
+                  subtitle="Hastalardan çevrimiçi ön değerlendirme talebi alın"
+                />
+
+                <div className="card space-y-4">
+                  <ToggleSetting
+                    label="Ön konsültasyon talebini etkinleştir"
+                    description="Hastalar fotoğraf + soru göndererek uygunluk değerlendirmesi talep edebilir. Talepler 'Ön Konsültasyon' sayfasında listelenir."
+                    checked={settings.consultations_enabled ?? true}
+                    onChange={(v) => setSettings(prev => ({ ...prev, consultations_enabled: v }))}
+                  />
+                  <ToggleSetting
+                    label="Otomatik 'Talebiniz alındı' mesajı"
+                    description="Form gönderildiğinde hastaya otomatik WhatsApp/SMS bildirimi gider. (Kanal bağlıysa)"
+                    checked={settings.consultations_auto_ack ?? false}
+                    onChange={(v) => setSettings(prev => ({ ...prev, consultations_auto_ack: v }))}
+                  />
+
+                  {(settings.consultations_enabled ?? true) && businessId && (
+                    <div className="rounded-lg bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 p-4">
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1.5">
+                        <Link2 className="h-3.5 w-3.5" />
+                        Hasta Başvuru Linki
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <code className="flex-1 text-xs bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-gray-600 dark:text-gray-300 truncate">
+                          {process.env.NEXT_PUBLIC_APP_URL ?? ''}/consultation/{businessId}
+                        </code>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const url = `${process.env.NEXT_PUBLIC_APP_URL ?? ''}/consultation/${businessId}`
+                            navigator.clipboard.writeText(url)
+                            window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'system', title: 'Kopyalandı', body: 'Link panoya kopyalandı.' } }))
+                          }}
+                          className="btn-secondary py-1.5 px-3 text-xs shrink-0"
+                        >
+                          <Link2 className="h-3.5 w-3.5 mr-1" />
+                          Kopyala
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const url = `${process.env.NEXT_PUBLIC_APP_URL ?? ''}/consultation/${businessId}`
+                            const waUrl = `https://wa.me/?text=${encodeURIComponent(`Ön konsültasyon başvurusu için: ${url}`)}`
+                            window.open(waUrl, '_blank')
+                          }}
+                          className="btn-secondary py-1.5 px-3 text-xs shrink-0 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800 hover:bg-green-50 dark:hover:bg-green-900/20"
+                        >
+                          <Share2 className="h-3.5 w-3.5 mr-1" />
+                          WhatsApp
+                        </button>
+                      </div>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                        Bu linki web sitenize, Instagram profilinize veya WhatsApp biyografinize ekleyin.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             <div className={cn("flex items-center justify-end gap-3 pt-2 border-t border-gray-100 dark:border-gray-800", isDirty && saveBtnAnimating && "save-btn-animate")}>
               {isDirty && (

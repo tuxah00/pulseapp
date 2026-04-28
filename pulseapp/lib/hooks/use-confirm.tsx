@@ -12,7 +12,7 @@ interface ConfirmOptions {
 }
 
 interface ConfirmContextType {
-  confirm: (options: ConfirmOptions) => Promise<boolean>
+  confirm: (options: ConfirmOptions) => Promise<boolean | null>
 }
 
 const ConfirmContext = createContext<ConfirmContextType | null>(null)
@@ -20,9 +20,9 @@ const ConfirmContext = createContext<ConfirmContextType | null>(null)
 export function ConfirmProvider({ children }: { children: ReactNode }) {
   const [options, setOptions] = useState<ConfirmOptions | null>(null)
   const [open, setOpen] = useState(false)
-  const resolveRef = useRef<((value: boolean) => void) | null>(null)
+  const resolveRef = useRef<((value: boolean | null) => void) | null>(null)
 
-  const confirm = useCallback((opts: ConfirmOptions): Promise<boolean> => {
+  const confirm = useCallback((opts: ConfirmOptions): Promise<boolean | null> => {
     return new Promise((resolve) => {
       resolveRef.current = resolve
       setOptions(opts)
@@ -30,10 +30,19 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
     })
   }, [])
 
+  // Cancel butonu → false
   const handleClose = useCallback(() => {
     setOpen(false)
     setOptions(null)
     resolveRef.current?.(false)
+    resolveRef.current = null
+  }, [])
+
+  // X ve backdrop → null (tüm işlemi iptal et)
+  const handleDismiss = useCallback(() => {
+    setOpen(false)
+    setOptions(null)
+    resolveRef.current?.(null)
     resolveRef.current = null
   }, [])
 
@@ -50,6 +59,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
       <ConfirmDialog
         open={open}
         onClose={handleClose}
+        onDismiss={handleDismiss}
         onConfirm={handleConfirm}
         title={options?.title}
         message={options?.message || ''}

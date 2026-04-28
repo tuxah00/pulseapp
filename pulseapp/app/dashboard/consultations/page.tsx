@@ -15,6 +15,7 @@ import { CustomSelect } from '@/components/ui/custom-select'
 import { useConfirm } from '@/lib/hooks/use-confirm'
 import { requirePermission } from '@/lib/hooks/use-require-permission'
 import { cn } from '@/lib/utils'
+import { createClient } from '@/lib/supabase/client'
 import type { ConsultationRequest, ConsultationStatus } from '@/types'
 
 // ── Status tanımları ──
@@ -76,6 +77,7 @@ export default function ConsultationsPage() {
   const [showConvertModal, setShowConvertModal] = useState(false)
 
   const fetchRef = useRef(0)
+  const supabase = createClient()
 
   const fetchItems = useCallback(async () => {
     if (!businessId) return
@@ -100,6 +102,38 @@ export default function ConsultationsPage() {
   useEffect(() => {
     fetchItems()
   }, [fetchItems])
+
+  // Realtime: yeni konsültasyon talebi gelince banner + toast
+  useEffect(() => {
+    if (!businessId) return
+    const channel = supabase
+      .channel(`consultations:${businessId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'consultation_requests',
+          filter: `business_id=eq.${businessId}`,
+        },
+        (payload) => {
+          const row = payload.new as { full_name?: string }
+          window.dispatchEvent(new CustomEvent('pulse-toast', {
+            detail: {
+              type: 'consultation_request',
+              title: 'Yeni Ön Konsültasyon',
+              body: `${row.full_name || 'Yeni hasta'} başvuru gönderdi.`,
+            },
+          }))
+          // Listeyi yenile
+          fetchItems()
+        }
+      )
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [businessId])
 
   // Panel aç/kapat
   function openPanel(item: ConsultationRequest) {

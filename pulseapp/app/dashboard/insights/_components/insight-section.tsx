@@ -117,6 +117,7 @@ export default function InsightSection({
       message: `"${action.label}" aksiyonu onay kuyruğuna eklenecek. Devam edilsin mi?`,
       confirmText: 'Kuyruğa Ekle',
       cancelText: 'Vazgeç',
+      variant: 'warning',
     })
     if (!ok) return
 

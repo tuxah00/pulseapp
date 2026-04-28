@@ -382,7 +382,7 @@ export default function InvoicesPage() {
   }
 
   async function handleRestore(invoice: Invoice) {
-    const ok = await confirm({ title: 'Onay', message: `"${invoice.invoice_number}" faturasını geri almak istediğinize emin misiniz?` })
+    const ok = await confirm({ title: 'Faturayı Geri Al', message: `"${invoice.invoice_number}" faturası aktif duruma geri alınacak. Onaylıyor musun?`, variant: 'warning' })
     if (!ok) return
     await fetch(`/api/invoices?id=${invoice.id}`, {
       method: 'PATCH',

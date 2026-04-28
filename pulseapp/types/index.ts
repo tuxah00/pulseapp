@@ -169,7 +169,7 @@ export type AiClassification =
   | 'appointment' | 'question' | 'complaint' | 'cancellation' | 'greeting' | 'other'
 
 export type ReviewStatus = 'pending' | 'responded' | 'escalated'
-export type NotificationType = 'appointment' | 'review' | 'payment' | 'customer' | 'system' | 'stock_alert' | 'ai_brief' | 'ai_alert'
+export type NotificationType = 'appointment' | 'review' | 'payment' | 'customer' | 'system' | 'stock_alert' | 'ai_brief' | 'ai_alert' | 'consultation_request'
 
 export type InvoiceStatus = 'pending' | 'paid' | 'partial' | 'overdue' | 'cancelled'
 export type PaymentMethod = 'cash' | 'card' | 'transfer' | 'online'

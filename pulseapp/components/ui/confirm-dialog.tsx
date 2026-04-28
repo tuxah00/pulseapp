@@ -7,6 +7,7 @@ import { AlertTriangle, Trash2, X } from 'lucide-react'
 interface ConfirmDialogProps {
   open: boolean
   onClose: () => void
+  onDismiss?: () => void  // X ve backdrop — null döndürür (işlemi iptal et)
   onConfirm: () => void
   title?: string
   message: string
@@ -18,6 +19,7 @@ interface ConfirmDialogProps {
 export default function ConfirmDialog({
   open,
   onClose,
+  onDismiss,
   onConfirm,
   title = 'Onay',
   message,
@@ -27,10 +29,17 @@ export default function ConfirmDialog({
 }: ConfirmDialogProps) {
   const confirmedRef = useRef(false)
 
+  // Cancel butonu → false
   const handleClose = useCallback(() => {
     confirmedRef.current = false
     onClose()
   }, [onClose])
+
+  // X ve backdrop → null (işlemi tamamen iptal et)
+  const handleDismiss = useCallback(() => {
+    confirmedRef.current = false
+    ;(onDismiss ?? onClose)()
+  }, [onDismiss, onClose])
 
   const handleConfirm = useCallback(() => {
     confirmedRef.current = true
@@ -49,7 +58,7 @@ export default function ConfirmDialog({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
             className="modal-backdrop z-[120] backdrop-blur-sm"
-            onClick={handleClose}
+            onClick={handleDismiss}
           />
 
           {/* Dialog */}
@@ -91,7 +100,7 @@ export default function ConfirmDialog({
                   </div>
 
                   <button
-                    onClick={handleClose}
+                    onClick={handleDismiss}
                     className="flex-shrink-0 rounded-lg p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300
                                hover:bg-gray-100 dark:hover:bg-white/10 transition-colors -mr-1 -mt-1"
                   >

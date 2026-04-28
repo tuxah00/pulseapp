@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Calendar, Star, CreditCard, Users, Settings, Package,
-  X, Bell,
+  X, Bell, ClipboardCheck,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -27,6 +27,7 @@ const TYPE_CONFIG: Record<string, { icon: any; bgColor: string; borderColor: str
   system: { icon: Settings, bgColor: 'bg-gray-50 dark:bg-gray-800', borderColor: 'border-gray-200 dark:border-gray-700', iconColor: 'text-gray-500' },
   stock_alert: { icon: Package, bgColor: 'bg-red-50 dark:bg-red-900/30', borderColor: 'border-red-200 dark:border-red-800', iconColor: 'text-red-500' },
   error: { icon: X, bgColor: 'bg-red-50 dark:bg-red-900/30', borderColor: 'border-red-300 dark:border-red-700', iconColor: 'text-red-600 dark:text-red-400' },
+  consultation_request: { icon: ClipboardCheck, bgColor: 'bg-violet-50 dark:bg-violet-900/30', borderColor: 'border-violet-200 dark:border-violet-800', iconColor: 'text-violet-600 dark:text-violet-400' },
 }
 
 const RELATED_ROUTES: Record<string, string> = {
@@ -36,6 +37,7 @@ const RELATED_ROUTES: Record<string, string> = {
   payment: '/dashboard/analytics',
   system: '/dashboard/notifications',
   stock_alert: '/dashboard/inventory',
+  consultation_request: '/dashboard/consultations',
 }
 
 const MAX_TOASTS = 3
