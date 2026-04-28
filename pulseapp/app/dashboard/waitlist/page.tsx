@@ -6,7 +6,7 @@ import { getCustomerLabelSingular } from '@/lib/config/sector-modules'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import {
-  Plus, Clock, Search, Loader2, Phone, Calendar, User, Bell, BellOff, Trash2, X, ShieldX, CheckCircle, CalendarPlus, Zap, UserCircle2, SkipForward, ToggleLeft, ToggleRight
+  Plus, Clock, Search, Loader2, Phone, Calendar, User, Bell, BellOff, Trash2, X, ShieldX, CheckCircle, CalendarPlus, Zap, UserCircle2, SkipForward, ToggleLeft, ToggleRight, RefreshCw
 } from 'lucide-react'
 import { AnimatedList, AnimatedItem } from '@/components/ui/animated-list'
 import { CustomerSearchSelect } from '@/components/ui/customer-search-select'
@@ -126,6 +126,9 @@ export default function WaitlistPage() {
   const [bookNotes, setBookNotes] = useState('')
   const [bookSaving, setBookSaving] = useState(false)
 
+  // Toplu tarama durumu
+  const [scanning, setScanning] = useState(false)
+
   const fetchEntries = useCallback(async () => {
     if (!businessId) return
     setLoading(true)
@@ -180,9 +183,44 @@ export default function WaitlistPage() {
     }
   }, [businessId, supabase])
 
+  // Tüm bildirilmemiş aktif kayıtları takvime karşı tara — arka planda, kullanıcıya
+  // silent. Eşleşme bulunursa fetchEntries zaten UI'ı günceller.
+  const scanAll = useCallback(async (manual = false) => {
+    if (!businessId) return
+    setScanning(true)
+    try {
+      const res = await fetch('/api/waitlist/scan-all', { method: 'POST' })
+      const json = await res.json()
+      if (manual) {
+        if (json.matched > 0) {
+          toast.success(`${json.matched} kayıt için uygun slot bulundu, bildirim gönderildi`)
+          fetchEntries()
+        } else if (json.scanned === 0) {
+          toast.message('Bildirim bekleyen kayıt yok')
+        } else {
+          toast.message('Tarama tamamlandı — uygun boşluk bulunamadı')
+        }
+      } else if (json.matched > 0) {
+        // Otomatik tarama eşleşme buldu — sessizce listeyi güncelle
+        fetchEntries()
+      }
+    } catch {
+      if (manual) toast.error('Tarama sırasında hata oluştu')
+    } finally {
+      setScanning(false)
+    }
+  }, [businessId, fetchEntries])
+
   useEffect(() => { fetchEntries() }, [fetchEntries])
   useEffect(() => { fetchServices() }, [fetchServices])
   useEffect(() => { fetchStaff() }, [fetchStaff])
+
+  // Sayfa yüklenince arka planda otomatik tara — bildirilmemiş kayıtlar için
+  // takvimde boşluk açılmış olabilir (iptal, erteleme vs.)
+  useEffect(() => {
+    if (businessId) scanAll(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [businessId])
 
   // ESC ile modal kapat
   useEffect(() => {
@@ -576,9 +614,20 @@ export default function WaitlistPage() {
             Randevu bekleyen {customerLabel.toLowerCase()}ları yönetin
           </p>
         </div>
-        <button onClick={() => setShowCreate(true)} className="btn-primary flex items-center gap-2">
-          <Plus className="h-4 w-4" /> Listeye Ekle
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => scanAll(true)}
+            disabled={scanning}
+            className="btn-secondary flex items-center gap-2 disabled:opacity-50"
+            title="Tüm bildirilmemiş kayıtlar için takvimde uygun boşluk ara"
+          >
+            <RefreshCw className={cn('h-4 w-4', scanning && 'animate-spin')} />
+            {scanning ? 'Taranıyor...' : 'Tümünü Tara'}
+          </button>
+          <button onClick={() => setShowCreate(true)} className="btn-primary flex items-center gap-2">
+            <Plus className="h-4 w-4" /> Listeye Ekle
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
