@@ -38,6 +38,9 @@ import {
   Area, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip as RTooltip, XAxis, YAxis,
 } from 'recharts'
 
+// Supabase istemcisi modül seviyesinde — component re-render'larında yeniden oluşmaz
+const supabase = createClient()
+
 /**
  * Gelir-Gider paneli — 4 bölüm.
  *
@@ -161,8 +164,6 @@ export default function AnalyticsPage() {
   const [commissions, setCommissions] = useState<CommissionEarning[]>([])
   const [commissionsLoading, setCommissionsLoading] = useState(false)
 
-  const supabase = createClient()
-
   const fetchData = useCallback(async () => {
     if (!businessId) return
     setLoading(true)
@@ -170,30 +171,39 @@ export default function AnalyticsPage() {
     const { start, end } = getPeriodDates(period, 0)
     const { start: prevStart, end: prevEnd } = getPeriodDates(period, 1)
 
-    const [aptRes, prevAptRes, custRes, revRes, svcRes, staffRes, invRes] = await Promise.all([
-      supabase.from('appointments').select('*, services(name, price)')
-        .eq('business_id', businessId).is('deleted_at', null).gte('appointment_date', start).lte('appointment_date', end).order('appointment_date'),
-      supabase.from('appointments').select('status, services(price)')
-        .eq('business_id', businessId).is('deleted_at', null).gte('appointment_date', prevStart).lte('appointment_date', prevEnd),
-      supabase.from('customers').select('id, name, segment, total_revenue').eq('business_id', businessId).eq('is_active', true),
-      supabase.from('reviews').select('*').eq('business_id', businessId).gte('created_at', start + 'T00:00:00'),
-      supabase.from('services').select('*').eq('business_id', businessId).eq('is_active', true),
-      supabase.from('staff_members').select('id, name').eq('business_id', businessId).eq('is_active', true),
-      // Ödenen + kısmi ödenen faturalar (dönem filtresine göre)
-      supabase.from('invoices').select('id, total, paid_amount, status, appointment_id, paid_at, created_at')
-        .eq('business_id', businessId).in('status', ['paid', 'partial']).is('deleted_at', null)
-        .gte('paid_at', start + 'T00:00:00').lte('paid_at', end + 'T23:59:59'),
-    ])
+    try {
+      const [aptRes, prevAptRes, custRes, revRes, svcRes, staffRes, invRes] = await Promise.all([
+        supabase.from('appointments').select('*, services(name, price)')
+          .eq('business_id', businessId).is('deleted_at', null).gte('appointment_date', start).lte('appointment_date', end).order('appointment_date'),
+        supabase.from('appointments').select('status, services(price)')
+          .eq('business_id', businessId).is('deleted_at', null).gte('appointment_date', prevStart).lte('appointment_date', prevEnd),
+        supabase.from('customers').select('id, name, segment, total_revenue').eq('business_id', businessId).eq('is_active', true),
+        // reviews — dönem başı + sonu filtresi (lte eksikti; düzeltildi)
+        supabase.from('reviews').select('*').eq('business_id', businessId)
+          .gte('created_at', start + 'T00:00:00').lte('created_at', end + 'T23:59:59'),
+        supabase.from('services').select('*').eq('business_id', businessId).eq('is_active', true),
+        supabase.from('staff_members').select('id, name').eq('business_id', businessId).eq('is_active', true),
+        // Ödenen + kısmi ödenen faturalar (dönem filtresine göre)
+        supabase.from('invoices').select('id, total, paid_amount, status, appointment_id, paid_at, created_at')
+          .eq('business_id', businessId).in('status', ['paid', 'partial']).is('deleted_at', null)
+          .gte('paid_at', start + 'T00:00:00').lte('paid_at', end + 'T23:59:59'),
+      ])
 
-    if (aptRes.data) setAppointments(aptRes.data as unknown as AnalyticsAppointment[])
-    if (prevAptRes.data) setPrevAppointments(prevAptRes.data as unknown as PrevAppointment[])
-    if (custRes.data) setCustomers(custRes.data as CustomerRow[])
-    if (revRes.data) setReviews(revRes.data as ReviewRow[])
-    if (svcRes.data) setServices(svcRes.data as ServiceRow[])
-    if (staffRes.data) setStaffMembers(staffRes.data as StaffSummary[])
-    if (invRes.data) setPaidInvoices(invRes.data as AnalyticsInvoice[])
-    setLoading(false)
-  }, [businessId, period, supabase])
+      if (aptRes.data) setAppointments(aptRes.data as unknown as AnalyticsAppointment[])
+      if (prevAptRes.data) setPrevAppointments(prevAptRes.data as unknown as PrevAppointment[])
+      if (custRes.data) setCustomers(custRes.data as CustomerRow[])
+      if (revRes.data) setReviews(revRes.data as ReviewRow[])
+      if (svcRes.data) setServices(svcRes.data as ServiceRow[])
+      if (staffRes.data) setStaffMembers(staffRes.data as StaffSummary[])
+      if (invRes.data) setPaidInvoices(invRes.data as AnalyticsInvoice[])
+    } catch {
+      window.dispatchEvent(new CustomEvent('pulse-toast', {
+        detail: { type: 'error', title: 'Veriler yüklenemedi', description: 'Lütfen sayfayı yenileyin.' },
+      }))
+    } finally {
+      setLoading(false)
+    }
+  }, [businessId, period])
 
   const fetchExpenses = useCallback(async () => {
     if (!businessId) return
@@ -242,7 +252,7 @@ export default function AnalyticsPage() {
     if (!expCategory || !expAmount || !expDate) return
     setSavingExpense(true)
     try {
-      await fetch('/api/expenses', {
+      const res = await fetch('/api/expenses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -256,6 +266,10 @@ export default function AnalyticsPage() {
           custom_interval_days: expIsRecurring && expRecurringPeriod === 'custom' ? parseInt(expCustomDays) || null : null,
         }),
       })
+      if (!res.ok) {
+        window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Kaydedilemedi', description: 'Gider oluşturulurken bir hata oluştu.' } }))
+        return
+      }
       setShowExpenseForm(false)
       logAudit({ businessId: businessId!, staffId: staffId || null, staffName: staffName || null, action: 'create', resource: 'expense', details: { category: expCategory, amount: parseFloat(expAmount), description: expDescription || null } })
       setExpCategory(''); setExpDescription(''); setExpAmount('')
@@ -272,7 +286,11 @@ export default function AnalyticsPage() {
     const ok = await confirm({ title: 'Onay', message: 'Bu gideri silmek istediğinize emin misiniz?' })
     if (!ok) return
     const expense = expenses.find(e => e.id === id)
-    await fetch(`/api/expenses?id=${id}`, { method: 'DELETE' })
+    const res = await fetch(`/api/expenses?id=${id}`, { method: 'DELETE' })
+    if (!res.ok) {
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Silinemedi', description: 'Gider silinirken bir hata oluştu.' } }))
+      return
+    }
     logAudit({ businessId: businessId!, staffId: staffId || null, staffName: staffName || null, action: 'delete', resource: 'expense', details: { category: expense?.category || null, amount: expense?.amount || null } })
     fetchExpenses()
     window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Silindi' } }))
@@ -283,7 +301,7 @@ export default function AnalyticsPage() {
     if (!incCategory || !incAmount || !incDate) return
     setSavingIncome(true)
     try {
-      await fetch('/api/income', {
+      const res = await fetch('/api/income', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -297,6 +315,10 @@ export default function AnalyticsPage() {
           custom_interval_days: incIsRecurring && incRecurringPeriod === 'custom' ? parseInt(incCustomDays) || null : null,
         }),
       })
+      if (!res.ok) {
+        window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Kaydedilemedi', description: 'Gelir oluşturulurken bir hata oluştu.' } }))
+        return
+      }
       setShowIncomeForm(false)
       logAudit({ businessId: businessId!, staffId: staffId || null, staffName: staffName || null, action: 'create', resource: 'income', details: { category: incCategory, amount: parseFloat(incAmount), description: incDescription || null } })
       setIncCategory(''); setIncDescription(''); setIncAmount('')
@@ -313,7 +335,11 @@ export default function AnalyticsPage() {
     const ok = await confirm({ title: 'Onay', message: 'Bu geliri silmek istediğinize emin misiniz?' })
     if (!ok) return
     const income = incomes.find(i => i.id === id)
-    await fetch(`/api/income?id=${id}`, { method: 'DELETE' })
+    const res = await fetch(`/api/income?id=${id}`, { method: 'DELETE' })
+    if (!res.ok) {
+      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Silinemedi', description: 'Gelir silinirken bir hata oluştu.' } }))
+      return
+    }
     logAudit({ businessId: businessId!, staffId: staffId || null, staffName: staffName || null, action: 'delete', resource: 'income', details: { category: income?.category || null, amount: income?.amount || null } })
     fetchIncome()
     window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Silindi' } }))
@@ -321,9 +347,16 @@ export default function AnalyticsPage() {
 
   useEffect(() => { if (!ctxLoading) fetchData() }, [fetchData, ctxLoading])
 
-  // Varsayılan "Özet & Trend" sekmesi açıldığında forecast + insights summary'yi yükle
+  // Dönem değişince sezonsal/tahmin verileri sıfırlanır (stale gösterim önlenir)
+  useEffect(() => {
+    setInsightsSummary(null)
+    setForecastData(null)
+  }, [period])
+
+  // Tab açıldığında forecast + insights summary lazy fetch
   useEffect(() => {
     if (ctxLoading || !businessId) return
+    const forecastMonths = period === 'year' ? 12 : period === 'week' ? 1 : 3
     if (activeTab === 'summary' || activeTab === 'people') {
       if (!insightsSummary && !insightsLoading) {
         setInsightsLoading(true)
@@ -336,14 +369,14 @@ export default function AnalyticsPage() {
     }
     if (activeTab === 'summary' && !forecastData && !forecastLoading) {
       setForecastLoading(true)
-      fetch('/api/analytics/forecast?months=3')
+      fetch(`/api/analytics/forecast?businessId=${businessId}&period=${period}&months=${forecastMonths}`)
         .then(r => r.json())
         .then(d => setForecastData(d))
         .catch(() => {})
         .finally(() => setForecastLoading(false))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, businessId, ctxLoading])
+  }, [activeTab, businessId, ctxLoading, period])
 
   requirePermission(permissions, 'analytics')
 
@@ -501,14 +534,6 @@ export default function AnalyticsPage() {
       })
   const maxRevenue = Math.max(...trendRevenue.map(d => d.revenue), ...trendExpenses, 1)
 
-  // Saat dağılımı
-  const hourDist = Array.from({ length: 14 }, (_, i) => {
-    const hour = i + 8
-    const count = appointments.filter(a => parseInt(a.start_time?.split(':')[0] || '0') === hour).length
-    return { hour: `${String(hour).padStart(2, '0')}`, count }
-  })
-  const maxHour = Math.max(...hourDist.map(h => h.count), 1)
-
   // En popüler hizmetler
   const serviceStats = services.map(svc => {
     const count = completed.filter(a => a.service_id === svc.id).length
@@ -611,34 +636,7 @@ export default function AnalyticsPage() {
 
           const handleTabClick = (key: AnalyticsTab) => {
             setActiveTab(key)
-            // Özet & Trend → forecast + sezonsal grafik için lazy fetch
-            if (key === 'summary') {
-              if (!forecastData && !forecastLoading) {
-                setForecastLoading(true)
-                fetch('/api/analytics/forecast?months=3')
-                  .then(r => r.json())
-                  .then(d => setForecastData(d))
-                  .catch(() => {})
-                  .finally(() => setForecastLoading(false))
-              }
-              if (!insightsSummary && !insightsLoading && businessId) {
-                setInsightsLoading(true)
-                fetch(`/api/insights/summary?businessId=${businessId}`)
-                  .then(r => r.json())
-                  .then(d => setInsightsSummary(d))
-                  .catch(() => {})
-                  .finally(() => setInsightsLoading(false))
-              }
-            }
-            // Personel & Müşteri → kohort + quadrant için lazy fetch
-            if (key === 'people' && !insightsSummary && !insightsLoading && businessId) {
-              setInsightsLoading(true)
-              fetch(`/api/insights/summary?businessId=${businessId}`)
-                .then(r => r.json())
-                .then(d => setInsightsSummary(d))
-                .catch(() => {})
-                .finally(() => setInsightsLoading(false))
-            }
+            // Lazy fetch (forecast + insights) useEffect tarafından yönetilir — burada tekrarlama yok
           }
 
           const renderTab = ([key, label, icon]: readonly [string, string, React.ReactElement]) => (
@@ -663,15 +661,15 @@ export default function AnalyticsPage() {
       {/* 1. Bölüm — Özet & Trend (overview + forecast + sezonsal) */}
       {activeTab === 'summary' && (
         <div className="space-y-6">
-          {/* İkinci KPI satırı */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <KPICard icon={<TrendingUp className="h-5 w-5" />} label="Tahmini Aylık Gelir"
+          {/* İkinci KPI satırı — destekleyici metrikler, daha küçük gösterim */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <KPICard secondary icon={<TrendingUp className="h-4 w-4" />} label="Tahmini Aylık Gelir"
               value={formatCurrency(Math.round(totalRevenue * periodMultiplier))} color="green" currency />
-            <KPICard icon={<Star className="h-5 w-5" />} label={`${customerLabel} Memnuniyeti`}
+            <KPICard secondary icon={<Star className="h-4 w-4" />} label={`${customerLabel} Memnuniyeti`}
               value={avgRating !== '—' ? `${avgRating} / 5` : '—'} color="amber" />
-            <KPICard icon={<Clock className="h-5 w-5" />} label="Tamamlanma Oranı"
+            <KPICard secondary icon={<Clock className="h-4 w-4" />} label="Tamamlanma Oranı"
               value={`%${completionRate}`} color="blue" />
-            <KPICard icon={<AlertTriangle className="h-5 w-5" />} label={`Risk ${customerLabelPlural}`}
+            <KPICard secondary icon={<AlertTriangle className="h-4 w-4" />} label={`Risk ${customerLabelPlural}`}
               value={riskCustomers.length} color="amber" />
           </div>
           {/* Gelir-Gider Trendi */}
@@ -999,9 +997,6 @@ export default function AnalyticsPage() {
                   <Download className="h-3.5 w-3.5" />Dışa Aktar
                 </button>
               )}
-              <button onClick={() => setShowIncomeForm(v => !v)} className="btn-success text-sm">
-                <Plus className="mr-1.5 h-4 w-4" />Gelir Ekle
-              </button>
               <button onClick={() => setShowExpenseForm(v => !v)} className="btn-primary text-sm">
                 <Plus className="mr-1.5 h-4 w-4" />Gider Ekle
               </button>
@@ -1243,11 +1238,16 @@ export default function AnalyticsPage() {
           )}
 
           {/* Gelir Listesi */}
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{periodLabel} Gelirleri</h3>
+            <button onClick={() => setShowIncomeForm(v => !v)} className="btn-success text-sm">
+              <Plus className="mr-1.5 h-4 w-4" />Gelir Ekle
+            </button>
+          </div>
           {incomesLoading ? (
             <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-pulse-900" /></div>
           ) : (completed.length > 0 || incomes.length > 0) && (
             <div>
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">{periodLabel} Gelirleri</h3>
               <div className="table-wrapper">
                 <table className="table-base">
                   <thead className="table-head-row">
@@ -1597,8 +1597,8 @@ export default function AnalyticsPage() {
                   <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">En Çok Gelir Getiren Hizmetler</h3>
                   <div className="space-y-3">
                     {forecastData.insights.topServices.map((svc, i) => {
-                      const maxRevenue = forecastData.insights.topServices[0]?.revenue || 1
-                      const pct = Math.round((svc.revenue / maxRevenue) * 100)
+                      const topServiceMax = forecastData.insights.topServices[0]?.revenue || 1
+                      const pct = Math.round((svc.revenue / topServiceMax) * 100)
                       const medals = ['🥇', '🥈', '🥉']
                       return (
                         <div key={i} className="space-y-1">
@@ -1680,17 +1680,29 @@ function TrendBadge({ value }: { value: number }) {
   return <span className="flex items-center gap-0.5 text-xs text-red-500"><TrendingDown className="h-3 w-3" />%{Math.abs(value)}</span>
 }
 
-function KPICard({ icon, label, value, trend, color, currency }: {
-  icon: React.ReactNode; label: string; value: string | number; trend?: number; color: string; currency?: boolean
+function KPICard({ icon, label, value, trend, color, currency, secondary }: {
+  icon: React.ReactNode; label: string; value: string | number; trend?: number; color: string; currency?: boolean; secondary?: boolean
 }) {
-  const colorMap: Record<string, { icon: string; bg: string }> = {
-    blue:   { icon: 'bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400',   bg: 'bg-blue-50 dark:bg-blue-950/40' },
-    green:  { icon: 'bg-green-500/10 dark:bg-green-500/20 text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-950/40' },
-    purple: { icon: 'bg-purple-500/10 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-950/40' },
-    amber:  { icon: 'bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400',  bg: 'bg-amber-50 dark:bg-amber-950/40' },
-    red:    { icon: 'bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400',        bg: 'bg-red-50 dark:bg-red-950/40' },
+  const colorMap: Record<string, { icon: string; bg: string; text: string }> = {
+    blue:   { icon: 'bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400',   bg: 'bg-blue-50 dark:bg-blue-950/40',   text: 'text-blue-600 dark:text-blue-400' },
+    green:  { icon: 'bg-green-500/10 dark:bg-green-500/20 text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-950/40', text: 'text-green-600 dark:text-green-400' },
+    purple: { icon: 'bg-purple-500/10 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-950/40', text: 'text-purple-600 dark:text-purple-400' },
+    amber:  { icon: 'bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400',  bg: 'bg-amber-50 dark:bg-amber-950/40',  text: 'text-amber-600 dark:text-amber-400' },
+    red:    { icon: 'bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400',        bg: 'bg-red-50 dark:bg-red-950/40',        text: 'text-red-600 dark:text-red-400' },
   }
   const cfg = colorMap[color] || colorMap.blue
+  if (secondary) {
+    return (
+      <div className="flex items-center gap-3 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-3">
+        <div className={cn('shrink-0', cfg.text)}>{icon}</div>
+        <div className="min-w-0">
+          <p className="text-[11px] font-medium text-gray-400 dark:text-gray-500 truncate">{label}</p>
+          <p className="text-base font-semibold text-gray-800 dark:text-gray-100 leading-tight">{value}</p>
+        </div>
+        {trend !== undefined && <div className="ml-auto shrink-0"><TrendBadge value={trend} /></div>}
+      </div>
+    )
+  }
   return (
     <div className={cn('relative overflow-hidden rounded-2xl border border-gray-100 dark:border-gray-800 p-4 transition-all hover:shadow-sm', cfg.bg)}>
       <div className="flex items-start justify-between mb-3">
