@@ -64,13 +64,13 @@ const VARIANT_CONFIG: Record<NotifVariant, {
     containerCls: 'bg-red-50 border-red-200 dark:bg-red-900/30 dark:border-red-700',
     iconCls: 'text-red-600 dark:text-red-400',
     titleCls: 'text-red-800 dark:text-red-200',
-    bodyCls: 'text-red-600 dark:text-red-400',
+    bodyCls: 'text-red-700 dark:text-red-300', // light modda kontrast iyileştirildi
     closeCls: 'text-red-400 hover:text-red-600 dark:hover:text-red-300 hover:bg-red-100/50 dark:hover:bg-red-800/50',
     barTrackCls: 'bg-red-100 dark:bg-red-800/50',
     barFillCls: 'bg-red-500 dark:bg-red-400',
     Icon: AlertCircle,
     spin: false,
-    autoDismissMs: 6000, // hata daha uzun kalsın
+    autoDismissMs: 0, // hata kullanıcı kapatana kadar görünsün — uzun mesajlar okunabilir
   },
 }
 
@@ -86,8 +86,8 @@ export default function SuccessNotification({ show, variant = 'success', title, 
 
     setProgress(1)
 
-    // Pending'de ilerleme barı sürekli akar — auto-dismiss yok
-    if (config.autoDismissMs === null) return
+    // null veya 0 → otomatik kapanma yok (pending: işlem sürüyor; error: kullanıcı okusun)
+    if (!config.autoDismissMs) return
 
     const start = Date.now()
     intervalRef.current = setInterval(() => {
@@ -115,6 +115,9 @@ export default function SuccessNotification({ show, variant = 'success', title, 
           exit={{ y: '-100%', opacity: 0 }}
           transition={{ type: 'spring', stiffness: 500, damping: 35 }}
           className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] w-auto max-w-sm pointer-events-auto"
+          role={variant === 'error' ? 'alert' : 'status'}
+          aria-live={variant === 'error' ? 'assertive' : 'polite'}
+          aria-atomic="true"
         >
           <div className={cn('rounded-xl border shadow-lg overflow-hidden', config.containerCls)}>
             <div className="flex items-center gap-3 px-4 py-3">
@@ -124,29 +127,31 @@ export default function SuccessNotification({ show, variant = 'success', title, 
                   {title}
                 </p>
                 {body && (
-                  <p className={cn('text-xs mt-0.5 line-clamp-2', config.bodyCls)}>
+                  <p className={cn('text-xs mt-0.5', config.bodyCls, variant === 'error' ? 'whitespace-pre-wrap' : 'line-clamp-2')}>
                     {body}
                   </p>
                 )}
               </div>
-              {variant !== 'pending' && (
-                <button
-                  onClick={onDismiss}
-                  className={cn('flex-shrink-0 rounded-lg p-1 transition-colors', config.closeCls)}
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              )}
+              {/* Pending'de bile X görünsün — kullanıcı askıda kalan işlemi kapatabilsin (a11y + recovery) */}
+              <button
+                onClick={onDismiss}
+                aria-label="Bildirimi kapat"
+                className={cn('flex-shrink-0 rounded-lg p-1 transition-colors', config.closeCls)}
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
             </div>
-            {/* Progress bar — pending'de sonsuz akan, diğerlerinde geri sayım */}
+            {/* Progress bar — pending'de sonsuz akan, success'te geri sayım, error'da statik */}
             <div className={cn('h-0.5 overflow-hidden', config.barTrackCls)}>
               {variant === 'pending' ? (
                 <div className={cn('h-full w-1/3 animate-pending-bar', config.barFillCls)} />
-              ) : (
+              ) : config.autoDismissMs ? (
                 <div
                   className={cn('h-full transition-all duration-100', config.barFillCls)}
                   style={{ width: `${progress * 100}%` }}
                 />
+              ) : (
+                <div className={cn('h-full w-full', config.barFillCls)} />
               )}
             </div>
           </div>

@@ -27,20 +27,39 @@ export interface OperationMessages {
   error?: string
 }
 
+// Pending → success/error geçişinde "flash" görünmesini engellemek için min süre
+const MIN_PENDING_MS = 350
+// Network hangs / unresolved promise koruması — pending sonsuz kalmasın
+const MAX_PENDING_MS = 30_000
+
 export function useOperation() {
   const run = useCallback(async <T,>(
     fn: () => Promise<T>,
     messages: OperationMessages,
   ): Promise<T | null> => {
     const id = crypto.randomUUID()
+    const startedAt = Date.now()
 
     // Pending toast
     window.dispatchEvent(new CustomEvent('pulse-toast', {
       detail: { id, type: 'pending', title: messages.pending },
     }))
 
+    // Min-show garantisi — çok hızlı işlemlerde pending bir flash gibi görünmesin
+    const ensureMinShow = async () => {
+      const elapsed = Date.now() - startedAt
+      if (elapsed < MIN_PENDING_MS) {
+        await new Promise(r => setTimeout(r, MIN_PENDING_MS - elapsed))
+      }
+    }
+
+    // Timeout race'i — fn çözülmezse 30 sn sonra hata fırlatılır
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('İşlem zaman aşımına uğradı (30 sn).')), MAX_PENDING_MS),
+    )
+
     try {
-      const result = await fn()
+      const result = await Promise.race([fn(), timeoutPromise])
 
       // Bazı Supabase çağrıları { data, error } şeklinde döner; error varsa fırlat
       if (result && typeof result === 'object' && 'error' in result) {
@@ -50,7 +69,7 @@ export function useOperation() {
         }
       }
 
-      // Başarı — aynı id ile yeşil toast
+      await ensureMinShow()
       window.dispatchEvent(new CustomEvent('pulse-toast', {
         detail: { id, type: 'success', title: messages.success },
       }))
@@ -62,6 +81,7 @@ export function useOperation() {
           ? String((err as { message: unknown }).message)
           : 'Bilinmeyen hata'
 
+      await ensureMinShow()
       window.dispatchEvent(new CustomEvent('pulse-toast', {
         detail: {
           id,

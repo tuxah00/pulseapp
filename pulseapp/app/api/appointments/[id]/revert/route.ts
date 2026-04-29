@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireWritePermission } from '@/lib/api/with-permission'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { revertPointsForAppointment } from '@/lib/loyalty/award'
 
 /**
  * POST /api/appointments/[id]/revert
@@ -154,48 +155,19 @@ export async function POST(
   }
 
   // 6. Sadakat puanı geri al — refund=true ise refund endpoint zaten geri aldı,
-  //    refund=false ise eski sistemden gelmiş puanları geri al (idempotent)
+  //    refund=false ise eski sistemden gelmiş puanları geri al (idempotent helper kullan).
   let pointsReverted = 0
   let loyaltyWarning: string | null = null
   if (apt.customer_id && !refund) {
-    // Internal API call yerine direkt DB sorgusu
-    const { data: txs } = await admin
-      .from('loyalty_transactions')
-      .select('id, points')
-      .eq('business_id', businessId)
-      .eq('customer_id', apt.customer_id)
-      .eq('reference_id', params.id)
-      .eq('type', 'earn')
-
-    const totalPoints = txs?.reduce((sum, t) => sum + (t.points || 0), 0) ?? 0
-    if (totalPoints > 0) {
-      // Müşterinin mevcut bakiyesini kontrol et
-      const { data: balance } = await admin
-        .from('customer_loyalty')
-        .select('balance, total_earned')
-        .eq('business_id', businessId)
-        .eq('customer_id', apt.customer_id)
-        .maybeSingle()
-
-      const currentBalance = balance?.balance ?? 0
-      if (currentBalance < totalPoints) {
-        loyaltyWarning = `Müşteri ${totalPoints} puanın bir kısmını harcamış (bakiye: ${currentBalance}). Sadakat puanı manuel düzeltilmeli.`
-      } else {
-        // Earn transaction'ları sil ve bakiyeyi azalt
-        await admin
-          .from('loyalty_transactions')
-          .delete()
-          .in('id', (txs ?? []).map(t => t.id))
-        await admin
-          .from('customer_loyalty')
-          .update({
-            balance: currentBalance - totalPoints,
-            total_earned: Math.max(0, (balance?.total_earned ?? 0) - totalPoints),
-          })
-          .eq('business_id', businessId)
-          .eq('customer_id', apt.customer_id)
-        pointsReverted = totalPoints
-      }
+    const result = await revertPointsForAppointment(admin, {
+      businessId,
+      customerId: apt.customer_id,
+      appointmentId: params.id,
+    })
+    if (result.ok) {
+      pointsReverted = result.pointsReverted
+    } else if (result.reason === 'points_already_spent') {
+      loyaltyWarning = `Müşteri ${result.pointsToRevert} puanın bir kısmını harcamış (bakiye: ${result.currentBalance}). Sadakat puanı manuel düzeltilmeli.`
     }
   }
 

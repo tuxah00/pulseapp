@@ -17,10 +17,6 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
-DECLARE
-  v_used int;
-  v_total int;
-  v_status text;
 BEGIN
   -- Atomik artış — yalnızca sessions_used < sessions_total ise.
   -- Aynı anda iki tıklama gelirse sadece ilki güncelleyebilir.
@@ -38,12 +34,18 @@ BEGIN
             customer_packages.sessions_total, customer_packages.status, false
   INTO package_id, sessions_used, sessions_total, new_status, was_already_full;
 
-  -- 0 satır güncellendiyse — paket zaten dolu (race condition kaybı veya tekrar tetikleme)
+  -- 0 satır güncellendiyse — paket dolu OLABİLİR ya da paket gerçekten YOK olabilir.
+  -- Önce var mı diye kontrol et; yoksa exception fırlat (sessiz veri tutarsızlığı yaşanmasın).
   IF NOT FOUND THEN
     SELECT id, customer_packages.sessions_used, customer_packages.sessions_total, customer_packages.status
     INTO package_id, sessions_used, sessions_total, new_status
     FROM customer_packages
     WHERE id = p_package_id AND business_id = p_business_id;
+
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'package_not_found: id=% business_id=%', p_package_id, p_business_id
+        USING ERRCODE = 'P0002';
+    END IF;
     was_already_full := true;
   END IF;
 

@@ -138,6 +138,8 @@ export default function AppointmentsPage() {
   const [statusLoadingAction, setStatusLoadingAction] = useState<{ id: string; status: AppointmentStatus } | null>(null)
   const isLoading = (id: string, status?: AppointmentStatus) =>
     statusLoadingAction?.id === id && (!status || statusLoadingAction.status === status)
+  // H3: aynı randevu için aynı anda iki revert çağrısı engellenir (double-click race)
+  const revertingIdsRef = useRef<Set<string>>(new Set())
 
   // M1: supabase istemcisi sabitlenir — her render'da yeni instance üretilmez,
   // useEffect/useCallback bağımlılıklarında stable referans olur.
@@ -323,7 +325,9 @@ export default function AppointmentsPage() {
 
   useEffect(() => {
     setNow(new Date())
-    const id = setInterval(() => setNow(new Date()), 1_000)
+    // Perf: 1 sn → 60 sn — saat çizgisi dakikada bir kayar, geçmiş/gelecek hesapları için yeter.
+    // 1 sn idi → 3593 satırlık sayfada saniyede tam re-render = laptop fan + lag.
+    const id = setInterval(() => setNow(new Date()), 60_000)
     return () => clearInterval(id)
   }, [])
 
@@ -353,7 +357,7 @@ export default function AppointmentsPage() {
   useEffect(() => { if (!ctxLoading) fetchBlockedSlots() }, [fetchBlockedSlots, ctxLoading])
 
   // Realtime: yeni randevu / güncellenme gelince listeyi otomatik tazele
-  // H3: aynı zamanda detay paneli açıksa o randevuyu da güncelle (stale veri görünmesin)
+  // H3: detay paneli açıksa join'leri içeren tekil fetch ile güncelle (payload.new join içermez)
   useEffect(() => {
     if (!businessId) return
     const channel = supabase
@@ -363,18 +367,36 @@ export default function AppointmentsPage() {
         schema: 'public',
         table: 'appointments',
         filter: `business_id=eq.${businessId}`,
-      }, (payload) => {
+      }, async (payload) => {
         fetchAppointments()
-        // H3: detay paneli açıksa içindeki randevuyu da güncelle (stale göstermeyi engelle)
-        const changed = (payload.new ?? payload.old) as { id?: string } | null
-        if (changed?.id) {
-          setSelectedAppointment(prev => {
-            if (!prev || prev.id !== changed.id) return prev
-            // payload.new bazı alanları içermez (sadece değişen sütunlar) — önceki ile birleştir
-            const updated = payload.new as Partial<AppointmentView> | null
-            return updated ? { ...prev, ...updated } : prev
-          })
+        const changed = (payload.new ?? payload.old) as { id?: string; deleted_at?: string | null } | null
+        if (!changed?.id) return
+
+        // Soft delete senaryosu: panel açıksa kapat — zombi randevu gösterme (M3)
+        const newRow = payload.new as { deleted_at?: string | null } | null
+        if (newRow?.deleted_at) {
+          setSelectedAppointment(prev => (prev?.id === changed.id ? null : prev))
+          return
         }
+
+        // H1: detay panel açıksa join'leri içeren tam satırı tekrar çek
+        setSelectedAppointment(prev => {
+          if (!prev || prev.id !== changed.id) return prev
+          // Tek seferlik fetch (fire & forget) — döndüğünde state'i güncelle
+          ;(async () => {
+            const { data: fresh } = await supabase
+              .from('appointments')
+              .select(`*, customers(name, phone), services(name, price, duration_minutes), staff_members(name), campaigns(name), invoices(id, status, paid_amount)`)
+              .eq('id', changed.id!)
+              .eq('business_id', businessId)
+              .is('deleted_at', null)
+              .maybeSingle()
+            if (fresh) {
+              setSelectedAppointment(curr => (curr?.id === fresh.id ? (fresh as unknown as AppointmentView) : curr))
+            }
+          })()
+          return prev
+        })
       })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
@@ -1097,7 +1119,7 @@ export default function AppointmentsPage() {
       .from('appointments')
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', appointmentId)
-    if (error) { window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: 'Silme hatası: ' + error.message } })); return }
+    if (error) { window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Silme hatası', body: humanizeSupabaseError(error) } })); return }
     // Silinen slot için bekleme listesi otomatik kontrol — silent (eşleşme yoksa toast yok)
     if (freedSlot) {
       setTimeout(() => handleFillGap(appointmentId, undefined, { silent: true, freedSlot, trigger: 'delete' }), 300)
@@ -1299,6 +1321,10 @@ export default function AppointmentsPage() {
       return
     }
 
+    // H3: aynı randevu için zaten devam eden bir revert varsa double-click'i yok say
+    if (revertingIdsRef.current.has(appointmentId)) return
+    revertingIdsRef.current.add(appointmentId)
+
     // Randevuya bağlı tahsilat (fatura) var mı? Varsa kullanıcıya iade seçeneği sun.
     let paidInvoice: { id: string; paid_amount: number; total: number } | null = null
     {
@@ -1330,7 +1356,10 @@ export default function AppointmentsPage() {
         cancelText: 'Sadece Durumu Geri Al',
         variant: 'warning',
       })
-      if (refundOk === null) return  // X'e basıldı — tüm işlemi iptal et
+      if (refundOk === null) {  // X'e basıldı — tüm işlemi iptal et
+        revertingIdsRef.current.delete(appointmentId)
+        return
+      }
       refundDecision = refundOk ? 'refund' : 'keep'
       // Status revert kullanıcı isteğine bağlı — iade yoksa hâlâ status'u geri almak isteyebilir,
       // bu yüzden ikinci bir onay sormaya gerek yok; doğrudan revert akışına devam.
@@ -1346,7 +1375,10 @@ export default function AppointmentsPage() {
       cancelText: 'Vazgeç',
       variant: 'warning',
     })
-    if (!ok) return
+    if (!ok) {
+      revertingIdsRef.current.delete(appointmentId)
+      return
+    }
 
     // C1: Server endpoint — atomik akış (status update → refund → package → loyalty)
     // Hata olursa server status'u rollback eder, kısmi başarı durumu olmaz.
@@ -1371,7 +1403,14 @@ export default function AppointmentsPage() {
         error: 'Geri alma başarısız',
       },
     )
-    if (!result) return
+    // H3: ref'i her durumda temizle (race lock'u açılır)
+    revertingIdsRef.current.delete(appointmentId)
+
+    // H4: hata olsa bile listeyi tazele — server kısmen değişmiş olabilir, stale UI gösterme
+    if (!result) {
+      fetchAppointments()
+      return
+    }
 
     // Detay panelini anında güncelle (realtime de tetikleyecek ama hızlı UX için)
     if (selectedAppointment?.id === appointmentId) {
@@ -1484,7 +1523,8 @@ export default function AppointmentsPage() {
 
   // H5: tüm aktif filtreleri (durum + arama dahil) say — toolbar ikonu doğru highlight alır
   const hasActiveFilters = !!(staffIdFilter || serviceIdFilter || statusFilter || search.trim())
-  const filteredAppointments = (() => {
+  // Perf: filtreleme + sıralama her render'da yeniden çalışmasın — useMemo ile cache
+  const filteredAppointments = useMemo(() => {
     let list = appointments.filter(a => {
       if (statusFilter === 'unresolved') {
         if (!isPastUnresolved(a)) return false
@@ -1521,7 +1561,8 @@ export default function AppointmentsPage() {
       })
     }
     return list
-  })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- isPastUnresolved çağrısı stable, fonksiyon ref'i değişmiyor
+  }, [appointments, statusFilter, staffIdFilter, serviceIdFilter, search, sortField, sortDir, unresolvedIds])
 
   return (
     <div className="space-y-5">
@@ -1572,7 +1613,7 @@ export default function AppointmentsPage() {
           <StatusChip label="Onaylı" count={confirmedCount} active={statusFilter === 'confirmed'} tone="info" onClick={() => setStatusFilter(statusFilter === 'confirmed' ? null : 'confirmed')} />
           <StatusChip label="Tamamlandı" count={completedCount} active={statusFilter === 'completed'} tone="success" onClick={() => setStatusFilter(statusFilter === 'completed' ? null : 'completed')} />
           <StatusChip label="Gelmedi" count={noShowCount} active={statusFilter === 'no_show'} tone="danger" onClick={() => setStatusFilter(statusFilter === 'no_show' ? null : 'no_show')} />
-          <StatusChip label="Sonuçlanmamış" count={unresolvedCount} active={statusFilter === 'unresolved'} tone="warning" onClick={() => setStatusFilter(statusFilter === 'unresolved' ? null : 'unresolved')} />
+          <StatusChip label="Sonuçlanmamış" count={unresolvedCount} active={statusFilter === 'unresolved'} tone="warning" onClick={() => setStatusFilter(statusFilter === 'unresolved' ? null : 'unresolved')} tooltip="Geçmiş randevular: tahsilat alınmamış veya tamamlandı/iptal/gelmedi olarak işaretlenmemiş" />
           {statusFilter && (
             <button
               onClick={() => setStatusFilter(null)}
@@ -2633,11 +2674,23 @@ export default function AppointmentsPage() {
           description={isSelectedDayClosed && !search && !statusFilter
             ? 'Çalışma saatleri ayarlarından kapalı günler düzenlenebilir.'
             : undefined}
-          action={!search && !statusFilter && !isSelectedDayClosed ? {
-            label: 'Randevu Ekle',
-            onClick: () => openNewModal(),
-            icon: <Plus className="mr-2 h-4 w-4" />,
-          } : undefined}
+          action={
+            // Aktif filtre varsa "Filtreleri Temizle" göster — kullanıcı sıkışmasın
+            hasActiveFilters ? {
+              label: 'Filtreleri Temizle',
+              onClick: () => {
+                setSearch('')
+                setStatusFilter(null)
+                setStaffIdFilter('')
+                setServiceIdFilter('')
+              },
+              icon: <X className="mr-2 h-4 w-4" />,
+            } : (!isSelectedDayClosed ? {
+              label: 'Randevu Ekle',
+              onClick: () => openNewModal(),
+              icon: <Plus className="mr-2 h-4 w-4" />,
+            } : undefined)
+          }
         />
       ) : (
         <div key={viewMode} className="view-transition">
@@ -3009,11 +3062,11 @@ export default function AppointmentsPage() {
                     <>
                       <button onClick={() => updateStatus(aptId, 'completed')} disabled={anyLoading} className={cn('w-full flex items-center gap-2 rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 px-4 py-2.5 text-sm font-medium text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-800/30 transition-colors', anyLoading && 'opacity-60 cursor-not-allowed')}>
                         {completing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
-                        {completing ? 'Tamamlanıyor...' : 'Tamamlandı İşaretle'}
+                        {completing ? 'Tamamlanıyor...' : 'Tamamla'}
                       </button>
                       <button onClick={() => updateStatus(aptId, 'no_show')} disabled={anyLoading} className={cn('w-full flex items-center gap-2 rounded-lg border border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/20 px-4 py-2.5 text-sm font-medium text-orange-700 dark:text-orange-300 hover:bg-orange-100 dark:hover:bg-orange-800/30 transition-colors', anyLoading && 'opacity-60 cursor-not-allowed')}>
                         {noShowing ? <Loader2 className="h-4 w-4 animate-spin" /> : <AlertTriangle className="h-4 w-4" />}
-                        {noShowing ? 'İşaretleniyor...' : 'Gelmedi İşaretle'}
+                        {noShowing ? 'İşaretleniyor...' : 'Gelmedi'}
                       </button>
                       <button onClick={(e) => openCancelConfirm(selectedAppointment, e)} disabled={anyLoading} className={cn('w-full flex items-center gap-2 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-4 py-2.5 text-sm font-medium text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-800/30 transition-colors', anyLoading && 'opacity-60 cursor-not-allowed')}>
                         <XCircle className="h-4 w-4" /> İptal Et
@@ -3055,7 +3108,7 @@ export default function AppointmentsPage() {
                         .eq('recurrence_group_id', selectedAppointment.recurrence_group_id)
                         .gte('appointment_date', today)
                         .in('status', ['pending', 'confirmed'])
-                      if (error) { window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: 'Seri iptal hatası: ' + error.message } })); return }
+                      if (error) { window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Seri iptal hatası', body: humanizeSupabaseError(error) } })); return }
                       setSelectedAppointment(null)
                       fetchAppointments()
                       window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Tüm seri iptal edildi' } }))
@@ -3443,27 +3496,27 @@ function ActionButtons({
     <div className="flex items-center gap-1 flex-wrap">
       {(apt.status === 'confirmed' || apt.status === 'pending') && (
         <>
-          <button onClick={(e) => onEdit(apt, e)} title="Düzenle" className={cn(btnCls, 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700')}>
+          <button onClick={(e) => onEdit(apt, e)} aria-label="Randevuyu düzenle" title="Düzenle" className={cn(btnCls, 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700')}>
             <Pencil className={iconCls} />
           </button>
-          <button onClick={(e) => onReschedule(apt, e)} title="Ertele" className={cn(btnCls, 'text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30')}>
+          <button onClick={(e) => onReschedule(apt, e)} aria-label="Randevuyu ertele" title="Ertele" className={cn(btnCls, 'text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30')}>
             <CalendarClock className={iconCls} />
           </button>
         </>
       )}
       {apt.status === 'confirmed' && (
         <>
-          <button onClick={(e) => onUpdateStatus(apt.id, 'completed', e)} title="Tamamlandı" disabled={isAnyLoading} className={cn(btnCls, 'text-green-500 hover:bg-green-50 dark:hover:bg-green-900/30', isAnyLoading && 'opacity-60 cursor-not-allowed')}>
+          <button onClick={(e) => onUpdateStatus(apt.id, 'completed', e)} aria-label="Tamamlandı işaretle" title="Tamamlandı" disabled={isAnyLoading} className={cn(btnCls, 'text-green-500 hover:bg-green-50 dark:hover:bg-green-900/30', isAnyLoading && 'opacity-60 cursor-not-allowed')}>
             {isLoadingAction('completed')
               ? <Loader2 className={cn(size === 'sm' ? 'h-4 w-4' : 'h-5 w-5', 'animate-spin')} />
               : <CheckCircle className={size === 'sm' ? 'h-4 w-4' : 'h-5 w-5'} />}
           </button>
-          <button onClick={(e) => onUpdateStatus(apt.id, 'no_show', e)} title="Gelmedi" disabled={isAnyLoading} className={cn(btnCls, 'text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30', isAnyLoading && 'opacity-60 cursor-not-allowed')}>
+          <button onClick={(e) => onUpdateStatus(apt.id, 'no_show', e)} aria-label="Gelmedi işaretle" title="Gelmedi" disabled={isAnyLoading} className={cn(btnCls, 'text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30', isAnyLoading && 'opacity-60 cursor-not-allowed')}>
             {isLoadingAction('no_show')
               ? <Loader2 className={cn(size === 'sm' ? 'h-4 w-4' : 'h-5 w-5', 'animate-spin')} />
               : <AlertTriangle className={size === 'sm' ? 'h-4 w-4' : 'h-5 w-5'} />}
           </button>
-          <button onClick={(e) => onCancelConfirm(apt, e)} title="İptal" disabled={isAnyLoading} className={cn(btnCls, 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700', isAnyLoading && 'opacity-60 cursor-not-allowed')}>
+          <button onClick={(e) => onCancelConfirm(apt, e)} aria-label="Randevuyu iptal et" title="İptal" disabled={isAnyLoading} className={cn(btnCls, 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700', isAnyLoading && 'opacity-60 cursor-not-allowed')}>
             <XCircle className={size === 'sm' ? 'h-4 w-4' : 'h-5 w-5'} />
           </button>
         </>
@@ -3478,6 +3531,7 @@ function ActionButtons({
             {!paymentLocked && (
               <button
                 onClick={(e) => { e.stopPropagation(); onQuickPayment(apt) }}
+                aria-label="Tahsilat al"
                 title="Tahsilat Al"
                 className={cn(btnCls, 'text-pulse-700 dark:text-pulse-300 hover:bg-pulse-50 dark:hover:bg-pulse-900/30')}
               >
@@ -3487,6 +3541,7 @@ function ActionButtons({
             {apt.customer_id && apt.customers?.name && (
               <button
                 onClick={(e) => { e.stopPropagation(); onFollowUp({ appointmentId: apt.id, customerId: apt.customer_id!, customerName: apt.customers!.name }) }}
+                aria-label="Takip başlat"
                 title="Takip Başlat"
                 className={cn(btnCls, 'text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30')}
               >
@@ -3502,6 +3557,7 @@ function ActionButtons({
           {apt.status === 'cancelled' && !isPastApt && (
             <button
               onClick={(e) => onFillGap(apt.id, e)}
+              aria-label="Boşluğu doldur — uygun müşterilere bildirim gönder"
               title="Boşluğu Doldur — Uygun müşterilere bildirim gönder"
               disabled={fillGapLoading === apt.id}
               className={cn(btnCls, 'text-purple-600 dark:text-purple-400 bg-purple-50/60 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/40')}
@@ -3522,6 +3578,7 @@ function ActionButtons({
           </button>
           <button
             onClick={(e) => onDelete(apt.id, e)}
+            aria-label="Randevuyu sil"
             title="Sil"
             className={cn(btnCls, 'text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30')}
           >
@@ -3560,12 +3617,14 @@ function StatusChip({
   active,
   tone,
   onClick,
+  tooltip,
 }: {
   label: string
   count: number
   active: boolean
   tone: 'info' | 'success' | 'danger' | 'warning'
   onClick: () => void
+  tooltip?: string
 }) {
   // M5: pasif + sıfır sayaçlı chip'i gizle — boş "0 Gelmedi" yer kaplamasın
   if (count === 0 && !active) return null
@@ -3578,6 +3637,8 @@ function StatusChip({
   return (
     <button
       onClick={onClick}
+      title={tooltip}
+      aria-label={tooltip ? `${label}: ${count}. ${tooltip}` : `${label}: ${count}`}
       className={cn(
         'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors',
         active
