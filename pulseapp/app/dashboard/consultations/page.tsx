@@ -292,7 +292,7 @@ export default function ConsultationsPage() {
           description="Formunuzu paylaşarak hastalardan değerlendirme talepleri alabilirsiniz."
         />
       ) : (
-        <AnimatedList>
+        <AnimatedList className="space-y-2">
           {items.map(item => {
             const photoCount = (item.photo_urls as { url: string }[])?.length || 0
             return (
