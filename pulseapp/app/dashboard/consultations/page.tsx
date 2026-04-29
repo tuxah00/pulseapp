@@ -216,16 +216,16 @@ export default function ConsultationsPage() {
   const allCount = Object.values(counts).reduce((a, b) => a + b, 0)
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Ön Konsültasyon</h1>
+          <h1 className="h-page">Ön Konsültasyon</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Hastalardan gelen ön değerlendirme talepleri</p>
         </div>
         <button
           onClick={fetchItems}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all"
+          className="btn-secondary flex items-center gap-2"
         >
           <RefreshCcw className="h-4 w-4" /> Yenile
         </button>
@@ -239,7 +239,7 @@ export default function ConsultationsPage() {
           { label: 'İnceleniyor', value: reviewingCount, color: 'text-blue-700 dark:text-blue-300' },
           { label: 'Dönüştürüldü', value: convertedCount, color: 'text-teal-700 dark:text-teal-300' },
         ].map(stat => (
-          <div key={stat.label} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-4">
+          <div key={stat.label} className="card p-4">
             <p className="text-xs text-gray-500 dark:text-gray-400">{stat.label}</p>
             <p className={cn('text-2xl font-bold mt-1', stat.color)}>{stat.value}</p>
           </div>
@@ -247,7 +247,19 @@ export default function ConsultationsPage() {
       </div>
 
       {/* Filters */}
-      <div className="space-y-3">
+      <div className="flex flex-wrap gap-3 items-center">
+        {/* Arama */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Ad, telefon veya soru..."
+            className="input pl-9 w-52"
+          />
+        </div>
+
         {/* Status Tabs */}
         <div className="flex gap-1.5 flex-wrap">
           {FILTER_TABS.map(tab => (
@@ -265,18 +277,6 @@ export default function ConsultationsPage() {
               {tab.key !== 'all' && counts[tab.key] ? ` (${counts[tab.key]})` : ''}
             </button>
           ))}
-        </div>
-
-        {/* Arama */}
-        <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Ad, telefon veya soru..."
-            className="pl-9 pr-4 py-2 w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-pulse-900/30 focus:border-pulse-900"
-          />
         </div>
       </div>
 
@@ -299,7 +299,7 @@ export default function ConsultationsPage() {
               <AnimatedItem key={item.id}>
                 <div
                   onClick={() => openPanel(item)}
-                  className="flex items-center gap-4 px-4 h-16 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-pulse-900/30 hover:shadow-sm transition-all cursor-pointer"
+                  className="card flex items-center gap-4 p-4 cursor-pointer hover:ring-1 hover:ring-pulse-900/40 transition-all"
                 >
                   {/* Avatar */}
                   <div className="h-10 w-10 rounded-xl bg-pulse-900/10 dark:bg-pulse-900/20 flex items-center justify-center flex-shrink-0">
