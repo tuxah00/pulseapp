@@ -19,13 +19,7 @@ export default function AIMessageBubble({ message, onConfirm }: Props) {
   return (
     <div className={`flex gap-3 ${isUser ? 'flex-row-reverse' : ''}`}>
       {/* Avatar */}
-      <div
-        className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-          isUser
-            ? 'bg-pulse-900 text-white'
-            : 'bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 ring-1 ring-black/5'
-        }`}
-      >
+      <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-pulse-900 text-white">
         {isUser ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
       </div>
 
@@ -39,7 +33,7 @@ export default function AIMessageBubble({ message, onConfirm }: Props) {
               isUser
                 ? 'bg-pulse-900 text-white rounded-tr-md'
                 : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-tl-md'
-            }`}
+            } ${message.isStreaming && !message.content ? 'self-start' : ''}`}
           >
             {message.isStreaming && !message.content ? (
               <div className="flex gap-1.5 py-1 items-center">
