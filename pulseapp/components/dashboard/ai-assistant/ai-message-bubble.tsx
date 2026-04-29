@@ -42,10 +42,10 @@ export default function AIMessageBubble({ message, onConfirm }: Props) {
             }`}
           >
             {message.isStreaming && !message.content ? (
-              <div className="flex gap-1 py-1">
-                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+              <div className="flex gap-1.5 py-1 items-center">
+                <span className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full typing-dot" style={{ animationDelay: '0ms' }} />
+                <span className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full typing-dot" style={{ animationDelay: '220ms' }} />
+                <span className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full typing-dot" style={{ animationDelay: '440ms' }} />
               </div>
             ) : (
               <div className="whitespace-pre-wrap break-words">

@@ -577,6 +577,13 @@
   animation: viewFadeIn 0.2s ease-out;
 }
 
+/* ── AI typing indicator ── */
+@keyframes typing-dot {
+  0%, 60%, 100% { opacity: 0.25; transform: scale(0.8); }
+  30%           { opacity: 1;    transform: scale(1);   }
+}
+.typing-dot { animation: typing-dot 1.4s ease-in-out infinite; }
+
 /* ── Toast animasyonlar ── */
 @keyframes toast-slide-in {
   from { transform: translateX(110%); opacity: 0; }

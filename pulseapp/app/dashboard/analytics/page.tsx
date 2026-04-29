@@ -1701,18 +1701,18 @@ function TrendBadge({ value }: { value: number }) {
 function KPICard({ icon, label, value, trend, color, currency, secondary }: {
   icon: React.ReactNode; label: string; value: string | number; trend?: number; color: string; currency?: boolean; secondary?: boolean
 }) {
-  const colorMap: Record<string, { icon: string; bg: string; text: string }> = {
-    blue:   { icon: 'bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400',   bg: 'bg-blue-50 dark:bg-blue-950/40',   text: 'text-blue-600 dark:text-blue-400' },
-    green:  { icon: 'bg-green-500/10 dark:bg-green-500/20 text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-950/40', text: 'text-green-600 dark:text-green-400' },
-    purple: { icon: 'bg-purple-500/10 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-950/40', text: 'text-purple-600 dark:text-purple-400' },
-    amber:  { icon: 'bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400',  bg: 'bg-amber-50 dark:bg-amber-950/40',  text: 'text-amber-600 dark:text-amber-400' },
-    red:    { icon: 'bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400',        bg: 'bg-red-50 dark:bg-red-950/40',        text: 'text-red-600 dark:text-red-400' },
+  const colorMap: Record<string, { icon: string; value: string }> = {
+    blue:   { icon: 'text-blue-600 dark:text-blue-400',   value: 'text-blue-700 dark:text-blue-300' },
+    green:  { icon: 'text-green-600 dark:text-green-400', value: 'text-green-700 dark:text-green-300' },
+    purple: { icon: 'text-purple-600 dark:text-purple-400', value: 'text-purple-700 dark:text-purple-300' },
+    amber:  { icon: 'text-amber-600 dark:text-amber-400', value: 'text-amber-700 dark:text-amber-300' },
+    red:    { icon: 'text-red-600 dark:text-red-400',     value: 'text-red-700 dark:text-red-300' },
   }
   const cfg = colorMap[color] || colorMap.blue
   if (secondary) {
     return (
       <div className="flex items-center gap-3 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-3">
-        <div className={cn('shrink-0', cfg.text)}>{icon}</div>
+        <div className={cn('shrink-0', cfg.icon)}>{icon}</div>
         <div className="min-w-0">
           <p className="text-[11px] font-medium text-gray-400 dark:text-gray-500 truncate">{label}</p>
           <p className="text-base font-semibold text-gray-800 dark:text-gray-100 leading-tight">{value}</p>
@@ -1722,13 +1722,13 @@ function KPICard({ icon, label, value, trend, color, currency, secondary }: {
     )
   }
   return (
-    <div className={cn('relative overflow-hidden rounded-2xl border border-gray-100 dark:border-gray-800 p-4 transition-all hover:shadow-sm', cfg.bg)}>
+    <div className="relative rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 hover:shadow-sm transition-all">
       <div className="flex items-start justify-between mb-3">
-        <div className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-xl', cfg.icon)}>{icon}</div>
+        <div className={cn('shrink-0', cfg.icon)}>{icon}</div>
         {trend !== undefined && <TrendBadge value={trend} />}
       </div>
-      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{label}</p>
-      <p className="text-2xl font-bold text-gray-900 dark:text-gray-50">{value}</p>
+      <p className="text-xs font-medium text-gray-400 dark:text-gray-500 mb-0.5">{label}</p>
+      <p className={cn('text-2xl font-bold tabular-nums', cfg.value)}>{value}</p>
     </div>
   )
 }
