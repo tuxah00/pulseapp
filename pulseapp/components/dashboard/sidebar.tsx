@@ -188,16 +188,6 @@ export default function Sidebar({ businessName, userName, sector, plan, permissi
             )}
           </AnimatePresence>
         </div>
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="hidden lg:flex h-7 w-7 items-center justify-center rounded-lg text-gray-400
-                     hover:bg-gray-100 dark:hover:bg-white/10 hover:text-gray-600 dark:hover:text-gray-300
-                     transition-colors flex-shrink-0"
-        >
-          <motion.div animate={{ rotate: collapsed ? 180 : 0 }} transition={{ duration: 0.2 }}>
-            <ChevronLeft className="h-4 w-4" />
-          </motion.div>
-        </button>
         {/* Mobile close */}
         <button
           onClick={() => setMobileOpen(false)}
@@ -392,12 +382,28 @@ export default function Sidebar({ businessName, userName, sector, plan, permissi
       <motion.aside
         animate={{ width: collapsed ? 72 : 256 }}
         transition={{ type: 'spring', stiffness: 400, damping: 40 }}
-        className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:flex lg:flex-col
+        className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:flex lg:flex-col relative
                    bg-white/95 dark:bg-gray-950/95 backdrop-blur-xl
                    border-r border-gray-200/80 dark:border-white/[0.06]
                    shadow-[1px_0_20px_rgba(0,0,0,0.06)]"
       >
         {sidebarContent}
+
+        {/* Floating collapse toggle — sidebar sağ kenarında yüzer, logo ile çakışmaz */}
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className="absolute right-0 top-5 translate-x-1/2 z-10
+                     flex h-6 w-6 items-center justify-center rounded-full
+                     bg-white dark:bg-gray-900
+                     border border-gray-200 dark:border-gray-700
+                     text-gray-400 hover:text-gray-600 dark:hover:text-gray-300
+                     shadow-sm hover:shadow-md transition-all"
+          title={collapsed ? 'Genişlet' : 'Daralt'}
+        >
+          <motion.div animate={{ rotate: collapsed ? 180 : 0 }} transition={{ duration: 0.2 }}>
+            <ChevronLeft className="h-3.5 w-3.5" />
+          </motion.div>
+        </button>
       </motion.aside>
     </>
   )
