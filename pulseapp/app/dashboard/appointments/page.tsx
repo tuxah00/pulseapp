@@ -138,6 +138,10 @@ export default function AppointmentsPage() {
   const [statusLoadingAction, setStatusLoadingAction] = useState<{ id: string; status: AppointmentStatus } | null>(null)
   const isLoading = (id: string, status?: AppointmentStatus) =>
     statusLoadingAction?.id === id && (!status || statusLoadingAction.status === status)
+
+  // M1: supabase istemcisi sabitlenir — her render'da yeni instance üretilmez,
+  // useEffect/useCallback bağımlılıklarında stable referans olur.
+  const supabase = useMemo(() => createClient(), [])
   const [cancelNotifyCustomer, setCancelNotifyCustomer] = useState(true)
   const [slotPopup, setSlotPopup] = useState<{ day: string; hour: number; apts: AppointmentView[]; x: number; y: number } | null>(null)
   const [saving, setSaving] = useState(false)
@@ -191,7 +195,6 @@ export default function AppointmentsPage() {
   const [actionMenu, setActionMenu] = useState<{ x: number; y: number; cells: { col: number; colId: string; date: string; hour: number }[] } | null>(null)
   const gridRef = useRef<HTMLDivElement>(null)
 
-  const supabase = createClient()
   const searchParams = useSearchParams()
   const router = useRouter()
 
@@ -350,9 +353,9 @@ export default function AppointmentsPage() {
   useEffect(() => { if (!ctxLoading) fetchBlockedSlots() }, [fetchBlockedSlots, ctxLoading])
 
   // Realtime: yeni randevu / güncellenme gelince listeyi otomatik tazele
+  // H3: aynı zamanda detay paneli açıksa o randevuyu da güncelle (stale veri görünmesin)
   useEffect(() => {
     if (!businessId) return
-    const supabase = createClient()
     const channel = supabase
       .channel(`appointments-list-${businessId}`)
       .on('postgres_changes', {
@@ -360,12 +363,22 @@ export default function AppointmentsPage() {
         schema: 'public',
         table: 'appointments',
         filter: `business_id=eq.${businessId}`,
-      }, () => {
+      }, (payload) => {
         fetchAppointments()
+        // H3: detay paneli açıksa içindeki randevuyu da güncelle (stale göstermeyi engelle)
+        const changed = (payload.new ?? payload.old) as { id?: string } | null
+        if (changed?.id) {
+          setSelectedAppointment(prev => {
+            if (!prev || prev.id !== changed.id) return prev
+            // payload.new bazı alanları içermez (sadece değişen sütunlar) — önceki ile birleştir
+            const updated = payload.new as Partial<AppointmentView> | null
+            return updated ? { ...prev, ...updated } : prev
+          })
+        }
       })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
-  }, [businessId, fetchAppointments])
+  }, [businessId, fetchAppointments, supabase])
 
   // Müşteri + hizmet seçildiğinde önerilen tekrar aralığı kontrolü
   useEffect(() => {
@@ -396,18 +409,21 @@ export default function AppointmentsPage() {
 
   // Tek hiyerarşik ESC handler — önce en üstteki katman kapanır
   useEffect(() => {
-    const anyOpen = !!(slotPopup || actionMenu || isSelecting || showModal || selectedAppointment)
+    const anyOpen = !!(slotPopup || actionMenu || isSelecting || showModal || rescheduleAppointment || cancelConfirmAppointment || selectedAppointment)
     if (!anyOpen) return
     const h = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return
       if (slotPopup) { setSlotPopup(null); return }
       if (actionMenu || isSelecting) { clearSelection(); return }
       if (showModal) { setIsClosingModal(true); return }
+      // M4: erteleme ve iptal-onay modal'ları ESC ile kapansın
+      if (rescheduleAppointment) { closeReschedule(); return }
+      if (cancelConfirmAppointment) { setCancelConfirmAppointment(null); return }
       if (selectedAppointment) { closePanelAnimated(); return }
     }
     document.addEventListener('keydown', h)
     return () => document.removeEventListener('keydown', h)
-  }, [slotPopup, actionMenu, isSelecting, showModal, selectedAppointment, closePanelAnimated])
+  }, [slotPopup, actionMenu, isSelecting, showModal, rescheduleAppointment, cancelConfirmAppointment, selectedAppointment, closePanelAnimated])
 
   function changeDate(days: number) {
     let d = new Date(selectedDate + 'T12:00:00')
@@ -543,6 +559,7 @@ export default function AppointmentsPage() {
     startTimeVal: string, endTimeVal: string, excludeId: string | null
   ): Promise<boolean> {
     if (!staffIdVal) return false
+    // Randevu çakışması kontrolü
     const { data: existing } = await supabase
       .from('appointments')
       .select('id, start_time, end_time')
@@ -550,11 +567,56 @@ export default function AppointmentsPage() {
       .eq('staff_id', staffIdVal)
       .eq('appointment_date', appointmentDate)
       .in('status', ['pending', 'confirmed'])
-    if (!existing?.length) return false
-    return existing.some(apt => {
+    if (existing?.some(apt => {
       if (excludeId && apt.id === excludeId) return false
       return timeRangesOverlap(startTimeVal, endTimeVal, apt.start_time, apt.end_time)
+    })) return true
+    // M7: bloklu slot kontrolü — personel bazlı veya işletme genelinde bloklar
+    const { data: blocks } = await supabase
+      .from('blocked_slots')
+      .select('start_time, end_time, staff_id')
+      .eq('business_id', businessId)
+      .eq('date', appointmentDate)
+    if (blocks?.some(b =>
+      (b.staff_id === null || b.staff_id === staffIdVal) &&
+      timeRangesOverlap(startTimeVal, endTimeVal, b.start_time, b.end_time)
+    )) return true
+    return false
+  }
+
+  // C3: çoklu tarih için tek seferde çakışma kontrolü — N+1 sorgu yerine 2 sorgu
+  async function checkStaffConflictBatch(
+    staffIdVal: string | null, dates: string[],
+    startTimeVal: string, endTimeVal: string,
+  ): Promise<Set<string>> {
+    const conflictDates = new Set<string>()
+    if (!staffIdVal || dates.length === 0) return conflictDates
+    const [{ data: appts }, { data: blocks }] = await Promise.all([
+      supabase
+        .from('appointments')
+        .select('appointment_date, start_time, end_time')
+        .eq('business_id', businessId)
+        .eq('staff_id', staffIdVal)
+        .in('appointment_date', dates)
+        .in('status', ['pending', 'confirmed']),
+      supabase
+        .from('blocked_slots')
+        .select('date, start_time, end_time, staff_id')
+        .eq('business_id', businessId)
+        .in('date', dates),
+    ])
+    appts?.forEach(a => {
+      if (timeRangesOverlap(startTimeVal, endTimeVal, a.start_time, a.end_time)) {
+        conflictDates.add(a.appointment_date)
+      }
     })
+    blocks?.forEach(b => {
+      if ((b.staff_id === null || b.staff_id === staffIdVal) &&
+          timeRangesOverlap(startTimeVal, endTimeVal, b.start_time, b.end_time)) {
+        conflictDates.add(b.date)
+      }
+    })
+    return conflictDates
   }
 
   function generateRecurringDates(startDate: string, frequency: string, count: number): string[] {
@@ -603,13 +665,10 @@ export default function AppointmentsPage() {
       // Tekrarlayan randevu: Toplu oluşturma
       const groupId = crypto.randomUUID()
       const dates = generateRecurringDates(date, recurrenceFrequency, recurrenceCount)
-      const conflictDates: string[] = []
 
-      // Çakışma kontrolü
-      for (const d of dates) {
-        const hasConflict = await checkStaffConflict(staffId || null, d, startTime, finalEndTime, null)
-        if (hasConflict) conflictDates.push(d)
-      }
+      // C3: çakışma kontrolü tek sorguda (eski hâli her tarih için ayrı sorgu = N+1)
+      const conflictSet = await checkStaffConflictBatch(staffId || null, dates, startTime, finalEndTime)
+      const conflictDates: string[] = dates.filter(d => conflictSet.has(d))
 
       const validDates = dates.filter(d => !conflictDates.includes(d))
 
@@ -1168,20 +1227,16 @@ export default function AppointmentsPage() {
     })
     // Randevu tamamlandığında: paket seansı düşümü + sadakat puanı ekleme
     if (newStatus === 'completed' && statusApt) {
-      // Paket seansı düşümü — yalnızca customer_package_id atanmış randevularda
-      if (statusApt.customer_package_id) {
-        const { data: pkg } = await supabase
-          .from('customer_packages')
-          .select('id, sessions_used, sessions_total')
-          .eq('id', statusApt.customer_package_id)
-          .single()
-        if (pkg) {
-          const newUsed = pkg.sessions_used + 1
-          const newPkgStatus = newUsed >= pkg.sessions_total ? 'completed' : 'active'
-          await supabase
-            .from('customer_packages')
-            .update({ sessions_used: newUsed, status: newPkgStatus })
-            .eq('id', pkg.id)
+      // C2: Paket seansı düşümü ATOMIC — RPC ile race condition'a karşı korunur.
+      // Eski kod: SELECT → newUsed = used+1 → UPDATE açığı vardı; iki sekme aynı anda
+      // tıklarsa ikisi de aynı sessions_used değerini okur, ikisi de +1 yazar.
+      if (statusApt.customer_package_id && businessId) {
+        const { data: rpcResult } = await supabase.rpc('increment_package_session', {
+          p_package_id: statusApt.customer_package_id,
+          p_business_id: businessId,
+        })
+        const pkgRow = Array.isArray(rpcResult) ? rpcResult[0] : rpcResult
+        if (pkgRow && !pkgRow.was_already_full) {
           // Rezervasyon kaydı zaten var (portal booking) — yoksa oluştur (staff-created)
           const { data: existingUsage } = await supabase
             .from('package_usages')
@@ -1191,7 +1246,7 @@ export default function AppointmentsPage() {
           if (!existingUsage) {
             await supabase.from('package_usages').insert({
               business_id: businessId,
-              customer_package_id: pkg.id,
+              customer_package_id: statusApt.customer_package_id,
               appointment_id: appointmentId,
               staff_id: currentStaffId || null,
               used_at: new Date().toISOString(),
@@ -1293,132 +1348,41 @@ export default function AppointmentsPage() {
     })
     if (!ok) return
 
-    // İade kararı 'refund' ise — önce iade kaydını yap (loyalty geri alma da bunun içinde olur)
-    if (refundDecision === 'refund' && paidInvoice) {
-      const refundRes = await fetch('/api/invoices/payments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          invoice_id: paidInvoice.id,
-          amount: paidInvoice.paid_amount,
-          method: 'cash',
-          payment_type: 'refund',
-          notes: 'Tamamlandı geri alma — randevu revert',
-        }),
-      })
-      if (!refundRes.ok) {
-        const errJson = await refundRes.json().catch(() => ({}))
-        window.dispatchEvent(new CustomEvent('pulse-toast', {
-          detail: { type: 'error', title: 'İade başarısız', body: errJson.error || 'İade kaydedilemedi.' },
-        }))
-        return
-      }
-    }
+    // C1: Server endpoint — atomik akış (status update → refund → package → loyalty)
+    // Hata olursa server status'u rollback eder, kısmi başarı durumu olmaz.
+    const result = await runOperation(
+      async () => {
+        const res = await fetch(`/api/appointments/${appointmentId}/revert`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refund: refundDecision === 'refund' }),
+        })
+        const json = await res.json().catch(() => ({}))
+        if (!res.ok) throw new Error(json.error || 'İşlem başarısız')
+        return json as { ok: true; pointsReverted: number; loyaltyWarning: string | null; refunded: boolean }
+      },
+      {
+        pending: 'Durum geri alınıyor...',
+        success: refundDecision === 'refund' && paidInvoice
+          ? `Geri alındı + ${paidInvoice.paid_amount.toFixed(2)}₺ iade kaydedildi`
+          : refundDecision === 'keep'
+            ? 'Geri alındı (tahsilat duruyor)'
+            : 'Durum geri alındı',
+        error: 'Geri alma başarısız',
+      },
+    )
+    if (!result) return
 
-    // Randevu durumunu geri al — yalnızca hâlâ 'completed' ise (concurrency guard).
-    // İki sekme aynı anda tıklarsa sadece biri başarılı olur, diğeri 0 satır günceller.
-    const { data: updatedRows, error } = await supabase
-      .from('appointments')
-      .update({ status: 'confirmed' })
-      .eq('id', appointmentId)
-      .eq('status', 'completed')
-      .select('id')
-
-    if (error) {
-      window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'error', title: 'Hata', body: error.message } }))
-      return
-    }
-    // Başka bir oturum/sekme zaten geri almışsa erken çık
-    if (!updatedRows || updatedRows.length === 0) {
-      window.dispatchEvent(new CustomEvent('pulse-toast', {
-        detail: { type: 'error', title: 'İşlem yapılamaz', body: 'Randevu durumu bu arada başka bir kullanıcı tarafından değiştirildi.' },
-      }))
-      return
-    }
-
-    // Detay panelindeki anlık güncelleme
+    // Detay panelini anında güncelle (realtime de tetikleyecek ama hızlı UX için)
     if (selectedAppointment?.id === appointmentId) {
       setSelectedAppointment(prev => prev ? { ...prev, status: 'confirmed' } : null)
     }
-
-    // Paket seansıysa seans sayısını geri al
-    if (apt.customer_package_id) {
-      const { data: pkg } = await supabase
-        .from('customer_packages')
-        .select('id, sessions_used, sessions_total, status')
-        .eq('id', apt.customer_package_id)
-        .single()
-
-      if (pkg) {
-        const newUsed = Math.max(0, pkg.sessions_used - 1)
-        const newPkgStatus = pkg.status === 'completed' ? 'active' : pkg.status
-        await supabase
-          .from('customer_packages')
-          .update({ sessions_used: newUsed, status: newPkgStatus })
-          .eq('id', pkg.id)
-
-        // Rezervasyon kaydını sil (tamamlanma sonrası tekrar rezervasyon gibi)
-        await supabase
-          .from('package_usages')
-          .delete()
-          .eq('appointment_id', appointmentId)
-      }
-    }
-
-    // Sadakat puanı geri alma:
-    // - refundDecision === 'refund' → refund endpoint zaten geri aldı, çift işlem yapma
-    // - refundDecision === 'keep' → para kaldı, puanı da bırak (müşteri hak etti)
-    // - paidInvoice yok → eski sistemden (completion-trigger) kalmış puanlar olabilir, geri al
-    let pointsReverted = 0
-    let loyaltyWarning: string | null = null
-    if (apt.customer_id && refundDecision !== 'keep' && refundDecision !== 'refund') {
-      try {
-        const res = await fetch(
-          `/api/loyalty?customerId=${apt.customer_id}&appointmentId=${appointmentId}`,
-          { method: 'DELETE' },
-        )
-        const j = await res.json().catch(() => ({}))
-        if (res.ok) {
-          pointsReverted = j.pointsReverted || 0
-        } else if (res.status === 409 && j.code === 'points_already_spent') {
-          loyaltyWarning = `Müşteri ${j.pointsToRevert} puanın bir kısmını harcamış (mevcut bakiye: ${j.currentBalance}). Sadakat puanı manuel düzeltilmeli.`
-        }
-      } catch { /* puan geri alma hatası ana akışı durdurmasın */ }
-    }
-
-    await logAudit({
-      businessId: businessId!,
-      staffId: currentStaffId,
-      staffName: currentStaffName,
-      action: 'status_change',
-      resource: 'appointment',
-      resourceId: appointmentId,
-      details: {
-        from: 'completed',
-        to: 'confirmed',
-        reason: 'manual_revert',
-        refund_decision: refundDecision,  // 'refund' | 'keep' | null (tahsilat yoktu)
-        refund_amount: refundDecision === 'refund' && paidInvoice ? paidInvoice.paid_amount : 0,
-        points_reverted: pointsReverted,
-        customer_name: apt.customers?.name || null,
-        service_name: apt.services?.name || null,
-      },
-    })
-
     fetchAppointments()
-    let toastBody = 'Randevu "Onaylandı" olarak işaretlendi.'
-    if (refundDecision === 'refund' && paidInvoice) {
-      toastBody = `Randevu geri alındı + ${paidInvoice.paid_amount.toFixed(2)}₺ iade kaydedildi.`
-    } else if (refundDecision === 'keep') {
-      toastBody = 'Randevu geri alındı. Tahsilat olduğu gibi kaldı.'
-    } else if (pointsReverted > 0) {
-      toastBody = `Randevu "Onaylandı" olarak işaretlendi. ${pointsReverted} sadakat puanı geri alındı.`
-    }
-    window.dispatchEvent(new CustomEvent('pulse-toast', { detail: { type: 'success', title: 'Durum geri alındı', body: toastBody } }))
-    if (loyaltyWarning) {
-      // Harcanmış puan uyarısı — başarı toast'ından sonra ayrı uyarı göster
+
+    // Harcanmış puan uyarısı — varsa ayrıca göster
+    if (result.loyaltyWarning) {
       window.dispatchEvent(new CustomEvent('pulse-toast', {
-        detail: { type: 'error', title: 'Sadakat Puanı Geri Alınamadı', body: loyaltyWarning },
+        detail: { type: 'error', title: 'Sadakat Puanı Geri Alınamadı', body: result.loyaltyWarning },
       }))
     }
   }
@@ -1518,7 +1482,8 @@ export default function AppointmentsPage() {
   const completedCount = appointments.filter(a => a.status === 'completed').length
   const noShowCount = appointments.filter(a => a.status === 'no_show').length
 
-  const hasActiveFilters = !!(staffIdFilter || serviceIdFilter)
+  // H5: tüm aktif filtreleri (durum + arama dahil) say — toolbar ikonu doğru highlight alır
+  const hasActiveFilters = !!(staffIdFilter || serviceIdFilter || statusFilter || search.trim())
   const filteredAppointments = (() => {
     let list = appointments.filter(a => {
       if (statusFilter === 'unresolved') {
@@ -3086,6 +3051,7 @@ export default function AppointmentsPage() {
                       const { error } = await supabase
                         .from('appointments')
                         .update({ status: 'cancelled' })
+                        .eq('business_id', businessId!)  // C4: çapraz kiracı koruması — RLS bypass'a karşı savunma
                         .eq('recurrence_group_id', selectedAppointment.recurrence_group_id)
                         .gte('appointment_date', today)
                         .in('status', ['pending', 'confirmed'])
@@ -3327,8 +3293,11 @@ export default function AppointmentsPage() {
                 <input type="date" value={rescheduleDate} onChange={(e) => {
                     const newDate = e.target.value
                     setRescheduleDate(newDate)
+                    // M3: mevcut saat yeni tarihte de uygunsa koru, değilse ilk slota düş
                     const slots = generateTimeSlots(newDate, workingHours)
-                    setRescheduleTime(slots.length > 0 ? slots[0] : '09:00')
+                    setRescheduleTime(prev =>
+                      slots.includes(prev) ? prev : (slots[0] ?? '09:00')
+                    )
                   }} className="input" required />
               </div>
               <div>
@@ -3598,6 +3567,8 @@ function StatusChip({
   tone: 'info' | 'success' | 'danger' | 'warning'
   onClick: () => void
 }) {
+  // M5: pasif + sıfır sayaçlı chip'i gizle — boş "0 Gelmedi" yer kaplamasın
+  if (count === 0 && !active) return null
   const activeClasses = {
     info: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800',
     success: 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800',
